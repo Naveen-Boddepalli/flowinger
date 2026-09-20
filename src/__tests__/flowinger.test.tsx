@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
+  Background,
   FlowingerCanvas,
   FlowingerProvider,
   Controls,
@@ -1183,5 +1184,46 @@ describe('Flowinger edge markers and labels', () => {
   it('defaults an edge’s stroke from --flowinger-edge, not a host app’s token', () => {
     const { container } = render(<FlowingerCanvas nodes={nodes} edges={[edge()]} />);
     expect(pathOf(container).getAttribute('stroke')).toBe('var(--flowinger-edge, #b1b1b7)');
+  });
+});
+
+describe('README quickstart', () => {
+  // The example from README.md, verbatim in shape. If the README's API drifts
+  // from the library's, this is what should fail.
+  function Step({ data }: NodeProps) {
+    return (
+      <div className="step">
+        <Handle id="in" type="target" position={Position.Top} />
+        {String(data.label)}
+        <Handle id="out" type="source" position={Position.Bottom} />
+      </div>
+    );
+  }
+  const nodeTypes = { step: Step };
+  const nodes: Node[] = [
+    { id: 'a', type: 'step', position: { x: 0, y: 0 }, data: { label: 'Scan' } },
+    { id: 'b', type: 'step', position: { x: 0, y: 120 }, data: { label: 'Filter' } },
+  ];
+  const edges: Edge[] = [
+    { id: 'a-b', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in', markerEnd: 'arrowclosed' },
+  ];
+
+  it('renders the nodes, the edge with its arrowhead, the background and the controls', () => {
+    const { container } = render(
+      <div style={{ position: 'relative', height: 400 }}>
+        <FlowingerProvider>
+          <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={nodeTypes}>
+            <Background />
+          </FlowingerCanvas>
+          <Controls style={{ position: 'absolute', right: 12, bottom: 12 }} />
+        </FlowingerProvider>
+      </div>,
+    );
+    expect(screen.getByText('Scan')).toBeInTheDocument();
+    expect(screen.getByText('Filter')).toBeInTheDocument();
+    expect(must(container, '[data-testid="edge-a-b"] path').getAttribute('marker-end')).toMatch(/^url\(#/);
+    expect(container.querySelector('.flowinger-background')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
+    expect(must<HTMLElement>(container, '.react-flow__controls').style.position).toBe('absolute');
   });
 });

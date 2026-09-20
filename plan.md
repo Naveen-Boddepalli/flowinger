@@ -75,8 +75,8 @@ browser.
   compatibility and ignored.
 - A minimap.
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.
-- Install/publish setup: `dist/` is gitignored and there is no `prepare` script, so the package cannot
-  be installed from git yet, and it has not been published.
+- Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
+  see the README), but has not been published, and there is no CI.
 
 ## 1. Context and Goals
 
@@ -202,7 +202,9 @@ depends on QueryLens; this section records what QueryLens depends on, so the swa
 
 ### On the QueryLens side, when swapping
 
-1. Replace the dependency; import from `flowinger` in `FlowTree`.
+1. Replace the dependency; import from `flowinger` in `FlowTree`. Installed from GitHub, pnpm 11 refuses
+   to build a git-hosted package unless QueryLens's `pnpm-workspace.yaml` allow-lists it
+   (`allowBuilds:` → `flowinger: true`); the error names exactly that fix.
 2. Delete the `react-flow__attribution` / `react-flow__pane` CSS overrides (nothing renders them) and
    the `@xyflow/react/dist/style.css` import.
 3. Re-point the `flow` chunk in `vite.config.ts` and cut its bundle budget. Measured in the same chunk,
@@ -216,5 +218,3 @@ depends on QueryLens; this section records what QueryLens depends on, so the swa
 - Add a `LICENSE` file (`package.json` says MIT; there is none).
 - Attribute React Flow: `src/paths.ts` uses React Flow's (MIT) bezier control-point formula, so keep a
   `NOTICE`/attribution unless that has been decided otherwise.
-- Write a real README (it is one line).
-- Make the package installable: a `prepare`/publish step, since `dist/` is gitignored.
