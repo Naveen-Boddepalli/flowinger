@@ -114,6 +114,16 @@ export interface FlowingerProps {
   elementsSelectable?: boolean;
   panOnDrag?: boolean | number[];
   zoomOnScroll?: boolean;
+  /** Zoom with a two-finger pinch on touch. Default true. */
+  zoomOnPinch?: boolean;
+  /**
+   * Make the canvas a tab stop and drive it from the keyboard while it has
+   * focus: arrow keys pan (Shift for larger steps), `+` / `-` zoom, `0` fits
+   * the view. Off by default, since it adds a tab stop.
+   */
+  keyboardNavigation?: boolean;
+  /** The canvas's accessible name when `keyboardNavigation` is on. Default "Diagram". */
+  ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
   children?: ReactNode;

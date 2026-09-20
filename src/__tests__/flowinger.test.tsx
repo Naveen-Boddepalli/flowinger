@@ -50,7 +50,8 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
 /** Reads the viewport transform back into numbers. */
 function viewportOf(container: ParentNode) {
   const t = must<HTMLElement>(container, '.flowinger-viewport').style.transform;
-  const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)/.exec(t);
+  const num = '(-?[\\d.]+(?:e[-+]?\\d+)?)'; // float noise can print as 5.7e-14, which is valid CSS
+  const m = new RegExp(`translate\\(${num}px, ${num}px\\) scale\\(${num}\\)`).exec(t);
   if (!m) throw new Error(`unparseable transform: ${t}`);
   return { x: Number(m[1]), y: Number(m[2]), zoom: Number(m[3]) };
 }
@@ -808,5 +809,177 @@ describe('Flowinger default styling', () => {
     );
     expect(screen.queryByRole('button', { name: 'Fit view' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeInTheDocument();
+  });
+});
+
+describe('Flowinger touch pinch', () => {
+  const finger = (id: number, x: number, y = 100) => ({
+    pointerId: id,
+    button: 0,
+    clientX: x,
+    clientY: y,
+    pointerType: 'touch',
+  });
+
+  it('zooms with two fingers, keeping the point under their midpoint fixed', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} />);
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, finger(1, 100));
+    fireEvent.pointerDown(pane, finger(2, 200)); // spread 100, midpoint (150, 100)
+    fireEvent.pointerMove(pane, finger(2, 300)); // spread 200, midpoint (200, 100)
+    // ×2 (the default maximum), and the point that was at (150, 100) now sits
+    // under (200, 100): x = 200 − 150·2, y = 100 − 100·2.
+    expect(viewportOf(container)).toEqual({ x: -100, y: -100, zoom: 2 });
+  });
+
+  it('pinches out to zoom out, down to minZoom', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} minZoom={0.5} />);
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, finger(1, 0));
+    fireEvent.pointerDown(pane, finger(2, 200));
+    fireEvent.pointerMove(pane, finger(2, 20)); // spread 200 → 20: wants ×0.1
+    expect(viewportOf(container).zoom).toBe(0.5);
+  });
+
+  it('turns an in-progress single-finger pan into a pinch', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} />);
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, finger(1, 100));
+    fireEvent.pointerMove(pane, finger(1, 140)); // panning: x = 40
+    expect(viewportOf(container).x).toBe(40);
+
+    fireEvent.pointerDown(pane, finger(2, 240)); // spread 100, midpoint (190, 100)
+    fireEvent.pointerMove(pane, finger(2, 340)); // spread 200 → a zoom, not a pan
+    expect(viewportOf(container).zoom).toBeGreaterThan(1);
+  });
+
+  it('does not resume as a pan when one finger lifts', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} />);
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, finger(1, 100));
+    fireEvent.pointerDown(pane, finger(2, 200));
+    fireEvent.pointerMove(pane, finger(2, 300));
+    fireEvent.pointerUp(pane, finger(2, 300));
+    const settled = viewportOf(container);
+
+    fireEvent.pointerMove(pane, finger(1, 500)); // the lone finger wanders
+    expect(viewportOf(container)).toEqual(settled);
+  });
+
+  it('lets a fresh single touch pan once the pinch is over', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} />);
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, finger(1, 100));
+    fireEvent.pointerDown(pane, finger(2, 200));
+    fireEvent.pointerMove(pane, finger(2, 300));
+    fireEvent.pointerUp(pane, finger(2, 300));
+    fireEvent.pointerUp(pane, finger(1, 100));
+    expect(viewportOf(container)).toEqual({ x: -100, y: -100, zoom: 2 });
+
+    // A stale pinch would swallow this move.
+    fireEvent.pointerDown(pane, finger(3, 100));
+    fireEvent.pointerMove(pane, finger(3, 140));
+    expect(viewportOf(container)).toEqual({ x: -60, y: -100, zoom: 2 });
+  });
+
+  it('is switched off by zoomOnPinch={false}', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} zoomOnPinch={false} />);
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, finger(1, 100));
+    fireEvent.pointerDown(pane, finger(2, 200));
+    fireEvent.pointerMove(pane, finger(2, 400));
+    expect(viewportOf(container).zoom).toBe(1);
+  });
+});
+
+describe('Flowinger keyboard navigation', () => {
+  const key = (k: string, extra: Record<string, boolean> = {}) => ({ key: k, ...extra });
+  const nodes: Node[] = [
+    { id: 'a', type: 'test', position: { x: 0, y: 0 }, data: { label: 'A' } },
+  ];
+
+  it('adds no tab stop or role unless asked to', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={testNodeTypes} />);
+    const pane = must(container, '.flowinger');
+    expect(pane.hasAttribute('tabindex')).toBe(false);
+    expect(pane.hasAttribute('role')).toBe(false);
+    expect(pane.hasAttribute('aria-label')).toBe(false);
+  });
+
+  it('becomes a focusable, named group when asked to', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} keyboardNavigation />);
+    const pane = must(container, '.flowinger');
+    expect(pane.getAttribute('tabindex')).toBe('0');
+    expect(pane.getAttribute('role')).toBe('group');
+    expect(pane.getAttribute('aria-label')).toBe('Diagram');
+
+    const named = render(<FlowingerCanvas nodes={nodes} keyboardNavigation ariaLabel="Query plan" />);
+    expect(must(named.container, '.flowinger').getAttribute('aria-label')).toBe('Query plan');
+  });
+
+  it('pans with the arrow keys the way they scroll a page, and larger with Shift', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} keyboardNavigation />);
+    const pane = must(container, '.flowinger');
+
+    fireEvent.keyDown(pane, key('ArrowRight')); // look right: content slides left
+    expect(viewportOf(container)).toEqual({ x: -50, y: 0, zoom: 1 });
+    fireEvent.keyDown(pane, key('ArrowDown'));
+    expect(viewportOf(container)).toEqual({ x: -50, y: -50, zoom: 1 });
+    fireEvent.keyDown(pane, key('ArrowLeft'));
+    fireEvent.keyDown(pane, key('ArrowUp'));
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+
+    fireEvent.keyDown(pane, key('ArrowRight', { shiftKey: true }));
+    expect(viewportOf(container).x).toBe(-200);
+  });
+
+  it('zooms with + and −, and fits with 0', () => {
+    const fitNodes: Node[] = [
+      { id: 'a', position: { x: 0, y: 0 }, data: {}, width: 100, height: 50 },
+      { id: 'b', position: { x: 300, y: 150 }, data: {}, width: 100, height: 50 },
+    ];
+    const { container } = render(<FlowingerCanvas nodes={fitNodes} keyboardNavigation maxZoom={4} />);
+    const pane = must(container, '.flowinger');
+    sized(pane, 800, 600);
+
+    fireEvent.keyDown(pane, key('0'));
+    expect(viewportOf(container).zoom).toBeCloseTo(1.8);
+    fireEvent.keyDown(pane, key('-'));
+    expect(viewportOf(container).zoom).toBeCloseTo(1.8 / 1.25);
+    fireEvent.keyDown(pane, key('='));
+    fireEvent.keyDown(pane, key('+'));
+    expect(viewportOf(container).zoom).toBeCloseTo((1.8 / 1.25) * 1.25 * 1.25);
+  });
+
+  it('consumes the keys it handles and leaves every other key alone', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} keyboardNavigation />);
+    const pane = must(container, '.flowinger');
+    expect(fireEvent.keyDown(pane, key('ArrowLeft'))).toBe(false); // preventDefault called
+    expect(fireEvent.keyDown(pane, key('a'))).toBe(true);
+    expect(fireEvent.keyDown(pane, key('Tab'))).toBe(true); // focus must be able to leave
+  });
+
+  it('ignores modified keys, so browser shortcuts still work', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} keyboardNavigation />);
+    const pane = must(container, '.flowinger');
+    fireEvent.keyDown(pane, key('ArrowRight', { ctrlKey: true }));
+    fireEvent.keyDown(pane, key('=', { metaKey: true })); // ⌘= is the browser's own zoom
+    fireEvent.keyDown(pane, key('ArrowRight', { altKey: true }));
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  it('leaves keys pressed inside a node to that node', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={testNodeTypes} keyboardNavigation />,
+    );
+    const inside = screen.getByText('press a');
+    fireEvent.keyDown(inside, key('ArrowRight'));
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  it('does nothing when the prop is off, even if the canvas somehow receives the key', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} />);
+    fireEvent.keyDown(must(container, '.flowinger'), key('ArrowRight'));
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 });

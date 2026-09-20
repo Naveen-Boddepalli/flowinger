@@ -5,14 +5,24 @@ import {
   useRef,
   type CSSProperties,
   type ComponentType,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { FlowingerContext, useFlowingerStore } from './context.ts';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
-import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
-import type { FlowingerProps, NodeProps, Viewport } from './types.ts';
+import {
+  DRAG_THRESHOLD,
+  capturePointer,
+  distance,
+  isInteractive,
+  midpoint,
+  pinchViewport,
+  releasePointer,
+  type PinchStart,
+} from './pointer.ts';
+import type { FlowingerProps, NodeProps, Viewport, XYPosition } from './types.ts';
 
 // Inline styles reading `--flowinger-*` custom properties (with fallbacks), so
 // the default node needs no stylesheet and themes from any ancestor. Give a node
@@ -41,6 +51,10 @@ function DefaultNodeView({ id, data }: NodeProps) {
 /** Wheel deltas arrive in pixels, lines or pages depending on device and browser. */
 const WHEEL_PIXELS_PER_UNIT = [1, 20, 400] as const;
 
+/** How far an arrow key pans, in screen pixels; Shift takes larger steps. */
+const KEY_PAN_STEP = 50;
+const KEY_PAN_STEP_LARGE = 200;
+
 interface PanState {
   pointerId: number;
   startX: number;
@@ -58,6 +72,9 @@ function InnerCanvas({
   nodesDraggable = false,
   panOnDrag = true,
   zoomOnScroll = true,
+  zoomOnPinch = true,
+  keyboardNavigation = false,
+  ariaLabel = 'Diagram',
   className = '',
   style = {},
   children,
@@ -69,6 +86,9 @@ function InnerCanvas({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const pan = useRef<PanState | null>(null);
+  /** Every pointer currently down, so a second finger can be told from a click. */
+  const pointers = useRef(new Map<number, XYPosition>());
+  const pinch = useRef<PinchStart | null>(null);
 
   // Layout effects, not passive ones: a parent's passive effect (one that
   // frames the diagram, say) runs after these, and must find the canvas
@@ -125,7 +145,28 @@ function InnerCanvas({
   const canPan = (button: number): boolean =>
     Array.isArray(panOnDrag) ? panOnDrag.includes(button) : panOnDrag && (button === 0 || button === 1);
 
+  /** The pointers' midpoint and spread, in container pixels — the pinch's two numbers. */
+  const fingers = (container: HTMLElement): { mid: XYPosition; dist: number } | null => {
+    if (pointers.current.size !== 2) return null;
+    const [a, b] = [...pointers.current.values()];
+    if (!a || !b) return null;
+    const rect = container.getBoundingClientRect();
+    const local = (p: XYPosition): XYPosition => ({ x: p.x - rect.left, y: p.y - rect.top });
+    return { mid: midpoint(local(a), local(b)), dist: distance(a, b) };
+  };
+
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zoomOnPinch && pointers.current.size === 2) {
+      // A second finger turns whatever the first was doing into a pinch.
+      const now = fingers(e.currentTarget);
+      if (now) {
+        pan.current = null;
+        pinch.current = { viewport: store.getViewport(), ...now };
+        capturePointer(e.currentTarget, e.pointerId);
+        return;
+      }
+    }
     if (!canPan(e.button) || isInteractive(e.target)) return;
     pan.current = {
       pointerId: e.pointerId,
@@ -137,6 +178,18 @@ function InnerCanvas({
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointers.current.has(e.pointerId)) {
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    const start = pinch.current;
+    if (start) {
+      const now = fingers(e.currentTarget);
+      if (now) {
+        store.instance.setViewport(pinchViewport(start, now.mid, now.dist, minZoom, maxZoom));
+      }
+      return;
+    }
+
     const p = pan.current;
     if (p?.pointerId !== e.pointerId) return;
     const dx = e.clientX - p.startX;
@@ -155,12 +208,55 @@ function InnerCanvas({
   };
 
   const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(e.pointerId);
+    // One finger left is not a pinch — and does not carry on as a pan either;
+    // it would jump. A fresh touch starts one.
+    if (pointers.current.size < 2) pinch.current = null;
+
     const p = pan.current;
     if (p?.pointerId !== e.pointerId) return;
     pan.current = null;
     if (!p.active) return;
     releasePointer(e.currentTarget, e.pointerId);
     e.currentTarget.style.cursor = panOnDrag ? 'grab' : '';
+  };
+
+  // Only when the canvas itself has focus: a key pressed inside a node (a text
+  // field, a button) is that node's, not ours.
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+    const step = e.shiftKey ? KEY_PAN_STEP_LARGE : KEY_PAN_STEP;
+    const vp = store.getViewport();
+    // Arrow keys move the view the way they scroll a page: Right looks further
+    // right, so the content slides left.
+    switch (e.key) {
+      case 'ArrowLeft':
+        store.instance.setViewport({ ...vp, x: vp.x + step });
+        break;
+      case 'ArrowRight':
+        store.instance.setViewport({ ...vp, x: vp.x - step });
+        break;
+      case 'ArrowUp':
+        store.instance.setViewport({ ...vp, y: vp.y + step });
+        break;
+      case 'ArrowDown':
+        store.instance.setViewport({ ...vp, y: vp.y - step });
+        break;
+      case '+':
+      case '=':
+        store.instance.zoomIn();
+        break;
+      case '-':
+      case '_':
+        store.instance.zoomOut();
+        break;
+      case '0':
+        store.instance.fitView();
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
   };
 
   const containerStyle: CSSProperties = {
@@ -183,6 +279,9 @@ function InnerCanvas({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
+      {...(keyboardNavigation
+        ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel, onKeyDown }
+        : {})}
     >
       {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
       {children}

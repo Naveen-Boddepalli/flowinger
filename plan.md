@@ -43,14 +43,18 @@ browser.
   `--flowinger-text-dim`, `--flowinger-radius`), each with a fallback — so they need no stylesheet and
   no utility framework, and theme from any ancestor. There is no `:hover` style (inline styles cannot
   express it) and no `outline` rule, so the browser's own focus ring stays.
+- **Keyboard navigation is opt-in (`keyboardNavigation`)** because it adds a tab stop, which changes
+  a consumer's tab order; a page that already has a toolbar does not want a second stop per diagram.
+  When on, the canvas is a focusable `role="group"` (name it with `ariaLabel`); arrows pan (Shift ×4),
+  `+`/`-` zoom, `0` fits. It acts only when the canvas itself has focus, so a key pressed inside a node
+  is the node's, and it ignores Ctrl/⌘/Alt chords so browser zoom still works. Two-finger pinch is always
+  on (`zoomOnPinch`), since it changes nothing else.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
 
 ### Not built
 
-- Two-finger pinch on touch (single-pointer pan works; a trackpad pinch works).
-- Keyboard pan/zoom on the canvas — a toolbar of `<Controls>` buttons is the accessible path today.
 - Selection and connecting edges. `nodesConnectable` / `elementsSelectable` are accepted for API
   compatibility and ignored.
 - Pan limits (§4.3's "pan limits"): `fitView` and the zoom bounds are all there is.

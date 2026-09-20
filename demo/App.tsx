@@ -119,7 +119,7 @@ export function App() {
           <span className="text-xs text-slate-500">· Pure React & SVG Node Graph Renderer</span>
         </div>
         <div className="text-xs text-slate-400">
-          Scroll to zoom · Drag background to pan · Drag nodes to reposition
+          Scroll or pinch to zoom · Drag background to pan · Drag nodes to reposition · Focus the canvas, then arrows / + / − / 0
         </div>
       </header>
 
@@ -131,6 +131,8 @@ export function App() {
             edges={edges}
             nodeTypes={nodeTypes}
             nodesDraggable={true}
+            keyboardNavigation
+            ariaLabel="Query plan"
             minZoom={0.2}
             maxZoom={2.0}
           >
