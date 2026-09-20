@@ -1,75 +1,21 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act } from '@testing-library/react';
-import { hydrateRoot } from 'react-dom/client';
+// @vitest-environment node
+// A real server has no `document`, and this package's layout effects depend on that (React 18
+// warns about useLayoutEffect on the server) — so these run where there really is none. jsdom
+// defines `document` at module load and would hide exactly what is being tested.
+import { describe, expect, it, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import {
-  Controls,
-  FlowingerCanvas,
-  FlowingerProvider,
-  Handle,
-  Position,
-  useStore,
-  useViewport,
-  type Edge,
-  type Node,
-  type NodeProps,
-} from '../index.ts';
-
-function PortNode({ data }: NodeProps) {
-  return (
-    <div>
-      <Handle id="in" type="target" position={Position.Top} />
-      <span>{String(data.label)}</span>
-      <Handle id="out" type="source" position={Position.Bottom} />
-    </div>
-  );
-}
-
-function Probe() {
-  const panZoom = useStore((s) => s.panZoom);
-  const viewport = useViewport();
-  return <output>{`${panZoom === null ? 'unmounted' : 'mounted'} ${String(viewport.zoom)}`}</output>;
-}
-
-const nodes: Node[] = [
-  { id: 'a', type: 'port', position: { x: 10, y: 20 }, width: 100, height: 40, data: { label: 'alpha' } },
-  { id: 'b', type: 'port', position: { x: 10, y: 220 }, width: 100, height: 40, data: { label: 'beta' } },
-];
-const edges: Edge[] = [
-  {
-    id: 'e',
-    source: 'a',
-    target: 'b',
-    sourceHandle: 'out',
-    targetHandle: 'in',
-    label: 'joins',
-    markerEnd: 'arrowclosed',
-  },
-];
-
-const tree = (
-  <FlowingerProvider initialViewport={{ x: 5, y: 6, zoom: 2 }}>
-    <FlowingerCanvas
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={{ port: PortNode }}
-      keyboardNavigation
-    >
-      <Probe />
-    </FlowingerCanvas>
-    <Controls />
-  </FlowingerProvider>
-);
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+import { tree } from './ssrFixture.tsx';
 
 describe('Flowinger server rendering', () => {
+  it('has no document, as a server has none', () => {
+    expect(typeof document).toBe('undefined');
+  });
+
   it('renders to a string without a DOM, and without React warnings', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const html = renderToString(tree);
     expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
 
     expect(html).toContain('alpha');
     expect(html).toContain('beta');
@@ -92,31 +38,5 @@ describe('Flowinger server rendering', () => {
 
   it('reports "not mounted" on the server, where no canvas has attached', () => {
     expect(renderToString(tree)).toContain('unmounted 2');
-  });
-
-  it('hydrates the server markup without a mismatch or a warning', async () => {
-    const html = renderToString(tree);
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    document.body.appendChild(container);
-
-    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
-    let root!: ReturnType<typeof hydrateRoot>;
-    await act(async () => {
-      root = hydrateRoot(container, tree);
-    });
-
-    expect(errors).not.toHaveBeenCalled();
-    // …and it is alive afterwards: mounted, with its handles measured or not,
-    // and the framing intact.
-    expect(container.textContent).toContain('mounted 2');
-    expect(container.querySelector<HTMLElement>('.flowinger-viewport')?.style.transform).toBe(
-      'translate(5px, 6px) scale(2)',
-    );
-
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
   });
 });

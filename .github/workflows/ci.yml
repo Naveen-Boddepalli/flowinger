@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The package declares react >=18, so test both ends of that range.
+        react: ['18', '19']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The pnpm version comes from `packageManager` in package.json.
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Use React ${{ matrix.react }}
+        if: matrix.react != '19'
+        run: pnpm add --save-dev react@${{ matrix.react }} react-dom@${{ matrix.react }} @types/react@${{ matrix.react }} @types/react-dom@${{ matrix.react }}
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build

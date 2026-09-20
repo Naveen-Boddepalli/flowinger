@@ -22,6 +22,7 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
+  "packageManager": "pnpm@11.1.2",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
