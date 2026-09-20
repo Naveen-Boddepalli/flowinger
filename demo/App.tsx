@@ -75,6 +75,7 @@ const initialEdges: Edge[] = [
     target: '2',
     sourceHandle: 'out',
     targetHandle: 'in',
+    markerEnd: 'arrowclosed',
     style: { stroke: '#64748b', strokeWidth: 2 },
   },
   {
@@ -84,6 +85,8 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out',
     targetHandle: 'in',
     className: 'is-active',
+    label: '10 rows',
+    markerEnd: 'arrowclosed',
     style: { stroke: '#10b981', strokeWidth: 2 },
   },
   {
@@ -93,6 +96,7 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out',
     targetHandle: 'in',
     className: 'is-active',
+    markerEnd: 'arrowclosed',
     style: { stroke: '#10b981', strokeWidth: 2 },
   },
   {
@@ -101,6 +105,7 @@ const initialEdges: Edge[] = [
     target: '3',
     sourceHandle: 'next',
     targetHandle: 'prev',
+    markerEnd: 'arrow',
     style: { stroke: '#38bdf8', strokeWidth: 1.5, strokeDasharray: '3 3' },
   },
 ];

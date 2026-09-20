@@ -40,7 +40,7 @@ browser.
   keeps the drag.
 - **The default node view and `<Controls>` are styled inline from `--flowinger-*` CSS variables**
   (`--flowinger-surface`, `--flowinger-surface-raised`, `--flowinger-border`, `--flowinger-text`,
-  `--flowinger-text-dim`, `--flowinger-radius`), each with a fallback — so they need no stylesheet and
+  `--flowinger-text-dim`, `--flowinger-edge`, `--flowinger-radius`), each with a fallback — so they need no stylesheet and
   no utility framework, and theme from any ancestor. There is no `:hover` style (inline styles cannot
   express it) and no `outline` rule, so the browser's own focus ring stays.
 - **Keyboard navigation is opt-in (`keyboardNavigation`)** because it adds a tab stop, which changes
@@ -53,6 +53,12 @@ browser.
   inside `[[minX, minY], [maxX, maxY]]` however it is panned, zoomed, keyed or animated, and an extent
   smaller than the pane is centred rather than pinned to a corner. It needs the pane's size, so it is a
   no-op until the canvas has been laid out; it is not re-applied on resize.
+- **Arrowheads and labels are SVG.** `markerStart`/`markerEnd` (`'arrow'`, `'arrowclosed'`, or an
+  `{ type, color, width, height }`) become `<marker>` definitions, shared between edges that ask for the
+  same one, sized in graph units (`userSpaceOnUse`) so they do not fatten with the stroke, and coloured
+  from the edge's own stroke unless told otherwise. `label` is SVG text at the path's midpoint with a
+  surface-coloured halo (`paint-order: stroke`) for legibility — no text measuring, hence no background
+  box, and string labels only. Edges without an explicit stroke default from `--flowinger-edge`.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
@@ -61,7 +67,7 @@ browser.
 
 - Selection and connecting edges. `nodesConnectable` / `elementsSelectable` are accepted for API
   compatibility and ignored.
-- Edge labels and arrowheads; a minimap.
+- A minimap.
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.
 - Install/publish setup: `dist/` is gitignored and there is no `prepare` script, so the package cannot
   be installed from git yet, and it has not been published.

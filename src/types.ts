@@ -39,6 +39,23 @@ export interface NodeProps<N extends Node = Node> {
   positionAbsoluteY?: number;
 }
 
+export const MarkerType = {
+  Arrow: 'arrow',
+  ArrowClosed: 'arrowclosed',
+} as const;
+
+export type MarkerType = (typeof MarkerType)[keyof typeof MarkerType];
+
+/** An arrowhead. The bare `MarkerType` string takes every default. */
+export interface EdgeMarker {
+  type: MarkerType;
+  /** Defaults to the edge's own stroke colour, else a neutral grey. */
+  color?: string;
+  /** Size in graph units (not scaled by the stroke). Default 12. */
+  width?: number;
+  height?: number;
+}
+
 export interface Edge {
   id: string;
   source: string;
@@ -49,6 +66,10 @@ export interface Edge {
   style?: CSSProperties;
   animated?: boolean;
   type?: 'bezier' | 'straight' | 'smoothstep';
+  /** Text drawn at the middle of the edge. */
+  label?: string;
+  markerStart?: MarkerType | EdgeMarker;
+  markerEnd?: MarkerType | EdgeMarker;
   data?: Record<string, unknown>;
 }
 

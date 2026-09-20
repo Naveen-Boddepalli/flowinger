@@ -6,6 +6,7 @@ import {
   FlowingerProvider,
   Controls,
   Handle,
+  MarkerType,
   Position,
   getBezierPath,
   getStraightPath,
@@ -1028,5 +1029,159 @@ describe('Flowinger translateExtent', () => {
 
     rerender(<FlowingerCanvas nodes={[]} translateExtent={world} />);
     expect(viewportOf(container).x).toBe(0);
+  });
+});
+
+describe('Flowinger edge markers and labels', () => {
+  const nodes: Node[] = [
+    { id: 'a', position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
+    { id: 'b', position: { x: 0, y: 200 }, data: {}, width: 100, height: 40 },
+    { id: 'c', position: { x: 300, y: 200 }, data: {}, width: 100, height: 40 },
+  ];
+  const edge = (over: Partial<Edge> = {}): Edge => ({ id: 'e', source: 'a', target: 'b', ...over });
+  const pathOf = (container: ParentNode, id = 'e') =>
+    must(container, `[data-testid="edge-${id}"] path`);
+  /** The <marker> a path's `marker-end` / `marker-start` points at. */
+  const markerOf = (container: ParentNode, attr: 'marker-end' | 'marker-start', id = 'e') => {
+    const ref = pathOf(container, id).getAttribute(attr) ?? '';
+    const match = /^url\(#(.+)\)$/.exec(ref);
+    if (!match?.[1]) throw new Error(`no marker reference on ${id}: "${ref}"`);
+    return must(container, `marker[id="${match[1]}"]`);
+  };
+
+  it('draws a closed arrowhead in the edge’s own stroke colour', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={[edge({ markerEnd: MarkerType.ArrowClosed, style: { stroke: '#10b981' } })]}
+      />,
+    );
+    const marker = markerOf(container, 'marker-end');
+    const head = must(marker, 'polyline');
+    expect(head.getAttribute('fill')).toBe('#10b981');
+    expect(head.getAttribute('stroke')).toBe('#10b981');
+    // Sized in graph units, so it does not fatten with the stroke; facing outward at the start.
+    expect(marker.getAttribute('markerUnits')).toBe('userSpaceOnUse');
+    expect(marker.getAttribute('orient')).toBe('auto-start-reverse');
+  });
+
+  it('draws an open arrowhead unfilled', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edges={[edge({ markerEnd: 'arrow' })]} />,
+    );
+    const head = must(markerOf(container, 'marker-end'), 'polyline');
+    expect(head.getAttribute('fill')).toBe('none');
+    expect(head.getAttribute('stroke')).toContain('var(--flowinger-edge');
+  });
+
+  it('takes an explicit colour and size over the defaults', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={[
+          edge({
+            markerEnd: { type: 'arrowclosed', color: 'crimson', width: 20, height: 18 },
+            style: { stroke: '#10b981' },
+          }),
+        ]}
+      />,
+    );
+    const marker = markerOf(container, 'marker-end');
+    expect(marker.getAttribute('markerWidth')).toBe('20');
+    expect(marker.getAttribute('markerHeight')).toBe('18');
+    expect(must(marker, 'polyline').getAttribute('fill')).toBe('crimson');
+  });
+
+  it('shares one marker between edges that ask for the same arrowhead', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={[
+          edge({ id: 'e1', markerEnd: 'arrowclosed' }),
+          edge({ id: 'e2', target: 'c', markerEnd: 'arrowclosed' }),
+          edge({ id: 'e3', target: 'c', markerEnd: 'arrow' }),
+        ]}
+      />,
+    );
+    expect(container.querySelectorAll('marker')).toHaveLength(2); // closed once, open once
+    expect(pathOf(container, 'e1').getAttribute('marker-end')).toBe(
+      pathOf(container, 'e2').getAttribute('marker-end'),
+    );
+    expect(pathOf(container, 'e3').getAttribute('marker-end')).not.toBe(
+      pathOf(container, 'e1').getAttribute('marker-end'),
+    );
+  });
+
+  it('can put an arrowhead at the start as well as the end', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={[edge({ markerStart: 'arrowclosed', markerEnd: 'arrowclosed' })]}
+      />,
+    );
+    // Same look at both ends: one shared definition, referenced twice.
+    expect(container.querySelectorAll('marker')).toHaveLength(1);
+    expect(pathOf(container).getAttribute('marker-start')).toBe(
+      pathOf(container).getAttribute('marker-end'),
+    );
+    expect(markerOf(container, 'marker-start')).toBeTruthy();
+  });
+
+  it('renders no <defs> when no edge has a marker', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} edges={[edge()]} />);
+    expect(container.querySelector('defs')).toBeNull();
+    expect(pathOf(container).hasAttribute('marker-end')).toBe(false);
+  });
+
+  it('keeps marker ids unique across canvases on the same page', () => {
+    const a = render(<FlowingerCanvas nodes={nodes} edges={[edge({ markerEnd: 'arrow' })]} />);
+    const b = render(<FlowingerCanvas nodes={nodes} edges={[edge({ markerEnd: 'arrow' })]} />);
+    const idA = markerOf(a.container, 'marker-end').id;
+    const idB = markerOf(b.container, 'marker-end').id;
+    expect(idA).not.toBe(idB);
+    expect(idA).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it('draws a label at the middle of the edge', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edges={[edge({ label: 'joins' })]} />,
+    );
+    // a's bottom-middle is (50, 40); b's top-middle is (50, 200).
+    const text = must(container, '[data-testid="edge-e"] text');
+    expect(text.textContent).toBe('joins');
+    expect(text.getAttribute('x')).toBe('50');
+    expect(text.getAttribute('y')).toBe('120');
+    expect(text.getAttribute('text-anchor')).toBe('middle');
+  });
+
+  it('puts the label mid-way along straight edges too, and draws none without one', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={[edge({ id: 'with', type: 'straight', label: 'x' }), edge({ id: 'without' })]}
+      />,
+    );
+    expect(container.querySelectorAll('text')).toHaveLength(1);
+    expect(must(container, '[data-testid="edge-with"] text').getAttribute('y')).toBe('120');
+  });
+
+  it('follows a dragged node', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={[edge({ label: 'joins' })]}
+        nodesDraggable
+      />,
+    );
+    const b = must(container, '[data-id="b"]');
+    fireEvent.pointerDown(b, pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(b, pointer({ clientX: 0, clientY: 100 })); // b moves down 100
+    const text = must(container, '[data-testid="edge-e"] text');
+    expect(text.getAttribute('y')).toBe('170'); // midway between 40 and 300
+  });
+
+  it('defaults an edge’s stroke from --flowinger-edge, not a host app’s token', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} edges={[edge()]} />);
+    expect(pathOf(container).getAttribute('stroke')).toBe('var(--flowinger-edge, #b1b1b7)');
   });
 });

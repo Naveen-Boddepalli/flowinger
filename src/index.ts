@@ -25,6 +25,7 @@ export {
 export {
   Position,
   BackgroundVariant,
+  MarkerType,
 } from './types.ts';
 
 export type {
@@ -41,5 +42,6 @@ export type {
   XYPosition,
   BackgroundProps,
   TranslateExtent,
+  EdgeMarker,
 } from './types.ts';
 export type { FlowingerState } from './store.ts';
