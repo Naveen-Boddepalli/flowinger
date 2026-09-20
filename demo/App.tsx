@@ -121,9 +121,9 @@ export function App() {
         <div className="flex items-center gap-2">
           <span className="font-bold text-emerald-400">Flowinger</span>
           <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">v0.1.0</span>
-          <span className="text-xs text-slate-500">· Pure React & SVG Node Graph Renderer</span>
+          <span className="hidden whitespace-nowrap text-xs text-slate-500 sm:inline">· Pure React & SVG Node Graph Renderer</span>
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="hidden text-xs text-slate-400 md:block">
           Scroll or pinch to zoom · Drag background to pan · Drag nodes to reposition · Focus the canvas, then arrows / + / − / 0
         </div>
       </header>

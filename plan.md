@@ -9,8 +9,14 @@ tweens, hidden-tab snap, geometry). `pnpm typecheck`, `pnpm test` and `pnpm buil
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
 flowinger is complete — the way QueryLens imports React Flow today — rather than carrying a copy (§5).
 Before this repo was split out, the same engine source ran QueryLens's three tree panels in a real
-browser (framing, zoom buttons, mouse pan, wheel zoom); the demo in `demo/` has *not* been run in a
-browser.
+browser (framing, zoom buttons, mouse pan, wheel zoom). The demo in `demo/` has since been run in a real
+browser too, with real input: measured handle anchors (an edge starts at a node's *measured* half-width,
+not a declared one), arrowheads and the label halo, a node drag (edge, arrowheads and label all follow;
+the viewport does not pan), arrow keys, `0` to fit, wheel zoom about the cursor, and a background pan,
+with the browser's own focus ring showing on the focused canvas. Not seen by eye: the *smoothness* of
+animated moves — the pane that ran it fires `requestAnimationFrame` about once per 300 ms, so the tween
+could only be shown to *land* (its backstop timer did), and smoothness rests on the fake-timer tests —
+and multi-touch pinch, which needs a touch device (the maths and the pointer handling are unit-tested).
 
 | Phase | State |
 |---|---|
