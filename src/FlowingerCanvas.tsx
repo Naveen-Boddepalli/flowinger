@@ -14,11 +14,26 @@ import { NodeWrapper } from './NodeWrapper.tsx';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
 import type { FlowingerProps, NodeProps, Viewport } from './types.ts';
 
+// Inline styles reading `--flowinger-*` custom properties (with fallbacks), so
+// the default node needs no stylesheet and themes from any ancestor. Give a node
+// its own component via `nodeTypes` for anything more than a placeholder.
+const defaultNodeStyle: CSSProperties = {
+  padding: 12,
+  borderRadius: 'var(--flowinger-radius, 6px)',
+  border: '1px solid var(--flowinger-border, #334155)',
+  background: 'var(--flowinger-surface, #1e293b)',
+  color: 'var(--flowinger-text, #e2e8f0)',
+};
+
 function DefaultNodeView({ id, data }: NodeProps) {
   return (
-    <div className="rounded border border-slate-700 bg-slate-800 p-3 text-slate-100 shadow">
-      <div className="font-semibold">{id}</div>
-      {'label' in data && <div className="text-sm text-slate-400">{String(data.label)}</div>}
+    <div style={defaultNodeStyle}>
+      <div style={{ fontWeight: 600 }}>{id}</div>
+      {'label' in data && (
+        <div style={{ fontSize: '0.875em', color: 'var(--flowinger-text-dim, #94a3b8)' }}>
+          {String(data.label)}
+        </div>
+      )}
     </div>
   );
 }

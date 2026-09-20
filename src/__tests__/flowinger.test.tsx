@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
   FlowingerCanvas,
   FlowingerProvider,
+  Controls,
   Handle,
   Position,
   getBezierPath,
@@ -64,6 +65,7 @@ const pointer = (extra: Record<string, number>) => ({ pointerId: 1, button: 0, .
 afterEach(() => {
   for (const key of Object.keys(renders)) delete renders[key];
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('Flowinger Engine', () => {
@@ -724,5 +726,87 @@ describe('Flowinger handles', () => {
       );
       expect(edgeD(container)).toMatch(/^M 130\.00 50\.00 C/);
     });
+  });
+});
+
+describe('Flowinger default styling', () => {
+  const nodes: Node[] = [{ id: 'plain', position: { x: 0, y: 0 }, data: { label: 'Hello' } }];
+
+  it('draws the default node from CSS variables with fallbacks, and no utility classes', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} />);
+    const view = must<HTMLElement>(container, '[data-id="plain"] > div');
+    const style = view.getAttribute('style') ?? '';
+    expect(style).toContain('var(--flowinger-surface, #1e293b)');
+    expect(style).toContain('var(--flowinger-border, #334155)');
+    expect(view.className).toBe(''); // nothing for a stylesheet to have to supply
+    expect(screen.getByText('plain')).toBeInTheDocument();
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+  });
+
+  it('draws Controls with inline styles only, at the 24px WCAG minimum target', () => {
+    render(
+      <FlowingerProvider>
+        <Controls />
+      </FlowingerProvider>,
+    );
+    const zoomIn = screen.getByRole('button', { name: 'Zoom in' });
+    expect(zoomIn.className).toBe('');
+    expect(zoomIn.style.minWidth).toBe('24px');
+    expect(zoomIn.style.height).toBe('24px');
+    const group = must(document.body, '.react-flow__controls');
+    expect(group.className).toBe('flowinger-controls react-flow__controls');
+    expect(group.getAttribute('style')).toContain('var(--flowinger-surface, #1e293b)');
+  });
+
+  it('lets a caller add a class and override the container style', () => {
+    render(
+      <FlowingerProvider>
+        <Controls className="mine" style={{ position: 'absolute' }} />
+      </FlowingerProvider>,
+    );
+    const group = must<HTMLElement>(document.body, '.react-flow__controls');
+    expect(group.classList.contains('mine')).toBe(true);
+    expect(group.style.position).toBe('absolute');
+  });
+
+  it('wires the buttons to zoom and fit', () => {
+    const nodes2: Node[] = [
+      { id: 'a', position: { x: 0, y: 0 }, data: {}, width: 100, height: 50 },
+      { id: 'b', position: { x: 300, y: 150 }, data: {}, width: 100, height: 50 },
+    ];
+    const { container } = render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes2} />
+        <Controls />
+      </FlowingerProvider>,
+    );
+    sized(must(container, '.flowinger'), 800, 600);
+
+    // The buttons animate (200–300ms), so let each move land before reading it.
+    vi.useFakeTimers();
+    const settle = () => act(() => { vi.advanceTimersByTime(600); });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fit view' }));
+    settle();
+    // Bounds are 400 × 200 in an 800 × 600 pane: (800 − 80) / 400 = 1.8.
+    expect(viewportOf(container).zoom).toBeCloseTo(1.8);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+    settle();
+    expect(viewportOf(container).zoom).toBeCloseTo(1.8 / 1.25);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    settle();
+    expect(viewportOf(container).zoom).toBeCloseTo(1.8);
+  });
+
+  it('hides the groups it is told to', () => {
+    render(
+      <FlowingerProvider>
+        <Controls showFit={false} />
+      </FlowingerProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Fit view' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Zoom out' })).toBeInTheDocument();
   });
 });

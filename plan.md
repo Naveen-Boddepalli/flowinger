@@ -38,16 +38,17 @@ browser.
 - **`nodes` is never mutated.** A dragged position is stored with the prop position it started from; a
   fresh layout from the parent (different prop position) wins, a re-render with the same positions
   keeps the drag.
+- **The default node view and `<Controls>` are styled inline from `--flowinger-*` CSS variables**
+  (`--flowinger-surface`, `--flowinger-surface-raised`, `--flowinger-border`, `--flowinger-text`,
+  `--flowinger-text-dim`, `--flowinger-radius`), each with a fallback — so they need no stylesheet and
+  no utility framework, and theme from any ancestor. There is no `:hover` style (inline styles cannot
+  express it) and no `outline` rule, so the browser's own focus ring stays.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
 
 ### Not built
 
-- Defaults that do not depend on Tailwind. The default node view and `<Controls>` use Tailwind slate
-  classes (the demo loads Tailwind from a CDN); anyone without Tailwind sees them unstyled. A consumer
-  with its own design system supplies its own node components and toolbar, but the defaults should not
-  need a utility framework — CSS variables or plain inline styles.
 - Two-finger pinch on touch (single-pointer pan works; a trackpad pinch works).
 - Keyboard pan/zoom on the canvas — a toolbar of `<Controls>` buttons is the accessible path today.
 - Selection and connecting edges. `nodesConnectable` / `elementsSelectable` are accepted for API
