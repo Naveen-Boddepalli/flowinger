@@ -52,6 +52,9 @@ export interface Edge {
   data?: Record<string, unknown>;
 }
 
+/** The region of graph space the view may show: `[[minX, minY], [maxX, maxY]]`. */
+export type TranslateExtent = [[number, number], [number, number]];
+
 export interface Viewport {
   x: number;
   y: number;
@@ -116,6 +119,11 @@ export interface FlowingerProps {
   zoomOnScroll?: boolean;
   /** Zoom with a two-finger pinch on touch. Default true. */
   zoomOnPinch?: boolean;
+  /**
+   * Keep the view inside this region of graph space, however it is panned or
+   * zoomed. An extent smaller than the pane is centred in it. Unset: unbounded.
+   */
+  translateExtent?: TranslateExtent;
   /**
    * Make the canvas a tab stop and drive it from the keyboard while it has
    * focus: arrow keys pan (Shift for larger steps), `+` / `-` zoom, `0` fits

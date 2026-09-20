@@ -353,3 +353,89 @@ describe('flowinger store — handle registry', () => {
     expect(store.findHandle('n', 'p', 'source')?.anchor).toBeNull();
   });
 });
+
+describe('flowinger store — translateExtent', () => {
+  // A 1000 × 800 world in an 800 × 600 pane.
+  const world = [[0, 0], [1000, 800]] as [[number, number], [number, number]];
+  const withExtent = (extent: [[number, number], [number, number]] | null, w = 800, h = 600) => {
+    const m = mounted(w, h);
+    m.store.setBounds(0.05, 4, extent);
+    return m.store;
+  };
+
+  it('stops the view at the extent edges', () => {
+    const store = withExtent(world);
+    const to = (x: number, y: number, zoom = 1) => {
+      store.instance.setViewport({ x, y, zoom });
+      return store.getViewport();
+    };
+    // x may be at most 0 (left edge on the extent's left) and at least 800 − 1000.
+    expect(to(100, 0)).toEqual({ x: 0, y: 0, zoom: 1 });
+    expect(to(-500, 0).x).toBe(-200);
+    // y: at most 0, at least 600 − 800.
+    expect(to(0, 100).y).toBe(0);
+    expect(to(0, -500).y).toBe(-200);
+    // Anywhere inside is left exactly alone.
+    expect(to(-120, -75)).toEqual({ x: -120, y: -75, zoom: 1 });
+  });
+
+  it('scales the limits with the zoom', () => {
+    const store = withExtent(world);
+    // At 2× the world is 2000 wide: x runs from 0 down to 800 − 2000.
+    store.instance.setViewport({ x: 50, y: 0, zoom: 2 });
+    expect(store.getViewport().x).toBe(0);
+    store.instance.setViewport({ x: -5000, y: 0, zoom: 2 });
+    expect(store.getViewport().x).toBe(-1200);
+  });
+
+  it('centres an extent smaller than the pane, instead of pinning it to a corner', () => {
+    const store = withExtent([[0, 0], [400, 300]]);
+    store.instance.setViewport({ x: -900, y: 900, zoom: 1 });
+    // Free space is 800 − 400 and 600 − 300; half of each on either side.
+    expect(store.getViewport()).toEqual({ x: 200, y: 150, zoom: 1 });
+  });
+
+  it('holds when zooming out would show past the extent', () => {
+    const store = withExtent(world);
+    store.instance.setViewport({ x: 0, y: 0, zoom: 1 });
+    store.zoomAt(0.5, 0, 0); // zoom out to 0.5: the world is now only 500 × 400
+    const vp = store.getViewport();
+    expect(vp.zoom).toBeCloseTo(0.5);
+    // Smaller than the pane, so centred: (800 − 500) / 2 and (600 − 400) / 2.
+    expect(vp.x).toBeCloseTo(150);
+    expect(vp.y).toBeCloseTo(100);
+  });
+
+  it('constrains the target of an animated move too', () => {
+    vi.useFakeTimers();
+    const store = withExtent(world);
+    store.instance.setViewport({ x: 900, y: 0, zoom: 1 }, { duration: 200 });
+    vi.advanceTimersByTime(600);
+    expect(store.getViewport().x).toBe(0);
+  });
+
+  it('is unbounded with no extent, and with a pane that has no size yet', () => {
+    const free = withExtent(null);
+    free.instance.setViewport({ x: 99999, y: -99999, zoom: 1 });
+    expect(free.getViewport()).toEqual({ x: 99999, y: -99999, zoom: 1 });
+
+    const unsized = withExtent(world, 0, 0);
+    unsized.instance.setViewport({ x: 500, y: 500, zoom: 1 });
+    expect(unsized.getViewport().x).toBe(500);
+  });
+
+  it('pulls the current view back in when a tighter extent arrives', () => {
+    const store = withExtent(null);
+    store.instance.setViewport({ x: 600, y: 0, zoom: 1 });
+    store.setBounds(0.05, 4, world);
+    expect(store.getViewport().x).toBe(0);
+  });
+
+  it('does not treat an equal extent, passed as a fresh array, as a change', () => {
+    const store = withExtent(world);
+    store.instance.setViewport({ x: -50, y: -50, zoom: 1 });
+    const at = store.getViewport();
+    store.setBounds(0.05, 4, [[0, 0], [1000, 800]]); // same values, new arrays
+    expect(store.getViewport()).toBe(at); // untouched: no needless re-commit
+  });
+});

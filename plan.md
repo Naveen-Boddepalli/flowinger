@@ -49,6 +49,10 @@ browser.
   `+`/`-` zoom, `0` fits. It acts only when the canvas itself has focus, so a key pressed inside a node
   is the node's, and it ignores Ctrl/⌘/Alt chords so browser zoom still works. Two-finger pinch is always
   on (`zoomOnPinch`), since it changes nothing else.
+- **Pan limits are `translateExtent`**, with d3-zoom's constraint rule (§4.3): the visible region stays
+  inside `[[minX, minY], [maxX, maxY]]` however it is panned, zoomed, keyed or animated, and an extent
+  smaller than the pane is centred rather than pinned to a corner. It needs the pane's size, so it is a
+  no-op until the canvas has been laid out; it is not re-applied on resize.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
@@ -57,7 +61,6 @@ browser.
 
 - Selection and connecting edges. `nodesConnectable` / `elementsSelectable` are accepted for API
   compatibility and ignored.
-- Pan limits (§4.3's "pan limits"): `fitView` and the zoom bounds are all there is.
 - Edge labels and arrowheads; a minimap.
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.
 - Install/publish setup: `dist/` is gitignored and there is no `prepare` script, so the package cannot

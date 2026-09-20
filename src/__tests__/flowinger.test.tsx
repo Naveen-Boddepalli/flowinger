@@ -983,3 +983,50 @@ describe('Flowinger keyboard navigation', () => {
     expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 });
+
+describe('Flowinger translateExtent', () => {
+  const world: [[number, number], [number, number]] = [[0, 0], [1000, 800]];
+
+  it('keeps a mouse pan inside the extent, however far the pointer goes', () => {
+    const { container } = render(<FlowingerCanvas nodes={[]} translateExtent={world} />);
+    const pane = must(container, '.flowinger');
+    sized(pane, 800, 600);
+
+    fireEvent.pointerDown(pane, pointer({ clientX: 400, clientY: 300 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 900, clientY: 900 })); // wants +500, +600
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+    fireEvent.pointerMove(pane, pointer({ clientX: -900, clientY: -900 })); // wants −1300, −1200
+    expect(viewportOf(container)).toEqual({ x: -200, y: -200, zoom: 1 });
+  });
+
+  it('keeps keyboard panning and wheel zoom inside it too', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={[]} translateExtent={world} keyboardNavigation />,
+    );
+    const pane = must(container, '.flowinger');
+    sized(pane, 800, 600);
+
+    fireEvent.keyDown(pane, { key: 'ArrowLeft' }); // would move x to +50
+    expect(viewportOf(container).x).toBe(0);
+
+    fireEvent.wheel(pane, { deltaY: 10000, clientX: 0, clientY: 0 }); // zoom out hard
+    const vp = viewportOf(container);
+    // Zoomed out far enough that the world is smaller than the pane: centred.
+    expect(vp.x).toBeCloseTo((800 - 1000 * vp.zoom) / 2);
+    expect(vp.y).toBeCloseTo((600 - 800 * vp.zoom) / 2);
+  });
+
+  it('applies a changed extent to a view already outside it', () => {
+    const { container, rerender } = render(<FlowingerCanvas nodes={[]} />);
+    sized(must(container, '.flowinger'), 800, 600);
+    // Pan it well outside where the extent will allow.
+    const pane = must(container, '.flowinger');
+    fireEvent.pointerDown(pane, pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 300, clientY: 0 }));
+    fireEvent.pointerUp(pane, pointer({ clientX: 300, clientY: 0 }));
+    expect(viewportOf(container).x).toBe(300);
+
+    rerender(<FlowingerCanvas nodes={[]} translateExtent={world} />);
+    expect(viewportOf(container).x).toBe(0);
+  });
+});

@@ -40,5 +40,6 @@ export type {
   HandleType,
   XYPosition,
   BackgroundProps,
+  TranslateExtent,
 } from './types.ts';
 export type { FlowingerState } from './store.ts';

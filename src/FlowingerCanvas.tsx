@@ -73,6 +73,7 @@ function InnerCanvas({
   panOnDrag = true,
   zoomOnScroll = true,
   zoomOnPinch = true,
+  translateExtent,
   keyboardNavigation = false,
   ariaLabel = 'Diagram',
   className = '',
@@ -104,8 +105,8 @@ function InnerCanvas({
   }, [store]);
 
   useLayoutEffect(() => {
-    store.setBounds(minZoom, maxZoom);
-  }, [store, minZoom, maxZoom]);
+    store.setBounds(minZoom, maxZoom, translateExtent ?? null);
+  }, [store, minZoom, maxZoom, translateExtent]);
 
   useLayoutEffect(() => {
     store.setNodes(nodes);

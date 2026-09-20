@@ -4,6 +4,7 @@ import type {
   Node,
   Position,
   SetViewportOptions,
+  TranslateExtent,
   Viewport,
   XYPosition,
 } from './types.ts';
@@ -69,6 +70,16 @@ const prefersReducedMotion = (): boolean =>
 
 const samePoint = (a: XYPosition, b: XYPosition): boolean => a.x === b.x && a.y === b.y;
 
+/** By value: a caller passing a fresh array literal each render must not look like a change. */
+const sameExtent = (a: TranslateExtent | null, b: TranslateExtent | null): boolean =>
+  a === b ||
+  (a !== null &&
+    b !== null &&
+    a[0][0] === b[0][0] &&
+    a[0][1] === b[0][1] &&
+    a[1][0] === b[1][0] &&
+    a[1][1] === b[1][1]);
+
 const sameAnchor = (a: XYPosition | null, b: XYPosition | null): boolean =>
   a === null || b === null ? a === b : samePoint(a, b);
 
@@ -117,6 +128,7 @@ export function createFlowingerStore(
   /** The viewport the last `setViewport` asked for — equal to `viewport` once a tween lands. */
   let target = initialViewport;
   let { minZoom, maxZoom } = initialBounds;
+  let extent: TranslateExtent | null = null;
 
   let viewportEl: HTMLElement | null = null;
   let containerEl: HTMLElement | null = null;
@@ -154,6 +166,29 @@ export function createFlowingerStore(
 
   const clampZoom = (zoom: number): number => Math.max(minZoom, Math.min(maxZoom, zoom));
 
+  /**
+   * Nudges a viewport so the visible region stays inside `extent`.
+   *
+   * d3-zoom's rule, per axis: measure how far each visible edge overshoots its
+   * limit; if both cannot be satisfied (the extent is smaller than the pane)
+   * centre it, else undo whichever overshoots. Needs the pane's size, so it
+   * does nothing before the canvas has attached or while it measures zero.
+   */
+  const constrain = (vp: Viewport): Viewport => {
+    if (!extent || !containerEl) return vp;
+    const width = containerEl.clientWidth;
+    const height = containerEl.clientHeight;
+    if (width === 0 || height === 0) return vp;
+    const [[minX, minY], [maxX, maxY]] = extent;
+    const along = (offset: number, size: number, lo: number, hi: number): number => {
+      const overLo = -offset / vp.zoom - lo;
+      const overHi = (size - offset) / vp.zoom - hi;
+      const shift = overHi > overLo ? (overLo + overHi) / 2 : Math.min(0, overLo) || Math.max(0, overHi);
+      return offset + shift * vp.zoom;
+    };
+    return { x: along(vp.x, width, minX, maxX), y: along(vp.y, height, minY, maxY), zoom: vp.zoom };
+  };
+
   // --- viewport -------------------------------------------------------------
 
   const commitViewport = (next: Viewport) => {
@@ -182,7 +217,7 @@ export function createFlowingerStore(
    * part-way through.
    */
   const setViewport = (requested: Viewport, options?: SetViewportOptions) => {
-    const to: Viewport = { ...requested, zoom: clampZoom(requested.zoom) };
+    const to = constrain({ ...requested, zoom: clampZoom(requested.zoom) });
     const duration = options?.duration ?? 0;
     target = to;
     cancelTween();
@@ -417,9 +452,13 @@ export function createFlowingerStore(
     detach,
     zoomAt,
     fitView,
-    setBounds: (min: number, max: number) => {
+    setBounds: (min: number, max: number, nextExtent: TranslateExtent | null = null) => {
       minZoom = min;
       maxZoom = max;
+      const changed = !sameExtent(extent, nextExtent);
+      extent = nextExtent;
+      // A tighter extent can leave the view outside it: bring it back in.
+      if (changed && extent) instance.setViewport(viewport);
     },
     setNodes,
     setCallbacks: (next: NodeCallbacks) => {
