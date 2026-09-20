@@ -1,7 +1,6 @@
 import {
   memo,
   useCallback,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -10,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore } from './context.ts';
+import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
 import type { Node, NodeProps, XYPosition } from './types.ts';
@@ -46,9 +46,9 @@ export const NodeWrapper = memo(function NodeWrapper({ node, View, draggable }: 
     (listener: () => void) => store.subscribeNode(node.id, listener),
     [store, node.id],
   );
-  const position = useSyncExternalStore(subscribe, () =>
-    store.resolvePosition(node.id, node.position),
-  );
+  const readPosition = () => store.resolvePosition(node.id, node.position);
+  // No drag has happened on the server; the layout's own position is it.
+  const position = useSyncExternalStore(subscribe, readPosition, readPosition);
 
   // What a `<Handle>` inside this node registers itself with.
   const nodeContext = useMemo<NodeContextValue>(
@@ -59,7 +59,7 @@ export const NodeWrapper = memo(function NodeWrapper({ node, View, draggable }: 
   // The edge layer needs the node's real size, and where its handles sit. The
   // handles have registered by now — children's layout effects run first.
   // offset* is layout size, so the viewport's scale does not leak into it.
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const unregister = store.registerNodeElement(node.id, el);

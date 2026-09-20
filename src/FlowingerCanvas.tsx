@@ -1,7 +1,6 @@
 import {
   useContext,
   useEffect,
-  useLayoutEffect,
   useRef,
   type CSSProperties,
   type ComponentType,
@@ -10,8 +9,10 @@ import {
 } from 'react';
 import { FlowingerContext, useFlowingerStore } from './context.ts';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
+import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
+import { viewportTransform } from './store.ts';
 import {
   DRAG_THRESHOLD,
   capturePointer,
@@ -94,7 +95,7 @@ function InnerCanvas({
   // Layout effects, not passive ones: a parent's passive effect (one that
   // frames the diagram, say) runs after these, and must find the canvas
   // attached, the zoom limits set and the nodes registered.
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const container = containerRef.current;
     const viewport = viewportRef.current;
     if (!container || !viewport) return;
@@ -104,15 +105,15 @@ function InnerCanvas({
     };
   }, [store]);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     store.setBounds(minZoom, maxZoom, translateExtent ?? null);
   }, [store, minZoom, maxZoom, translateExtent]);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     store.setNodes(nodes);
   }, [store, nodes]);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     store.setCallbacks({ onNodeDrag, onNodeDragStop });
   }, [store, onNodeDrag, onNodeDragStop]);
 
@@ -299,6 +300,10 @@ function InnerCanvas({
           height: '100%',
           transformOrigin: '0 0',
           pointerEvents: 'none',
+          // In the markup from the first paint, so server-rendered output is
+          // already framed. After that the store writes it straight to the
+          // DOM; this re-reads the same value, so a re-render agrees with it.
+          transform: viewportTransform(store.getViewport()),
         }}
       >
         <FlowingerEdges edges={edges} nodes={nodes} />

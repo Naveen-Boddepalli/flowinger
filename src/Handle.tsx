@@ -1,5 +1,6 @@
-import { type CSSProperties, memo, useContext, useLayoutEffect, useRef } from 'react';
+import { type CSSProperties, memo, useContext, useRef } from 'react';
 import { NodeContext } from './nodeContext.ts';
+import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { type HandleProps, Position } from './types.ts';
 
 const POSITION_STYLES: Record<Position, CSSProperties> = {
@@ -43,7 +44,7 @@ export const Handle = memo(function Handle({
   const node = useContext(NodeContext);
   const ref = useRef<HTMLDivElement | null>(null);
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const el = ref.current;
     if (!node || !el) return;
     return node.registerHandle({ id: id ?? null, type, position, el });

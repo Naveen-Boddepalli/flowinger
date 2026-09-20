@@ -29,7 +29,9 @@ export const useReactFlow = useFlowinger;
 /** The current viewport. Re-renders its caller on every change — use it sparingly. */
 export function useViewport(): Viewport {
   const store = useFlowingerStore();
-  return useSyncExternalStore(store.subscribeViewport, store.getViewport);
+  // The server has no pan or zoom yet, so it renders the same viewport the
+  // client starts from — the one the store was created with.
+  return useSyncExternalStore(store.subscribeViewport, store.getViewport, store.getViewport);
 }
 
 const NOT_MOUNTED: FlowingerState = { panZoom: null, isReady: false };
@@ -44,7 +46,11 @@ const noSubscription = () => () => {};
  */
 export function useStore<T>(selector: (state: FlowingerState) => T): T {
   const store = useContext(FlowingerContext);
-  return useSyncExternalStore(store ? store.subscribeMount : noSubscription, () =>
-    selector(store ? store.getState() : NOT_MOUNTED),
+  const read = () => selector(store ? store.getState() : NOT_MOUNTED);
+  // Nothing is mounted on the server, or while hydrating, so both agree.
+  return useSyncExternalStore(
+    store ? store.subscribeMount : noSubscription,
+    read,
+    () => selector(NOT_MOUNTED),
   );
 }

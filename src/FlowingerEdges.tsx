@@ -218,7 +218,7 @@ export const FlowingerEdges = memo(function FlowingerEdges({ edges, nodes }: Flo
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
   // makes this component re-render when either moves.
-  useSyncExternalStore(store.subscribeGeometry, store.getGeometryVersion);
+  useSyncExternalStore(store.subscribeGeometry, store.getGeometryVersion, store.getGeometryVersion);
 
   const byId = new Map(nodes.map((n) => [n.id, n]));
 

@@ -59,6 +59,12 @@ browser.
   from the edge's own stroke unless told otherwise. `label` is SVG text at the path's midpoint with a
   surface-coloured halo (`paint-order: stroke`) for legibility — no text measuring, hence no background
   box, and string labels only. Edges without an explicit stroke default from `--flowinger-edge`.
+- **Server rendering works (React 18 and 19).** Every `useSyncExternalStore` has a server snapshot (the
+  hook that reads state outside React throws without one), layout effects fall back to `useEffect` where
+  there is no DOM (React 18 warns otherwise), and the initial viewport is written into the markup so the
+  first paint is already framed. Verified against the *installed tarball*: a server render with no DOM,
+  then a client render and a hydration of that server HTML, under React 19.3 and 18.3 — no warnings.
+  jsdom tests alone could not have found this; they only ever render on a client.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
