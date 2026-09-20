@@ -2,14 +2,34 @@
   "name": "flowinger",
   "version": "0.1.0",
   "description": "Bespoke, lightweight, and dependency-free React node graph renderer",
+  "keywords": [
+    "react",
+    "node-graph",
+    "flow",
+    "diagram",
+    "graph",
+    "svg",
+    "react-flow"
+  ],
+  "homepage": "https://github.com/Naveen-Boddepalli/flowinger#readme",
+  "bugs": {
+    "url": "https://github.com/Naveen-Boddepalli/flowinger/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Naveen-Boddepalli/flowinger.git"
+  },
+  "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -19,7 +39,8 @@
     "dev": "vite",
     "build": "vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
@@ -38,6 +59,5 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"
-  },
-  "license": "MIT"
+  }
 }
