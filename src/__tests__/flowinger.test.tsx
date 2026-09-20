@@ -594,3 +594,135 @@ describe('Flowinger Engine', () => {
     });
   });
 });
+
+describe('Flowinger handles', () => {
+  /** A node with two handles whose ids mean nothing to the legacy alias table. */
+  function PortNode({ data }: NodeProps) {
+    const withPorts = (data as { ports?: boolean }).ports !== false;
+    return (
+      <div>
+        {withPorts && (
+          <>
+            <Handle id="west" type="source" position={Position.Left} />
+            <Handle id="east" type="target" position={Position.Right} />
+          </>
+        )}
+      </div>
+    );
+  }
+  const types = { port: PortNode };
+  const nodesWith = (ports = true): Node[] => [
+    { id: 'a', type: 'port', position: { x: 0, y: 0 }, width: 100, height: 40, data: { ports } },
+    { id: 'b', type: 'port', position: { x: 300, y: 200 }, width: 100, height: 40, data: { ports } },
+  ];
+  const edgeD = (container: ParentNode) =>
+    must(container, '.react-flow__edge-path').getAttribute('d') ?? '';
+
+  it('attaches to the side a registered handle declares, whatever its id is called', () => {
+    const edges: Edge[] = [
+      { id: 'e', source: 'a', target: 'b', sourceHandle: 'west', targetHandle: 'east' },
+    ];
+    const { container } = render(
+      <FlowingerCanvas nodes={nodesWith()} edges={edges} nodeTypes={types} />,
+    );
+    // a's left-middle is (0, 20); b's right-middle is (400, 220). With the
+    // alias table alone, "west" was unknown and this ran bottom-to-top instead.
+    const d = edgeD(container);
+    expect(d).toMatch(/^M 0\.00 20\.00 C/);
+    expect(d).toMatch(/400\.00 220\.00$/);
+  });
+
+  it('uses the first handle of the right type when the edge names none', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodesWith()}
+        edges={[{ id: 'e', source: 'a', target: 'b' }]}
+        nodeTypes={types}
+      />,
+    );
+    const d = edgeD(container);
+    expect(d).toMatch(/^M 0\.00 20\.00 C/);
+    expect(d).toMatch(/400\.00 220\.00$/);
+  });
+
+  it('does not match a handle of the wrong type, and falls back to guessing', () => {
+    // "east" is a target handle; asking for it as a source finds nothing.
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodesWith()}
+        edges={[{ id: 'e', source: 'a', target: 'b', sourceHandle: 'east', targetHandle: 'east' }]}
+        nodeTypes={types}
+      />,
+    );
+    // Source falls back to the direction default (bottom-middle: (50, 40)).
+    expect(edgeD(container)).toMatch(/^M 50\.00 40\.00 C/);
+    // …while the target, a real target handle, still resolves.
+    expect(edgeD(container)).toMatch(/400\.00 220\.00$/);
+  });
+
+  it('forgets a handle when it unmounts', () => {
+    const edge: Edge[] = [{ id: 'e', source: 'a', target: 'b', sourceHandle: 'west', targetHandle: 'east' }];
+    const { container, rerender } = render(
+      <FlowingerCanvas nodes={nodesWith(true)} edges={edge} nodeTypes={types} />,
+    );
+    expect(edgeD(container)).toMatch(/^M 0\.00 20\.00 C/);
+
+    rerender(<FlowingerCanvas nodes={nodesWith(false)} edges={edge} nodeTypes={types} />);
+    // No handles left: "west"/"east" are unknown again, so it guesses (bottom → top).
+    expect(edgeD(container)).toMatch(/^M 50\.00 40\.00 C/);
+    expect(edgeD(container)).toMatch(/350\.00 200\.00$/);
+  });
+
+  describe('measured anchors', () => {
+    const rect = (left: number, top: number, width: number, height: number) => ({
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+      x: left,
+      y: top,
+      toJSON: () => ({}),
+    });
+
+    /** A top handle pushed 30% along the node, drawn at `scale` × its layout size. */
+    function mockLayout(scale: number) {
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40);
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        if (this.dataset.id) return rect(500, 300, 100 * scale, 40 * scale);
+        if (this.dataset.handleid) return rect(500 + 30 * scale - 3, 300 - 3, 6, 6);
+        return rect(0, 0, 0, 0);
+      });
+    }
+
+    function OffsetNode() {
+      return <Handle id="p" type="source" position={Position.Top} style={{ left: '30%' }} />;
+    }
+    const nodes: Node[] = [
+      { id: 'a', type: 'offset', position: { x: 100, y: 50 }, data: {} },
+      { id: 'b', type: 'offset', position: { x: 400, y: 300 }, data: {} },
+    ];
+    const edges: Edge[] = [{ id: 'e', source: 'a', target: 'b', sourceHandle: 'p' }];
+
+    it('attaches to where a handle is actually drawn, not its side midpoint', () => {
+      mockLayout(1);
+      const { container } = render(
+        <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={{ offset: OffsetNode }} />,
+      );
+      // 30px along a's top edge: node (100, 50) + anchor (30, 0).
+      expect(edgeD(container)).toMatch(/^M 130\.00 50\.00 C/);
+    });
+
+    it('takes the viewport zoom out of what it measures', () => {
+      mockLayout(2); // rects are twice the layout size, as at zoom 2
+      const { container } = render(
+        <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={{ offset: OffsetNode }} />,
+      );
+      expect(edgeD(container)).toMatch(/^M 130\.00 50\.00 C/);
+    });
+  });
+});

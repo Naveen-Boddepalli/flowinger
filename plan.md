@@ -17,7 +17,7 @@ browser.
 | 1. Core engine & data model | Done. |
 | 2. Pan & zoom | Done. Left *or* middle drag pans (no spacebar-drag); wheel zooms about the cursor; ctrl+wheel (trackpad pinch) zooms faster. |
 | 3. Node dragging | Done. Off by default (`nodesDraggable`); `node.draggable` overrides it either way. |
-| 4. Edges & ports | **Partial.** Edges anchor to each node's *measured* size. But `Handle` is decorative: the edge layer maps a handle *id* through a fixed alias table (`in`/`out`/`prev`/`next`/`top`/`bottom`/`left`/`right`) rather than reading the position a `<Handle>` declares. A handle with any other id silently falls back to the default side. |
+| 4. Edges & ports | Done. Each `<Handle>` registers its side, type and element with the store; the node wrapper measures where each is actually drawn, so a handle moved with `style` still gets its edge. An edge names a handle by `id` (and its end fixes the type), or names none and gets the first of that type — as React Flow does. Resolution order: registered handle at its measured anchor → same handle at its side's midpoint (unmeasurable, e.g. jsdom) → the legacy id table (`in`/`out`/`prev`/`next`/`top`/`bottom`/`left`/`right`) → the edge's direction. |
 | 5. Integration | Happens in QueryLens, as a dependency swap — see §5. Not started in this repo. |
 
 ### Where the build deliberately departs from §2
@@ -44,7 +44,6 @@ browser.
 
 ### Not built
 
-- A handle registry (Phase 4 above).
 - Defaults that do not depend on Tailwind. The default node view and `<Controls>` use Tailwind slate
   classes (the demo loads Tailwind from a CDN); anyone without Tailwind sees them unstyled. A consumer
   with its own design system supplies its own node components and toolbar, but the defaults should not
@@ -178,7 +177,8 @@ depends on QueryLens; this section records what QueryLens depends on, so the swa
   `.react-flow__edge` (a `<g>` carrying the edge's `className`), and `.react-flow__edge-path` inside it.
   QueryLens styles `.react-flow__edge.is-active .react-flow__edge-path` (an animated dash). An edge's
   inline `style` on the path outranks that CSS — the same as React Flow — so stroke colour stays inline.
-- Edges resolve handle ids through the alias table in Phase 4 above.
+- Edges resolve handles through the registry (Phase 4 above). QueryLens's ids (`in`, `out`, `prev`,
+  `next`) are registered by its own `<Handle>`s, so the legacy id table is no longer what it relies on.
 
 ### On the QueryLens side, when swapping
 

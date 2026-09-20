@@ -1,6 +1,8 @@
 import type {
   FlowingerInstance,
+  HandleType,
   Node,
+  Position,
   SetViewportOptions,
   Viewport,
   XYPosition,
@@ -11,6 +13,20 @@ type Listener = () => void;
 export interface Size {
   width: number;
   height: number;
+}
+
+/** What a `<Handle>` tells the store about itself. */
+export interface HandleRegistration {
+  id: string | null;
+  type: HandleType;
+  position: Position;
+  el: HTMLElement;
+}
+
+/** A registered handle, plus where it actually sits — null until measured. */
+export interface HandleRecord extends HandleRegistration {
+  /** Centre of the handle relative to its node's top-left, in graph units. */
+  anchor: XYPosition | null;
 }
 
 /** What `useStore` selects from — the subset of React Flow's store shape that migrating code reads. */
@@ -53,6 +69,31 @@ const prefersReducedMotion = (): boolean =>
 
 const samePoint = (a: XYPosition, b: XYPosition): boolean => a.x === b.x && a.y === b.y;
 
+const sameAnchor = (a: XYPosition | null, b: XYPosition | null): boolean =>
+  a === null || b === null ? a === b : samePoint(a, b);
+
+/**
+ * Where a handle's centre sits inside its node, in graph units.
+ *
+ * Read from rects rather than offsets so a handle nested under a positioned
+ * ancestor, or moved with a CSS transform, still reports where it is drawn.
+ * Rects carry the viewport's zoom; dividing by the node's rendered-to-layout
+ * width takes it back out. Null when either box has no size (jsdom,
+ * `display: none`) — the caller then falls back to the side's midpoint.
+ */
+function anchorOf(handle: HTMLElement, node: HTMLElement): XYPosition | null {
+  const nodeRect = node.getBoundingClientRect();
+  const layoutWidth = node.offsetWidth;
+  if (nodeRect.width === 0 || nodeRect.height === 0 || layoutWidth === 0) return null;
+  const rect = handle.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return null;
+  const scale = nodeRect.width / layoutWidth;
+  return {
+    x: (rect.left + rect.width / 2 - nodeRect.left) / scale,
+    y: (rect.top + rect.height / 2 - nodeRect.top) / scale,
+  };
+}
+
 /**
  * The engine's state, held outside React.
  *
@@ -86,6 +127,9 @@ export function createFlowingerStore(
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
   const sizes = new Map<string, Size>();
+  /** Registered handles by node, in registration (DOM) order. */
+  const handles = new Map<string, Set<HandleRecord>>();
+  const nodeEls = new Map<string, HTMLElement>();
   let geometryVersion = 0;
 
   const viewportListeners = new Set<Listener>();
@@ -222,6 +266,66 @@ export function createFlowingerStore(
     bumpGeometry();
   };
 
+  /** Lets handle measurement find the node a handle belongs to. Returns its cleanup. */
+  const registerNodeElement = (id: string, el: HTMLElement): (() => void) => {
+    nodeEls.set(id, el);
+    return () => {
+      if (nodeEls.get(id) === el) nodeEls.delete(id);
+    };
+  };
+
+  /** Re-reads where each of a node's handles sits. Bumps geometry only if one moved. */
+  const measureHandles = (nodeId: string) => {
+    const records = handles.get(nodeId);
+    const nodeEl = nodeEls.get(nodeId);
+    if (!records || !nodeEl) return;
+    let changed = false;
+    for (const record of records) {
+      const next = anchorOf(record.el, nodeEl);
+      if (!sameAnchor(record.anchor, next)) {
+        record.anchor = next;
+        changed = true;
+      }
+    }
+    if (changed) bumpGeometry();
+  };
+
+  const registerHandle = (nodeId: string, registration: HandleRegistration): (() => void) => {
+    const record: HandleRecord = { ...registration, anchor: null };
+    let records = handles.get(nodeId);
+    if (!records) {
+      records = new Set();
+      handles.set(nodeId, records);
+    }
+    records.add(record);
+    measureHandles(nodeId);
+    bumpGeometry();
+    return () => {
+      records.delete(record);
+      if (records.size === 0 && handles.get(nodeId) === records) handles.delete(nodeId);
+      bumpGeometry();
+    };
+  };
+
+  /**
+   * The handle an edge end refers to: a handle of `type` with that `id`, or —
+   * with no id — the first handle of that type, as React Flow does. Undefined
+   * when there is none, and the edge layer then falls back to guessing.
+   */
+  const findHandle = (
+    nodeId: string,
+    handleId: string | null | undefined,
+    type: HandleType,
+  ): HandleRecord | undefined => {
+    const records = handles.get(nodeId);
+    if (!records) return undefined;
+    for (const record of records) {
+      if (record.type !== type) continue;
+      if (handleId === null || handleId === undefined || record.id === handleId) return record;
+    }
+    return undefined;
+  };
+
   const setNodes = (next: readonly Node[]) => {
     nodes = next;
     const byId = new Map(next.map((n) => [n.id, n]));
@@ -331,6 +435,10 @@ export function createFlowingerStore(
     getNodeSize,
     setNodePosition,
     setSize,
+    registerNodeElement,
+    registerHandle,
+    measureHandles,
+    findHandle,
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),

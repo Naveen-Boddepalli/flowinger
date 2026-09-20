@@ -1,14 +1,19 @@
 import { memo, useSyncExternalStore, type CSSProperties } from 'react';
 import { useFlowingerStore } from './context.ts';
 import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
-import { type Edge, type Node, Position } from './types.ts';
-import type { Size } from './store.ts';
+import { type Edge, type HandleType, type Node, Position } from './types.ts';
+import type { FlowingerStore, Size } from './store.ts';
 
 export interface FlowingerEdgesProps {
   edges: Edge[];
   nodes: Node[];
 }
 
+/**
+ * The legacy fallback, for a handle id that no `<Handle>` registered under:
+ * a handful of conventional names map to a side. A registered handle wins over
+ * this outright, so an id is only ever a *name* once nodes declare handles.
+ */
 function resolveHandlePosition(handleId: string | null | undefined, fallback: Position): Position {
   if (!handleId) return fallback;
   switch (handleId.toLowerCase()) {
@@ -40,6 +45,35 @@ function handleCoordinates(at: { x: number; y: number }, pos: Position, size: Si
     case Position.Right:
       return { x: at.x + size.width, y: at.y + size.height / 2 };
   }
+}
+
+/**
+ * Where one end of an edge attaches, and which way it leaves.
+ *
+ * In order: the registered handle the edge names (or, naming none, the first of
+ * that type) at its measured anchor; the same handle at its side's midpoint if
+ * it could not be measured; the legacy id-to-side table; and finally the
+ * direction the edge runs.
+ */
+function endpoint(
+  store: FlowingerStore,
+  node: Node,
+  at: { x: number; y: number },
+  handleId: string | null | undefined,
+  type: HandleType,
+  fallback: Position,
+): { point: { x: number; y: number }; position: Position } {
+  const handle = store.findHandle(node.id, handleId, type);
+  if (handle) {
+    return {
+      position: handle.position,
+      point: handle.anchor
+        ? { x: at.x + handle.anchor.x, y: at.y + handle.anchor.y }
+        : handleCoordinates(at, handle.position, store.getNodeSize(node)),
+    };
+  }
+  const position = resolveHandlePosition(handleId, fallback);
+  return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
 }
 
 function pathFor(
@@ -113,25 +147,27 @@ export const FlowingerEdges = memo(function FlowingerEdges({ edges, nodes }: Flo
         const sourceAt = store.resolvePosition(source.id, source.position);
         const targetAt = store.resolvePosition(target.id, target.position);
 
-        // Without an explicit handle, leave the source's bottom for the
-        // target's top when the target sits below it, else run sideways.
+        // With nothing to go on, leave the source's bottom for the target's top
+        // when the target sits below it, else run sideways.
         const below = targetAt.y > sourceAt.y;
-        const sourcePos = resolveHandlePosition(
+        const from = endpoint(
+          store,
+          source,
+          sourceAt,
           edge.sourceHandle,
+          'source',
           below ? Position.Bottom : Position.Right,
         );
-        const targetPos = resolveHandlePosition(
+        const to = endpoint(
+          store,
+          target,
+          targetAt,
           edge.targetHandle,
+          'target',
           below ? Position.Top : Position.Left,
         );
 
-        const d = pathFor(
-          edge.type,
-          handleCoordinates(sourceAt, sourcePos, store.getNodeSize(source)),
-          sourcePos,
-          handleCoordinates(targetAt, targetPos, store.getNodeSize(target)),
-          targetPos,
-        );
+        const d = pathFor(edge.type, from.point, from.position, to.point, to.position);
 
         return (
           <EdgePath

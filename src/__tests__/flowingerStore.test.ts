@@ -282,3 +282,74 @@ describe('flowinger store — fitView', () => {
     expect(flat.store.getViewport()).toBe(at);
   });
 });
+
+describe('flowinger store — handle registry', () => {
+  const handleEl = () => document.createElement('div');
+  const reg = (id: string | null, type: 'source' | 'target', el = handleEl()) => ({
+    id,
+    type,
+    position: type === 'source' ? ('bottom' as const) : ('top' as const),
+    el,
+  });
+
+  it('finds a handle by id and type, or the first of a type when no id is given', () => {
+    const { store } = mounted();
+    store.registerHandle('n', reg('out', 'source'));
+    store.registerHandle('n', reg('alt', 'source'));
+    store.registerHandle('n', reg('in', 'target'));
+
+    expect(store.findHandle('n', 'alt', 'source')?.id).toBe('alt');
+    expect(store.findHandle('n', undefined, 'source')?.id).toBe('out'); // first registered
+    expect(store.findHandle('n', null, 'target')?.id).toBe('in');
+    // Right id, wrong type — and an id nobody registered — both find nothing.
+    expect(store.findHandle('n', 'in', 'source')).toBeUndefined();
+    expect(store.findHandle('n', 'nope', 'source')).toBeUndefined();
+    expect(store.findHandle('other-node', 'out', 'source')).toBeUndefined();
+  });
+
+  it('forgets a handle on unregister, and tells the edge layer both times', () => {
+    const { store } = mounted();
+    const v0 = store.getGeometryVersion();
+    const off = store.registerHandle('n', reg('out', 'source'));
+    expect(store.getGeometryVersion()).toBeGreaterThan(v0);
+
+    const v1 = store.getGeometryVersion();
+    off();
+    expect(store.findHandle('n', 'out', 'source')).toBeUndefined();
+    expect(store.getGeometryVersion()).toBeGreaterThan(v1);
+  });
+
+  it('measures an anchor relative to the node, and only bumps geometry when it moves', () => {
+    const { store } = mounted();
+    const nodeEl = document.createElement('div');
+    Object.defineProperty(nodeEl, 'offsetWidth', { value: 100 });
+    const rectOf = (l: number, t: number, w: number, h: number) =>
+      ({ left: l, top: t, width: w, height: h, right: l + w, bottom: t + h } as DOMRect);
+    vi.spyOn(nodeEl, 'getBoundingClientRect').mockReturnValue(rectOf(200, 100, 100, 40));
+
+    const el = handleEl();
+    const handleRect = vi.spyOn(el, 'getBoundingClientRect').mockReturnValue(rectOf(217, 97, 6, 6));
+    store.registerNodeElement('n', nodeEl);
+    store.registerHandle('n', reg('p', 'source', el));
+
+    // Centre (220, 100) minus the node's (200, 100).
+    expect(store.findHandle('n', 'p', 'source')?.anchor).toEqual({ x: 20, y: 0 });
+
+    const before = store.getGeometryVersion();
+    store.measureHandles('n'); // nothing moved
+    expect(store.getGeometryVersion()).toBe(before);
+
+    handleRect.mockReturnValue(rectOf(237, 97, 6, 6));
+    store.measureHandles('n');
+    expect(store.findHandle('n', 'p', 'source')?.anchor).toEqual({ x: 40, y: 0 });
+    expect(store.getGeometryVersion()).toBe(before + 1);
+  });
+
+  it('leaves the anchor null for a box with no size, so callers fall back to the side midpoint', () => {
+    const { store } = mounted();
+    const nodeEl = document.createElement('div'); // jsdom: every rect is zero
+    store.registerNodeElement('n', nodeEl);
+    store.registerHandle('n', reg('p', 'source'));
+    expect(store.findHandle('n', 'p', 'source')?.anchor).toBeNull();
+  });
+});
