@@ -7,7 +7,7 @@
 edges, selection, connecting, the minimap, `translateExtent`, and the render-loop regression),
 `flowingerStore.test.ts` (the pure store), `pointer.test.ts` (pinch maths), `ssr.test.tsx` (a server render
 in vitest's `node` environment, where there really is no `document`) and `hydration.test.tsx`.
-`pnpm typecheck`, `pnpm test` (178 tests) and `pnpm build` pass on React 19 **and** React 18, and the
+`pnpm typecheck`, `pnpm test` (188 tests) and `pnpm build` pass on React 19 **and** React 18, and the
 installed tarball renders, hydrates and type-checks (TypeScript 7, `skipLibCheck` off) on both.
 
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
@@ -257,6 +257,34 @@ depends on QueryLens; this section records what QueryLens depends on, so the swa
    budget currently sits at 422.2 / 424 kB, so it is the swap that buys back the headroom.
 4. Run QueryLens's full gate, *including e2e* — the framing, zoom-control and hidden-tab tests are the
    ones that pin this contract. They cannot run until Playwright's browser is installed.
+
+### Trial swap — what actually happened
+
+The checklist above was a prediction; it has since been run. QueryLens's repo has a `flowinger-trial`
+branch (a worktree, not merged) that swaps `@xyflow/react` for a git dependency pinned to a flowinger
+commit, and takes `FlowTree` across by changing its imports alone.
+
+- **Contract:** QueryLens's full e2e suite — the tests §5 names — passes **79 / 79** on both React Flow
+  and flowinger (Playwright pointed at the installed Chrome; nothing downloaded). Typecheck, lint and all
+  1170 unit tests are unchanged. On the parse tree and the B+Tree the viewport transform and every node
+  rectangle are *identical*.
+- **Weight:** the `flow` chunk 60.5 → 14.0 kB gzip; QueryLens's total 422.2 → 373.9 kB (budget 424).
+- **What the suite could not see, and a side-by-side did:** (1) `Background`'s `size` is a dot's
+  *diameter* in React Flow and was a radius here — QueryLens's dots would have been twice as large;
+  (2) React Flow ends an edge at the *outer* edge of a handle's dot, flowinger at its centre — about 3
+  units at each end; and `offsetWidth` rounds to whole pixels. All three are fixed (`1dccd68`,
+  `dc36570`); edge endpoints now agree to within 0.2 units.
+- **Behaviour that changes for QueryLens, and is arguably better:** React Flow sets `pointer-events: none`
+  on nodes that are neither draggable nor selectable, so `FlowTree`'s documented hover styling and
+  tooltips *never fired*; they do now. React Flow also leaves inert nodes focusable (five no-op tab
+  stops in the parse-tree pane) with a `role`, `aria-roledescription` and an assertive live region;
+  flowinger adds none unless a canvas opts in. The "React Flow" attribution badge disappears.
+- **A policy collision:** QueryLens's `pnpm-workspace.yaml` deliberately has `allowBuilds: []`, so that a
+  build script is always a reviewed diff. A git-hosted package has no `dist/`, so flowinger's `prepare`
+  script must run, which needs `allowBuilds: flowinger: true` there. That works (`blockExoticSubdeps`
+  is about *transitive* git dependencies and does not block a direct one), but it is a weaker posture
+  than QueryLens has chosen. **Publishing flowinger to a registry is the clean fix**: `dist/` ships
+  prebuilt, no script runs, and `minimumReleaseAge` applies as it does to everything else.
 
 ### Before publishing or announcing
 
