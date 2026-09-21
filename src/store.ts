@@ -643,67 +643,6 @@ export function createFlowingerStore(
     });
   };
 
-  /**
-   * Makes exactly these nodes and edges the selection. Controlled, that is a
-   * list of `select` changes for whoever owns the state; otherwise it is done
-   * here and the affected nodes are told.
-   */
-  const setSelection = (nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => {
-    const nodeChanges: NodeChange[] = [];
-    const flipped: string[] = [];
-    for (const n of nodes) {
-      const now = isSelected(n.id);
-      const next = nodeIds.has(n.id);
-      if (now === next) continue;
-      if (nodesControlled()) nodeChanges.push({ type: 'select', id: n.id, selected: next });
-      else {
-        if (next) selected.add(n.id);
-        else selected.delete(n.id);
-        flipped.push(n.id);
-      }
-    }
-    const edgeChanges: EdgeChange[] = [];
-    let edgesFlipped = false;
-    for (const e of edges) {
-      const now = isEdgeSelected(e.id);
-      const next = edgeIds.has(e.id);
-      if (now === next) continue;
-      if (edgesControlled()) edgeChanges.push({ type: 'select', id: e.id, selected: next });
-      else {
-        if (next) selectedEdges.add(e.id);
-        else selectedEdges.delete(e.id);
-        edgesFlipped = true;
-      }
-    }
-    for (const id of flipped) emit(nodeListeners.get(id) ?? []);
-    if (edgesFlipped) bumpGeometry();
-    emitNodeChanges(nodeChanges);
-    emitEdgeChanges(edgeChanges);
-    announceIfChanged();
-  };
-
-  /**
-   * Selects a node — replacing the selection, or with `additive` toggling it in
-   * or out. Selecting what is already the whole selection changes nothing, and
-   * says nothing.
-   */
-  const selectNode = (id: string, additive = false) => {
-    const nodeIds = new Set(additive ? selectedNodeIds() : []);
-    if (!additive || !nodeIds.delete(id)) nodeIds.add(id);
-    setSelection(nodeIds, new Set(additive ? selectedEdgeIds() : []));
-  };
-
-  /** Selects an edge, replacing the selection or — `additive` — toggling it in or out. */
-  const selectEdge = (id: string, additive = false) => {
-    const edgeIds = new Set(additive ? selectedEdgeIds() : []);
-    if (!additive || !edgeIds.delete(id)) edgeIds.add(id);
-    setSelection(new Set(additive ? selectedNodeIds() : []), edgeIds);
-  };
-
-  const clearSelection = () => {
-    setSelection(new Set(), new Set());
-  };
-
   /** Where a node is and how big, in graph units: the dragged position, the measured size. */
   const getNodeRect = (id: string): Rect | null => {
     const n = nodeById.get(id);
@@ -717,10 +656,6 @@ export function createFlowingerStore(
   });
 
   const hasSelection = (): boolean => selectedNodeIds().length > 0 || selectedEdgeIds().length > 0;
-
-  // --- selectable ---------------------------------------------------------------
-
-  const isSelectable = (n: Node): boolean => options.elementsSelectable && n.selectable !== false;
 
   // --- what the canvas hands over ------------------------------------------
 
@@ -1004,10 +939,15 @@ export function createFlowingerStore(
     emitEdgeChanges,
     setNodePosition,
     isSelected,
+    isEdgeSelected,
     selectedNodeIds,
-    isSelectable,
-    selectNode,
-    setSelection,
+    selectedEdgeIds,
+    ownSelection: { nodes: selected, edges: selectedEdges },
+    notifyNode: (id) => {
+      emit(nodeListeners.get(id) ?? []);
+    },
+    geometryChanged: bumpGeometry,
+    announceSelection: announceIfChanged,
     setConnection,
     setVisible,
     on: (event, fn) => {
@@ -1136,9 +1076,6 @@ export function createFlowingerStore(
     isSelected,
     isEdgeSelected,
     hasSelection,
-    selectNode,
-    selectEdge,
-    clearSelection,
     getNodeRect,
     getSelectedNodeCount: (): number => selectedNodeIds().length,
     subscribeSelection: subscribeTo(selectionChangeListeners),

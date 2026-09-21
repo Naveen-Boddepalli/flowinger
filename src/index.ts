@@ -10,6 +10,7 @@ export {
   dragFeature,
   editingFeature,
   reconnectFeature,
+  selectionFeature,
 } from './features/index.ts';
 export type {
   CanvasArgs,

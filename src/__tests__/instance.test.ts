@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { allFeatures } from '../features/index.ts';
+import { allFeatures, selectionFeature } from '../features/index.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 import {
   getNodesBounds,
@@ -176,7 +176,7 @@ describe('reading the graph', () => {
     store.setEdges([{ id: 'e', source: 'a', target: 'b' }]);
     store.setNodePosition(a, { x: 50, y: 60 });
     store.setSize('a', 120, 30);
-    store.selectNode('a');
+    store.api(selectionFeature).selectNode('a');
     const got = store.instance.getNode('a');
     expect(got).toMatchObject({ id: 'a', position: { x: 50, y: 60 }, selected: true, measured: { width: 120, height: 30 } });
     expect(store.instance.getNodes().map((n) => n.id)).toEqual(['a', 'b']);

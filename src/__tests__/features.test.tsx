@@ -15,7 +15,9 @@ import {
   dragFeature,
   editingFeature,
   reconnectFeature,
+  selectionFeature,
   useNodesState,
+  useOnSelectionChange,
   useReactFlow,
   type EngineContext,
   type Feature,
@@ -103,7 +105,8 @@ describe('resolving features', () => {
 
   it('brings in what the built-in features build on', () => {
     expect(named(resolveFeatures([reconnectFeature]))).toEqual(['autoPan', 'connect', 'reconnect']);
-    expect(named(resolveFeatures([dragFeature]))).toEqual(['autoPan', 'drag']);
+    expect(named(resolveFeatures([dragFeature]))).toEqual(['autoPan', 'selection', 'drag']);
+    expect(named(resolveFeatures([boxSelectFeature]))).toEqual(['selection', 'boxSelect']);
     expect(named(resolveFeatures(allFeatures))).toHaveLength(new Set(named(allFeatures)).size + 1); // + autoPan
   });
 });
@@ -276,24 +279,53 @@ describe('a core canvas with no features', () => {
     expect(handle.style.pointerEvents).toBe('none');
   });
 
-  it('selects on a click and says so — selection is not a feature', () => {
+  it('does not select on a click, or take a tab stop — but shows and reports the selection a controlled node carries', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     const onSelectionChange = vi.fn();
     const { container } = render(
-      <FlowingerCore nodes={pair()} elementsSelectable onSelectionChange={onSelectionChange} />,
+      <FlowingerCore
+        nodes={[box('a', 0, 0, { selected: true }), box('b', 200, 0)]}
+        onNodesChange={() => {}}
+        elementsSelectable
+        onSelectionChange={onSelectionChange}
+      />,
     );
-    fireEvent.click(node(container, 'a'));
     expect(node(container, 'a').classList.contains('selected')).toBe(true);
     expect(onSelectionChange).toHaveBeenCalledTimes(1);
     expect(onSelectionChange.mock.calls[0]?.[0].nodes.map((n: Node) => n.id)).toEqual(['a']);
+    fireEvent.click(node(container, 'b'));
+    expect(node(container, 'b').classList.contains('selected')).toBe(false);
+    expect(node(container, 'b').hasAttribute('tabindex')).toBe(false);
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves the delete key alone', () => {
+  it('tells useOnSelectionChange, too, when a controlled node’s selection changes from outside', () => {
+    const seen: string[][] = [];
+    function Listen() {
+      useOnSelectionChange({ onChange: ({ nodes }) => seen.push(nodes.map((n) => n.id)) });
+      return null;
+    }
+    const at = (selectedId: string) => (
+      <FlowingerProvider>
+        <Listen />
+        <FlowingerCore nodes={pair().map((n) => ({ ...n, selected: n.id === selectedId }))} onNodesChange={() => {}} />
+      </FlowingerProvider>
+    );
+    const { rerender } = render(at('a'));
+    rerender(at('b'));
+    expect(seen).toEqual([['b']]);
+  });
+
+  it('leaves the delete key alone, whatever is selected', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const changes: NodeChange[] = [];
     const { container } = render(
-      <Controlled elementsSelectable onChange={(c) => changes.push(...c)} deleteKeyCode="Backspace" />,
+      <Controlled
+        initial={[box('a', 0, 0, { selected: true }), box('b', 200, 0)]}
+        onChange={(c) => changes.push(...c)}
+        deleteKeyCode="Backspace"
+      />,
     );
-    fireEvent.click(node(container, 'a'));
     const backspace = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true });
     act(() => {
       node(container, 'a').dispatchEvent(backspace);
@@ -474,7 +506,7 @@ describe('features given one at a time', () => {
   it('delete: the key removes the selection', async () => {
     const changes: NodeChange[] = [];
     const { container } = render(
-      <Controlled elementsSelectable features={[deleteFeature]} onChange={(c) => changes.push(...c)} />,
+      <Controlled elementsSelectable features={[selectionFeature, deleteFeature]} onChange={(c) => changes.push(...c)} />,
     );
     fireEvent.click(node(container, 'a'));
     // Deleting waits for `onBeforeDelete`, if there is one, so the change is a moment behind the key.
@@ -597,5 +629,239 @@ describe('what a feature adds to the canvas’s own handling', () => {
     expect(pane(container).style.cursor).toBe('crosshair');
     const own = render(<FlowingerCanvas nodes={pair()} elementsSelectable selectionOnDrag style={{ cursor: 'help' }} />);
     expect(pane(own.container).style.cursor).toBe('help');
+  });
+});
+
+describe('selection as a feature', () => {
+  const link = [{ id: 'ab', source: 'a', target: 'b' }];
+  const edgeG = (c: ParentNode) => must<SVGGElement>(c, '[data-testid="edge-ab"]');
+  const isSelected = (c: ParentNode, id: string) => node(c, id).classList.contains('selected');
+
+  it('selects on a click, adds with Shift, and a click on the empty canvas clears — with the feature', () => {
+    const { container } = render(<Controlled elementsSelectable features={[selectionFeature]} />);
+    fireEvent.click(node(container, 'a'));
+    expect(isSelected(container, 'a')).toBe(true);
+    fireEvent.click(node(container, 'b'), { shiftKey: true });
+    expect(isSelected(container, 'a') && isSelected(container, 'b')).toBe(true);
+    fireEvent.click(node(container, 'b'), { shiftKey: true }); // Shift toggles it out again
+    expect(isSelected(container, 'b')).toBe(false);
+    fireEvent.click(pane(container));
+    expect(isSelected(container, 'a')).toBe(false);
+  });
+
+  it('adds a node to a selected edge with Shift, and keeps the edge', () => {
+    const { container } = render(<Controlled elementsSelectable features={[selectionFeature]} edges={link} />);
+    fireEvent.click(must(edgeG(container), '.flowinger-edge-interaction'));
+    fireEvent.click(node(container, 'a'), { shiftKey: true });
+    expect(isSelected(container, 'a')).toBe(true);
+    expect(edgeG(container).classList.contains('selected')).toBe(true);
+    fireEvent.click(node(container, 'b')); // without Shift it replaces everything
+    expect(edgeG(container).classList.contains('selected')).toBe(false);
+    expect(isSelected(container, 'a')).toBe(false);
+  });
+
+  it('does not clear on a click on the canvas when the canvas does not allow selecting', () => {
+    const changes: NodeChange[] = [];
+    const { container } = render(
+      <Controlled
+        features={[selectionFeature]}
+        initial={[box('a', 0, 0, { selected: true }), box('b', 200, 0)]}
+        onChange={(c) => changes.push(...c)}
+      />,
+    );
+    fireEvent.click(pane(container));
+    expect(changes.some((c) => c.type === 'select')).toBe(false);
+    expect(isSelected(container, 'a')).toBe(true);
+  });
+
+  it('makes a selectable node a tab stop, and Enter or Space select it', () => {
+    const { container } = render(
+      <Controlled elementsSelectable features={[selectionFeature]} initial={[...pair(), box('c', 400, 0, { selectable: false })]} />,
+    );
+    expect(node(container, 'a').getAttribute('tabindex')).toBe('0');
+    expect(node(container, 'c').hasAttribute('tabindex')).toBe(false); // opted out
+    fireEvent.keyDown(node(container, 'a'), { key: 'Enter' });
+    expect(isSelected(container, 'a')).toBe(true);
+    expect(node(container, 'a').getAttribute('aria-current')).toBe('true');
+    fireEvent.keyDown(node(container, 'b'), { key: ' ' });
+    expect(isSelected(container, 'b')).toBe(true);
+    expect(isSelected(container, 'a')).toBe(false);
+    fireEvent.click(node(container, 'c'));
+    expect(isSelected(container, 'c')).toBe(false);
+  });
+
+  it('gives an edge a hit area, a tab stop and a click — with the feature, and none of them without it', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const without = render(<FlowingerCore nodes={pair()} edges={link} elementsSelectable />);
+    expect(without.container.querySelector('.flowinger-edge-interaction')).toBeNull();
+    expect(edgeG(without.container).hasAttribute('tabindex')).toBe(false);
+    expect(edgeG(without.container).classList.contains('selectable')).toBe(false);
+    without.unmount();
+
+    const { container } = render(<FlowingerCore nodes={pair()} edges={link} elementsSelectable features={[selectionFeature]} />);
+    expect(container.querySelector('.flowinger-edge-interaction')).not.toBeNull();
+    expect(edgeG(container).getAttribute('tabindex')).toBe('0');
+    fireEvent.click(must(edgeG(container), '.flowinger-edge-interaction'));
+    expect(edgeG(container).classList.contains('selected')).toBe(true);
+    fireEvent.click(pane(container));
+    expect(edgeG(container).classList.contains('selected')).toBe(false);
+    fireEvent.keyDown(edgeG(container), { key: 'x' }); // only Enter and Space select
+    for (const chord of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      fireEvent.keyDown(edgeG(container), { key: 'Enter', ...chord }); // a chord is the browser's or the page's
+    }
+    expect(edgeG(container).classList.contains('selected')).toBe(false);
+    const space = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    act(() => {
+      edgeG(container).dispatchEvent(space);
+    });
+    expect(space.defaultPrevented).toBe(true); // Space would otherwise scroll the page
+    expect(edgeG(container).classList.contains('selected')).toBe(true);
+  });
+
+  it('clears the selection with Escape when the canvas is a tab stop, and only then', () => {
+    const escape = (c: ParentNode) => fireEvent.keyDown(pane(c), { key: 'Escape' });
+    const a = render(<Controlled elementsSelectable keyboardNavigation features={[selectionFeature]} />);
+    fireEvent.click(node(a.container, 'a'));
+    escape(a.container);
+    expect(isSelected(a.container, 'a')).toBe(false);
+    a.unmount();
+    const b = render(<Controlled elementsSelectable features={[selectionFeature]} />); // not a tab stop
+    fireEvent.click(node(b.container, 'a'));
+    escape(b.container);
+    expect(isSelected(b.container, 'a')).toBe(true);
+  });
+
+  it('clears on Escape alone — no other key, no modifier, and not from inside a node', () => {
+    const { container } = render(<Controlled elementsSelectable keyboardNavigation features={[selectionFeature]} />);
+    fireEvent.click(node(container, 'a'));
+    fireEvent.keyDown(pane(container), { key: 'a' });
+    fireEvent.keyDown(pane(container), { key: 'Escape', ctrlKey: true });
+    fireEvent.keyDown(pane(container), { key: 'Escape', metaKey: true });
+    fireEvent.keyDown(pane(container), { key: 'Escape', altKey: true });
+    fireEvent.keyDown(node(container, 'a'), { key: 'Escape' }); // a key pressed inside a node is that node's
+    expect(isSelected(container, 'a')).toBe(true);
+    fireEvent.keyDown(pane(container), { key: 'Escape' });
+    expect(isSelected(container, 'a')).toBe(false);
+  });
+
+  it('says it took the Escape it acted on, so nothing else acts on it too — and lets go of one it did not', () => {
+    const heard: string[] = [];
+    const other: Feature = { name: 'other', useCanvas: () => ({ onKeyDown: (e) => (heard.push(e.key), false) }) };
+    const { container } = render(
+      <Controlled elementsSelectable keyboardNavigation features={[selectionFeature, other]} />,
+    );
+    fireEvent.click(node(container, 'a'));
+    fireEvent.keyDown(pane(container), { key: 'Escape' }); // selection takes it
+    expect(heard).toEqual([]);
+    fireEvent.keyDown(pane(container), { key: 'Escape' }); // nothing to clear now: it goes on
+    expect(heard).toEqual(['Escape']);
+  });
+
+  it('leaves Escape to whoever else wants it when nothing is selected', () => {
+    const { container } = render(<Controlled elementsSelectable keyboardNavigation features={[selectionFeature]} />);
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    act(() => {
+      pane(container).dispatchEvent(escape);
+    });
+    expect(escape.defaultPrevented).toBe(false);
+  });
+
+  it('is brought by what builds on it: pressing an unselected node selects it, with only drag given', () => {
+    const { container } = render(<Controlled nodesDraggable elementsSelectable features={[dragFeature]} />);
+    const a = node(container, 'a');
+    fireEvent.pointerDown(a, pointer({ clientX: 10, clientY: 10 }));
+    fireEvent.pointerMove(a, pointer({ clientX: 40, clientY: 10 }));
+    expect(isSelected(container, 'a')).toBe(true);
+  });
+
+  it('tells the features it needs about elementsSelectable: a warning without it, none with it', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<FlowingerCore nodes={pair()} elementsSelectable />);
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/elementsSelectable does nothing without the "selection" feature — pass selectionFeature/);
+    warn.mockClear();
+    render(<FlowingerCore nodes={pair()} elementsSelectable features={[boxSelectFeature]} />);
+    expect(warn).not.toHaveBeenCalled(); // box selection brings it
+  });
+});
+
+describe('the slots selecting uses, for a feature of your own', () => {
+  const link = [{ id: 'ab', source: 'a', target: 'b' }];
+
+  it('a node: a click after onNodeClick, keys, and being a tab stop', () => {
+    const order: string[] = [];
+    const mine: Feature = {
+      name: 'mine',
+      useCanvas: () => ({ selectable: true }),
+      useNode: ({ node: n, selectable }) => ({
+        focusable: selectable,
+        onClick: () => order.push(`click ${n.id}`),
+        onKeyDown: (e) => order.push(`key ${e.key}`),
+      }),
+    };
+    const { container } = render(
+      <FlowingerCore nodes={pair()} elementsSelectable features={[mine]} onNodeClick={() => order.push('onNodeClick')} />,
+    );
+    expect(node(container, 'a').getAttribute('tabindex')).toBe('0'); // selectable, and the feature says focusable
+    fireEvent.click(node(container, 'a'));
+    expect(order).toEqual(['onNodeClick', 'click a']);
+    fireEvent.keyDown(node(container, 'a'), { key: 'q' });
+    expect(order.at(-1)).toBe('key q');
+  });
+
+  it('a node: not focusable, and its keys not heard, unless a feature says so', () => {
+    const heard = vi.fn();
+    const mine: Feature = { name: 'mine', useNode: () => ({ onKeyDown: heard }) };
+    const { container } = render(<FlowingerCore nodes={pair()} features={[mine]} />);
+    expect(node(container, 'a').hasAttribute('tabindex')).toBe(false);
+    fireEvent.keyDown(node(container, 'a'), { key: 'q' });
+    expect(heard).not.toHaveBeenCalled();
+  });
+
+  it('an edge: a click after onEdgeClick, keys while it is selectable and focusable', () => {
+    const order: string[] = [];
+    const mine: Feature = {
+      name: 'mine',
+      useCanvas: () => ({ selectable: true }),
+      useEdge: ({ edge, selectable }) => ({
+        onClick: () => order.push(`click ${edge.id} ${String(selectable)}`),
+        onKeyDown: (e) => order.push(`key ${e.key}`),
+      }),
+    };
+    const { container } = render(
+      <FlowingerCore nodes={pair()} edges={link} elementsSelectable features={[mine]} onEdgeClick={() => order.push('onEdgeClick')} />,
+    );
+    const g = must<SVGGElement>(container, '[data-testid="edge-ab"]');
+    fireEvent.click(g);
+    expect(order).toEqual(['onEdgeClick', 'click ab true']);
+    fireEvent.keyDown(g, { key: 'x' });
+    expect(order.at(-1)).toBe('key x');
+  });
+
+  it('the pane: a click on the bare canvas, not on a node, and not the click that ends a pan', () => {
+    const order: string[] = [];
+    const clicks = vi.fn(() => order.push('feature'));
+    const mine: Feature = { name: 'mine', useCanvas: () => ({ onPaneClick: clicks }) };
+    const onPaneClick = vi.fn(() => order.push('onPaneClick'));
+    const { container } = render(<FlowingerCore nodes={pair()} features={[mine]} onPaneClick={onPaneClick} />);
+    fireEvent.click(node(container, 'a'));
+    expect(clicks).not.toHaveBeenCalled();
+    fireEvent.click(pane(container));
+    expect(clicks).toHaveBeenCalledTimes(1);
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['onPaneClick', 'feature']); // the caller's own first, as for a node and an edge
+    fireEvent.pointerDown(pane(container), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane(container), pointer({ clientX: 50, clientY: 0 }));
+    fireEvent.pointerUp(pane(container), pointer({ clientX: 50, clientY: 0 }));
+    fireEvent.click(pane(container)); // the click that ends the pan
+    expect(clicks).toHaveBeenCalledTimes(1);
+  });
+
+  it('selectable: elementsSelectable alone does not make anything selectable; a feature that says so does', () => {
+    const says: Feature = { name: 'says', useCanvas: () => ({ selectable: true }) };
+    const off = render(<FlowingerCore nodes={pair()} edges={link} features={[says]} />);
+    expect(must(off.container, '[data-testid="edge-ab"]').classList.contains('selectable')).toBe(false); // the canvas has not allowed it
+    off.unmount();
+    const on = render(<FlowingerCore nodes={pair()} edges={link} elementsSelectable features={[says]} />);
+    expect(must(on.container, '[data-testid="edge-ab"]').classList.contains('selectable')).toBe(true);
   });
 });

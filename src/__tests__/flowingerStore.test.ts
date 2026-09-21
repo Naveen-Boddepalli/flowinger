@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { selectionFeature } from '../features/selection.ts';
 import { createFlowingerStore, viewportTransform } from '../store.ts';
 import type { Node } from '../types.ts';
 
@@ -445,6 +446,7 @@ describe('flowinger store — selection', () => {
   const nodesOf = (...ids: string[]): Node[] => ids.map((id) => node(id, 0, 0));
   const setup = () => {
     const { store } = mounted();
+    store.use([selectionFeature]);
     const onSelectionChange = vi.fn();
     store.setNodes(nodesOf('a', 'b', 'c'));
     store.setCallbacks({ onSelectionChange });
@@ -454,22 +456,22 @@ describe('flowinger store — selection', () => {
 
   it('replaces the selection, or toggles within it when additive', () => {
     const { store, ids } = setup();
-    store.selectNode('a');
-    store.selectNode('b');
+    store.api(selectionFeature).selectNode('a');
+    store.api(selectionFeature).selectNode('b');
     expect(ids()).toEqual(['b']);
-    store.selectNode('a', true);
+    store.api(selectionFeature).selectNode('a', true);
     expect(ids()).toEqual(['a', 'b']); // in graph order, not click order
-    store.selectNode('b', true);
+    store.api(selectionFeature).selectNode('b', true);
     expect(ids()).toEqual(['a']);
     expect([store.isSelected('a'), store.isSelected('b')]).toEqual([true, false]);
   });
 
   it('stays quiet when nothing changes', () => {
     const { store, onSelectionChange } = setup();
-    store.selectNode('a');
-    store.selectNode('a'); // already the whole selection
-    store.clearSelection();
-    store.clearSelection(); // already empty
+    store.api(selectionFeature).selectNode('a');
+    store.api(selectionFeature).selectNode('a'); // already the whole selection
+    store.api(selectionFeature).clearSelection();
+    store.api(selectionFeature).clearSelection(); // already empty
     expect(onSelectionChange).toHaveBeenCalledTimes(2); // select, then clear
   });
 
@@ -481,15 +483,15 @@ describe('flowinger store — selection', () => {
         heard[id] = (heard[id] ?? 0) + 1;
       });
     }
-    store.selectNode('a');
-    store.selectNode('b'); // a deselected, b selected
+    store.api(selectionFeature).selectNode('a');
+    store.api(selectionFeature).selectNode('b'); // a deselected, b selected
     expect(heard).toEqual({ a: 2, b: 1, c: 0 });
   });
 
   it('drops a selected node that leaves the graph, and reports the survivors', () => {
     const { store, ids, onSelectionChange } = setup();
-    store.selectNode('a');
-    store.selectNode('c', true);
+    store.api(selectionFeature).selectNode('a');
+    store.api(selectionFeature).selectNode('c', true);
     onSelectionChange.mockClear();
     store.setNodes(nodesOf('b', 'c')); // a is gone
     expect(ids()).toEqual(['c']);

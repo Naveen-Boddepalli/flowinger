@@ -36,6 +36,7 @@ async function consumer(names: string[]): Promise<{ code: string; gzip: number }
  * The second test finds every one of these in the whole canvas, so none is a needle that cannot be seen.
  */
 const FEATURES: Record<string, string[]> = {
+  selection: ['selectEdge', 'clearSelection'],
   drag: ['beginNodeDrag', 'nudgeSelection'],
   'expand parent': ['expandParent'],
   connect: ['beginConnection', 'flowinger-connection-line'],

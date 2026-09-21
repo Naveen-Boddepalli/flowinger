@@ -3,6 +3,7 @@ import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import { isRectIntersecting } from '../geometry.ts';
 import { DRAG_THRESHOLD, capturePointer, releasePointer } from '../pointer.ts';
+import { selectionFeature } from './selection.ts';
 import type { Rect, SelectionMode } from '../types.ts';
 
 export interface BoxSelectApi {
@@ -65,7 +66,9 @@ function SelectionBox() {
  */
 export const boxSelectFeature: Feature<BoxSelectApi> = {
   name: 'boxSelect',
+  needs: [selectionFeature],
   install(ctx) {
+    const { isSelectable, setSelection } = ctx.api(selectionFeature);
     /** The box being dragged, in pane pixels — null when there is none. */
     let selectionRect: Rect | null = null;
     const listeners = new Set<() => void>();
@@ -83,7 +86,7 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
       };
       const nodeIds = new Set(base?.nodes);
       for (const n of ctx.nodes) {
-        if (n.hidden === true || !ctx.isSelectable(n)) continue;
+        if (n.hidden === true || !isSelectable(n)) continue;
         const box = ctx.rectOf(n);
         if (box && isRectIntersecting(box, area, mode === 'partial')) nodeIds.add(n.id);
       }
@@ -93,7 +96,7 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
           edgeIds.add(e.id);
         }
       }
-      ctx.setSelection(nodeIds, edgeIds);
+      setSelection(nodeIds, edgeIds);
       selectionRect = rect;
       emit();
     };

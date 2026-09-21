@@ -69,14 +69,17 @@ interface EdgeChrome {
   selected: boolean;
   selectable: boolean;
   focusable: boolean;
+  /** The features that act on an edge's clicks and keys — selecting it. */
+  hooks: readonly Feature[];
 }
 
 /**
- * What every edge's `<g>` shares, built or built on: its classes, the click
- * that selects it, and Enter / Space from the keyboard.
+ * What every edge's `<g>` shares, built or built on: its classes, `onEdgeClick`, and the clicks and keys
+ * the features (selecting) act on.
  */
-function useEdgeChrome({ edge, selected, selectable, focusable }: EdgeChrome) {
+function useEdgeChrome({ edge, selected, selectable, focusable, hooks }: EdgeChrome) {
   const store = useFlowingerStore();
+  const bits = hooks.flatMap((f) => f.useEdge?.({ store, edge, selectable }) ?? []);
   const context = useMemo(() => ({ selected, selectable }), [selected, selectable]);
   const className = [
     'flowinger-edge react-flow__edge',
@@ -89,13 +92,11 @@ function useEdgeChrome({ edge, selected, selectable, focusable }: EdgeChrome) {
     .join(' ');
   const onClick = (e: ReactMouseEvent<SVGGElement>) => {
     store.getCallbacks().onEdgeClick?.(e, edge);
-    if (selectable) store.selectEdge(edge.id, e.shiftKey || e.metaKey || e.ctrlKey);
+    for (const b of bits) b.onClick?.(e);
   };
   const onKeyDown = (e: ReactKeyboardEvent<SVGGElement>) => {
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault();
-    store.selectEdge(edge.id, e.shiftKey);
+    for (const b of bits) b.onKeyDown?.(e);
   };
   const props = {
     className,
@@ -274,6 +275,7 @@ const EdgePath = /*#__PURE__*/ memo(function EdgePath({
   selected,
   selectable,
   focusable,
+  hooks,
   reconnectable,
   adornments,
   sourceX,
@@ -288,7 +290,7 @@ const EdgePath = /*#__PURE__*/ memo(function EdgePath({
   markerStart,
   markerEnd,
 }: EdgePathProps) {
-  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable });
+  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable, hooks });
   return (
     <g {...props}>
       <EdgeContext.Provider value={context}>
@@ -338,11 +340,12 @@ const CustomEdge = /*#__PURE__*/ memo(function CustomEdge({
   selected,
   selectable,
   focusable,
+  hooks,
   reconnectable,
   adornments,
   ...ends
 }: CustomEdgeProps) {
-  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable });
+  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable, hooks });
   return (
     <g {...props}>
       <EdgeContext.Provider value={context}>
@@ -391,6 +394,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
   const store = useFlowingerStore();
   // Stable, so the memoised edges below are not remade by a new array each render.
   const adornments = useMemo(() => features.filter((f) => f.EdgeAdornment), [features]);
+  const hooks = useMemo(() => features.filter((f) => f.useEdge), [features]);
   // Positions and sizes live in the store, not in props. The version is what
   // makes this component re-render when either moves.
   useSyncExternalStore(store.subscribeGeometry, store.getGeometryVersion, store.getGeometryVersion);
@@ -495,6 +499,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
           selected={selected}
           selectable={selectable}
           focusable={edgesFocusable}
+          hooks={hooks}
           reconnectable={reconnectable}
           adornments={adornments}
           sourceX={from.point.x}
@@ -517,6 +522,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
         selected={selected}
         selectable={selectable}
         focusable={edgesFocusable}
+        hooks={hooks}
         reconnectable={reconnectable}
         adornments={adornments}
         sourceX={from.point.x}

@@ -23,6 +23,7 @@ import {
   dragFeature,
   editingFeature,
   reconnectFeature,
+  selectionFeature,
   getBezierPath,
   reconnectEdge,
   useEdgesState,
@@ -197,6 +198,7 @@ function DomCount() {
 
 /** What <FlowingerCore> can be given, one at a time — <FlowingerCanvas> has all of them. */
 const PICKABLE: readonly { label: string; feature: Feature }[] = [
+  { label: 'selection', feature: selectionFeature },
   { label: 'drag', feature: dragFeature },
   { label: 'connect', feature: connectFeature },
   { label: 'reconnect', feature: reconnectFeature },

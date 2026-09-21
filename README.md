@@ -67,7 +67,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | | |
 |---|---|
 | `FlowingerCanvas` | The whole canvas, every feature: pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. Also `ReactFlow`. |
-| `FlowingerCore` | The same canvas with only the [features](#pay-for-what-you-use) you name — pan, zoom, nodes, edges and selection are always there. |
+| `FlowingerCore` | The same canvas with only the [features](#pay-for-what-you-use) you name — pan, zoom, nodes and edges are always there. |
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
@@ -102,18 +102,20 @@ only its own code. The props, the nodes and the instance are the same either way
 
 | Feature | What it adds | Props that need it |
 |---|---|---|
-| `dragFeature` | Dragging nodes and selections, snapping, extents, `expandParent`, the arrow keys, auto-pan | `nodesDraggable`, `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, `snapToGrid`, `snapGrid`, `nodeExtent`, `autoPanOnNodeDrag`, `autoPanSpeed` |
+| `selectionFeature` | Selecting by click (Shift, Ctrl or ⌘ adds), Enter and Space, a click on the empty canvas or Escape clearing it; nodes and edges become tab stops | `elementsSelectable`, `edgesFocusable` |
+| `dragFeature` | Dragging nodes and selections, snapping, extents, `expandParent`, the arrow keys, auto-pan (brings `selectionFeature`) | `nodesDraggable`, `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, `snapToGrid`, `snapGrid`, `nodeExtent`, `autoPanOnNodeDrag`, `autoPanSpeed` |
 | `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `autoPanOnConnect` |
 | `reconnectFeature` | Dragging an end of a selected edge to another handle (brings `connectFeature`) | `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` |
-| `boxSelectFeature` | Selecting with a box | `selectionOnDrag`, `selectionMode`, `onSelectionStart`, `onSelectionEnd` |
+| `boxSelectFeature` | Selecting with a box (brings `selectionFeature`) | `selectionOnDrag`, `selectionMode`, `onSelectionStart`, `onSelectionEnd` |
 | `deleteFeature` | The delete key, and `deleteElements` | `deleteKeyCode`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` |
 | `cullingFeature` | Drawing only what is in view | `onlyRenderVisibleElements` |
 | `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `getIntersectingNodes`, `isNodeIntersecting` | |
 
 Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
-labels, arrowheads, custom edges) and handles, selection (`elementsSelectable`, `onSelectionChange`, clicks and
-keys), the viewport calls and `fitView`, sub-flows, `useStore`, and the hooks. `allFeatures` is the list the whole
-canvas has.
+labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the
+hooks — and *reporting* the selection: a controlled node's `selected` is drawn, and `onSelectionChange`,
+`useOnSelectionChange`, `onNodeClick`, `onEdgeClick` and `onPaneClick` work on any canvas. What `selectionFeature`
+adds is *changing* it from the pointer and keyboard. `allFeatures` is the list the whole canvas has.
 
 - **A prop for a feature the canvas lacks does nothing**, and in development the console says so, once, with the
   feature to pass. (Switched off — `nodesDraggable={false}` — is not "given".)

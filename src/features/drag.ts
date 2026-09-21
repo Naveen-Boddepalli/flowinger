@@ -7,6 +7,7 @@ import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from '.
 import type { Node, NodeChange, NodePositionChange, TranslateExtent, XYPosition } from '../types.ts';
 import { useIsomorphicLayoutEffect } from '../useIsomorphicLayoutEffect.ts';
 import { autoPanFeature } from './autoPan.ts';
+import { selectionFeature } from './selection.ts';
 
 /** A node drag in progress — one node, or the whole selection moving with it. */
 export interface DragSession {
@@ -57,8 +58,9 @@ const ARROWS: Record<string, [number, number]> = {
  */
 export const dragFeature: Feature<DragApi> = {
   name: 'drag',
-  needs: [autoPanFeature],
+  needs: [autoPanFeature, selectionFeature],
   install(ctx) {
+    const { isSelectable, selectNode } = ctx.api(selectionFeature);
     const isDraggable = (n: Node): boolean => n.draggable ?? ctx.options.nodesDraggable;
 
     /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
@@ -81,8 +83,8 @@ export const dragFeature: Feature<DragApi> = {
       let group = [lead.id];
       if (before.includes(lead.id)) {
         group = before;
-      } else if (ctx.isSelectable(lead)) {
-        ctx.selectNode(lead.id, additive);
+      } else if (isSelectable(lead)) {
+        selectNode(lead.id, additive);
         group = additive ? [...before, lead.id] : [lead.id];
       }
       const movable = group.flatMap((id) => {

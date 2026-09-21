@@ -211,6 +211,8 @@ function InnerCanvas(props: FlowingerProps) {
     justPanned.current = true;
   }, []);
   const bits = feats.flatMap((f) => f.useCanvas?.({ store, props, suppressPaneClick }) ?? []);
+  // Nodes and edges are selectable where the canvas allows it *and* a feature acts on selecting.
+  const selectable = elementsSelectable && bits.some((b) => b.selectable === true);
 
   // Layout effects, not passive ones: a parent's passive effect (one that
   // frames the diagram, say) runs after these, and must find the canvas
@@ -465,7 +467,7 @@ function InnerCanvas(props: FlowingerProps) {
     }
     if (e.target !== e.currentTarget) return;
     onPaneClick?.(e);
-    if (elementsSelectable) store.clearSelection();
+    for (const b of bits) b.onPaneClick?.(e);
   };
 
   // A double click on the bare canvas zooms in about the pointer; with Shift, out.
@@ -511,12 +513,6 @@ function InnerCanvas(props: FlowingerProps) {
         break;
       case '0':
         store.instance.fitView();
-        break;
-      case 'Escape':
-        // Only ours if there is a selection to drop; otherwise Escape belongs to
-        // whatever else wants it (a dialog this canvas sits in, say).
-        if (!store.hasSelection()) return;
-        store.clearSelection();
         break;
       default:
         return;
@@ -586,7 +582,7 @@ function InnerCanvas(props: FlowingerProps) {
               edges={edges}
               nodes={nodes}
               edgeTypes={edgeTypes}
-              elementsSelectable={elementsSelectable}
+              elementsSelectable={selectable}
               edgesFocusable={edgesFocusable}
               controlledSelection={edgesChange !== undefined}
               hiddenNodeIds={tree.hidden}
@@ -641,7 +637,7 @@ function InnerCanvas(props: FlowingerProps) {
                 // cannot be checked here; `NodeTypes` accepts any.
                 View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
                 draggable={node.draggable ?? nodesDraggable}
-                selectable={elementsSelectable && node.selectable !== false}
+                selectable={selectable && node.selectable !== false}
                 connectable={node.connectable ?? nodesConnectable}
                 controlledSelection={nodesChange !== undefined}
                 parentX={tree.origin.get(node.id)?.x ?? 0}

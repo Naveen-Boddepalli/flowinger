@@ -184,15 +184,15 @@ drag, connect, selection boxes, delete or the edit API; it hands a static viewer
   (moved out of the core so `changes.ts` is not in a lean bundle). The public API is otherwise unchanged.
 - **A feature has two halves** (`src/features.ts`). `install(ctx)` is the engine half: an `EngineContext` — getters
   over the store's *current* state, `on('change' | 'detach')`, `changed()`, `api(other)` — and it returns the
-  methods it adds. The React half is five slots: `useCanvas` (pane gestures, keys, container style), `useNode` (a
-  node's pointer and key handlers, `dragging`, `startConnection`), `Layer`, `EdgesLayer` (in the topmost edge
-  layer) and `EdgeAdornment` (with a selected edge). Hooks run in the order the features were given, so the list is
+  methods it adds. The React half is six slots: `useCanvas` (pane gestures, keys, the pane click, container style), `useNode`
+  (a node's pointer, click and key handlers, `dragging`, `focusable`, `startConnection`), `useEdge` (an edge's
+  click and keys), `Layer`, `EdgesLayer` (in the topmost edge layer) and `EdgeAdornment` (with a selected edge). Hooks run in the order the features were given, so the list is
   read once. `needs` installs dependencies first; a feature is known by its name.
 - **What moved out:** `drag` (with `expandParent` and the arrow keys), `autoPan` (needed by drag and connect),
   `connect` (with the connection line), `reconnect` (with the grips), `boxSelect` (with the box), `delete` (with the
   key), `culling`, `editing` (the instance's mutators) and `resize` (installed by `NodeResizer` itself). **What
-  stayed:** selection — small, and slicing it needed node, edge and pane slots for about 0.7 kB — sub-flows, the
-  viewport, handles and measurement, and edges.
+  stayed:** sub-flows, the viewport, handles and measurement, and edges — and, at first, selection ("small, and
+  slicing it needs node, edge and pane slots for about 0.7 kB"). It moved afterwards; see the end of this section.
 - **Instance methods a feature supplies are stable delegators**, present from the start: `const { setNodes } =
   useReactFlow()` taken before the canvas renders (the ordinary React Flow pattern) still works, and without the
   feature it throws and names it.
@@ -230,8 +230,22 @@ drag, connect, selection boxes, delete or the edit API; it hands a static viewer
   must define it. The exported `FlowingerEdges` draws the connection line and the reconnect grips only when given
   the features that draw them. An `EdgeAdornment` is drawn only with *selected* edges, so an unselected edge costs
   what it did.
-  `pnpm size` takes `--max-full` / `--max-lean` (the old `--max` is gone). Not done: making selection itself a
-  feature, and trimming the core further — its floor is the viewport, edges, handles and measurement.
+  `pnpm size` takes `--max-full` / `--max-lean` (the old `--max` is gone). Not done: trimming the core further —
+  its floor is the viewport, edges, handles and measurement.
+- **Selection became a feature afterwards** (`selectionFeature`, at the user's request). What is *selected* stays in
+  the core — a controlled node's `selected` is drawn, and `onSelectionChange`, `useOnSelectionChange`, `onNodeClick`,
+  `onEdgeClick` and `onPaneClick` work on any canvas, as in React Flow, where the selection is reported however it
+  changes. What moved is *changing* it by interaction: `setSelection` / `selectNode` / `selectEdge` /
+  `clearSelection`, the click, Enter and Space on a node and an edge, the click on the empty canvas, and Escape. That
+  took three additions to the slot contract (`useEdge`; `onClick` and `focusable` on a node; `onPaneClick` and
+  `selectable` on the canvas), and `drag` and `boxSelect` now `need` it. **Measured, it saves less than estimated:**
+  the core 15.2 → 15.0 kB gzip from `dist` (about 0.2 kB, against the ~0.7 kB I guessed — gzip had already squeezed
+  that repetitive code) while the whole canvas grows 22.8 → 23.2 kB from the extra plumbing. So it is a trade of a
+  little on the full canvas for a little on the core, made for consistency (everything that *acts* is a feature;
+  the core is a viewer). Reverting it is one commit. 612 tests; about 90 mutants of the feature and its wiring, of
+  which one was equivalent (a value the core already ANDs) and the rest were killed — after new tests for the
+  ones that survived: keeping a selected edge when Shift-adding a node, a pane click when the canvas does not allow
+  selecting, each Escape guard, and the edge keyboard handler.
 
 ### Not built
 

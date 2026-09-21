@@ -14,7 +14,6 @@ import type { Feature } from './features.ts';
 import { layoutSize } from './measure.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
-import { isInteractive } from './pointer.ts';
 import type { Node, NodeProps } from './types.ts';
 
 const NO_FEATURES: readonly Feature[] = [];
@@ -24,7 +23,7 @@ export interface NodeWrapperProps {
   node: Node;
   View: ComponentType<NodeProps>;
   draggable: boolean;
-  /** Whether a click, or Enter/Space, selects it. */
+  /** Whether a click, or Enter/Space, may select it — what the selection feature acts on. */
   selectable: boolean;
   /** Whether its handles can start and end connections. */
   connectable: boolean;
@@ -83,7 +82,10 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   );
 
   // What each feature adds, in the order they were given.
-  const bits = features.flatMap((f) => f.useNode?.({ store, node, draggable, selected, justDragged }) ?? []);
+  const bits = features.flatMap(
+    (f) => f.useNode?.({ store, node, draggable, selectable, selected, justDragged }) ?? [],
+  );
+  const focusable = bits.some((b) => b.focusable === true);
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
 
@@ -142,18 +144,13 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       return;
     }
     store.getCallbacks().onNodeClick?.(e, node);
-    if (selectable && !isInteractive(e.target)) {
-      store.selectNode(node.id, e.shiftKey || e.metaKey || e.ctrlKey);
-    }
+    for (const b of bits) b.onClick?.(e);
   };
 
   // Only when the node itself has focus: Enter or Space inside a field is the field's.
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
     for (const b of bits) b.onKeyDown?.(e);
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault(); // Space would otherwise scroll the page
-    store.selectNode(node.id, e.shiftKey);
   };
 
   return (
@@ -180,9 +177,9 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
       onClick={onClick}
-      // Selectable means reachable from the keyboard too. `aria-current` is a
+      // Focusable — what selecting is — means reachable from the keyboard too. `aria-current` is a
       // global attribute, valid on a plain div; `aria-selected` is not.
-      {...(selectable
+      {...(focusable
         ? { tabIndex: 0, onKeyDown, 'aria-current': selected ? ('true' as const) : undefined }
         : {})}
     >

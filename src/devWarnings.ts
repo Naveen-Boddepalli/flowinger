@@ -30,6 +30,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
   boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd'],
   delete: ['deleteKeyCode', 'onBeforeDelete', 'onNodesDelete', 'onEdgesDelete', 'onDelete'],
   culling: ['onlyRenderVisibleElements'],
+  selection: ['elementsSelectable', 'edgesFocusable'],
 };
 
 /**

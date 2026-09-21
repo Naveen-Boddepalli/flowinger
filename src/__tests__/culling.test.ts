@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { cullingFeature } from '../features/culling.ts';
+import { selectionFeature } from '../features/selection.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore, type EngineOptions } from '../store.ts';
 import type { Edge, Node } from '../types.ts';
 
@@ -8,7 +9,7 @@ const on: EngineOptions = { ...DEFAULT_ENGINE_OPTIONS, elementsSelectable: true,
 /** A store that can cull. */
 function fresh() {
   const store = createFlowingerStore();
-  store.use([cullingFeature]);
+  store.use([cullingFeature, selectionFeature]);
   return store;
 }
 
@@ -84,7 +85,7 @@ describe('the visible set', () => {
 
   it('keeps a selected node, wherever it goes', () => {
     const store = culled([box('a', 0, 0), box('b', 5000, 0)]);
-    store.selectNode('a');
+    store.api(selectionFeature).selectNode('a');
     void store.instance.setViewport({ x: -5000, y: 0, zoom: 1 });
     expect(ids(store.getVisible()?.nodes)).toEqual(['a', 'b']);
   });

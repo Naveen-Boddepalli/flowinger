@@ -2,6 +2,7 @@ import type {
   ComponentType,
   CSSProperties,
   KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
 } from 'react';
@@ -51,6 +52,8 @@ export interface Feature<Api = unknown> {
   readonly useCanvas?: (args: CanvasArgs) => CanvasBits | undefined;
   /** Called by every node: what pressing, clicking and typing on it does. */
   readonly useNode?: (args: NodeArgs) => NodeBits | undefined;
+  /** Called by every edge: what clicking and typing on it does. */
+  readonly useEdge?: (args: EdgeArgs) => EdgeBits | undefined;
   /** Drawn inside the canvas, above the graph — a selection box. */
   readonly Layer?: ComponentType;
   /** Drawn inside the topmost edge layer, in graph space — the line being dragged out of a handle. */
@@ -119,10 +122,17 @@ export interface EngineContext {
   setNodePosition: (node: Node, position: XYPosition) => void;
 
   isSelected: (id: string) => boolean;
+  isEdgeSelected: (id: string) => boolean;
   selectedNodeIds: () => string[];
-  isSelectable: (node: Node) => boolean;
-  selectNode: (id: string, additive?: boolean) => void;
-  setSelection: (nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => void;
+  selectedEdgeIds: () => string[];
+  /** Who is selected where nobody applies changes — a controlled element says so itself. Written by `selection`. */
+  readonly ownSelection: { readonly nodes: Set<string>; readonly edges: Set<string> };
+  /** Tells a node it needs drawing again (its position, or its selection, changed). */
+  notifyNode: (id: string) => void;
+  /** Says the edges need drawing again. */
+  geometryChanged: () => void;
+  /** Tells `onSelectionChange` and `useOnSelectionChange`, if the selection is not what they last heard. */
+  announceSelection: () => void;
 
   /** The line being dragged out of a handle, as the edge layer draws it. */
   setConnection: (next: ConnectionState | null) => void;
@@ -157,6 +167,13 @@ export interface CanvasBits {
   style?: CSSProperties;
   /** A click on the canvas should leave focus on it — a key handler hears nothing otherwise. */
   focusable?: boolean;
+  /** The bare canvas was clicked (not the end of a pan, or of a gesture that said so). */
+  onPaneClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
+  /**
+   * Nodes and edges may be selected — which the canvas's `elementsSelectable` must also allow. Without it
+   * they are drawn as unselectable, and are not reachable from the keyboard.
+   */
+  selectable?: boolean;
 }
 
 export interface NodeArgs {
@@ -164,6 +181,8 @@ export interface NodeArgs {
   node: Node;
   /** Whether it may be dragged: the canvas's `nodesDraggable`, or the node's own say. */
   draggable: boolean;
+  /** Whether a click, or Enter and Space, may select it: the canvas allows it, and the node has not opted out. */
+  selectable: boolean;
   selected: boolean;
   /** Set it when a drag begins: the click that ends a drag is not a click on the node. */
   justDragged: MutableRefObject<boolean>;
@@ -174,13 +193,32 @@ export interface NodeBits {
   onPointerDown?: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove?: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerEnd?: (e: ReactPointerEvent<HTMLDivElement>) => void;
-  /** Only heard while the node has focus itself, and no modifier is down. */
+  /** After `onNodeClick`, and not for the click that ends a drag. */
+  onClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
+  /** Only heard while the node has focus itself, and no modifier is down — and the node is `focusable`. */
   onKeyDown?: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
+  /** A tab stop, and keys are heard: what `selectable` means for a node. */
+  focusable?: boolean;
   /** Being dragged now: stacked above the rest, and given the `dragging` class. */
   dragging?: boolean;
   style?: CSSProperties;
   /** What a `<Handle>` inside the node calls to begin a connection; without it, handles only draw. */
   startConnection?: (handle: HTMLElement, at: PointerEvent) => void;
+}
+
+export interface EdgeArgs {
+  store: FlowingerStore;
+  edge: Edge;
+  /** Whether a click, or Enter and Space, may select it: the canvas allows it, and the edge has not opted out. */
+  selectable: boolean;
+}
+
+/** What a feature adds to an edge's own handlers. */
+export interface EdgeBits {
+  /** After `onEdgeClick`. */
+  onClick?: (e: ReactMouseEvent<SVGGElement>) => void;
+  /** Only heard while the edge itself has focus, no modifier is down, and it is `selectable` and `edgesFocusable`. */
+  onKeyDown?: (e: ReactKeyboardEvent<SVGGElement>) => void;
 }
 
 export interface EdgeAdornmentProps {
