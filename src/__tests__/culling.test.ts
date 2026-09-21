@@ -121,3 +121,17 @@ describe('the visible set', () => {
     expect(ids(store.getVisible()?.nodes)).toEqual(['c']);
   });
 });
+
+describe('a selection the caller makes', () => {
+  it('brings a far-off node into the set when the nodes are handed over again, laid out as before', () => {
+    const store = culled([box('near', 0, 0), box('far', 5000, 5000)]);
+    store.setCallbacks({ onNodesChange: () => {} }); // controlled: `selected` on the node says
+    store.setNodes([box('near', 0, 0), box('far', 5000, 5000)]);
+    expect(ids(store.getVisible()?.nodes)).toEqual(['near']);
+    // Same ids, positions and sizes: nothing was laid out anew, but a selected node is never left out.
+    store.setNodes([box('near', 0, 0), box('far', 5000, 5000, { selected: true })]);
+    expect(ids(store.getVisible()?.nodes)).toEqual(['far', 'near']);
+    store.setNodes([box('near', 0, 0), box('far', 5000, 5000)]);
+    expect(ids(store.getVisible()?.nodes)).toEqual(['near']);
+  });
+});

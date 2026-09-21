@@ -388,6 +388,34 @@ describe('a warning when a prop needs a feature the canvas lacks', () => {
     expect(warn).not.toHaveBeenCalled();
     expect(container.querySelectorAll('.flowinger-node')).toHaveLength(2);
   });
+
+  it('says nothing when the graph is given as well as a default for it', () => {
+    const warn = warned();
+    render(<FlowingerCore nodes={pair()} edges={[]} defaultNodes={pair()} defaultEdges={[]} />);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('says it for defaultEdges on their own, too', () => {
+    const warn = warned();
+    render(<FlowingerCore nodes={pair()} defaultEdges={[]} />);
+    expect(String(warn.mock.calls[0]?.[0])).toContain('defaultNodes and defaultEdges need <FlowingerCanvas>');
+  });
+});
+
+describe('the whole canvas owning the edges', () => {
+  it('applies its own changes to them: a click selects one, and the delete key removes it', async () => {
+    const { container } = render(
+      <FlowingerCanvas defaultNodes={pair()} defaultEdges={[{ id: 'ab', source: 'a', target: 'b' }]} elementsSelectable />,
+    );
+    const edge = must<SVGGElement>(container, '[data-testid="edge-ab"]');
+    fireEvent.click(must(edge, '.flowinger-edge-interaction'));
+    expect(edge.classList.contains('selected')).toBe(true); // an edge's `selected` is state it holds itself
+    await act(async () => {
+      fireEvent.keyDown(pane(container), { key: 'Backspace' });
+    });
+    expect(container.querySelector('[data-testid="edge-ab"]')).toBeNull();
+    expect(container.querySelectorAll('.flowinger-node')).toHaveLength(2);
+  });
 });
 
 describe('features given one at a time', () => {
@@ -522,5 +550,52 @@ describe('a feature of your own', () => {
     fireEvent.pointerDown(a, pointer({ clientX: 0, clientY: 0 }));
     fireEvent.pointerMove(a, pointer({ clientX: 30, clientY: 0 }));
     expect(at(container, 'a')).toBe('translate(30px, 0px)');
+  });
+});
+
+describe('what a feature adds to the canvas’s own handling', () => {
+  it('can take a key, and then the canvas does not act on it', () => {
+    const takes = (key: string): Feature => ({
+      name: 'keys',
+      useCanvas: () => ({ onKeyDown: (e) => e.key === key }),
+    });
+    const { container } = render(<FlowingerCanvas nodes={pair()} keyboardNavigation features={[takes('ArrowRight')]} />);
+    fireEvent.keyDown(pane(container), { key: 'ArrowRight' }); // taken: Right would have panned the view
+    expect(viewportOf(container)).toBe('translate(0px, 0px) scale(1)');
+    fireEvent.keyDown(pane(container), { key: 'ArrowLeft' }); // not taken: the canvas pans
+    expect(viewportOf(container)).toBe('translate(50px, 0px) scale(1)');
+  });
+
+  it('can take a press, and then it is not a pan', () => {
+    const takes: Feature = { name: 'press', useCanvas: () => ({ onPointerDown: () => true }) };
+    const { container } = render(<FlowingerCanvas nodes={pair()} features={[takes]} />);
+    fireEvent.pointerDown(pane(container), pointer({ clientX: 100, clientY: 100 }));
+    fireEvent.pointerMove(pane(container), pointer({ clientX: 160, clientY: 140 }));
+    expect(viewportOf(container)).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('lets a press go by that it does not take — and that is a pan', () => {
+    const declines: Feature = { name: 'press', useCanvas: () => ({ onPointerDown: () => false }) };
+    const { container } = render(<FlowingerCanvas nodes={pair()} features={[declines]} />);
+    fireEvent.pointerDown(pane(container), pointer({ clientX: 100, clientY: 100 }));
+    fireEvent.pointerMove(pane(container), pointer({ clientX: 160, clientY: 140 }));
+    expect(viewportOf(container)).toBe('translate(60px, 40px) scale(1)');
+  });
+
+  it('makes the canvas focusable without a tab stop or a focus ring — unless it is a tab stop already', () => {
+    const plain = render(<FlowingerCanvas nodes={pair()} elementsSelectable />);
+    expect(pane(plain.container).getAttribute('tabindex')).toBe('-1');
+    expect(pane(plain.container).style.outline).toBe('none');
+    plain.unmount();
+    const stop = render(<FlowingerCanvas nodes={pair()} elementsSelectable keyboardNavigation />);
+    expect(pane(stop.container).getAttribute('tabindex')).toBe('0');
+    expect(pane(stop.container).style.outline).toBe(''); // the browser's own ring stays
+  });
+
+  it('lays a feature’s style on the canvas, under the caller’s own', () => {
+    const { container } = render(<FlowingerCanvas nodes={pair()} elementsSelectable selectionOnDrag />);
+    expect(pane(container).style.cursor).toBe('crosshair');
+    const own = render(<FlowingerCanvas nodes={pair()} elementsSelectable selectionOnDrag style={{ cursor: 'help' }} />);
+    expect(pane(own.container).style.cursor).toBe('help');
   });
 });

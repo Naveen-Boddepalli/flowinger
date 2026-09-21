@@ -50,7 +50,10 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
         `feature — pass ${feature}Feature in \`features\`, or use <FlowingerCanvas>, which has them all.`,
     );
   }
-  if (props.nodes === undefined && (props.defaultNodes !== undefined || props.defaultEdges !== undefined)) {
+  if (
+    (props.nodes === undefined && props.defaultNodes !== undefined) ||
+    (props.edges === undefined && props.defaultEdges !== undefined)
+  ) {
     console.warn(
       'flowinger: defaultNodes and defaultEdges need <FlowingerCanvas>, which can own the graph — ' +
         '<FlowingerCore> shows the `nodes` it is given.',
