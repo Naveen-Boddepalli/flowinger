@@ -313,15 +313,49 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 ## Coming from React Flow
 
-`ReactFlow` (the whole canvas — `FlowingerCore` is the lean one), `ReactFlowProvider`, `useReactFlow`, `useStore`, `Handle`,
-`Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
-all exported under React Flow's names, and so are `useNodesState`, `useEdgesState`, `applyNodeChanges`,
-`applyEdgeChanges`, `addEdge` and `useNodesInitialized`. `useStore` reads the ten fields above, not React Flow's
-whole internal store.
+It keeps React Flow's shape and names for the core — `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`,
+`Handle`, `Position`, `Background`, `BackgroundVariant`, `MarkerType`, `useNodesState`, `useEdgesState`,
+`applyNodeChanges`, `applyEdgeChanges`, `addEdge`, `useNodesInitialized`, and the `Node` / `Edge` / `NodeProps`
+types — and the `react-flow__*` class names on the elements it draws. **It is not a drop-in for arbitrary React
+Flow code**: it covers the part of the API an app like [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)
+uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
 
-**Not built** (from memory of React Flow's API, not an audit): `nodeOrigin`, and a `NodeToolbar` for a node
-other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
-pass a `padding` ratio, and `deleteKeyCode` is `'Backspace'` alone.
+Measured against `@xyflow/react` 12.11.6's own type declarations
+(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **78 of its 211
+exports** (108 of the 133 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
+`ReactFlowInstance` by name will not compile until you rename them), **60 of 119** `ReactFlow` props, 27 of 32
+instance methods, 14 of 22 `Node` fields, 11 of 20 `Edge` fields and 5 of 13 `NodeProps` fields. What is missing:
+
+- **Canvas events:** `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for
+  edges; `onPaneContextMenu`, `onPaneMouse*`, `onPaneScroll`; `onSelectionContextMenu`, `onSelectionDrag*`;
+  `onMove*`, `onViewportChange`; `onClickConnectStart` / `End`.
+- **Viewport and gestures:** `defaultViewport` and a controlled `viewport` (the provider takes `initialViewport`);
+  `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode`, `panOnScrollMode`,
+  `selectNodesOnDrag`, `nodesFocusable`, `disableKeyboardA11y`, `connectOnClick`, `connectionRadius`,
+  `reconnectRadius`, the drag and click distance thresholds, `preventScrolling`, `noDragClassName` / `noPanClassName`
+  / `noWheelClassName` (`nodrag` and `nopan` are honoured, `nowheel` is not).
+- **Layout and look:** `nodeOrigin`, `elevateNodesOnSelect` / `elevateEdgesOnSelect`, `zIndexMode`, `colorMode`,
+  `proOptions`, `attributionPosition`, `debug`, `ariaLabelConfig`, `defaultMarkerColor`,
+  `connectionLineContainerStyle`. The canvas takes `className`, `style` and `children`, not HTML attributes
+  (`id`, `role`, `data-*`, `onKeyDown`…); the same goes for `Panel`, `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge`.
+- **Hooks, instance and helpers:** `useUpdateNodeInternals`, `useConnection`, `useInternalNode`,
+  `useOnViewportChange`, `useStoreApi`, `useHandleConnections`; `getInternalNode`, `getNodeConnections`,
+  `getHandleConnections`, `updateEdgeData`, `viewportInitialized`; `isNode`, `isEdge`, `getEdgeCenter`,
+  `getBezierEdgeCenter`, `getSimpleBezierPath`, and `getViewportForBounds` (ours is named `viewportForBounds`).
+- **Components:** `BezierEdge`, `SmoothStepEdge`, `StraightEdge`, `StepEdge`, `SimpleBezierEdge`, `EdgeText`,
+  `EdgeToolbar`, `ControlButton`, `NodeResizeControl`, `MiniMapNode`. Options: `Handle`'s `isConnectableStart` /
+  `End`, `isValidConnection`, `onConnect`; `MiniMap`'s `position`, `zoomable`, `nodeComponent`, `nodeStrokeColor`…;
+  `Controls`' `position`, `showInteractive`, `onZoomIn`…; `Background`'s `bgColor`; `NodeResizer`'s `autoScale`.
+- **Fields:** a node's `sourcePosition`, `targetPosition`, `handles`, `initialWidth` / `initialHeight`, `ariaLabel`,
+  `domAttributes`; an edge's `interactionWidth`, `labelStyle`, `labelShowBg`, `labelBgStyle`, `labelBgPadding`,
+  `labelBgBorderRadius`. A custom node is not given `dragging`, `width`, `height`, `draggable`, `selectable`,
+  `deletable`, `parentId`, `zIndex`, `dragHandle`, `sourcePosition` or `targetPosition` (it gets `id`, `data`, `type`,
+  `selected`, `isConnectable` and its absolute position); a custom edge is not given `animated`, `selectable`,
+  `deletable`, `interactionWidth`, the label styles or `pathOptions`. `fitView` has no `ease` / `interpolate`.
+
+Counts are not weights — most of the list is niche — but it is a list to check your own code against before
+swapping. Defaults that differ: `fitView` keeps a 40 px margin unless you pass a `padding` ratio, and `deleteKeyCode`
+is `'Backspace'` alone. Nodes and edges do not get React Flow's `role`, `aria-roledescription` or live region.
 
 ## Server rendering
 
@@ -338,6 +372,7 @@ pnpm test
 pnpm build       # dist/: ESM, CJS and type declarations
 pnpm size        # what a small consumer pays: the gzip size of the subset it imports, whole canvas and core
 node scripts/size-dist.mjs   # the same, from the built package (after pnpm build), which is what an app really bundles
+node scripts/audit-react-flow.mjs <path>   # how much of React Flow's API this has, from its own type declarations
 ```
 
 [`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left.

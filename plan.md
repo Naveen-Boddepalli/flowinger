@@ -251,8 +251,11 @@ drag, connect, selection boxes, delete or the edit API; it hands a static viewer
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
-- Things React Flow has that this does not: `nodeOrigin`, `NodeToolbar` for a node other than its own.
-  This list is from memory of React Flow's API, not an audit.
+- A lot that React Flow has. Measured (not from memory) with `scripts/audit-react-flow.mjs` against `@xyflow/react`
+  12.11.6's type declarations: 78 of its 211 exports (108 of the 133 missing are types), 60 of 119 `ReactFlow`
+  props, 27 of 32 instance methods, 14 of 22 `Node` fields, 11 of 20 `Edge` fields, 5 of 13 `NodeProps` fields.
+  The README's "Coming from React Flow" lists what is missing, by category. It is enough for QueryLens (whose
+  `FlowTree` uses eight names) and not for an arbitrary React Flow app.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
   see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build
