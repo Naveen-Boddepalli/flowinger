@@ -162,6 +162,11 @@ hit-tests — edges, the minimap, `fitView`, box selection, `getIntersectingNode
 as `positionAbsoluteX` / `positionAbsoluteY`; the `position` in your data stays relative, in a `position`
 change too. Drag or nudge a parent together with its own children and they move once, not twice.
 
+An edge is stacked with the nodes it joins — the higher of the two — so one running into a child is drawn
+*above* its group (and can be clicked there) and below the child it ends at; `edge.zIndex` overrides. With no
+nesting every edge stays in the one layer under every node. Edges of different levels are separate `<svg>`s;
+arrowheads are shared through the lowest.
+
 Give a child `expandParent: true` and dragging it past its parent's edge makes the parent *grow* to hold it
 (instead of `extent: 'parent'`, which would stop it): a `dimensions` change for the parent's size, and past the
 top or left edge a `position` change too — the parent's corner moves out, and its other children are re-based

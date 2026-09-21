@@ -150,6 +150,18 @@ A third batch, each in its own module where it could be so that unused ones cost
 `ViewportPortal`, `zoomOnDoubleClick`, `connectionLineType` / `connectionLineStyle` / `connectionLineComponent`,
 a `step` edge type, and `smoothstep` that is actually smooth (its `borderRadius` was ignored).
 
+What driving this round in a real browser found: an edge running into a group's child was **unclickable inside
+the group** — every edge sat in one SVG below every node, so the group covered it. Edges are now stacked with the
+nodes they join (the higher of the two), one `<svg>` per level; with no nesting it is still one layer at z 0, so
+QueryLens's markup is unchanged (a test holds that). Also confirmed there, with real input: a child dragged past
+its parent's edge grows it while everything else stays put; auto-pan with the pointer held at the edge, and it
+stops on release; double-click zoom about the pointer; selecting an edge and dragging its end to another handle.
+
+Re-run against QueryLens with this build's tarball (nothing committed): typecheck and lint clean, **1170** unit,
+**79 / 79** e2e. Its `flow` chunk is **24.0 kB** gzip (14.0 with the first pin, 21.7 with the second) against the
+25 kB budget the trial branch now carries, so there is about 1 kB left; `pnpm size` here reads 21.0 kB for the
+same imports, with a CI budget of 22.
+
 A fifth, **`onReconnect`**: the rings on a selected edge's ends are HTML in the layer above the nodes (in the
 edges' own SVG a node would cover half of each), and the drag is the connection gesture run from the end that
 stays, so it snaps, is vetoed and is cancelled exactly as a new connection is; `reconnectEdge` applies it.

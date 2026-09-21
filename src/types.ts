@@ -147,6 +147,11 @@ export interface Edge {
   /** `false` keeps it out of a delete. */
   deletable?: boolean;
   /**
+   * Stacking order. By default an edge sits at the higher of its two nodes', so one running into a
+   * node inside a group is drawn above the group and can be clicked there.
+   */
+  zIndex?: number;
+  /**
    * Whether its ends can be dragged to other handles (see `onReconnect`): `false`
    * for neither, or `'source'` / `'target'` for just that end. Default true.
    */

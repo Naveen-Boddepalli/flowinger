@@ -681,6 +681,7 @@ function InnerCanvas({
               connectionLineStyle={connectionLineStyle}
               connectionLineComponent={connectionLineComponent}
               reconnectable={edgesReconnectable && onReconnect !== undefined}
+              depths={tree.depth}
             />
           </EdgeLabelHost.Provider>
           {/* Your own elements, in graph space: `ViewportPortal` draws into this. */}

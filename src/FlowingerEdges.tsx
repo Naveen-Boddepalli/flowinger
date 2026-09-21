@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type ComponentType,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactElement,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
@@ -47,6 +48,8 @@ export interface FlowingerEdgesProps {
   connectionLineComponent?: ComponentType<ConnectionLineProps> | undefined;
   /** Whether a selected edge shows drag handles on its ends — an `onReconnect` is there to hear of them. */
   reconnectable?: boolean;
+  /** How many parents deep each node is, for stacking an edge with the nodes it joins. */
+  depths?: ReadonlyMap<string, number> | undefined;
 }
 
 /**
@@ -383,6 +386,7 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   connectionLineStyle,
   connectionLineComponent: CustomConnectionLine,
   reconnectable = false,
+  depths,
 }: FlowingerEdgesProps) {
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
@@ -414,8 +418,19 @@ export const FlowingerEdges = memo(function FlowingerEdges({
     return `url(#${entry.id})`;
   };
 
+  // An edge is stacked with the nodes it joins — the higher of the two — so one
+  // running into a node inside a group is drawn above the group, where it can be
+  // clicked, and below the node it ends at. With no nesting that is level 0, the
+  // one layer under every node.
+  const nodeZ = (n: Node): number => n.zIndex ?? 1 + (depths?.get(n.id) ?? 0);
+  const levelOf = (source: Node, target: Node): number => {
+    const z = Math.max(nodeZ(source), nodeZ(target));
+    return z <= 1 ? 0 : z;
+  };
+  const levels = new Map<number, ReactElement[]>();
+
   let anyAnimated = false;
-  const paths = edges.map((edge) => {
+  edges.forEach((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
     if (!source || !target || edge.hidden) return null;
@@ -462,8 +477,15 @@ export const FlowingerEdges = memo(function FlowingerEdges({
 
     // A key of `edgeTypes` wins, even over a built-in name.
     const View = edge.type ? edgeTypes?.[edge.type] : undefined;
+    const level = edge.zIndex ?? levelOf(source, target);
+    const place = (element: ReactElement): null => {
+      const at = levels.get(level);
+      if (at) at.push(element);
+      else levels.set(level, [element]);
+      return null;
+    };
     if (View) {
-      return (
+      return place(
         <CustomEdge
           key={edge.id}
           View={View}
@@ -481,12 +503,12 @@ export const FlowingerEdges = memo(function FlowingerEdges({
           targetPosition={to.position}
           markerStart={markerStart}
           markerEnd={markerEnd}
-        />
+        />,
       );
     }
 
     const path = pathFor(edge.type, from.point, from.position, to.point, to.position);
-    return (
+    return place(
       <EdgePath
         key={edge.id}
         edge={edge}
@@ -506,68 +528,84 @@ export const FlowingerEdges = memo(function FlowingerEdges({
         labelY={path.labelY}
         markerStart={markerStart}
         markerEnd={markerEnd}
-      />
+      />,
     );
   });
 
+  // One <svg> per level, lowest first. The marker definitions and the animation's
+  // stylesheet ride in the lowest — `url(#…)` finds a marker anywhere in the
+  // document — and the line being dragged in the highest.
+  const ordered = [...levels.keys()].sort((a, b) => a - b);
+  if (ordered.length === 0) ordered.push(0);
+  const lowest = ordered[0];
+  const highest = ordered[ordered.length - 1];
+
+  const connectionLine =
+    connection &&
+    (CustomConnectionLine ? (
+      <g className="flowinger-connection-line react-flow__connection" style={{ pointerEvents: 'none' }}>
+        <CustomConnectionLine
+          fromX={connection.start.x}
+          fromY={connection.start.y}
+          fromPosition={connection.startPosition}
+          toX={connection.end.x}
+          toY={connection.end.y}
+          toPosition={connection.endPosition}
+          connectionLineType={connectionLineType}
+          connectionLineStyle={connectionLineStyle}
+          isValid={connection.isValid}
+        />
+      </g>
+    ) : (
+      <path
+        className="flowinger-connection-line react-flow__connection-path"
+        d={
+          pathFor(
+            connectionLineType,
+            connection.start,
+            connection.startPosition,
+            connection.end,
+            connection.endPosition,
+          ).d
+        }
+        fill="none"
+        stroke="var(--flowinger-selected, #38bdf8)"
+        strokeWidth={2}
+        strokeDasharray="5 4"
+        // Never takes events, whatever the style says: under the pointer it would hide the handle it is over.
+        style={{ ...connectionLineStyle, pointerEvents: 'none' }}
+      />
+    ));
+
   return (
-    <svg
-      className="flowinger-edges react-flow__edges"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        overflow: 'visible',
-        zIndex: 0,
-      }}
-    >
-      {anyAnimated && <style>{ANIMATED_EDGE_CSS}</style>}
-      {markers.size > 0 && (
-        <defs>
-          {[...markers.values()].map(({ id, marker }) => (
-            <MarkerDef key={id} id={id} marker={marker} />
-          ))}
-        </defs>
-      )}
-      {paths}
-      {connection &&
-        (CustomConnectionLine ? (
-          <g className="flowinger-connection-line react-flow__connection" style={{ pointerEvents: 'none' }}>
-            <CustomConnectionLine
-              fromX={connection.start.x}
-              fromY={connection.start.y}
-              fromPosition={connection.startPosition}
-              toX={connection.end.x}
-              toY={connection.end.y}
-              toPosition={connection.endPosition}
-              connectionLineType={connectionLineType}
-              connectionLineStyle={connectionLineStyle}
-              isValid={connection.isValid}
-            />
-          </g>
-        ) : (
-          <path
-            className="flowinger-connection-line react-flow__connection-path"
-            d={
-              pathFor(
-                connectionLineType,
-                connection.start,
-                connection.startPosition,
-                connection.end,
-                connection.endPosition,
-              ).d
-            }
-            fill="none"
-            stroke="var(--flowinger-selected, #38bdf8)"
-            strokeWidth={2}
-            strokeDasharray="5 4"
-            // Never takes events, whatever the style says: under the pointer it would hide the handle it is over.
-            style={{ ...connectionLineStyle, pointerEvents: 'none' }}
-          />
-        ))}
-    </svg>
+    <>
+      {ordered.map((level) => (
+        <svg
+          key={level}
+          className="flowinger-edges react-flow__edges"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            overflow: 'visible',
+            zIndex: level,
+          }}
+        >
+          {level === lowest && anyAnimated && <style>{ANIMATED_EDGE_CSS}</style>}
+          {level === lowest && markers.size > 0 && (
+            <defs>
+              {[...markers.values()].map(({ id, marker }) => (
+                <MarkerDef key={id} id={id} marker={marker} />
+              ))}
+            </defs>
+          )}
+          {levels.get(level)}
+          {level === highest && connectionLine}
+        </svg>
+      ))}
+    </>
   );
 });

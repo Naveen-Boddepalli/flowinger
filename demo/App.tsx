@@ -13,9 +13,12 @@ import {
   NodeToolbar,
   Panel,
   Position,
+  ViewportPortal,
   addEdge,
   getBezierPath,
+  reconnectEdge,
   useEdgesState,
+  useKeyPress,
   useNodesState,
   useReactFlow,
   type Connection,
@@ -121,7 +124,8 @@ const plan = (id: string, x: number, y: number, data: PlanData, extra: Partial<N
 const initialNodes: Node[] = [
   { id: 'block', type: 'group', position: { x: 40, y: 140 }, width: 520, height: 300, data: { label: 'Subquery' } },
   plan('1', 250, 20, { label: 'IndexScan', kind: 'PLAN OPERATOR', detail: 'idx_users_email', highlighted: true }),
-  plan('2', 40, 60, { label: 'Filter', kind: 'PLAN OPERATOR', detail: 'active = true' }, { parentId: 'block', extent: 'parent' }),
+  // Drag Filter past the box's edge: the box grows to hold it (it has no `extent: 'parent'` to stop it).
+  plan('2', 40, 60, { label: 'Filter', kind: 'PLAN OPERATOR', detail: 'active = true' }, { parentId: 'block', expandParent: true }),
   plan('3', 280, 60, { label: 'Projection', kind: 'PLAN OPERATOR', detail: 'id, name, email', highlighted: true }, { parentId: 'block', extent: 'parent' }),
   plan('4', 280, 500, { label: 'Output', kind: 'SINK', detail: '10 rows', highlighted: true }),
 ];
@@ -164,6 +168,12 @@ function bigGrid(count: number): Node[] {
   }));
 }
 
+/** Whether Shift is held — a `useKeyPress` readout, and a Shift-drag draws a selection box. */
+function ShiftState() {
+  const shift = useKeyPress('Shift');
+  return <span data-testid="shift">{shift ? 'Shift held: drag to box-select' : 'Hold Shift to box-select'}</span>;
+}
+
 /** How many nodes are in the document right now. */
 function DomCount() {
   const [count, setCount] = useState(0);
@@ -188,6 +198,12 @@ export function App() {
   const stress = useMemo(() => bigGrid(2000), []);
 
   const isValidConnection = (c: Connection) => c.source !== c.target;
+  const onReconnect = useCallback(
+    (old: Edge, next: Connection) => {
+      setEdges((all) => reconnectEdge(old, next, all));
+    },
+    [setEdges],
+  );
   const onConnect = useCallback(
     (c: Connection) => {
       setEdges((all) =>
@@ -206,7 +222,7 @@ export function App() {
           <span className="hidden whitespace-nowrap text-xs text-slate-500 sm:inline">· Pure React & SVG Node Graph Renderer</span>
         </div>
         <div className="hidden text-xs text-slate-400 md:block">
-          Scroll to zoom · Drag to pan (or box-select) · Shift-drag to box-select · Backspace deletes · Arrow keys nudge
+          Scroll or double-click to zoom · Drag to pan · Shift-drag to box-select · Select an edge to move its ends · Backspace deletes
         </div>
       </header>
 
@@ -230,6 +246,7 @@ export function App() {
             fitView
             isValidConnection={isValidConnection}
             onConnect={onConnect}
+            onReconnect={onReconnect}
             onSelectionChange={({ nodes: n, edges: e }) => {
               setPicked(n.length + e.length === 0 ? 'nothing selected' : `${String(n.length)} nodes, ${String(e.length)} edges selected`);
             }}
@@ -239,6 +256,16 @@ export function App() {
             maxZoom={2}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#334155" />
+            {/* Drawn in graph space, above the nodes: a marker at the origin. */}
+            <ViewportPortal>
+              <div
+                data-testid="origin"
+                className="text-[10px] text-slate-600"
+                style={{ position: 'absolute', transform: 'translate(-50%, -50%)' }}
+              >
+                + origin
+              </div>
+            </ViewportPortal>
             <Panel position="top-right">
               <div className="flex flex-col gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-2.5 text-xs text-slate-300 shadow-lg">
                 <label className="flex items-center gap-2">
@@ -254,6 +281,7 @@ export function App() {
                   2,000 nodes, drawn only in view
                 </label>
                 <div className="text-slate-500" data-testid="picked">{picked}</div>
+                <div className="text-slate-500"><ShiftState /></div>
                 <div className="text-slate-500">
                   <DomCount />
                 </div>
