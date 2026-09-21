@@ -244,13 +244,9 @@ export function pathFor(
     type === 'straight'
       ? getStraightPath(ends)
       : type === 'smoothstep'
-        ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, ...pick(options, 'borderRadius') })
+        ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, borderRadius: options?.borderRadius })
         : type === 'step'
           ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, borderRadius: 0 })
-          : getBezierPath({ ...ends, sourcePosition, targetPosition, ...pick(options, 'curvature') });
+          : getBezierPath({ ...ends, sourcePosition, targetPosition, curvature: options?.curvature });
   return { d, labelX, labelY };
 }
-
-/** `{ [key]: value }` when the option is there, else nothing — so a default still applies. */
-const pick = <K extends 'curvature' | 'borderRadius'>(o: Edge['pathOptions'], key: K): { [P in K]?: number } =>
-  o?.[key] === undefined ? {} : { [key]: o[key] } as { [P in K]?: number };

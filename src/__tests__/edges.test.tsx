@@ -10,6 +10,8 @@ import {
   SmoothStepEdge,
   StepEdge,
   StraightEdge,
+  edgeLabelsFeature,
+  editingFeature,
   getBezierEdgeCenter,
   getBezierPath,
   getEdgeCenter,
@@ -325,9 +327,11 @@ describe('an edge\'s label', () => {
     expect(container.querySelector('.react-flow__edge-textbg')).toBeNull();
   });
 
+  const boxed = { features: [edgeLabelsFeature] };
+
   it('gets a box behind it, as big as the text plus its padding, when labelShowBg is on', () => {
     withBBox(() => box);
-    const { container } = withEdge({ label: 'hi', labelShowBg: true });
+    const { container } = withEdge({ label: 'hi', labelShowBg: true }, boxed);
     const rect = must<SVGRectElement>(container, '.react-flow__edge-textbg');
     // The default padding is [2, 4]: two either side, four above and below.
     expect(rect.getAttribute('x')).toBe('38');
@@ -343,13 +347,16 @@ describe('an edge\'s label', () => {
 
   it('follows labelBgPadding, labelBgBorderRadius and labelBgStyle', () => {
     withBBox(() => box);
-    const { container } = withEdge({
-      label: 'hi',
-      labelShowBg: true,
-      labelBgPadding: [10, 1],
-      labelBgBorderRadius: 7,
-      labelBgStyle: { fill: 'gold' },
-    });
+    const { container } = withEdge(
+      {
+        label: 'hi',
+        labelShowBg: true,
+        labelBgPadding: [10, 1],
+        labelBgBorderRadius: 7,
+        labelBgStyle: { fill: 'gold' },
+      },
+      boxed,
+    );
     const rect = must<SVGRectElement>(container, '.react-flow__edge-textbg');
     expect(rect.getAttribute('x')).toBe('30');
     expect(rect.getAttribute('y')).toBe('9');
@@ -361,22 +368,54 @@ describe('an edge\'s label', () => {
 
   it('has no box unless asked for one', () => {
     withBBox(() => box);
-    const { container } = withEdge({ label: 'hi' });
+    const { container } = withEdge({ label: 'hi' }, boxed);
     expect(container.querySelector('.react-flow__edge-textbg')).toBeNull();
   });
 
   it('still shows its text where nothing can measure it', () => {
-    const { container } = withEdge({ label: 'hi', labelShowBg: true });
+    const { container } = withEdge({ label: 'hi', labelShowBg: true }, boxed);
     expect(container.querySelector('.react-flow__edge-textbg')).toBeNull();
     expect(must(container, '.react-flow__edge-text').textContent).toBe('hi');
   });
 
-  it('is drawn by BaseEdge, given the same props', () => {
+  it('is a feature\'s: without edgeLabels a core keeps the halo and draws no box', () => {
     withBBox(() => box);
+    const { container } = withEdge({ label: 'hi', labelShowBg: true });
+    expect(container.querySelector('.react-flow__edge-textbg')).toBeNull();
+    expect(must<SVGTextElement>(container, '.react-flow__edge-text').style.strokeWidth).toBe('4');
+  });
+
+  it('is measured again when the label changes', () => {
+    let width = 60;
+    withBBox(() => ({ ...box, width }));
+    const view = withEdge({ label: 'hi', labelShowBg: true }, boxed);
+    expect(must(view.container, '.react-flow__edge-textbg').getAttribute('width')).toBe('64');
+    width = 100;
+    view.rerender(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCore
+          nodes={nodes}
+          edges={[{ id: 'e', source: 'a', target: 'b', label: 'a longer one', labelShowBg: true }]}
+          {...boxed}
+        />
+      </div>,
+    );
+    expect(must(view.container, '.react-flow__edge-textbg').getAttribute('width')).toBe('104');
+  });
+
+  it('is drawn by BaseEdge inside a custom edge, given the same props', () => {
+    withBBox(() => box);
+    const Mine = ({ label }: EdgeProps) => (
+      <BaseEdge path="M0 0 L10 10" label={label} labelX={5} labelY={5} labelShowBg labelBgPadding={[1, 1]} />
+    );
     const { container } = render(
-      <svg>
-        <BaseEdge path="M0 0 L10 10" label="x" labelX={5} labelY={5} labelShowBg labelBgPadding={[1, 1]} />
-      </svg>,
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCanvas
+          nodes={nodes}
+          edges={[{ id: 'e', source: 'a', target: 'b', type: 'mine', label: 'x' }]}
+          edgeTypes={{ mine: Mine }}
+        />
+      </div>,
     );
     expect(must(container, '.react-flow__edge-textbg').getAttribute('width')).toBe('62');
   });
@@ -466,6 +505,17 @@ describe('updateEdgeData', () => {
 });
 
 describe('getNodeConnections and getHandleConnections', () => {
+  it('are the editing feature\'s, and say so where it is missing', () => {
+    let instance: FlowingerInstance | undefined;
+    render(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCore nodes={nodes} edges={[]} onInit={(i) => (instance = i)} />
+      </div>,
+    );
+    expect(() => instance?.getNodeConnections({ nodeId: 'a' })).toThrow(/editing/);
+    expect(() => instance?.getHandleConnections({ type: 'source', nodeId: 'a' })).toThrow(/editing/);
+  });
+
   const graph: Node[] = ['a', 'b', 'c'].map((id, i) => ({
     id,
     position: { x: i * 200, y: 0 },
@@ -485,7 +535,7 @@ describe('getNodeConnections and getHandleConnections', () => {
     let instance: FlowingerInstance | undefined;
     render(
       <div style={{ width: 800, height: 600 }}>
-        <FlowingerCore nodes={graph} edges={links} onInit={(i) => (instance = i)} />
+        <FlowingerCore nodes={graph} edges={links} features={[editingFeature]} onInit={(i) => (instance = i)} />
       </div>,
     );
     if (!instance) throw new Error('no instance');

@@ -6,6 +6,8 @@ import type {
   MouseEvent as ReactMouseEvent,
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
+  ReactNode,
+  RefObject,
   SVGAttributes,
 } from 'react';
 import type { FlowingerEdgesProps } from './FlowingerEdges.tsx';
@@ -232,6 +234,27 @@ export interface EdgeBits {
   onKeyDown?: (e: ReactKeyboardEvent<SVGGElement>) => void;
   /** More props for the edge's `<g>`, under the ones the canvas puts there itself. */
   props?: SVGAttributes<SVGGElement>;
+  /** Draws the box behind an edge's label, when the edge asks for one (`labelShowBg`). */
+  LabelBox?: ComponentType<LabelBoxProps>;
+}
+
+/**
+ * What draws the box behind a label, around the label's own `<text>` (its `children`): the box goes first, so
+ * it is behind. It is the text's parent so that its layout effect runs when the text has been laid out.
+ */
+export interface LabelBoxProps {
+  children: ReactNode;
+  textRef: RefObject<SVGTextElement | null>;
+  /** What the label says and where it is — when either changes, the text needs measuring again. */
+  label: string;
+  x: number;
+  y: number;
+  /** The label's own style: a bigger font is a bigger box. */
+  labelStyle: CSSProperties | undefined;
+  /** `[x, y]` between the text and the edge of the box. */
+  padding: [number, number];
+  borderRadius: number;
+  style: CSSProperties | undefined;
 }
 
 export interface EdgeAdornmentProps {

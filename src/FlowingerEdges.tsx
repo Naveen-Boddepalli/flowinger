@@ -84,7 +84,11 @@ interface EdgeChrome {
 function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hooks }: EdgeChrome) {
   const store = useFlowingerStore();
   const bits = hooks.flatMap((f) => f.useEdge?.({ store, edge, selectable }) ?? []);
-  const context = useMemo(() => ({ selected, selectable, interactive }), [selected, selectable, interactive]);
+  const LabelBox = bits.find((b) => b.LabelBox)?.LabelBox ?? null;
+  const context = useMemo(
+    () => ({ selected, selectable, interactive, LabelBox }),
+    [selected, selectable, interactive, LabelBox],
+  );
   const className = [
     'flowinger-edge react-flow__edge',
     edge.animated ? 'flowinger-edge-animated animated' : '',

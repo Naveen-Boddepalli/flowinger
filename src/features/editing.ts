@@ -1,3 +1,4 @@
+import { connectionsAt } from '../connections.ts';
 import type { Feature } from '../features.ts';
 import { isRectIntersecting } from '../geometry.ts';
 import type { Edge, EdgeChange, FlowingerInstance, Node, NodeChange, Rect } from '../types.ts';
@@ -13,6 +14,8 @@ export type EditingApi = Pick<
   | 'updateNodeData'
   | 'updateEdge'
   | 'updateEdgeData'
+  | 'getNodeConnections'
+  | 'getHandleConnections'
   | 'getIntersectingNodes'
   | 'isNodeIntersecting'
 >;
@@ -119,6 +122,9 @@ export const editingFeature: Feature<EditingApi> = {
       updateNodeData,
       updateEdge,
       updateEdgeData,
+      getNodeConnections: ({ type, nodeId, handleId }) =>
+        connectionsAt(ctx.edges, nodeId, { handleType: type, handleId }),
+      getHandleConnections: ({ type, nodeId, id }) => connectionsAt(ctx.edges, nodeId, { handleType: type, handleId: id }),
       getIntersectingNodes,
       isNodeIntersecting,
     };
