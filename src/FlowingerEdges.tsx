@@ -1,9 +1,12 @@
-import { memo, useId, useSyncExternalStore, type CSSProperties } from 'react';
+import { memo, useId, useSyncExternalStore, type CSSProperties, type ComponentType } from 'react';
+import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
 import { useFlowingerStore } from './context.ts';
 import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
 import {
   type Edge,
   type EdgeMarker,
+  type EdgeProps,
+  type EdgeTypes,
   type HandleType,
   type MarkerType,
   type Node,
@@ -14,6 +17,7 @@ import type { FlowingerStore, Size } from './store.ts';
 export interface FlowingerEdgesProps {
   edges: Edge[];
   nodes: Node[];
+  edgeTypes?: EdgeTypes | undefined;
 }
 
 /**
@@ -100,8 +104,6 @@ function pathFor(
   return { d, labelX, labelY };
 }
 
-/** Read from `--flowinger-edge` so a consumer can theme every edge at once. */
-const DEFAULT_EDGE_COLOR = 'var(--flowinger-edge, #b1b1b7)';
 const DEFAULT_MARKER_SIZE = 12;
 
 type ResolvedMarker = Required<EdgeMarker>;
@@ -161,18 +163,6 @@ interface EdgePathProps {
   markerEnd: string | undefined;
 }
 
-// A halo in the surface colour keeps the text readable where it crosses the
-// line, without measuring the text to size a background box.
-const labelStyle: CSSProperties = {
-  fontSize: 12,
-  fill: 'var(--flowinger-text, #e2e8f0)',
-  stroke: 'var(--flowinger-surface, #1e293b)',
-  strokeWidth: 4,
-  strokeLinejoin: 'round',
-  paintOrder: 'stroke',
-  pointerEvents: 'none',
-};
-
 /** Memoised on primitives: a drag moves one node, so most edges keep the same `d`. */
 const EdgePath = memo(function EdgePath({
   id,
@@ -187,34 +177,57 @@ const EdgePath = memo(function EdgePath({
 }: EdgePathProps) {
   return (
     <g className={`flowinger-edge react-flow__edge ${className}`} data-testid={`edge-${id}`}>
-      {/* Presentation attributes, so an edge's own `style` or a stylesheet rule wins. */}
-      <path
-        className="flowinger-edge-path react-flow__edge-path"
-        d={d}
-        fill="none"
-        stroke={DEFAULT_EDGE_COLOR}
-        strokeWidth={1}
+      <BaseEdge
+        path={d}
+        label={label}
+        labelX={labelX}
+        labelY={labelY}
         markerStart={markerStart}
         markerEnd={markerEnd}
         style={style}
       />
-      {label && (
-        <text
-          className="flowinger-edge-label react-flow__edge-text"
-          x={labelX}
-          y={labelY}
-          textAnchor="middle"
-          dominantBaseline="central"
-          style={labelStyle}
-        >
-          {label}
-        </text>
-      )}
     </g>
   );
 });
 
-export const FlowingerEdges = memo(function FlowingerEdges({ edges, nodes }: FlowingerEdgesProps) {
+interface CustomEdgeProps {
+  View: ComponentType<EdgeProps>;
+  /** Stable while the caller's `edges` array is, so an untouched edge is skipped. */
+  edge: Edge;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  sourcePosition: EdgeProps['sourcePosition'];
+  targetPosition: EdgeProps['targetPosition'];
+  markerStart: string | undefined;
+  markerEnd: string | undefined;
+}
+
+/** A user's edge component, in the same wrapper as a built-in edge, and memoised the same way. */
+const CustomEdge = memo(function CustomEdge({ View, edge, ...ends }: CustomEdgeProps) {
+  return (
+    <g className={`flowinger-edge react-flow__edge ${edge.className ?? ''}`} data-testid={`edge-${edge.id}`}>
+      <View
+        id={edge.id}
+        source={edge.source}
+        target={edge.target}
+        sourceHandleId={edge.sourceHandle ?? null}
+        targetHandleId={edge.targetHandle ?? null}
+        data={edge.data}
+        label={edge.label}
+        style={edge.style}
+        {...ends}
+      />
+    </g>
+  );
+});
+
+export const FlowingerEdges = memo(function FlowingerEdges({
+  edges,
+  nodes,
+  edgeTypes,
+}: FlowingerEdgesProps) {
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
   // makes this component re-render when either moves.
@@ -270,9 +283,31 @@ export const FlowingerEdges = memo(function FlowingerEdges({ edges, nodes }: Flo
       below ? Position.Top : Position.Left,
     );
 
-    const path = pathFor(edge.type, from.point, from.position, to.point, to.position);
     const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : DEFAULT_EDGE_COLOR;
+    const markerStart = markerRef(edge.markerStart, stroke);
+    const markerEnd = markerRef(edge.markerEnd, stroke);
 
+    // A key of `edgeTypes` wins, even over a built-in name.
+    const View = edge.type ? edgeTypes?.[edge.type] : undefined;
+    if (View) {
+      return (
+        <CustomEdge
+          key={edge.id}
+          View={View}
+          edge={edge}
+          sourceX={from.point.x}
+          sourceY={from.point.y}
+          targetX={to.point.x}
+          targetY={to.point.y}
+          sourcePosition={from.position}
+          targetPosition={to.position}
+          markerStart={markerStart}
+          markerEnd={markerEnd}
+        />
+      );
+    }
+
+    const path = pathFor(edge.type, from.point, from.position, to.point, to.position);
     return (
       <EdgePath
         key={edge.id}
@@ -283,8 +318,8 @@ export const FlowingerEdges = memo(function FlowingerEdges({ edges, nodes }: Flo
         label={edge.label}
         labelX={path.labelX}
         labelY={path.labelY}
-        markerStart={markerRef(edge.markerStart, stroke)}
-        markerEnd={markerRef(edge.markerEnd, stroke)}
+        markerStart={markerStart}
+        markerEnd={markerEnd}
       />
     );
   });

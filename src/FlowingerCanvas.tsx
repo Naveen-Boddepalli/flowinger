@@ -68,6 +68,7 @@ function InnerCanvas({
   nodes,
   edges = [],
   nodeTypes = {},
+  edgeTypes,
   minZoom = 0.05,
   maxZoom = 2,
   nodesDraggable = false,
@@ -306,7 +307,7 @@ function InnerCanvas({
           transform: viewportTransform(store.getViewport()),
         }}
       >
-        <FlowingerEdges edges={edges} nodes={nodes} />
+        <FlowingerEdges edges={edges} nodes={nodes} edgeTypes={edgeTypes} />
 
         <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>
           {nodes.map((node) => (

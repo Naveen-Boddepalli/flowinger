@@ -8,6 +8,7 @@ export { useFlowinger, useReactFlow, useStore, useViewport } from './context.ts'
 
 // Handles & Ports
 export { Handle } from './Handle.tsx';
+export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
 
 // Background & Controls
 export { Background } from './Background.tsx';
@@ -43,5 +44,7 @@ export type {
   BackgroundProps,
   TranslateExtent,
   EdgeMarker,
+  EdgeProps,
+  EdgeTypes,
 } from './types.ts';
 export type { FlowingerState } from './store.ts';

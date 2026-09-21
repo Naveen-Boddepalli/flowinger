@@ -67,6 +67,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `FlowingerCanvas` | The canvas. Pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. |
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
+| `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
 | `Background`, `Controls` | A dot/line/cross backdrop; zoom and fit buttons. Both go inside the provider. |
 | `useFlowinger()`, `useViewport()` | The viewport controls (`setViewport`, `zoomIn`, `zoomOut`, `fitView`, `getViewport`), and the current viewport. |
 | `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY]`. |
@@ -76,6 +77,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | Prop | Default | |
 |---|---|---|
 | `nodes`, `edges`, `nodeTypes` | | The graph. `nodeTypes` maps `node.type` to your component. |
+| `edgeTypes` | | Custom edge components by `edge.type`, receiving `EdgeProps` (where each end attaches, which way it leaves, `data`, `label`, marker references). A key overrides a built-in of the same name; an unknown `type` draws a bezier. |
 | `minZoom`, `maxZoom` | `0.05`, `2` | |
 | `nodesDraggable` | `false` | A node's own `draggable` overrides it, either way. |
 | `panOnDrag` | `true` | `false`, or a list of mouse buttons, e.g. `[1]` for middle only. |
@@ -112,7 +114,7 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore` (only `panZoom` and `isReady`), `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
 all exported under React Flow's names. **Not built:** selection, connecting edges by dragging, a
-minimap, custom edge components, and `animated` (style an edge with a class instead).
+minimap, and `animated` (style an edge with a class instead).
 
 ## Server rendering
 

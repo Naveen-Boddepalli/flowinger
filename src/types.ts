@@ -65,13 +65,40 @@ export interface Edge {
   className?: string;
   style?: CSSProperties;
   animated?: boolean;
-  type?: 'bezier' | 'straight' | 'smoothstep';
+  /** A built-in path, or a key of the canvas's `edgeTypes`. */
+  type?: 'bezier' | 'straight' | 'smoothstep' | (string & {});
   /** Text drawn at the middle of the edge. */
   label?: string;
   markerStart?: MarkerType | EdgeMarker;
   markerEnd?: MarkerType | EdgeMarker;
   data?: Record<string, unknown>;
 }
+
+/** What a custom edge component receives. */
+export interface EdgeProps {
+  id: string;
+  source: string;
+  target: string;
+  /** Where the edge attaches at each end, in graph units. */
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  /** Which way it leaves the source / arrives at the target. */
+  sourcePosition: Position;
+  targetPosition: Position;
+  sourceHandleId: string | null;
+  targetHandleId: string | null;
+  data?: Record<string, unknown> | undefined;
+  label?: string | undefined;
+  style?: CSSProperties | undefined;
+  /** `url(#…)` references into the shared marker definitions — put them on a `<path>`. */
+  markerStart?: string | undefined;
+  markerEnd?: string | undefined;
+}
+
+/** A registry of edge components by `Edge.type`, like `nodeTypes` for nodes. */
+export type EdgeTypes = Record<string, ComponentType<EdgeProps>>;
 
 /** The region of graph space the view may show: `[[minX, minY], [maxX, maxY]]`. */
 export type TranslateExtent = [[number, number], [number, number]];
@@ -131,6 +158,8 @@ export interface FlowingerProps {
   nodes: Node[];
   edges?: Edge[];
   nodeTypes?: NodeTypes;
+  /** Custom edge components, by `Edge.type`. A key overrides a built-in of the same name. */
+  edgeTypes?: EdgeTypes;
   minZoom?: number;
   maxZoom?: number;
   nodesDraggable?: boolean;

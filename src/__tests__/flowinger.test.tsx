@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
   Background,
+  BaseEdge,
   FlowingerCanvas,
   FlowingerProvider,
   Controls,
@@ -16,6 +17,7 @@ import {
   useStore,
   useViewport,
   type Edge,
+  type EdgeProps,
   type FlowingerInstance,
   type Node,
   type NodeProps,
@@ -1225,5 +1227,150 @@ describe('README quickstart', () => {
     expect(container.querySelector('.flowinger-background')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
     expect(must<HTMLElement>(container, '.react-flow__controls').style.position).toBe('absolute');
+  });
+});
+
+describe('Flowinger custom edges', () => {
+  const nodes: Node[] = [
+    { id: 'a', position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
+    { id: 'b', position: { x: 0, y: 200 }, data: {}, width: 100, height: 40 },
+  ];
+  const commits: Record<string, number> = {};
+
+  /** Writes what it was given into the DOM, so a test can read it back. */
+  function Probe(p: EdgeProps) {
+    useEffect(() => {
+      commits[p.id] = (commits[p.id] ?? 0) + 1;
+    });
+    const seen = {
+      id: p.id, source: p.source, target: p.target,
+      sx: p.sourceX, sy: p.sourceY, tx: p.targetX, ty: p.targetY,
+      sp: p.sourcePosition, tp: p.targetPosition,
+      sh: p.sourceHandleId, th: p.targetHandleId,
+      label: p.label, data: p.data, markerEnd: p.markerEnd,
+    };
+    return <g data-testid={`probe-${p.id}`} data-seen={JSON.stringify(seen)} />;
+  }
+  const seenBy = (container: ParentNode, id = 'e') =>
+    JSON.parse(must(container, `[data-testid="probe-${id}"]`).getAttribute('data-seen') ?? '{}') as Record<string, unknown>;
+  const custom = (over: Partial<Edge> = {}): Edge => ({ id: 'e', source: 'a', target: 'b', type: 'probe', ...over });
+  const types = { probe: Probe };
+
+  afterEach(() => {
+    for (const key of Object.keys(commits)) delete commits[key];
+  });
+
+  it('hands the component where each end attaches, and which way it leaves', () => {
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        edgeTypes={types}
+        edges={[custom({ data: { weight: 3 }, label: 'joins' })]}
+      />,
+    );
+    // a's bottom-middle and b's top-middle: no handles, b sits below a.
+    expect(seenBy(container)).toMatchObject({
+      id: 'e', source: 'a', target: 'b',
+      sx: 50, sy: 40, tx: 50, ty: 200,
+      sp: 'bottom', tp: 'top',
+      sh: null, th: null,
+      label: 'joins', data: { weight: 3 },
+    });
+  });
+
+  it('wraps it like a built-in edge, so the same class hooks and test ids apply', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edgeTypes={types} edges={[custom({ className: 'mine' })]} />,
+    );
+    const wrapper = must(container, '[data-testid="edge-e"]');
+    expect(wrapper.classList.contains('react-flow__edge')).toBe(true);
+    expect(wrapper.classList.contains('mine')).toBe(true);
+    expect(wrapper.querySelector('[data-testid="probe-e"]')).not.toBeNull();
+  });
+
+  it('lets a component reuse the default drawing through BaseEdge and the path helpers', () => {
+    function Curvy({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, label }: EdgeProps) {
+      const [path, labelX, labelY] = getBezierPath({
+        sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, curvature: 0.5,
+      });
+      return <BaseEdge path={path} label={label} labelX={labelX} labelY={labelY} />;
+    }
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edgeTypes={{ curvy: Curvy }} edges={[custom({ type: 'curvy', label: 'hi' })]} />,
+    );
+    expect(must(container, '.react-flow__edge-path').getAttribute('d')).toMatch(/^M 50\.00 40\.00 C/);
+    expect(must(container, '.react-flow__edge-text').textContent).toBe('hi');
+  });
+
+  it('passes marker references that point at real definitions', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edgeTypes={types} edges={[custom({ markerEnd: 'arrowclosed' })]} />,
+    );
+    const ref = String(seenBy(container).markerEnd);
+    const id = /^url\(#(.+)\)$/.exec(ref)?.[1];
+    expect(id).toBeTruthy();
+    expect(container.querySelector(`marker[id="${String(id)}"]`)).not.toBeNull();
+  });
+
+  it('attaches at a registered handle, like a built-in edge', () => {
+    function Ported() {
+      return (
+        <div>
+          <Handle id="west" type="source" position={Position.Left} />
+          <Handle id="east" type="target" position={Position.Right} />
+        </div>
+      );
+    }
+    const ported: Node[] = nodes.map((n) => ({ ...n, type: 'ported' }));
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={ported}
+        nodeTypes={{ ported: Ported }}
+        edgeTypes={types}
+        edges={[custom({ sourceHandle: 'west', targetHandle: 'east' })]}
+      />,
+    );
+    expect(seenBy(container)).toMatchObject({
+      sx: 0, sy: 20, sp: 'left', tx: 100, ty: 220, tp: 'right', sh: 'west', th: 'east',
+    });
+  });
+
+  it('follows a dragged node', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edgeTypes={types} edges={[custom()]} nodesDraggable />,
+    );
+    const b = must(container, '[data-id="b"]');
+    fireEvent.pointerDown(b, pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(b, pointer({ clientX: 0, clientY: 100 }));
+    expect(seenBy(container)).toMatchObject({ ty: 300 });
+  });
+
+  it('is not re-rendered when a node it is not attached to moves', () => {
+    const three: Node[] = [...nodes, { id: 'c', position: { x: 400, y: 0 }, data: {}, width: 100, height: 40 }];
+    const edges = [custom()]; // one array, kept: only the geometry changes
+    const { container } = render(
+      <FlowingerCanvas nodes={three} edgeTypes={types} edges={edges} nodesDraggable />,
+    );
+    const before = commits.e;
+    const c = must(container, '[data-id="c"]');
+    fireEvent.pointerDown(c, pointer({ clientX: 0, clientY: 0 }));
+    for (let i = 1; i <= 5; i++) fireEvent.pointerMove(c, pointer({ clientX: i * 10, clientY: i * 10 }));
+    expect(commits.e).toBe(before);
+  });
+
+  it('draws a built-in edge for a type nobody registered', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edgeTypes={types} edges={[custom({ type: 'nope' })]} />,
+    );
+    expect(container.querySelector('[data-testid="probe-e"]')).toBeNull();
+    expect(must(container, '.react-flow__edge-path').getAttribute('d')).toMatch(/^M 50\.00 40\.00 C/);
+  });
+
+  it('lets a registered type replace a built-in one of the same name', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} edgeTypes={{ straight: Probe }} edges={[custom({ type: 'straight' })]} />,
+    );
+    expect(container.querySelector('[data-testid="probe-e"]')).not.toBeNull();
+    expect(container.querySelector('.react-flow__edge-path')).toBeNull();
   });
 });

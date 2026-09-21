@@ -71,6 +71,12 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
   first paint is already framed. Verified against the *installed tarball*: a server render with no DOM,
   then a client render and a hydration of that server HTML, under React 19.3 and 18.3 — no warnings.
   jsdom tests alone could not have found this; they only ever render on a client.
+- **Custom edges are components, like custom nodes.** `edgeTypes` maps `edge.type` to a component that
+  receives `EdgeProps` — both attach points, both directions, `data`, `label`, and `url(#…)` marker
+  references — and is wrapped in the same `<g class="react-flow__edge">` as a built-in edge. `BaseEdge`
+  is the default drawing, exported so a custom edge can start from it. A registered key wins over a
+  built-in name; an unregistered type falls back to a bezier. Memoised on the edge object and its
+  coordinates, so a drag elsewhere does not re-render it.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
