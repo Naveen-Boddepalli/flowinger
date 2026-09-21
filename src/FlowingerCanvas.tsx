@@ -17,6 +17,7 @@ import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
+import { SelectionBox } from './SelectionBox.tsx';
 import { viewportTransform } from './store.ts';
 import {
   DRAG_THRESHOLD,
@@ -80,6 +81,18 @@ const WHEEL_PIXELS_PER_UNIT = [1, 20, 400] as const;
 const KEY_PAN_STEP = 50;
 const KEY_PAN_STEP_LARGE = 200;
 
+interface BoxState {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  /** The pane's place on the page, so the box can be worked in pane pixels. */
+  left: number;
+  top: number;
+  active: boolean;
+  /** What stays selected under it, when Ctrl or ⌘ held the selection at the start. */
+  base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null;
+}
+
 interface PanState {
   pointerId: number;
   startX: number;
@@ -101,6 +114,12 @@ function InnerCanvas({
   maxZoom = 2,
   nodesDraggable = false,
   panOnDrag = true,
+  selectionOnDrag = false,
+  selectionMode = 'full',
+  onSelectionStart,
+  onSelectionEnd,
+  panOnScroll = false,
+  panOnScrollSpeed = 0.5,
   zoomOnScroll = true,
   zoomOnPinch = true,
   elementsSelectable = false,
@@ -183,6 +202,7 @@ function InnerCanvas({
   /** Every pointer currently down, so a second finger can be told from a click. */
   const pointers = useRef(new Map<number, XYPosition>());
   const pinch = useRef<PinchStart | null>(null);
+  const box = useRef<BoxState | null>(null);
   /** A pan just ended: the click that follows it is not a click on the canvas. */
   const justPanned = useRef(false);
 
@@ -282,24 +302,36 @@ function InnerCanvas({
     onInitRef.current?.(store.instance);
   }, [store]);
 
-  // Wheel zoom. A native listener: React registers `wheel` as passive, and a
-  // passive listener cannot stop the page scrolling underneath.
+  // Wheel: zoom, or — with `panOnScroll` — pan. A native listener: React
+  // registers `wheel` as passive, and a passive listener cannot stop the page
+  // scrolling underneath.
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !zoomOnScroll) return;
+    if (!container || (!zoomOnScroll && !panOnScroll)) return;
     const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = container.getBoundingClientRect();
-      const pixels = e.deltaY * WHEEL_PIXELS_PER_UNIT[e.deltaMode as 0 | 1 | 2];
+      const unit = WHEEL_PIXELS_PER_UNIT[e.deltaMode as 0 | 1 | 2];
       // A trackpad pinch arrives as ctrl+wheel with small deltas.
-      const factor = 2 ** (-pixels * (e.ctrlKey ? 0.01 : 0.002));
-      store.zoomAt(factor, e.clientX - rect.left, e.clientY - rect.top);
+      const zooming = panOnScroll ? e.ctrlKey || e.metaKey : true;
+      if (zooming && !zoomOnScroll) return;
+      e.preventDefault();
+      if (zooming) {
+        const rect = container.getBoundingClientRect();
+        const factor = 2 ** (-e.deltaY * unit * (e.ctrlKey ? 0.01 : 0.002));
+        store.zoomAt(factor, e.clientX - rect.left, e.clientY - rect.top);
+        return;
+      }
+      const vp = store.getViewport();
+      void store.instance.setViewport({
+        x: vp.x - e.deltaX * unit * panOnScrollSpeed,
+        y: vp.y - e.deltaY * unit * panOnScrollSpeed,
+        zoom: vp.zoom,
+      });
     };
     container.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       container.removeEventListener('wheel', onWheel);
     };
-  }, [store, zoomOnScroll]);
+  }, [store, zoomOnScroll, panOnScroll, panOnScrollSpeed]);
 
   const canPan = (button: number): boolean =>
     Array.isArray(panOnDrag) ? panOnDrag.includes(button) : panOnDrag && (button === 0 || button === 1);
@@ -327,6 +359,30 @@ function InnerCanvas({
         return;
       }
     }
+    // A bare press on the pane draws a selection box when that is asked for
+    // (always with Shift); everything else falls through to panning.
+    if (
+      elementsSelectable &&
+      e.button === 0 &&
+      e.target === e.currentTarget &&
+      (selectionOnDrag || e.shiftKey)
+    ) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const keep = e.ctrlKey || e.metaKey ? store.getSelection() : null;
+      box.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        left: rect.left,
+        top: rect.top,
+        active: false,
+        base: keep && {
+          nodes: new Set(keep.nodes.map((n) => n.id)),
+          edges: new Set(keep.edges.map((n) => n.id)),
+        },
+      };
+      return;
+    }
     if (!canPan(e.button) || isInteractive(e.target)) return;
     pan.current = {
       pointerId: e.pointerId,
@@ -347,6 +403,28 @@ function InnerCanvas({
       if (now) {
         store.instance.setViewport(pinchViewport(start, now.mid, now.dist, minZoom, maxZoom));
       }
+      return;
+    }
+
+    const b = box.current;
+    if (b?.pointerId === e.pointerId) {
+      if (!b.active) {
+        if (Math.hypot(e.clientX - b.startX, e.clientY - b.startY) < DRAG_THRESHOLD) return;
+        b.active = true;
+        justPanned.current = true; // the click that ends it is not a click on the pane
+        capturePointer(e.currentTarget, e.pointerId);
+        onSelectionStart?.(e);
+      }
+      store.boxSelect(
+        {
+          x: Math.min(b.startX, e.clientX) - b.left,
+          y: Math.min(b.startY, e.clientY) - b.top,
+          width: Math.abs(e.clientX - b.startX),
+          height: Math.abs(e.clientY - b.startY),
+        },
+        selectionMode,
+        b.base,
+      );
       return;
     }
 
@@ -373,6 +451,19 @@ function InnerCanvas({
     // One finger left is not a pinch — and does not carry on as a pan either;
     // it would jump. A fresh touch starts one.
     if (pointers.current.size < 2) pinch.current = null;
+
+    const b = box.current;
+    if (b?.pointerId === e.pointerId) {
+      box.current = null;
+      if (b.active) {
+        releasePointer(e.currentTarget, e.pointerId);
+        store.endBoxSelect();
+        onSelectionEnd?.(e);
+        // Leave focus where the delete key will find it.
+        e.currentTarget.focus({ preventScroll: true });
+      }
+      return;
+    }
 
     const p = pan.current;
     if (p?.pointerId !== e.pointerId) return;
@@ -464,7 +555,8 @@ function InnerCanvas({
     userSelect: 'none',
     touchAction: 'none',
     ...(focusableForDelete ? { outline: 'none' } : {}),
-    ...(panOnDrag ? { cursor: 'grab' } : {}),
+    ...(panOnDrag && !selectionOnDrag ? { cursor: 'grab' } : {}),
+    ...(selectionOnDrag && elementsSelectable ? { cursor: 'crosshair' } : {}),
     ...style,
   };
 
@@ -487,6 +579,7 @@ function InnerCanvas({
     >
       {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
       {children}
+      <SelectionBox />
 
       {/* The layer the viewport transform is written to. */}
       <div

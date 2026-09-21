@@ -34,6 +34,7 @@ export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
 export { Background } from './Background.tsx';
 export { MiniMap, type MiniMapProps } from './MiniMap.tsx';
 export { Controls } from './Controls.tsx';
+export { Panel, type PanelProps, type PanelPosition } from './Panel.tsx';
 
 // Edges & Path Math
 export { FlowingerEdges } from './FlowingerEdges.tsx';
@@ -49,6 +50,7 @@ export {
   BackgroundVariant,
   MarkerType,
   ConnectionMode,
+  SelectionMode,
 } from './types.ts';
 
 export type {

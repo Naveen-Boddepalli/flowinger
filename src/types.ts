@@ -23,6 +23,17 @@ export const ConnectionMode = {
 
 export type ConnectionMode = (typeof ConnectionMode)[keyof typeof ConnectionMode];
 
+/**
+ * How a selection box picks nodes: `full` takes those wholly inside it, `partial`
+ * any it touches.
+ */
+export const SelectionMode = {
+  Full: 'full',
+  Partial: 'partial',
+} as const;
+
+export type SelectionMode = (typeof SelectionMode)[keyof typeof SelectionMode];
+
 /** Which handle a connection is being dragged out of. */
 export interface ConnectStartParams {
   nodeId: string;
@@ -344,6 +355,25 @@ export interface FlowingerProps {
    */
   elementsSelectable?: boolean;
   panOnDrag?: boolean | number[];
+  /**
+   * Dragging on the empty canvas draws a selection box instead of panning (with
+   * `elementsSelectable`). Holding Shift does that anyway. Pan with the middle or
+   * right button (`panOnDrag={[1, 2]}`), or with the wheel (`panOnScroll`).
+   * Default false.
+   */
+  selectionOnDrag?: boolean;
+  /** Whether a selection box takes the nodes it touches or only those wholly inside. Default `'full'`. */
+  selectionMode?: SelectionMode;
+  /** A selection box began (past the drag threshold). */
+  onSelectionStart?: (event: React.PointerEvent) => void;
+  onSelectionEnd?: (event: React.PointerEvent) => void;
+  /**
+   * The wheel pans instead of zooming; Ctrl/⌘ with the wheel (and a trackpad pinch)
+   * still zooms. Default false.
+   */
+  panOnScroll?: boolean;
+  /** How far the wheel pans per unit of scroll. Default 0.5. */
+  panOnScrollSpeed?: number;
   zoomOnScroll?: boolean;
   /** Zoom with a two-finger pinch on touch. Default true. */
   zoomOnPinch?: boolean;

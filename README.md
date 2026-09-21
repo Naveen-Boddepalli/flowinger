@@ -68,6 +68,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
+| `Panel` | A box of your own UI pinned to the canvas — `position` is `top-left` (default), `top-center`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-center` or `bottom-right`. A press on it does not pan, and a click on it is not a pane click. |
 | `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's — as in React Flow); zoom and fit buttons. Both go inside the provider. |
 | `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor` (a colour or a function of the node), `maskColor`, `pannable`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
 | `useFlowinger()`, `useViewport()` | The instance (below), and the current viewport. |
@@ -84,6 +85,8 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `nodesDraggable` | `false` | A node's own `draggable` overrides it, either way. |
 | `panOnDrag` | `true` | `false`, or a list of mouse buttons, e.g. `[1]` for middle only. |
 | `zoomOnScroll`, `zoomOnPinch` | `true` | |
+| `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). |
+| `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
 | `snapToGrid`, `snapGrid` | `false`, `[15, 15]` | A dragged node lands on the grid; a selection keeps its shape, snapping by the node you hold. |
