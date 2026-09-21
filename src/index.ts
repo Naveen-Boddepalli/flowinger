@@ -2,6 +2,25 @@
 export { FlowingerCanvas, FlowingerCanvas as ReactFlow } from './FlowingerCanvas.tsx';
 export { FlowingerCore } from './FlowingerCore.tsx';
 export {
+  allFeatures,
+  boxSelectFeature,
+  connectFeature,
+  cullingFeature,
+  deleteFeature,
+  dragFeature,
+  editingFeature,
+  reconnectFeature,
+} from './features/index.ts';
+export type {
+  CanvasArgs,
+  CanvasBits,
+  EdgeAdornmentProps,
+  EngineContext,
+  Feature,
+  NodeArgs,
+  NodeBits,
+} from './features.ts';
+export {
   FlowingerProvider,
   FlowingerProvider as ReactFlowProvider,
 } from './FlowingerProvider.tsx';
@@ -55,7 +74,7 @@ export { NodeToolbar, type NodeToolbarProps } from './NodeToolbar.tsx';
 export { NodeResizer, type NodeResizerProps, type ResizeParams } from './NodeResizer.tsx';
 
 // Edges & Path Math
-export { FlowingerEdges } from './FlowingerEdges.tsx';
+export { FlowingerEdges, type FlowingerEdgesProps } from './FlowingerEdges.tsx';
 export {
   getBezierPath,
   getStraightPath,

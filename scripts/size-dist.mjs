@@ -20,6 +20,7 @@ const result = await build({
   configFile: false,
   logLevel: 'silent',
   root: dir,
+  define: { 'process.env.NODE_ENV': '"production"' },
   build: {
     write: false,
     minify: true,

@@ -14,6 +14,7 @@ import {
 } from 'react';
 import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
+import { warnAboutIgnoredProps } from './devWarnings.ts';
 import { resolveFeatures, type Feature } from './features.ts';
 import { ViewportPortalHost } from './ViewportPortal.tsx';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
@@ -170,6 +171,12 @@ function InnerCanvas(props: FlowingerProps) {
     store.use(features);
     return resolveFeatures(features);
   });
+  // What a canvas is given when it mounts is what it is judged by. The condition is a constant to a
+  // production bundle, which then drops the check and the table behind it.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') warnAboutIgnoredProps(props, feats);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // `defaultEdgeOptions` is compared by value, so `{ animated: true }` written
   // inline does not remake every edge on every render.

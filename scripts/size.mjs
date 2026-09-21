@@ -21,6 +21,8 @@ for (const { name, entry, max } of entries) {
   const result = await build({
     configFile: false,
     logLevel: 'silent',
+    // As in an app's production build, where the development-only checks are dead code.
+    define: { 'process.env.NODE_ENV': '"production"' },
     build: {
       write: false,
       minify: true,
