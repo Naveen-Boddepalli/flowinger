@@ -31,6 +31,23 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
   delete: ['deleteKeyCode', 'onBeforeDelete', 'onNodesDelete', 'onEdgesDelete', 'onDelete'],
   culling: ['onlyRenderVisibleElements'],
   selection: ['elementsSelectable', 'edgesFocusable'],
+  events: [
+    'onNodeDoubleClick',
+    'onNodeContextMenu',
+    'onNodeMouseEnter',
+    'onNodeMouseMove',
+    'onNodeMouseLeave',
+    'onEdgeDoubleClick',
+    'onEdgeContextMenu',
+    'onEdgeMouseEnter',
+    'onEdgeMouseMove',
+    'onEdgeMouseLeave',
+    'onPaneContextMenu',
+    'onPaneMouseEnter',
+    'onPaneMouseMove',
+    'onPaneMouseLeave',
+    'onPaneScroll',
+  ],
 };
 
 /**

@@ -460,6 +460,34 @@ export interface FlowingerProps {
   onNodeClick?: (event: React.MouseEvent, node: Node) => void;
   /** A click on the empty canvas — but not the click that ends a pan. */
   onPaneClick?: (event: React.MouseEvent) => void;
+  /** A double click on a node. */
+  onNodeDoubleClick?: (event: React.MouseEvent, node: Node) => void;
+  /** A right click on a node. */
+  onNodeContextMenu?: (event: React.MouseEvent, node: Node) => void;
+  /** The pointer came onto a node, moved over it, or left it. */
+  onNodeMouseEnter?: (event: React.MouseEvent, node: Node) => void;
+  onNodeMouseMove?: (event: React.MouseEvent, node: Node) => void;
+  onNodeMouseLeave?: (event: React.MouseEvent, node: Node) => void;
+  /**
+   * A double click, a right click, or the pointer coming onto, moving over and leaving an edge. Giving any of
+   * these (or `onEdgeClick`) makes every edge take the pointer, selectable or not.
+   */
+  onEdgeDoubleClick?: (event: React.MouseEvent, edge: Edge) => void;
+  onEdgeContextMenu?: (event: React.MouseEvent, edge: Edge) => void;
+  onEdgeMouseEnter?: (event: React.MouseEvent, edge: Edge) => void;
+  onEdgeMouseMove?: (event: React.MouseEvent, edge: Edge) => void;
+  onEdgeMouseLeave?: (event: React.MouseEvent, edge: Edge) => void;
+  /**
+   * A right click on the empty canvas. With right-button panning (`panOnDrag={[1, 2]}`) the browser's menu is
+   * held back and this is not called, as in React Flow.
+   */
+  onPaneContextMenu?: (event: React.MouseEvent) => void;
+  /** The pointer came onto the canvas (nodes and all), moved over it, or left it. */
+  onPaneMouseEnter?: (event: React.MouseEvent) => void;
+  onPaneMouseMove?: (event: React.MouseEvent) => void;
+  onPaneMouseLeave?: (event: React.MouseEvent) => void;
+  /** The wheel turned over the empty canvas — whether or not it zoomed. */
+  onPaneScroll?: (event?: React.WheelEvent) => void;
   /**
    * Let a handle be dragged to another to make a connection. Default false.
    * The engine never edits `edges`; it reports the connection through `onConnect`.
@@ -503,7 +531,7 @@ export interface FlowingerProps {
   onConnectStart?: (event: PointerEvent, params: ConnectStartParams) => void;
   /** A connection drag ended — whether or not it made a connection. */
   onConnectEnd?: (event: PointerEvent, state: ConnectEndState) => void;
-  /** A click on an edge (a selectable one, or a custom edge that draws its own hit area). */
+  /** A click on an edge — a selectable one, or any edge when an `onEdge…` handler is given. */
   onEdgeClick?: (event: React.MouseEvent, edge: Edge) => void;
   /** Whether selectable edges are tab stops, selected by Enter or Space. Default true. */
   edgesFocusable?: boolean;

@@ -31,7 +31,7 @@ export interface BaseEdgeProps {
   style?: CSSProperties | undefined;
   /**
    * The width of an invisible strip along the path that takes the click, so a thin
-   * edge is easy to hit. Default 20 when the edge is selectable, else none.
+   * edge is easy to hit. Default 20 when the edge is selectable or the canvas listens to edge events, else none.
    */
   interactionWidth?: number;
 }
@@ -50,8 +50,8 @@ export function BaseEdge({
   style,
   interactionWidth,
 }: BaseEdgeProps) {
-  const { selected, selectable } = useContext(EdgeContext);
-  const hitWidth = interactionWidth ?? (selectable ? DEFAULT_INTERACTION_WIDTH : 0);
+  const { selected, selectable, interactive } = useContext(EdgeContext);
+  const hitWidth = interactionWidth ?? (selectable || interactive ? DEFAULT_INTERACTION_WIDTH : 0);
   return (
     <>
       {/* Presentation attributes, so an edge's own `style` or a stylesheet rule wins. */}

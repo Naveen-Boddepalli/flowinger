@@ -9,6 +9,7 @@ export {
   deleteFeature,
   dragFeature,
   editingFeature,
+  eventsFeature,
   reconnectFeature,
   selectionFeature,
 } from './features/index.ts';

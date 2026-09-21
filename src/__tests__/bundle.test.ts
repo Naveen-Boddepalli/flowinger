@@ -37,6 +37,7 @@ async function consumer(names: string[]): Promise<{ code: string; gzip: number }
  */
 const FEATURES: Record<string, string[]> = {
   selection: ['selectEdge', 'clearSelection'],
+  events: ['onNodeMouseEnter', 'onEdgeContextMenu', 'onPaneScroll'],
   drag: ['beginNodeDrag', 'nudgeSelection'],
   'expand parent': ['expandParent'],
   connect: ['beginConnection', 'flowinger-connection-line'],

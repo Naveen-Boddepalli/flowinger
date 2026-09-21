@@ -5,6 +5,7 @@ import { connectFeature } from './connect.tsx';
 import { deleteFeature } from './delete.ts';
 import { dragFeature } from './drag.ts';
 import { editingFeature } from './editing.ts';
+import { eventsFeature } from './events.ts';
 import { reconnectFeature } from './reconnect.tsx';
 import { selectionFeature } from './selection.ts';
 
@@ -15,6 +16,7 @@ export {
   deleteFeature,
   dragFeature,
   editingFeature,
+  eventsFeature,
   reconnectFeature,
   selectionFeature,
 };
@@ -25,6 +27,7 @@ export const allFeatures: readonly Feature[] = [
   cullingFeature,
   deleteFeature,
   editingFeature,
+  eventsFeature,
   dragFeature,
   connectFeature,
   reconnectFeature,

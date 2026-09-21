@@ -9,7 +9,7 @@
 //
 // Members that are plain DOM/SVG attributes (`id`, `role`, `aria-*`, `onClick`, …) are counted apart from
 // React Flow's own: flowinger's components take few of them.
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, normalize, resolve } from 'node:path';
 
@@ -28,7 +28,8 @@ if (!existsSync(FL)) {
   console.error('build first (pnpm build): dist/index.d.ts is missing');
   process.exit(2);
 }
-const RF = resolve(rfEntry);
+// The real path: through a package manager's symlink, `@xyflow/system` (which its types come from) is not found.
+const RF = realpathSync(resolve(rfEntry));
 
 /** Every name a declaration file exports, following `export *` and `export { … } from`. */
 function exportedNames(entry) {

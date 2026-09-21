@@ -539,6 +539,7 @@ function InnerCanvas(props: FlowingerProps) {
   return (
     <ViewportPortalHost.Provider value={portalHost}>
       <div
+        {...Object.assign({}, ...bits.map((b) => b.props))}
         ref={containerRef}
         className={`flowinger react-flow ${className}`}
         style={containerStyle}
@@ -584,6 +585,7 @@ function InnerCanvas(props: FlowingerProps) {
               edgeTypes={edgeTypes}
               elementsSelectable={selectable}
               edgesFocusable={edgesFocusable}
+              interactive={onEdgeClick !== undefined || bits.some((b) => b.edgesInteractive === true)}
               controlledSelection={edgesChange !== undefined}
               hiddenNodeIds={tree.hidden}
               visibleEdgeIds={visible?.edges}

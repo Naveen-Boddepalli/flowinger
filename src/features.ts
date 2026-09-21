@@ -1,10 +1,12 @@
 import type {
   ComponentType,
   CSSProperties,
+  HTMLAttributes,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
+  SVGAttributes,
 } from 'react';
 import type { FlowingerEdgesProps } from './FlowingerEdges.tsx';
 import type { Size } from './geometry.ts';
@@ -170,6 +172,13 @@ export interface CanvasBits {
   /** The bare canvas was clicked (not the end of a pan, or of a gesture that said so). */
   onPaneClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   /**
+   * More props for the container itself. Under the canvas's own — a feature adds a handler, it does not
+   * replace one — and over none of the caller's.
+   */
+  props?: HTMLAttributes<HTMLDivElement>;
+  /** Every edge takes the pointer, selectable or not: someone listens to events on edges. */
+  edgesInteractive?: boolean;
+  /**
    * Nodes and edges may be selected — which the canvas's `elementsSelectable` must also allow. Without it
    * they are drawn as unselectable, and are not reachable from the keyboard.
    */
@@ -204,6 +213,8 @@ export interface NodeBits {
   style?: CSSProperties;
   /** What a `<Handle>` inside the node calls to begin a connection; without it, handles only draw. */
   startConnection?: (handle: HTMLElement, at: PointerEvent) => void;
+  /** More props for the node's element, under the ones the canvas puts there itself. */
+  props?: HTMLAttributes<HTMLDivElement>;
 }
 
 export interface EdgeArgs {
@@ -219,6 +230,8 @@ export interface EdgeBits {
   onClick?: (e: ReactMouseEvent<SVGGElement>) => void;
   /** Only heard while the edge itself has focus, no modifier is down, and it is `selectable` and `edgesFocusable`. */
   onKeyDown?: (e: ReactKeyboardEvent<SVGGElement>) => void;
+  /** More props for the edge's `<g>`, under the ones the canvas puts there itself. */
+  props?: SVGAttributes<SVGGElement>;
 }
 
 export interface EdgeAdornmentProps {

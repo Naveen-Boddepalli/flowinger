@@ -37,6 +37,8 @@ export interface FlowingerEdgesProps {
   elementsSelectable?: boolean;
   /** Whether selectable edges are tab stops. */
   edgesFocusable?: boolean;
+  /** Whether something listens to events on edges, so that every edge takes the pointer, selectable or not. */
+  interactive?: boolean;
   /** Whether `edge.selected` is what says so (a controlled edge list), as opposed to the store's own set. */
   controlledSelection?: boolean;
   /** Nodes not drawn — hidden, or inside something hidden — and so no edges to or from them. */
@@ -69,6 +71,8 @@ interface EdgeChrome {
   selected: boolean;
   selectable: boolean;
   focusable: boolean;
+  /** Whether something listens to events on edges: the edge takes the pointer even when it cannot be selected. */
+  interactive: boolean;
   /** The features that act on an edge's clicks and keys — selecting it. */
   hooks: readonly Feature[];
 }
@@ -77,10 +81,10 @@ interface EdgeChrome {
  * What every edge's `<g>` shares, built or built on: its classes, `onEdgeClick`, and the clicks and keys
  * the features (selecting) act on.
  */
-function useEdgeChrome({ edge, selected, selectable, focusable, hooks }: EdgeChrome) {
+function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hooks }: EdgeChrome) {
   const store = useFlowingerStore();
   const bits = hooks.flatMap((f) => f.useEdge?.({ store, edge, selectable }) ?? []);
-  const context = useMemo(() => ({ selected, selectable }), [selected, selectable]);
+  const context = useMemo(() => ({ selected, selectable, interactive }), [selected, selectable, interactive]);
   const className = [
     'flowinger-edge react-flow__edge',
     edge.animated ? 'flowinger-edge-animated animated' : '',
@@ -99,24 +103,23 @@ function useEdgeChrome({ edge, selected, selectable, focusable, hooks }: EdgeChr
     for (const b of bits) b.onKeyDown?.(e);
   };
   const props = {
+    ...Object.assign({}, ...bits.map((b) => b.props)),
     className,
     'data-testid': `edge-${edge.id}`,
-    // Events only where there is something to do with them; the svg itself takes none.
-    ...(selectable
+    onClick,
+    // The svg itself takes no events; an edge takes them where there is something to do with them.
+    ...(selectable || interactive
+      ? { style: { pointerEvents: 'stroke', ...(selectable ? { cursor: 'pointer' } : {}) } as CSSProperties }
+      : {}),
+    ...(selectable && focusable
       ? {
-          style: { pointerEvents: 'stroke', cursor: 'pointer' } as CSSProperties,
-          onClick,
-          ...(focusable
-            ? {
-                tabIndex: 0,
-                role: 'button',
-                'aria-label': `Edge from ${edge.source} to ${edge.target}`,
-                'aria-pressed': selected,
-                onKeyDown,
-              }
-            : {}),
+          tabIndex: 0,
+          role: 'button',
+          'aria-label': `Edge from ${edge.source} to ${edge.target}`,
+          'aria-pressed': selected,
+          onKeyDown,
         }
-      : { onClick }),
+      : {}),
   };
   return { context, props };
 }
@@ -275,6 +278,7 @@ const EdgePath = /*#__PURE__*/ memo(function EdgePath({
   selected,
   selectable,
   focusable,
+  interactive,
   hooks,
   reconnectable,
   adornments,
@@ -290,7 +294,7 @@ const EdgePath = /*#__PURE__*/ memo(function EdgePath({
   markerStart,
   markerEnd,
 }: EdgePathProps) {
-  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable, hooks });
+  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable, interactive, hooks });
   return (
     <g {...props}>
       <EdgeContext.Provider value={context}>
@@ -340,12 +344,13 @@ const CustomEdge = /*#__PURE__*/ memo(function CustomEdge({
   selected,
   selectable,
   focusable,
+  interactive,
   hooks,
   reconnectable,
   adornments,
   ...ends
 }: CustomEdgeProps) {
-  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable, hooks });
+  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable, interactive, hooks });
   return (
     <g {...props}>
       <EdgeContext.Provider value={context}>
@@ -384,6 +389,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     edgeTypes,
     elementsSelectable = false,
     edgesFocusable = true,
+    interactive = false,
     controlledSelection = false,
     hiddenNodeIds,
     visibleEdgeIds,
@@ -499,6 +505,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
           selected={selected}
           selectable={selectable}
           focusable={edgesFocusable}
+          interactive={interactive}
           hooks={hooks}
           reconnectable={reconnectable}
           adornments={adornments}
@@ -522,6 +529,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
         selected={selected}
         selectable={selectable}
         focusable={edgesFocusable}
+        interactive={interactive}
         hooks={hooks}
         reconnectable={reconnectable}
         adornments={adornments}
