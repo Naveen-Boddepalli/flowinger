@@ -139,18 +139,24 @@ label layer now sits above the nodes. Both have tests. Two smaller ones came fro
 stray pointer left in the canvas after a resize (the next touch looked like half a pinch), and a `fitView`
 prop that framed against the *previous* node list.
 
-Re-verified against QueryLens: the trial branch's suites, run with the packed tarball of this build in place
-of its pinned commit — typecheck clean, **1170** unit tests, **79 / 79** e2e (installed Chrome). The branch
-itself still pins the earlier commit; nothing in QueryLens was changed.
+Re-verified against QueryLens: the trial branch now pins `0c74b6a` (the first round of these) — typecheck
+clean, lint clean, **1170** unit tests, **79 / 79** e2e (installed Chrome). It costs: QueryLens's `flow` chunk
+went 14.0 → 21.7 kB gzip and its total 373.9 → 380.7 kB, because the canvas and its store carry every feature
+whether or not a consumer uses it (only separate exports — hooks, `NodeResizer`, `Panel` — tree-shake away).
+`pnpm size` reports what a minimal consumer pays, and CI holds it to a budget.
+
+A third batch, each in its own module where it could be so that unused ones cost a small consumer nothing:
+`useKeyPress`, `useOnSelectionChange`, `useNodesData`, `useNodeConnections`, `useNodes`, `useEdges`,
+`ViewportPortal`, `zoomOnDoubleClick`, `connectionLineType` / `connectionLineStyle` / `connectionLineComponent`,
+a `step` edge type, and `smoothstep` that is actually smooth (its `borderRadius` was ignored).
 
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
 - Things React Flow has that this does not: `expandParent`, reconnecting an edge (`onReconnect`),
-  `connectionLineComponent`, auto-pan while dragging near the pane's edge, `zoomOnDoubleClick`,
-  `ViewportPortal`, `useOnSelectionChange`, `useKeyPress`, `useNodesData`, `useNodeConnections`, `nodeOrigin`,
-  `NodeToolbar` for a node other than its own. This list is from memory of React Flow's API, not an audit.
+  auto-pan while dragging near the pane's edge, `nodeOrigin`, `NodeToolbar` for a node other than its own.
+  This list is from memory of React Flow's API, not an audit.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
   see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build

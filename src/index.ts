@@ -23,6 +23,17 @@ export {
   getOutgoers,
 } from './changes.ts';
 export { useNodesState, useEdgesState } from './hooks.ts';
+export { useOnSelectionChange } from './selectionHooks.ts';
+export {
+  useNodes,
+  useEdges,
+  useNodesData,
+  useNodeConnections,
+  type NodeData,
+  type NodeConnection,
+  type UseNodeConnectionsOptions,
+} from './dataHooks.ts';
+export { useKeyPress, type UseKeyPressOptions } from './useKeyPress.ts';
 
 // Geometry
 export { getNodesBounds, isRectIntersecting, viewportForBounds } from './geometry.ts';
@@ -37,6 +48,7 @@ export { MiniMap, type MiniMapProps } from './MiniMap.tsx';
 export { Controls } from './Controls.tsx';
 export { Panel, type PanelProps, type PanelPosition } from './Panel.tsx';
 export { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
+export { ViewportPortal } from './ViewportPortal.tsx';
 export { NodeToolbar, type NodeToolbarProps } from './NodeToolbar.tsx';
 export { NodeResizer, type NodeResizerProps, type ResizeParams } from './NodeResizer.tsx';
 
@@ -55,6 +67,7 @@ export {
   MarkerType,
   ConnectionMode,
   SelectionMode,
+  ConnectionLineType,
 } from './types.ts';
 
 export type {
@@ -87,6 +100,7 @@ export type {
   EdgeRemoveChange,
   EdgeAddChange,
   EdgeReplaceChange,
+  ConnectionLineProps,
   ConnectStartParams,
   ConnectEndState,
   FitViewOptions,

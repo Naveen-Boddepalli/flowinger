@@ -76,6 +76,8 @@ export interface ConnectionState {
   startPosition: Position;
   end: XYPosition;
   endPosition: Position;
+  /** Over a handle that would make a valid connection, over one that would not, or over neither (null). */
+  isValid: boolean | null;
 }
 
 /** Where a connection end lives: a node, one of its handles by id (null = unnamed), and that handle's type. */
@@ -739,9 +741,13 @@ export function createFlowingerStore(
     if (hit) {
       const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
       const point = pointOfHandle(hit.nodeId, hit.record);
-      if (c && isAllowed(c) && point) return { end: point, endPosition: hit.record.position };
+      if (c && isAllowed(c) && point) return { end: point, endPosition: hit.record.position, isValid: true };
     }
-    return { end: toGraph(clientX, clientY), endPosition: OPPOSITE[startPosition] };
+    return {
+      end: toGraph(clientX, clientY),
+      endPosition: OPPOSITE[startPosition],
+      isValid: hit ? false : null,
+    };
   };
 
   /**

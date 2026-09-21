@@ -15,6 +15,7 @@ import {
 import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
 import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
+import { ViewportPortalHost } from './ViewportPortal.tsx';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
@@ -77,6 +78,12 @@ function DefaultNodeView({ id, data, selected }: NodeProps) {
   );
 }
 
+/** How long a double-click zoom takes. */
+const DOUBLE_CLICK_ZOOM_MS = 200;
+
+/** Above the edge labels too. */
+const VIEWPORT_PORTAL_Z = 10001;
+
 /** Above every node — even one being dragged (1000) or given a large `zIndex` of its own. */
 const EDGE_LABEL_LAYER_Z = 10000;
 
@@ -127,6 +134,10 @@ function InnerCanvas({
   panOnScroll = false,
   panOnScrollSpeed = 0.5,
   zoomOnScroll = true,
+  zoomOnDoubleClick = true,
+  connectionLineType,
+  connectionLineStyle,
+  connectionLineComponent,
   zoomOnPinch = true,
   elementsSelectable = false,
   nodesConnectable = false,
@@ -206,6 +217,7 @@ function InnerCanvas({
   const containerRef = useRef<HTMLDivElement | null>(null);
   // The layer an edge's HTML labels portal into; state, so they render once it exists.
   const [labelHost, setLabelHost] = useState<HTMLElement | null>(null);
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const pan = useRef<PanState | null>(null);
   /** Every pointer currently down, so a second finger can be told from a click. */
@@ -512,6 +524,15 @@ function InnerCanvas({
     if (elementsSelectable) store.clearSelection();
   };
 
+  // A double click on the bare canvas zooms in about the pointer; with Shift, out.
+  const onDoubleClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (!zoomOnDoubleClick || e.target !== e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    void store.zoomAt(e.shiftKey ? 0.5 : 2, e.clientX - rect.left, e.clientY - rect.top, {
+      duration: DOUBLE_CLICK_ZOOM_MS,
+    });
+  };
+
   const deleteKeys = deleteKeyCode === null ? [] : Array.isArray(deleteKeyCode) ? deleteKeyCode : [deleteKeyCode];
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -587,95 +608,115 @@ function InnerCanvas({
   };
 
   return (
-    <div
-      ref={containerRef}
-      className={`flowinger react-flow ${className}`}
-      style={containerStyle}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      {...(keyboardNavigation
-        ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel }
-        : focusableForDelete
-          ? { tabIndex: -1 }
-          : {})}
-    >
-      {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
-      {children}
-      <SelectionBox />
-
-      {/* The layer the viewport transform is written to. */}
+    <ViewportPortalHost.Provider value={portalHost}>
       <div
-        ref={viewportRef}
-        className="flowinger-viewport react-flow__viewport"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          transformOrigin: '0 0',
-          pointerEvents: 'none',
-          // In the markup from the first paint, so server-rendered output is
-          // already framed. After that the store writes it straight to the
-          // DOM; this re-reads the same value, so a re-render agrees with it.
-          transform: viewportTransform(store.getViewport()),
-        }}
+        ref={containerRef}
+        className={`flowinger react-flow ${className}`}
+        style={containerStyle}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onClick={onClick}
+        onDoubleClick={onDoubleClick}
+        onKeyDown={onKeyDown}
+        {...(keyboardNavigation
+          ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel }
+          : focusableForDelete
+            ? { tabIndex: -1 }
+            : {})}
       >
-        <EdgeLabelHost.Provider value={labelHost}>
-          <FlowingerEdges
-            edges={edges}
-            nodes={nodes}
-            edgeTypes={edgeTypes}
-            elementsSelectable={elementsSelectable}
-            edgesFocusable={edgesFocusable}
-            controlledSelection={edgesChange !== undefined}
-            hiddenNodeIds={tree.hidden}
-            visibleEdgeIds={visible?.edges}
-          />
-        </EdgeLabelHost.Provider>
-        {/* Above the edges and the nodes — a label is there to be read and clicked, and a
-            node under it would take the click. Takes no events of its own. */}
+        {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
+        {children}
+        <SelectionBox />
+
+        {/* The layer the viewport transform is written to. */}
         <div
-          ref={setLabelHost}
-          className="flowinger-edge-labels react-flow__edgelabel-renderer"
+          ref={viewportRef}
+          className="flowinger-viewport react-flow__viewport"
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
+            transformOrigin: '0 0',
             pointerEvents: 'none',
-            userSelect: 'none',
-            zIndex: EDGE_LABEL_LAYER_Z,
+            // In the markup from the first paint, so server-rendered output is
+            // already framed. After that the store writes it straight to the
+            // DOM; this re-reads the same value, so a re-render agrees with it.
+            transform: viewportTransform(store.getViewport()),
           }}
-        />
-
-        <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>
-          {nodes
-            .filter((node) => !tree.hidden.has(node.id) && (!visible || visible.nodes.has(node.id)))
-            .map((node) => (
-            <NodeWrapper
-              key={node.id}
-              node={node}
-              // A component is chosen by string at runtime, so its `data` type
-              // cannot be checked here; `NodeTypes` accepts any.
-              View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
-              draggable={node.draggable ?? nodesDraggable}
-              selectable={elementsSelectable && node.selectable !== false}
-              connectable={node.connectable ?? nodesConnectable}
-              controlledSelection={nodesChange !== undefined}
-              parentX={tree.origin.get(node.id)?.x ?? 0}
-              parentY={tree.origin.get(node.id)?.y ?? 0}
-              depth={tree.depth.get(node.id) ?? 0}
+        >
+          <EdgeLabelHost.Provider value={labelHost}>
+            <FlowingerEdges
+              edges={edges}
+              nodes={nodes}
+              edgeTypes={edgeTypes}
+              elementsSelectable={elementsSelectable}
+              edgesFocusable={edgesFocusable}
+              controlledSelection={edgesChange !== undefined}
+              hiddenNodeIds={tree.hidden}
+              visibleEdgeIds={visible?.edges}
+              connectionLineType={connectionLineType}
+              connectionLineStyle={connectionLineStyle}
+              connectionLineComponent={connectionLineComponent}
             />
-          ))}
+          </EdgeLabelHost.Provider>
+          {/* Your own elements, in graph space: `ViewportPortal` draws into this. */}
+          <div
+            ref={setPortalHost}
+            className="flowinger-viewport-portal react-flow__viewport-portal"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              zIndex: VIEWPORT_PORTAL_Z,
+            }}
+          />
+          {/* Above the edges and the nodes — a label is there to be read and clicked, and a
+              node under it would take the click. Takes no events of its own. */}
+          <div
+            ref={setLabelHost}
+            className="flowinger-edge-labels react-flow__edgelabel-renderer"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              zIndex: EDGE_LABEL_LAYER_Z,
+            }}
+          />
+
+          <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>
+            {nodes
+              .filter((node) => !tree.hidden.has(node.id) && (!visible || visible.nodes.has(node.id)))
+              .map((node) => (
+              <NodeWrapper
+                key={node.id}
+                node={node}
+                // A component is chosen by string at runtime, so its `data` type
+                // cannot be checked here; `NodeTypes` accepts any.
+                View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
+                draggable={node.draggable ?? nodesDraggable}
+                selectable={elementsSelectable && node.selectable !== false}
+                connectable={node.connectable ?? nodesConnectable}
+                controlledSelection={nodesChange !== undefined}
+                parentX={tree.origin.get(node.id)?.x ?? 0}
+                parentY={tree.origin.get(node.id)?.y ?? 0}
+                depth={tree.depth.get(node.id) ?? 0}
+              />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </ViewportPortalHost.Provider>
   );
 }
 

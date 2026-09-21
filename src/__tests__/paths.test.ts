@@ -52,34 +52,54 @@ describe('paths', () => {
   });
 
   describe('getSmoothStepPath', () => {
-    it('generates vertical step path', () => {
-      const [path, labelX, labelY] = getSmoothStepPath({
-        sourceX: 10,
-        sourceY: 20,
-        sourcePosition: Position.Bottom,
-        targetX: 50,
-        targetY: 100,
-        targetPosition: Position.Top,
-      });
+    const vertical = {
+      sourceX: 10,
+      sourceY: 20,
+      sourcePosition: Position.Bottom,
+      targetX: 50,
+      targetY: 100,
+      targetPosition: Position.Top,
+    };
+    const horizontal = {
+      sourceX: 0,
+      sourceY: 50,
+      sourcePosition: Position.Right,
+      targetX: 100,
+      targetY: 150,
+      targetPosition: Position.Left,
+    };
 
+    it('leaves square corners with a radius of 0', () => {
+      const [path, labelX, labelY] = getSmoothStepPath({ ...vertical, borderRadius: 0 });
       expect(path).toBe('M 10.00 20.00 L 10.00 60.00 L 50.00 60.00 L 50.00 100.00');
       expect(labelX).toBe(30);
       expect(labelY).toBe(60);
+      expect(getSmoothStepPath({ ...horizontal, borderRadius: 0 })[0]).toBe(
+        'M 0.00 50.00 L 50.00 50.00 L 50.00 150.00 L 100.00 150.00',
+      );
     });
 
-    it('generates horizontal step path', () => {
-      const [path, labelX, labelY] = getSmoothStepPath({
-        sourceX: 0,
-        sourceY: 50,
-        sourcePosition: Position.Right,
-        targetX: 100,
-        targetY: 150,
-        targetPosition: Position.Left,
-      });
+    it('rounds each corner by 5 by default, with a curve whose control point is the corner', () => {
+      expect(getSmoothStepPath(vertical)[0]).toBe(
+        'M 10.00 20.00 L 10.00 55.00 Q 10.00 60.00 15.00 60.00 L 45.00 60.00 Q 50.00 60.00 50.00 65.00 L 50.00 100.00',
+      );
+      expect(getSmoothStepPath(horizontal)[0]).toBe(
+        'M 0.00 50.00 L 45.00 50.00 Q 50.00 50.00 50.00 55.00 L 50.00 145.00 Q 50.00 150.00 55.00 150.00 L 100.00 150.00',
+      );
+    });
 
-      expect(path).toBe('M 0.00 50.00 L 50.00 50.00 L 50.00 150.00 L 100.00 150.00');
-      expect(labelX).toBe(50);
-      expect(labelY).toBe(100);
+    it('takes its radius from borderRadius, and never more than half of a side', () => {
+      // Sides of 40: a radius of 100 is cut to 20.
+      expect(getSmoothStepPath({ ...vertical, borderRadius: 100 })[0]).toBe(
+        'M 10.00 20.00 L 10.00 40.00 Q 10.00 60.00 30.00 60.00 L 30.00 60.00 Q 50.00 60.00 50.00 80.00 L 50.00 100.00',
+      );
+      expect(getSmoothStepPath({ ...vertical, borderRadius: 8 })[0]).toContain('L 10.00 52.00 Q 10.00 60.00 18.00 60.00');
+    });
+
+    it('draws a straight run, without a NaN, when the ends line up', () => {
+      const [path] = getSmoothStepPath({ ...vertical, targetX: 10 });
+      expect(path).not.toContain('NaN');
+      expect(path).toBe('M 10.00 20.00 L 10.00 60.00 L 10.00 60.00 L 10.00 100.00');
     });
   });
 });

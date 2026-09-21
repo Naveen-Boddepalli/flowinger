@@ -68,6 +68,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
+| `ViewportPortal` | Draws your own elements in graph space — they pan and zoom with the diagram and sit above its nodes and edge labels. Renders nothing on the server. |
 | `EdgeLabelRenderer` | Inside a custom edge: draws HTML (a button, an input) at a point of the edge, in a layer above the edges that pans and zooms with the graph. Position it with a `translate(x, y)` from the edge's own label coordinates; give it `pointerEvents: 'all'` and a `nopan` class to make it clickable. |
 | `NodeToolbar` | Inside a node: buttons attached to a side of it (`position`, `align`, `offset`), shown while it is the only thing selected (`isVisible` overrides). It rides on the node, so it follows drags and zoom and never changes the node's size. |
 | `NodeResizer` | Inside a node: eight drag handles (sides and corners) that resize it — `minWidth`, `minHeight`, `maxWidth`, `maxHeight`, `keepAspectRatio`, `isVisible`, `color`, `shouldResize`, `onResizeStart` / `onResize` / `onResizeEnd`. Reported as `dimensions` (written to `width`/`height`) and `position` changes, so it needs a [controlled flow](#controlled-flows) or `defaultNodes`. |
@@ -88,6 +89,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `nodesDraggable` | `false` | A node's own `draggable` overrides it, either way. |
 | `panOnDrag` | `true` | `false`, or a list of mouse buttons, e.g. `[1]` for middle only. |
 | `zoomOnScroll`, `zoomOnPinch` | `true` | |
+| `zoomOnDoubleClick` | `true` | A double click on the empty canvas zooms in about the pointer (out with Shift). |
 | `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). |
 | `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
@@ -99,6 +101,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
 | `elementsSelectable` | `false` | A click selects a node *or an edge* (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes and edges become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`), and the arrow keys nudge a selected node (Shift for four times as far). A node's or edge's own `selectable: false` opts it out; `edgesFocusable={false}` takes edges out of the tab order. |
 | `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out, and so does a node's `connectable: false`. |
+| `connectionLineType`, `connectionLineStyle`, `connectionLineComponent` | `'bezier'` | The line dragged out of a handle: `'bezier'`, `'straight'`, `'step'` or `'smoothstep'`; a style for it (it never takes pointer events, whatever the style says); or your own component, given `fromX/Y`, `toX/Y`, which way each end faces, and `isValid` (`true` over a handle that would be accepted, `false` over one that would not, `null` over neither). |
 | `connectionMode` | `'strict'` | `'strict'` joins a source handle to a target handle; `'loose'` joins any handle to any other (never itself), the end you dragged from becoming the source. |
 | `onConnectStart`, `onConnectEnd` | | `onConnectStart(event, { nodeId, handleId, handleType })`; `onConnectEnd(event, { connection, isValid })` when the pointer is released — `isValid` is `true` (made), `false` (refused) or `null` (no handle there). |
 | `onConnect`, `isValidConnection` | | `onConnect({ source, target, sourceHandle, targetHandle })` — always source → target, whichever end the drag began at. `isValidConnection` can veto, and decides whether the line snaps to a handle. |
@@ -110,7 +113,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 Without `onNodesChange`, `nodes` is never mutated: a dragged position is kept internally, and a fresh
 layout from you wins over it. Dragging a selected node drags the whole selection; a node with a
 `dragHandle` (a CSS selector) drags only by that element. **Edges**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`
-(`'bezier'` \| `'straight'` \| `'smoothstep'`), `label`, `markerStart`, `markerEnd`
+(`'bezier'` \| `'straight'` \| `'step'` \| `'smoothstep'` — `step` has square corners, `smoothstep` rounds them), `label`, `markerStart`, `markerEnd`
 (`'arrow'`, `'arrowclosed'`, or `{ type, color, width, height }`), `className`, `style`. Give a node
 `width` and `height` to fix its size — as in React Flow they are applied to the node, and are what server
 rendering and `fitView` use before it has been measured. Leave them out and the content decides; the engine
@@ -177,6 +180,11 @@ effect's dependencies; `onInit` hands you the same one.
 - **Edit**: `setNodes`, `setEdges` (a list or an updater), `addNodes`, `addEdges`, `updateNode`,
   `updateNodeData`, `updateEdge`. They are reported as changes, so they need a [controlled flow](#controlled-flows)
   or `defaultNodes`; on nodes you merely pass in, there is nobody to apply them and they do nothing.
+
+**Hooks**: `useKeyPress('Meta+s')` (a key, a combination, or a list; ignores typing in fields unless modified),
+`useOnSelectionChange({ onChange })`, `useNodesData(id | ids)` (re-renders only when that `data` changes),
+`useNodeConnections({ id, handleType, handleId, onConnect, onDisconnect })`, `useNodes()`, `useEdges()`,
+`useNodesInitialized()` and `useNodeId()`.
 
 `useStore(selector, equalityFn?)` reads `panZoom`, `isReady`, `nodes`, `edges`, `transform` (`[x, y, zoom]`),
 `width`, `height`, `minZoom`, `maxZoom` and `nodesInitialized`. The selector must return a stable value, or you
@@ -245,9 +253,8 @@ all exported under React Flow's names, and so are `useNodesState`, `useEdgesStat
 whole internal store.
 
 **Not built** (from memory of React Flow's API, not an audit): `expandParent`, reconnecting an edge
-(`onReconnect`), `connectionLineComponent`, auto-pan while dragging at the pane's edge, `zoomOnDoubleClick`,
-`ViewportPortal`, `useOnSelectionChange`, `useKeyPress`, `useNodesData`, `useNodeConnections`, `nodeOrigin`, and
-a `NodeToolbar` for a node other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
+(`onReconnect`), auto-pan while dragging at the pane's edge, `nodeOrigin`, and a `NodeToolbar` for a node
+other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
 pass a `padding` ratio, and `deleteKeyCode` is `'Backspace'` alone.
 
 ## Server rendering
@@ -263,6 +270,7 @@ pnpm dev         # the demo, in demo/
 pnpm typecheck
 pnpm test
 pnpm build       # dist/: ESM, CJS and type declarations
+pnpm size        # what a small consumer pays: the gzip size of the subset it imports
 ```
 
 [`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left.

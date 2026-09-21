@@ -14,6 +14,7 @@ import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { absolutePositionOf } from './parents.ts';
 import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
+import { ConnectionLineType, type ConnectionLineProps } from './types.ts';
 import {
   type Edge,
   type EdgeMarker,
@@ -40,6 +41,9 @@ export interface FlowingerEdgesProps {
   hiddenNodeIds?: ReadonlySet<string> | undefined;
   /** When only what is in view is drawn: the edges that are. */
   visibleEdgeIds?: ReadonlySet<string> | undefined;
+  connectionLineType?: ConnectionLineType | undefined;
+  connectionLineStyle?: CSSProperties | undefined;
+  connectionLineComponent?: ComponentType<ConnectionLineProps> | undefined;
 }
 
 /**
@@ -175,7 +179,9 @@ function pathFor(
       ? getStraightPath(ends)
       : type === 'smoothstep'
         ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition })
-        : getBezierPath({ ...ends, sourcePosition, targetPosition });
+        : type === 'step'
+          ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, borderRadius: 0 })
+          : getBezierPath({ ...ends, sourcePosition, targetPosition });
   return { d, labelX, labelY };
 }
 
@@ -320,6 +326,9 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   controlledSelection = false,
   hiddenNodeIds,
   visibleEdgeIds,
+  connectionLineType = ConnectionLineType.Bezier,
+  connectionLineStyle,
+  connectionLineComponent: CustomConnectionLine,
 }: FlowingerEdgesProps) {
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
@@ -457,26 +466,41 @@ export const FlowingerEdges = memo(function FlowingerEdges({
         </defs>
       )}
       {paths}
-      {connection && (
-        <path
-          className="flowinger-connection-line react-flow__connection-path"
-          d={
-            getBezierPath({
-              sourceX: connection.start.x,
-              sourceY: connection.start.y,
-              sourcePosition: connection.startPosition,
-              targetX: connection.end.x,
-              targetY: connection.end.y,
-              targetPosition: connection.endPosition,
-            })[0]
-          }
-          fill="none"
-          stroke="var(--flowinger-selected, #38bdf8)"
-          strokeWidth={2}
-          strokeDasharray="5 4"
-          style={{ pointerEvents: 'none' }}
-        />
-      )}
+      {connection &&
+        (CustomConnectionLine ? (
+          <g className="flowinger-connection-line react-flow__connection" style={{ pointerEvents: 'none' }}>
+            <CustomConnectionLine
+              fromX={connection.start.x}
+              fromY={connection.start.y}
+              fromPosition={connection.startPosition}
+              toX={connection.end.x}
+              toY={connection.end.y}
+              toPosition={connection.endPosition}
+              connectionLineType={connectionLineType}
+              connectionLineStyle={connectionLineStyle}
+              isValid={connection.isValid}
+            />
+          </g>
+        ) : (
+          <path
+            className="flowinger-connection-line react-flow__connection-path"
+            d={
+              pathFor(
+                connectionLineType,
+                connection.start,
+                connection.startPosition,
+                connection.end,
+                connection.endPosition,
+              ).d
+            }
+            fill="none"
+            stroke="var(--flowinger-selected, #38bdf8)"
+            strokeWidth={2}
+            strokeDasharray="5 4"
+            // Never takes events, whatever the style says: under the pointer it would hide the handle it is over.
+            style={{ ...connectionLineStyle, pointerEvents: 'none' }}
+          />
+        ))}
     </svg>
   );
 });

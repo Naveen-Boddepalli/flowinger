@@ -140,12 +140,38 @@ export interface Edge {
   /** `false` keeps it out of a delete. */
   deletable?: boolean;
   /** A built-in path, or a key of the canvas's `edgeTypes`. */
-  type?: 'bezier' | 'straight' | 'smoothstep' | (string & {});
+  type?: 'bezier' | 'straight' | 'step' | 'smoothstep' | (string & {});
   /** Text drawn at the middle of the edge. */
   label?: string;
   markerStart?: MarkerType | EdgeMarker;
   markerEnd?: MarkerType | EdgeMarker;
   data?: Record<string, unknown>;
+}
+
+/** The shape of the line dragged out of a handle while connecting. */
+export const ConnectionLineType = {
+  Bezier: 'bezier',
+  Straight: 'straight',
+  Step: 'step',
+  SmoothStep: 'smoothstep',
+} as const;
+
+export type ConnectionLineType = (typeof ConnectionLineType)[keyof typeof ConnectionLineType];
+
+/** What a custom connection line component receives. */
+export interface ConnectionLineProps {
+  /** Where the drag began, and which way it leaves. */
+  fromX: number;
+  fromY: number;
+  fromPosition: Position;
+  /** Where the pointer is — or the handle it has snapped to — and which way a line would arrive. */
+  toX: number;
+  toY: number;
+  toPosition: Position;
+  connectionLineType: ConnectionLineType;
+  connectionLineStyle: CSSProperties | undefined;
+  /** `true` over a handle that would make a valid connection, `false` over one that would not, `null` over neither. */
+  isValid: boolean | null;
 }
 
 /** A finished connection: which handle of which node, to which. Always source → target. */
@@ -420,6 +446,13 @@ export interface FlowingerProps {
   onConnect?: (connection: Connection) => void;
   /** Veto a connection. Also decides whether a handle snaps the in-progress line to itself. */
   isValidConnection?: (connection: Connection) => boolean;
+  /** The shape of the line drawn while connecting. Default `'bezier'`. */
+  connectionLineType?: ConnectionLineType;
+  connectionLineStyle?: CSSProperties;
+  /** Draw the line yourself: it is given the two ends, which way each faces, and whether it is over a valid handle. */
+  connectionLineComponent?: ComponentType<ConnectionLineProps>;
+  /** Zoom in on a double click on the empty canvas (out with Shift). Default true. */
+  zoomOnDoubleClick?: boolean;
   /**
    * How a connection may be made: `'strict'` (default) source → target only, `'loose'`
    * any handle to any other. `Connection` is always source → target either way.

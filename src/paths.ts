@@ -129,7 +129,40 @@ export function getStraightPath({
 }
 
 /**
- * Generates an orthogonal smooth-step SVG path string between two points.
+ * The path through `points` with each corner rounded by `radius` — or less where
+ * a side is too short to give it that much. A radius of 0 leaves square corners.
+ */
+function roundedPolyline(points: readonly (readonly [number, number])[], radius: number): string {
+  const f = (n: number) => n.toFixed(2);
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return '';
+  let d = `M ${f(first[0])} ${f(first[1])}`;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const prev = points[i - 1];
+    const corner = points[i];
+    const next = points[i + 1];
+    if (!prev || !corner || !next) continue;
+    const before = Math.hypot(corner[0] - prev[0], corner[1] - prev[1]);
+    const after = Math.hypot(next[0] - corner[0], next[1] - corner[1]);
+    const r = Math.min(radius, before / 2, after / 2);
+    if (r <= 0) {
+      d += ` L ${f(corner[0])} ${f(corner[1])}`;
+      continue;
+    }
+    const inX = corner[0] - ((corner[0] - prev[0]) / before) * r;
+    const inY = corner[1] - ((corner[1] - prev[1]) / before) * r;
+    const outX = corner[0] + ((next[0] - corner[0]) / after) * r;
+    const outY = corner[1] + ((next[1] - corner[1]) / after) * r;
+    d += ` L ${f(inX)} ${f(inY)} Q ${f(corner[0])} ${f(corner[1])} ${f(outX)} ${f(outY)}`;
+  }
+  return `${d} L ${f(last[0])} ${f(last[1])}`;
+}
+
+/**
+ * Generates an orthogonal SVG path between two points: out of the source, across
+ * halfway, then into the target. Corners are rounded by `borderRadius` (default
+ * 5); give 0 for square ones.
  */
 export function getSmoothStepPath({
   sourceX,
@@ -137,22 +170,13 @@ export function getSmoothStepPath({
   sourcePosition = Position.Bottom,
   targetX,
   targetY,
-  targetPosition: _targetPosition = Position.Top,
-  borderRadius: _borderRadius = 5,
-  offset: _offset = 20,
+  borderRadius = 5,
 }: GetSmoothStepPathParams): [path: string, labelX: number, labelY: number] {
-  // If points are horizontal or vertical aligned, simple L
   const isHorizontal = sourcePosition === Position.Left || sourcePosition === Position.Right;
   const labelX = (sourceX + targetX) / 2;
   const labelY = (sourceY + targetY) / 2;
-
-  if (isHorizontal) {
-    const midX = (sourceX + targetX) / 2;
-    const path = `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} L ${midX.toFixed(2)} ${sourceY.toFixed(2)} L ${midX.toFixed(2)} ${targetY.toFixed(2)} L ${targetX.toFixed(2)} ${targetY.toFixed(2)}`;
-    return [path, labelX, labelY];
-  }
-
-  const midY = (sourceY + targetY) / 2;
-  const path = `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} L ${sourceX.toFixed(2)} ${midY.toFixed(2)} L ${targetX.toFixed(2)} ${midY.toFixed(2)} L ${targetX.toFixed(2)} ${targetY.toFixed(2)}`;
-  return [path, labelX, labelY];
+  const points: [number, number][] = isHorizontal
+    ? [[sourceX, sourceY], [labelX, sourceY], [labelX, targetY], [targetX, targetY]]
+    : [[sourceX, sourceY], [sourceX, labelY], [targetX, labelY], [targetX, targetY]];
+  return [roundedPolyline(points, borderRadius), labelX, labelY];
 }

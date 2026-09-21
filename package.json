@@ -41,7 +41,8 @@
     "build": "vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "size": "node scripts/size.mjs"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

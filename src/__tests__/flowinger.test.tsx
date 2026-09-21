@@ -112,7 +112,9 @@ describe('Flowinger Engine', () => {
         targetY: 50,
         targetPosition: Position.Top,
       });
-      expect(path).toBe('M 10.00 10.00 L 10.00 30.00 L 30.00 30.00 L 30.00 50.00');
+      expect(path).toBe(
+        'M 10.00 10.00 L 10.00 25.00 Q 10.00 30.00 15.00 30.00 L 25.00 30.00 Q 30.00 30.00 30.00 35.00 L 30.00 50.00',
+      );
       expect(lx).toBe(20);
       expect(ly).toBe(30);
     });
