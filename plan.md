@@ -386,9 +386,9 @@ depends on QueryLens; this section records what QueryLens depends on, so the swa
 
 ### On the QueryLens side, when swapping
 
-1. Replace the dependency; import from `flowinger` in `FlowTree`. Installed from GitHub, pnpm 11 refuses
-   to build a git-hosted package unless QueryLens's `pnpm-workspace.yaml` allow-lists it
-   (`allowBuilds:` → `flowinger: true`); the error names exactly that fix.
+1. Replace the dependency; import from `flowinger` in `FlowTree`. From the registry (`flowinger@0.1.0`, published
+   2026-09-21) there is nothing to allow-list. Installed from GitHub instead, pnpm 11 refuses to build a
+   git-hosted package unless `pnpm-workspace.yaml` allow-lists it (`allowBuilds:` → `flowinger: true`).
 2. Delete the `react-flow__attribution` / `react-flow__pane` CSS overrides (nothing renders them) and
    the `@xyflow/react/dist/style.css` import.
 3. Re-point the `flow` chunk in `vite.config.ts` and cut its bundle budget. Measured in the same chunk,
@@ -418,15 +418,24 @@ commit, and takes `FlowTree` across by changing its imports alone.
   tooltips *never fired*; they do now. React Flow also leaves inert nodes focusable (five no-op tab
   stops in the parse-tree pane) with a `role`, `aria-roledescription` and an assertive live region;
   flowinger adds none unless a canvas opts in. The "React Flow" attribution badge disappears.
-- **A policy collision:** QueryLens's `pnpm-workspace.yaml` deliberately has `allowBuilds: []`, so that a
-  build script is always a reviewed diff. A git-hosted package has no `dist/`, so flowinger's `prepare`
-  script must run, which needs `allowBuilds: flowinger: true` there. That works (`blockExoticSubdeps`
-  is about *transitive* git dependencies and does not block a direct one), but it is a weaker posture
-  than QueryLens has chosen. **Publishing flowinger to a registry is the clean fix**: `dist/` ships
-  prebuilt, no script runs, and `minimumReleaseAge` applies as it does to everything else.
+- **A policy collision, resolved by publishing:** QueryLens's `pnpm-workspace.yaml` deliberately has
+  `allowBuilds: []`, so that a build script is always a reviewed diff. A git-hosted package has no `dist/`,
+  so flowinger's `prepare` script must run, which needed `allowBuilds: flowinger: true` there — a weaker
+  posture than QueryLens has chosen. Since `flowinger@0.1.0` is on npm, `dist/` ships prebuilt and the trial
+  branch is back to `allowBuilds: []`; a fresh `pnpm install --frozen-lockfile` (pnpm 11.1.2) needs no
+  exception. Two things met on the way, worth knowing:
+  - pnpm's `minimumReleaseAge` (QueryLens sets 7 days) refuses a release younger than that, so *resolving*
+    `0.1.0` in its first week needs `minimumReleaseAgeExclude: [flowinger]` — once. The lockfile then holds the
+    resolution and installs, frozen or not, need no exemption.
+  - Switching an existing checkout from the git dependency to the registry printed
+    `ERR_PNPM_IGNORED_BUILDS` for `flowinger@0.1.0` and wrote a placeholder into `allowBuilds`; a clean install
+    of the same lockfile does not. It is leftover state from the git-hosted copy, not the package
+    (`prepare` stays in the manifest; a registry install never runs a dependency's `prepare`).
+- **On the registry, the same gates:** typecheck, lint, all 1170 unit tests and the whole e2e suite (79 / 79)
+  pass; the `flow` chunk is 18.0 kB gzip and QueryLens's total 377.0 / 424 kB.
 
 ### Before publishing or announcing
 
-- Add a `LICENSE` file (`package.json` says MIT; there is none).
-- Attribute React Flow: `src/paths.ts` uses React Flow's (MIT) bezier control-point formula, so keep a
+- Done: `LICENSE.md` (MIT), and published to npm as `flowinger@0.1.0` (2026-09-21).
+- Still open — attribute React Flow: `src/paths.ts` uses React Flow's (MIT) bezier control-point formula, so keep a
   `NOTICE`/attribution unless that has been decided otherwise.

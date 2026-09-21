@@ -49,8 +49,14 @@ export function Diagram() {
 
 ## Install
 
-Flowinger is not on npm yet; install it from GitHub. Its `dist/` is built on install, which package
-managers gate behind an explicit opt-in:
+```bash
+pnpm add flowinger      # or: npm install flowinger
+```
+
+React 18 or 19 is a peer dependency. The package ships its built `dist/`.
+
+To try a commit that is not released, install from GitHub instead. A git dependency has no `dist/`, so it is
+built on install, which package managers gate behind an explicit opt-in:
 
 ```bash
 # pnpm 11 — allow the build first, in pnpm-workspace.yaml:
