@@ -44,6 +44,8 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   connectable?: boolean;
   /** A CSS selector: when set, the node can only be dragged by an element that matches it. */
   dragHandle?: string;
+  /** Keeps the node inside this region of graph space while it is dragged or nudged. */
+  extent?: TranslateExtent;
 }
 
 export interface NodeProps<N extends Node = Node> {
@@ -142,7 +144,34 @@ export interface Viewport {
 }
 
 export interface SetViewportOptions {
+  /** Milliseconds to take over the move; none (or 0) is instant. */
   duration?: number;
+}
+
+export interface FitViewOptions extends SetViewportOptions {
+  /**
+   * As in React Flow, a ratio: `0.1` leaves a tenth of the diagram's size around
+   * it. Left out, the margin is a fixed 40 px.
+   */
+  padding?: number;
+  /** Fit only these nodes. */
+  nodes?: { id: string }[];
+  includeHiddenNodes?: boolean;
+  minZoom?: number;
+  maxZoom?: number;
+}
+
+export interface SetCenterOptions extends SetViewportOptions {
+  /** Zoom to this as well. Default: keep the current zoom. */
+  zoom?: number;
+}
+
+/** A rectangle in graph space. */
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export const BackgroundVariant = {
@@ -180,11 +209,64 @@ export interface HandleProps {
 }
 
 export interface FlowingerInstance {
-  setViewport: (viewport: Viewport, options?: SetViewportOptions) => void;
-  zoomIn: (options?: SetViewportOptions) => void;
-  zoomOut: (options?: SetViewportOptions) => void;
-  fitView: (options?: SetViewportOptions) => void;
+  /** Resolves `true` when the move lands, `false` if something else moved the view first. */
+  setViewport: (viewport: Viewport, options?: SetViewportOptions) => Promise<boolean>;
   getViewport: () => Viewport;
+  getZoom: () => number;
+  zoomIn: (options?: SetViewportOptions) => Promise<boolean>;
+  zoomOut: (options?: SetViewportOptions) => Promise<boolean>;
+  /** Zoom to a level, about the centre of the pane. */
+  zoomTo: (zoom: number, options?: SetViewportOptions) => Promise<boolean>;
+  /** Put a point of the graph in the middle of the pane. */
+  setCenter: (x: number, y: number, options?: SetCenterOptions) => Promise<boolean>;
+  fitView: (options?: FitViewOptions) => Promise<boolean>;
+  /** Show a rectangle of graph space, as `fitView` shows the nodes. */
+  fitBounds: (bounds: Rect, options?: FitViewOptions) => Promise<boolean>;
+  /** A point on the screen (`clientX`/`clientY`), in graph units — e.g. where a drop landed. */
+  screenToFlowPosition: (position: XYPosition, options?: { snapToGrid?: boolean }) => XYPosition;
+  /** The inverse: a point of the graph as a screen (`clientX`/`clientY`) position. */
+  flowToScreenPosition: (position: XYPosition) => XYPosition;
+
+  /** The nodes as they stand: a dragged position, a measured size and the selection included. */
+  getNodes: () => Node[];
+  getNode: (id: string) => Node | undefined;
+  getEdges: () => Edge[];
+  getEdge: (id: string) => Edge | undefined;
+  /**
+   * Edit the graph. These are reported as changes (`onNodesChange` / `onEdgesChange`),
+   * so they need a controlled flow or `defaultNodes`; on nodes you only pass in, they do nothing.
+   */
+  setNodes: (nodes: Node[] | ((nodes: Node[]) => Node[])) => void;
+  setEdges: (edges: Edge[] | ((edges: Edge[]) => Edge[])) => void;
+  addNodes: (nodes: Node | Node[]) => void;
+  addEdges: (edges: Edge | Edge[]) => void;
+  /** Merge a patch into a node; with `replace`, swap the whole node for it. */
+  updateNode: (
+    id: string,
+    patch: Partial<Node> | ((node: Node) => Partial<Node>),
+    options?: { replace?: boolean },
+  ) => void;
+  updateNodeData: (
+    id: string,
+    data: Record<string, unknown> | ((node: Node) => Record<string, unknown>),
+    options?: { replace?: boolean },
+  ) => void;
+  updateEdge: (
+    id: string,
+    patch: Partial<Edge> | ((edge: Edge) => Partial<Edge>),
+    options?: { replace?: boolean },
+  ) => void;
+
+  /** Nodes that overlap a node or rectangle (`partially`, the default) or lie wholly inside it. */
+  getIntersectingNodes: (
+    target: Node | Rect | { id: string },
+    partially?: boolean,
+    nodes?: Node[],
+  ) => Node[];
+  isNodeIntersecting: (target: Node | Rect | { id: string }, area: Rect, partially?: boolean) => boolean;
+  /** The smallest rectangle holding these nodes (or ids). */
+  getNodesBounds: (nodes: (Node | string)[]) => Rect;
+  toObject: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
 }
 
 /**
@@ -264,6 +346,20 @@ export interface FlowingerProps {
   /** Called whenever the set of selected nodes or edges changes. */
   onSelectionChange?: (selection: { nodes: Node[]; edges: Edge[] }) => void;
   onInit?: (instance: FlowingerInstance) => void;
+  /**
+   * Fit the view to the nodes once, as soon as all of them have been measured.
+   * `fitViewOptions` shapes that fit (and is what `fitView()` on the instance
+   * does not read — it takes its own).
+   */
+  fitView?: boolean;
+  fitViewOptions?: FitViewOptions;
+  /** Defaults for every edge; an edge's own fields win. Compared by value, so an inline object is fine. */
+  defaultEdgeOptions?: Partial<Omit<Edge, 'id' | 'source' | 'target'>>;
+  /** Keep every dragged node inside this region of graph space. A node's own `extent` wins. */
+  nodeExtent?: TranslateExtent;
+  /** Round dragged positions to a grid — `snapGrid` (default 15 × 15). */
+  snapToGrid?: boolean;
+  snapGrid?: [number, number];
 }
 
 // --- changes ---------------------------------------------------------------

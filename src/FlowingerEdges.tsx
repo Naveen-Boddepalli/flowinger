@@ -249,7 +249,7 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   const paths = edges.map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
-    if (!source || !target) return null;
+    if (!source || !target || edge.hidden || source.hidden || target.hidden) return null;
 
     const sourceAt = store.resolvePosition(source.id, source.position);
     const targetAt = store.resolvePosition(target.id, target.position);

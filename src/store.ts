@@ -1,15 +1,27 @@
+import {
+  FALLBACK_SIZE,
+  clampMove,
+  getNodesBounds,
+  isRectIntersecting,
+  snapTo,
+  viewportForBounds,
+  type Size,
+} from './geometry.ts';
 import { handleCoordinates } from './handlePoint.ts';
 import { layoutSize } from './measure.ts';
 import type {
   Connection,
   Edge,
   EdgeChange,
+  FitViewOptions,
   FlowingerInstance,
   HandleType,
   Node,
   NodeChange,
   NodePositionChange,
   Position,
+  Rect,
+  SetCenterOptions,
   SetViewportOptions,
   TranslateExtent,
   Viewport,
@@ -18,10 +30,7 @@ import type {
 
 type Listener = () => void;
 
-export interface Size {
-  width: number;
-  height: number;
-}
+export type { Size };
 
 /** What a `<Handle>` tells the store about itself. */
 export interface HandleRegistration {
@@ -42,6 +51,18 @@ export interface FlowingerState {
   /** Null until a canvas has mounted: viewport calls are meaningless before then. */
   panZoom: FlowingerInstance | null;
   isReady: boolean;
+  /** As given to the canvas: a drag in an uncontrolled flow is not reflected in `position`. */
+  nodes: readonly Node[];
+  edges: readonly Edge[];
+  /** `[x, y, zoom]`, as React Flow's `transform`. */
+  transform: readonly [number, number, number];
+  /** The pane's size in pixels; 0 until it has mounted. */
+  width: number;
+  height: number;
+  minZoom: number;
+  maxZoom: number;
+  /** Whether every node has been measured. */
+  nodesInitialized: boolean;
 }
 
 /** A connection being dragged out: from a handle, to wherever the pointer (or a handle it snapped to) is. */
@@ -84,6 +105,10 @@ export interface NodeCallbacks {
 export interface EngineOptions {
   nodesDraggable: boolean;
   elementsSelectable: boolean;
+  /** Round a dragged node's position to a multiple of these. */
+  snapGrid: readonly [number, number] | null;
+  /** Keep every dragged node inside this region of graph space. */
+  nodeExtent: TranslateExtent | null;
 }
 
 /** A node drag in progress — one node, or the whole selection moving with it. */
@@ -93,13 +118,6 @@ export interface DragSession {
   end: (event: React.PointerEvent) => void;
 }
 
-/**
- * The size a node is assumed to be until it has been measured, and the size
- * `fitView` uses for a node that never reports one (jsdom, `display: none`).
- */
-const FALLBACK_SIZE: Size = { width: 150, height: 40 };
-
-const FIT_PADDING = 40;
 const ZOOM_STEP = 1.25;
 /** A backstop for the tween, see `setViewport`. */
 const TWEEN_GRACE_MS = 100;
@@ -142,7 +160,8 @@ const sameLayout = (a: readonly Node[], b: readonly Node[]): boolean =>
         n.id === m.id &&
         samePoint(n.position, m.position) &&
         n.width === m.width &&
-        n.height === m.height
+        n.height === m.height &&
+        n.hidden === m.hidden
       );
     }));
 
@@ -211,14 +230,19 @@ export function createFlowingerStore(
 
   let viewportEl: HTMLElement | null = null;
   let containerEl: HTMLElement | null = null;
-  let state: FlowingerState = { panZoom: null, isReady: false };
+  let mounted = false;
 
   let nodes: readonly Node[] = [];
   let nodeById = new Map<string, Node>();
   let edges: readonly Edge[] = [];
   let edgeById = new Map<string, Edge>();
   let callbacks: NodeCallbacks = {};
-  let options: EngineOptions = { nodesDraggable: false, elementsSelectable: false };
+  let options: EngineOptions = {
+    nodesDraggable: false,
+    elementsSelectable: false,
+    snapGrid: null,
+    nodeExtent: null,
+  };
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
   const sizes = new Map<string, Size>();
@@ -241,12 +265,27 @@ export function createFlowingerStore(
   const geometryListeners = new Set<Listener>();
   const mountListeners = new Set<Listener>();
   const connectionListeners = new Set<Listener>();
+  const stateListeners = new Set<Listener>();
   const nodeListeners = new Map<string, Set<Listener>>();
 
-  let tween: { frame: number; timer: ReturnType<typeof setTimeout> } | null = null;
+  let tween: {
+    frame: number;
+    timer: ReturnType<typeof setTimeout>;
+    resolve: (finished: boolean) => void;
+  } | null = null;
 
   const emit = (listeners: Iterable<Listener>) => {
     for (const listener of listeners) listener();
+  };
+
+  // `useStore`'s snapshot: rebuilt only after something it reads has changed, so
+  // it is the same object between changes, as `useSyncExternalStore` requires.
+  let stateVersion = 0;
+  let cachedVersion = -1;
+  let cachedState: FlowingerState | null = null;
+  const touch = () => {
+    stateVersion += 1;
+    emit(stateListeners);
   };
 
   const subscribeTo =
@@ -289,13 +328,17 @@ export function createFlowingerStore(
     viewport = next;
     if (viewportEl) viewportEl.style.transform = viewportTransform(next);
     emit(viewportListeners);
+    touch();
   };
 
-  const cancelTween = () => {
+  /** Stops a tween. Whoever awaited it hears `finished` — false when something interrupted it. */
+  const cancelTween = (finished = false) => {
     if (!tween) return;
-    cancelAnimationFrame(tween.frame);
-    clearTimeout(tween.timer);
+    const { frame, timer, resolve } = tween;
+    cancelAnimationFrame(frame);
+    clearTimeout(timer);
     tween = null;
+    resolve(finished);
   };
 
   /**
@@ -310,7 +353,7 @@ export function createFlowingerStore(
    * hidden tab snaps, and a timer lands the move if frames stop arriving
    * part-way through.
    */
-  const setViewport = (requested: Viewport, options?: SetViewportOptions) => {
+  const setViewport = (requested: Viewport, options?: SetViewportOptions): Promise<boolean> => {
     const to = constrain({ ...requested, zoom: clampZoom(requested.zoom) });
     const duration = options?.duration ?? 0;
     target = to;
@@ -318,41 +361,49 @@ export function createFlowingerStore(
 
     if (duration <= 0 || document.hidden || prefersReducedMotion()) {
       commitViewport(to);
-      return;
+      return Promise.resolve(true);
     }
 
-    const from = viewport;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      if (t >= 1) {
-        cancelTween();
+    return new Promise<boolean>((resolve) => {
+      const from = viewport;
+      const start = performance.now();
+      const land = () => {
+        cancelTween(true);
         commitViewport(to);
-        return;
-      }
-      const e = easeOutCubic(t);
-      commitViewport({
-        x: from.x + (to.x - from.x) * e,
-        y: from.y + (to.y - from.y) * e,
-        zoom: from.zoom + (to.zoom - from.zoom) * e,
-      });
-      if (tween) tween.frame = requestAnimationFrame(tick);
-    };
-    tween = {
-      frame: requestAnimationFrame(tick),
-      timer: setTimeout(() => {
-        cancelTween();
-        commitViewport(to);
-      }, duration + TWEEN_GRACE_MS),
-    };
+      };
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        if (t >= 1) {
+          land();
+          return;
+        }
+        const e = easeOutCubic(t);
+        commitViewport({
+          x: from.x + (to.x - from.x) * e,
+          y: from.y + (to.y - from.y) * e,
+          zoom: from.zoom + (to.zoom - from.zoom) * e,
+        });
+        if (tween) tween.frame = requestAnimationFrame(tick);
+      };
+      tween = {
+        frame: requestAnimationFrame(tick),
+        timer: setTimeout(land, duration + TWEEN_GRACE_MS),
+        resolve,
+      };
+    });
   };
 
   /** Zooms by `factor`, keeping the point (`cx`, `cy`) — in container pixels — fixed. */
-  const zoomAt = (factor: number, cx: number, cy: number, options?: SetViewportOptions) => {
+  const zoomAt = (
+    factor: number,
+    cx: number,
+    cy: number,
+    options?: SetViewportOptions,
+  ): Promise<boolean> => {
     const zoom = clampZoom(target.zoom * factor);
-    if (zoom === target.zoom) return;
+    if (zoom === target.zoom) return Promise.resolve(false);
     const k = zoom / target.zoom;
-    setViewport({ x: cx - (cx - target.x) * k, y: cy - (cy - target.y) * k, zoom }, options);
+    return setViewport({ x: cx - (cx - target.x) * k, y: cy - (cy - target.y) * k, zoom }, options);
   };
 
   const centre = (): XYPosition => ({
@@ -365,6 +416,7 @@ export function createFlowingerStore(
   const bumpGeometry = () => {
     geometryVersion += 1;
     emit(geometryListeners);
+    touch();
   };
 
   const resolvePosition = (id: string, fallback: XYPosition): XYPosition => {
@@ -715,9 +767,30 @@ export function createFlowingerStore(
 
     callbacks.onNodeDragStart?.(event, lead, items.map((n) => at(n, 0, 0, false)));
 
+    // Where the drag may take these nodes: onto the grid (by the lead, so the
+    // others keep their offsets from it), and inside every node's own extent.
+    const boxes = items.map((n) => {
+      const from = origins.get(n.id) ?? n.position;
+      return { x: from.x, y: from.y, ...getNodeSize(n) };
+    });
+    const extents = items.map((n) => n.extent ?? options.nodeExtent);
+    const constrainMove = (dx: number, dy: number): XYPosition => {
+      let move = { x: dx, y: dy };
+      const grid = options.snapGrid;
+      const origin = origins.get(lead.id);
+      if (grid && origin) {
+        move = {
+          x: snapTo(origin.x + dx, grid[0]) - origin.x,
+          y: snapTo(origin.y + dy, grid[1]) - origin.y,
+        };
+      }
+      return clampMove(boxes, extents, move);
+    };
+
     let last = { dx: 0, dy: 0 };
     return {
-      move: (e, dx, dy) => {
+      move: (e, rawDx, rawDy) => {
+        const { x: dx, y: dy } = constrainMove(rawDx, rawDy);
         last = { dx, dy };
         const changes: NodePositionChange[] = [];
         for (const n of items) {
@@ -775,6 +848,7 @@ export function createFlowingerStore(
       }
     }
     if (pruned || relaid) bumpGeometry();
+    else touch();
     announceIfChanged();
     flushDimensions();
   };
@@ -783,38 +857,194 @@ export function createFlowingerStore(
     edges = next;
     edgeById = new Map(next.map((e) => [e.id, e]));
     for (const id of [...selectedEdges]) if (!edgeById.has(id)) selectedEdges.delete(id);
+    touch();
     announceIfChanged();
   };
 
-  const fitView = (options?: SetViewportOptions) => {
-    if (!containerEl || nodes.length === 0) return;
-    const w = containerEl.clientWidth;
-    const h = containerEl.clientHeight;
-    if (w === 0 || h === 0) return;
+  /** The pane, in pixels — null before a canvas has attached, or while it has no size. */
+  const paneSize = (): Size | null => {
+    if (!containerEl) return null;
+    const width = containerEl.clientWidth;
+    const height = containerEl.clientHeight;
+    return width === 0 || height === 0 ? null : { width, height };
+  };
 
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    for (const node of nodes) {
-      const pos = resolvePosition(node.id, node.position);
-      const size = getNodeSize(node);
-      minX = Math.min(minX, pos.x);
-      maxX = Math.max(maxX, pos.x + size.width);
-      minY = Math.min(minY, pos.y);
-      maxY = Math.max(maxY, pos.y + size.height);
-    }
+  /** A node as it stands now: dragged position, measured size, selection. */
+  const snapshotNode = (n: Node): Node => {
+    const position = resolvePosition(n.id, n.position);
+    const selectedNow = isSelected(n.id);
+    const size = sizes.get(n.id);
+    const measured = n.measured ?? (size ? { width: size.width, height: size.height } : undefined);
+    if (position === n.position && (n.selected === true) === selectedNow && measured === n.measured) return n;
+    return { ...n, position, selected: selectedNow, ...(measured ? { measured } : {}) };
+  };
 
-    const zoom = clampZoom(
-      Math.min(
-        (w - FIT_PADDING * 2) / Math.max(maxX - minX, 1),
-        (h - FIT_PADDING * 2) / Math.max(maxY - minY, 1),
+  const snapshotEdge = (e: Edge): Edge => (isEdgeSelected(e.id) === (e.selected === true) ? e : { ...e, selected: !e.selected });
+
+  const boundsOfNodes = (list: readonly Node[]): Rect =>
+    getNodesBounds(list.map((n) => ({ ...snapshotNode(n), measured: sizes.get(n.id) ?? n.measured })));
+
+  const fitBounds = (bounds: Rect, opts?: FitViewOptions): Promise<boolean> => {
+    const pane = paneSize();
+    if (!pane) return Promise.resolve(false);
+    return setViewport(
+      viewportForBounds(
+        bounds,
+        pane.width,
+        pane.height,
+        opts?.minZoom ?? minZoom,
+        opts?.maxZoom ?? maxZoom,
+        opts?.padding,
       ),
+      opts,
     );
-    setViewport(
-      { x: w / 2 - ((minX + maxX) / 2) * zoom, y: h / 2 - ((minY + maxY) / 2) * zoom, zoom },
-      options,
+  };
+
+  const fitView = (opts?: FitViewOptions): Promise<boolean> => {
+    const wanted = opts?.nodes ? new Set(opts.nodes.map((n) => n.id)) : null;
+    const list = nodes.filter(
+      (n) => (opts?.includeHiddenNodes === true || n.hidden !== true) && (!wanted || wanted.has(n.id)),
     );
+    if (list.length === 0) return Promise.resolve(false);
+    return fitBounds(boundsOfNodes(list), opts);
+  };
+
+  const setCenter = (x: number, y: number, opts?: SetCenterOptions): Promise<boolean> => {
+    const pane = paneSize();
+    if (!pane) return Promise.resolve(false);
+    const zoom = clampZoom(opts?.zoom ?? target.zoom);
+    return setViewport({ x: pane.width / 2 - x * zoom, y: pane.height / 2 - y * zoom, zoom }, opts);
+  };
+
+  const zoomTo = (zoom: number, opts?: SetViewportOptions): Promise<boolean> => {
+    const c = centre();
+    return zoomAt(zoom / target.zoom, c.x, c.y, opts);
+  };
+
+  // --- reading and editing the graph from outside ---------------------------
+
+  const screenToFlowPosition = (p: XYPosition, opts?: { snapToGrid?: boolean }): XYPosition => {
+    const at = toGraph(p.x, p.y);
+    const grid = options.snapGrid;
+    return opts?.snapToGrid && grid ? { x: snapTo(at.x, grid[0]), y: snapTo(at.y, grid[1]) } : at;
+  };
+
+  const flowToScreenPosition = (p: XYPosition): XYPosition => {
+    const rect = containerEl?.getBoundingClientRect();
+    return {
+      x: (rect?.left ?? 0) + viewport.x + p.x * viewport.zoom,
+      y: (rect?.top ?? 0) + viewport.y + p.y * viewport.zoom,
+    };
+  };
+
+  const getNodesNow = (): Node[] => nodes.map(snapshotNode);
+  const getEdgesNow = (): Edge[] => edges.map(snapshotEdge);
+
+  /**
+   * Replaces the list — as the changes that would produce it, so a controlled
+   * flow's owner applies them like any other. Ones it names that it has, it
+   * replaces; ones it lacks, it removes; ones it has not seen, it adds. Without
+   * `onNodesChange` there is nobody to apply them, and nothing happens.
+   */
+  const requestNodes = (next: Node[] | ((current: Node[]) => Node[])) => {
+    const current = getNodesNow();
+    const wanted = typeof next === 'function' ? next(current) : next;
+    const changes: NodeChange[] = [];
+    const wantedById = new Map(wanted.map((w) => [w.id, w]));
+    nodes.forEach((n, i) => {
+      const w = wantedById.get(n.id);
+      if (!w) changes.push({ type: 'remove', id: n.id });
+      else if (current[i] !== w) changes.push({ type: 'replace', id: n.id, item: w });
+    });
+    for (const w of wanted) if (!nodeById.has(w.id)) changes.push({ type: 'add', item: w });
+    emitNodeChanges(changes);
+  };
+
+  const requestEdges = (next: Edge[] | ((current: Edge[]) => Edge[])) => {
+    const current = getEdgesNow();
+    const wanted = typeof next === 'function' ? next(current) : next;
+    const changes: EdgeChange[] = [];
+    const wantedById = new Map(wanted.map((w) => [w.id, w]));
+    edges.forEach((e, i) => {
+      const w = wantedById.get(e.id);
+      if (!w) changes.push({ type: 'remove', id: e.id });
+      else if (current[i] !== w) changes.push({ type: 'replace', id: e.id, item: w });
+    });
+    for (const w of wanted) if (!edgeById.has(w.id)) changes.push({ type: 'add', item: w });
+    emitEdgeChanges(changes);
+  };
+
+  const toList = <T>(one: T | T[]): T[] => (Array.isArray(one) ? one : [one]);
+
+  const rectOf = (target: Node | Rect | { id: string }): Rect | null => {
+    if ('width' in target && 'x' in target) return target;
+    const n = nodeById.get(target.id);
+    if (!n) return null;
+    const at = resolvePosition(n.id, n.position);
+    const size = sizes.get(n.id) ?? getNodeSize(n);
+    return { x: at.x, y: at.y, ...size };
+  };
+
+  const isNodeIntersecting = (target: Node | Rect | { id: string }, area: Rect, partially = true): boolean => {
+    const rect = rectOf(target);
+    return rect ? isRectIntersecting(rect, area, partially) : false;
+  };
+
+  const getIntersectingNodes = (
+    target: Node | Rect | { id: string },
+    partially = true,
+    among?: Node[],
+  ): Node[] => {
+    const rect = rectOf(target);
+    if (!rect) return [];
+    const self = 'id' in target ? target.id : null;
+    return (among ?? getNodesNow()).filter((n) => {
+      if (n.id === self) return false;
+      const other = rectOf(n);
+      return other !== null && isRectIntersecting(other, rect, partially);
+    });
+  };
+
+  const updateNode = (
+    id: string,
+    patch: Partial<Node> | ((node: Node) => Partial<Node>),
+    opts?: { replace?: boolean },
+  ) => {
+    const node = nodeById.get(id);
+    if (!node) return;
+    const current = snapshotNode(node);
+    const change = typeof patch === 'function' ? patch(current) : patch;
+    emitNodeChanges([
+      { type: 'replace', id, item: opts?.replace === true ? ({ ...change, id } as Node) : { ...current, ...change } },
+    ]);
+  };
+
+  const updateNodeData = (
+    id: string,
+    data: Record<string, unknown> | ((node: Node) => Record<string, unknown>),
+    opts?: { replace?: boolean },
+  ) => {
+    updateNode(
+      id,
+      (node) => {
+        const next = typeof data === 'function' ? data(node) : data;
+        return { data: opts?.replace === true ? next : { ...node.data, ...next } };
+      },
+    );
+  };
+
+  const updateEdge = (
+    id: string,
+    patch: Partial<Edge> | ((edge: Edge) => Partial<Edge>),
+    opts?: { replace?: boolean },
+  ) => {
+    const edge = edgeById.get(id);
+    if (!edge) return;
+    const current = snapshotEdge(edge);
+    const change = typeof patch === 'function' ? patch(current) : patch;
+    emitEdgeChanges([
+      { type: 'replace', id, item: opts?.replace === true ? ({ ...change, id } as Edge) : { ...current, ...change } },
+    ]);
   };
 
   // --- lifecycle ------------------------------------------------------------
@@ -838,8 +1068,9 @@ export function createFlowingerStore(
       observer.observe(container);
       stopObserving = () => { observer.disconnect(); };
     }
-    state = { panZoom: instance, isReady: true };
+    mounted = true;
     emit(mountListeners);
+    touch();
   };
 
   const detach = () => {
@@ -849,23 +1080,74 @@ export function createFlowingerStore(
     stopObserving = null;
     viewportEl = null;
     containerEl = null;
-    state = { panZoom: null, isReady: false };
+    mounted = false;
     emit(mountListeners);
+    touch();
+  };
+
+  const getState = (): FlowingerState => {
+    if (cachedState === null || cachedVersion !== stateVersion) {
+      cachedVersion = stateVersion;
+      cachedState = {
+        panZoom: mounted ? instance : null,
+        isReady: mounted,
+        nodes,
+        edges,
+        transform: [viewport.x, viewport.y, viewport.zoom],
+        width: containerEl?.clientWidth ?? 0,
+        height: containerEl?.clientHeight ?? 0,
+        minZoom,
+        maxZoom,
+        nodesInitialized: areNodesInitialized(),
+      };
+    }
+    return cachedState;
   };
 
   /** Created once. Its identity is the contract: it never changes. */
   const instance: FlowingerInstance = {
     setViewport,
     getViewport: () => viewport,
+    getZoom: () => viewport.zoom,
     zoomIn: (options) => {
       const c = centre();
-      zoomAt(ZOOM_STEP, c.x, c.y, options);
+      return zoomAt(ZOOM_STEP, c.x, c.y, options);
     },
     zoomOut: (options) => {
       const c = centre();
-      zoomAt(1 / ZOOM_STEP, c.x, c.y, options);
+      return zoomAt(1 / ZOOM_STEP, c.x, c.y, options);
     },
+    zoomTo,
+    setCenter,
     fitView,
+    fitBounds,
+    screenToFlowPosition,
+    flowToScreenPosition,
+    getNodes: getNodesNow,
+    getNode: (id) => {
+      const n = nodeById.get(id);
+      return n && snapshotNode(n);
+    },
+    getEdges: getEdgesNow,
+    getEdge: (id) => {
+      const e = edgeById.get(id);
+      return e && snapshotEdge(e);
+    },
+    setNodes: requestNodes,
+    setEdges: requestEdges,
+    addNodes: (added) => {
+      emitNodeChanges(toList(added).map((item) => ({ type: 'add', item })));
+    },
+    addEdges: (added) => {
+      emitEdgeChanges(toList(added).map((item) => ({ type: 'add', item })));
+    },
+    updateNode,
+    updateNodeData,
+    updateEdge,
+    getIntersectingNodes,
+    isNodeIntersecting,
+    getNodesBounds: (list) => boundsOfNodes(list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n))),
+    toObject: () => ({ nodes: getNodesNow(), edges: getEdgesNow(), viewport }),
   };
 
   return {
@@ -877,6 +1159,7 @@ export function createFlowingerStore(
     setBounds: (min: number, max: number, nextExtent: TranslateExtent | null = null) => {
       minZoom = min;
       maxZoom = max;
+      touch();
       const changed = !sameExtent(extent, nextExtent);
       extent = nextExtent;
       // A tighter extent can leave the view outside it: bring it back in.
@@ -893,7 +1176,7 @@ export function createFlowingerStore(
     getCallbacks: () => callbacks,
 
     getViewport: () => viewport,
-    getState: () => state,
+    getState,
     getGeometryVersion: () => geometryVersion,
 
     resolvePosition,
@@ -921,6 +1204,7 @@ export function createFlowingerStore(
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),
     subscribeMount: subscribeTo(mountListeners),
+    subscribeState: subscribeTo(stateListeners),
     subscribeNode: (id: string, listener: Listener): (() => void) => {
       let set = nodeListeners.get(id);
       if (!set) {

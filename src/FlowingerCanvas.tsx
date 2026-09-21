@@ -2,6 +2,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -11,7 +12,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
-import { FlowingerContext, useFlowingerStore } from './context.ts';
+import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
@@ -104,6 +105,12 @@ function InnerCanvas({
   elementsSelectable = false,
   nodesConnectable = false,
   translateExtent,
+  fitView = false,
+  fitViewOptions,
+  defaultEdgeOptions,
+  nodeExtent,
+  snapToGrid = false,
+  snapGrid,
   keyboardNavigation = false,
   ariaLabel = 'Diagram',
   className = '',
@@ -126,10 +133,21 @@ function InnerCanvas({
   // controlled flow's caller takes, so there is one way things happen.
   const ownsNodes = nodesProp === undefined;
   const ownsEdges = edgesProp === undefined;
+  // `defaultEdgeOptions` is compared by value, so `{ animated: true }` written
+  // inline does not remake every edge on every render.
+  const edgeDefaultsKey = defaultEdgeOptions === undefined ? undefined : JSON.stringify(defaultEdgeOptions);
+  const edgeDefaults = useMemo(
+    () => (edgeDefaultsKey === undefined ? undefined : (JSON.parse(edgeDefaultsKey) as Partial<Edge>)),
+    [edgeDefaultsKey],
+  );
   const [ownNodes, setOwnNodes] = useState<Node[]>(() => defaultNodes ?? NO_NODES);
   const [ownEdges, setOwnEdges] = useState<Edge[]>(() => defaultEdges ?? NO_EDGES);
   const nodes = nodesProp ?? ownNodes;
-  const edges = edgesProp ?? ownEdges;
+  const givenEdges = edgesProp ?? ownEdges;
+  const edges = useMemo(
+    () => (edgeDefaults ? givenEdges.map((e) => ({ ...edgeDefaults, ...e })) : givenEdges),
+    [givenEdges, edgeDefaults],
+  );
   const changeNodes = useCallback(
     (changes: NodeChange[]) => {
       if (ownsNodes) setOwnNodes((current) => applyNodeChanges(changes, current));
@@ -176,9 +194,16 @@ function InnerCanvas({
 
   // Callbacks and options first: whether the flow is controlled is decided by
   // them, and the nodes below are read in that light.
+  const [gridX, gridY] = snapGrid ?? [15, 15];
   useIsomorphicLayoutEffect(() => {
-    store.setOptions({ nodesDraggable, elementsSelectable });
-  }, [store, nodesDraggable, elementsSelectable]);
+    store.setOptions({
+      nodesDraggable,
+      elementsSelectable,
+      snapGrid: snapToGrid ? [gridX, gridY] : null,
+      nodeExtent: nodeExtent ?? null,
+    });
+  }, [store, nodesDraggable, elementsSelectable, snapToGrid, gridX, gridY, nodeExtent]);
+
 
   useIsomorphicLayoutEffect(() => {
     store.setCallbacks({
@@ -212,6 +237,16 @@ function InnerCanvas({
   useIsomorphicLayoutEffect(() => {
     store.setEdges(edges);
   }, [store, edges]);
+
+  // Once, when every node has a size: before that there is nothing to frame. After
+  // `setNodes` above, so it frames the nodes it is given, not the ones before them.
+  const nodesInitialized = useNodesInitialized();
+  const fitted = useRef(false);
+  useIsomorphicLayoutEffect(() => {
+    if (!fitView || !nodesInitialized || fitted.current) return;
+    fitted.current = true;
+    void store.fitView(fitViewOptions);
+  }, [store, fitView, fitViewOptions, nodesInitialized]);
 
   const onInitRef = useRef(onInit);
   useEffect(() => {
@@ -427,7 +462,7 @@ function InnerCanvas({
         <FlowingerEdges edges={edges} nodes={nodes} edgeTypes={edgeTypes} />
 
         <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>
-          {nodes.map((node) => (
+          {nodes.filter((node) => !node.hidden).map((node) => (
             <NodeWrapper
               key={node.id}
               node={node}

@@ -70,7 +70,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
 | `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's — as in React Flow); zoom and fit buttons. Both go inside the provider. |
 | `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor` (a colour or a function of the node), `maskColor`, `pannable`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
-| `useFlowinger()`, `useViewport()` | The viewport controls (`setViewport`, `zoomIn`, `zoomOut`, `fitView`, `getViewport`), and the current viewport. |
+| `useFlowinger()`, `useViewport()` | The instance (below), and the current viewport. |
 | `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY]`. |
 
 ### `FlowingerCanvas` props
@@ -85,6 +85,10 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `panOnDrag` | `true` | `false`, or a list of mouse buttons, e.g. `[1]` for middle only. |
 | `zoomOnScroll`, `zoomOnPinch` | `true` | |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
+| `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
+| `snapToGrid`, `snapGrid` | `false`, `[15, 15]` | A dragged node lands on the grid; a selection keeps its shape, snapping by the node you hold. |
+| `fitView`, `fitViewOptions` | `false` | Frame the nodes once, as soon as every one has been measured. |
+| `defaultEdgeOptions` | | Defaults for every edge (`animated`, `markerEnd`, `style`…); an edge's own fields win. Compared by value, so writing it inline is fine. |
 | `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
 | `elementsSelectable` | `false` | A click selects a node (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`). A node's own `selectable: false` opts it out. |
 | `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out. |
@@ -120,6 +124,32 @@ edits `edges` itself (they are your prop), so you add it:
 
 The dashed line follows the pointer, snaps to a handle that would make a valid connection, and Escape
 cancels. The gesture is tracked on `window`, so it survives leaving the node and the canvas.
+
+### The instance
+
+`useReactFlow()` (alias `useFlowinger()`) returns one object for the life of the provider, so it is safe in an
+effect's dependencies; `onInit` hands you the same one.
+
+- **View**, each returning a `Promise<boolean>` — `true` when the move lands, `false` if another one cut it
+  short: `setViewport`, `zoomIn`, `zoomOut`, `zoomTo(zoom)`, `setCenter(x, y, { zoom })`,
+  `fitView({ padding, nodes, includeHiddenNodes, minZoom, maxZoom, duration })`, `fitBounds(rect, options)`;
+  and `getViewport()`, `getZoom()`. `padding` is a ratio, as in React Flow (`0.1` = a tenth of the diagram's
+  size on each side); left out, `fitView` keeps a 40 px margin.
+- **Coordinates**: `screenToFlowPosition({ x, y }, { snapToGrid })` takes a pointer position (`clientX`,
+  `clientY`) to graph units — for dropping a node where the pointer is — and `flowToScreenPosition` goes back.
+- **Read**: `getNodes()`, `getNode(id)`, `getEdges()`, `getEdge(id)`, `getNodesBounds(nodesOrIds)`,
+  `getIntersectingNodes(nodeOrRect, partially?, nodes?)`, `isNodeIntersecting(nodeOrRect, rect, partially?)`,
+  `toObject()`. They report the nodes as they stand: a dragged position, a measured size and the selection
+  included.
+- **Edit**: `setNodes`, `setEdges` (a list or an updater), `addNodes`, `addEdges`, `updateNode`,
+  `updateNodeData`, `updateEdge`. They are reported as changes, so they need a [controlled flow](#controlled-flows)
+  or `defaultNodes`; on nodes you merely pass in, there is nobody to apply them and they do nothing.
+
+`useStore(selector, equalityFn?)` reads `panZoom`, `isReady`, `nodes`, `edges`, `transform` (`[x, y, zoom]`),
+`width`, `height`, `minZoom`, `maxZoom` and `nodesInitialized`. The selector must return a stable value, or you
+pass an equality function.
+
+A node with `hidden: true` is neither drawn nor listed on the minimap, and nor are its edges.
 
 ### Controlled flows
 
@@ -164,11 +194,11 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 ## Coming from React Flow
 
-`ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore` (only `panZoom` and `isReady`), `Handle`,
+`ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`, `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
 all exported under React Flow's names, and so are `useNodesState`, `useEdgesState`, `applyNodeChanges`,
 `applyEdgeChanges`, `addEdge` and `useNodesInitialized`. **Not built yet:** `animated` edges (style one with a class
-instead) and selecting an edge.
+instead) and selecting an edge. `useStore` reads the ten fields above, not React Flow's whole internal store.
 
 ## Server rendering
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useSyncExternalStore } from 'react';
+import { createContext, useContext, useRef, useSyncExternalStore } from 'react';
 import type { FlowingerInstance, Viewport } from './types.ts';
 import type { FlowingerState, FlowingerStore } from './store.ts';
 
@@ -34,22 +34,45 @@ export function useViewport(): Viewport {
   return useSyncExternalStore(store.subscribeViewport, store.getViewport, store.getViewport);
 }
 
-const NOT_MOUNTED: FlowingerState = { panZoom: null, isReady: false };
+const NOT_MOUNTED: FlowingerState = {
+  panZoom: null,
+  isReady: false,
+  nodes: [],
+  edges: [],
+  transform: [0, 0, 1],
+  width: 0,
+  height: 0,
+  minZoom: 0.05,
+  maxZoom: 2,
+  nodesInitialized: false,
+};
 const noSubscription = () => () => {};
 
 /**
- * React Flow's `useStore`, cut down to the two fields code migrating from it
- * tends to read: `panZoom` and `isReady`.
+ * React Flow's `useStore`, cut down to the fields code migrating from it tends
+ * to read: `panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`,
+ * `height`, `minZoom`, `maxZoom` and `nodesInitialized`.
  *
  * The selector must return something referentially stable (a field, not a
- * fresh object) — the same rule React Flow's own `useStore` has.
+ * fresh object) — the same rule React Flow's own `useStore` has — or else say
+ * when two results are the same with `equalityFn`, e.g. a shallow comparison.
  */
-export function useStore<T>(selector: (state: FlowingerState) => T): T {
+export function useStore<T>(
+  selector: (state: FlowingerState) => T,
+  equalityFn?: (a: T, b: T) => boolean,
+): T {
   const store = useContext(FlowingerContext);
-  const read = () => selector(store ? store.getState() : NOT_MOUNTED);
+  const last = useRef<{ value: T } | null>(null);
+  const read = () => {
+    const next = selector(store ? store.getState() : NOT_MOUNTED);
+    const prev = last.current;
+    if (prev && equalityFn?.(prev.value, next)) return prev.value;
+    last.current = { value: next };
+    return next;
+  };
   // Nothing is mounted on the server, or while hydrating, so both agree.
   return useSyncExternalStore(
-    store ? store.subscribeMount : noSubscription,
+    store ? store.subscribeState : noSubscription,
     read,
     () => selector(NOT_MOUNTED),
   );

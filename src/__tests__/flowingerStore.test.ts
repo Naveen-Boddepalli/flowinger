@@ -161,7 +161,7 @@ describe('flowinger store — animated moves', () => {
 describe('flowinger store — mount state', () => {
   it('reports no panZoom until a canvas attaches, and one stable instance after', () => {
     const store = createFlowingerStore();
-    expect(store.getState()).toEqual({ panZoom: null, isReady: false });
+    expect(store.getState()).toMatchObject({ panZoom: null, isReady: false });
 
     const el = document.createElement('div');
     store.attach(el, el);

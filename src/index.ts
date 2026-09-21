@@ -23,6 +23,9 @@ export {
 } from './changes.ts';
 export { useNodesState, useEdgesState } from './hooks.ts';
 
+// Geometry
+export { getNodesBounds, isRectIntersecting, viewportForBounds } from './geometry.ts';
+
 // Handles & Ports
 export { Handle } from './Handle.tsx';
 export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
@@ -77,5 +80,8 @@ export type {
   EdgeRemoveChange,
   EdgeAddChange,
   EdgeReplaceChange,
+  FitViewOptions,
+  SetCenterOptions,
+  Rect,
 } from './types.ts';
 export type { FlowingerState } from './store.ts';

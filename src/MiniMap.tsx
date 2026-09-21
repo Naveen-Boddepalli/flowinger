@@ -84,7 +84,7 @@ export const MiniMap = memo(function MiniMap({
         }
       : null;
 
-  const rects = store.getNodes().map((node) => {
+  const rects = store.getNodes().filter((node) => node.hidden !== true).map((node) => {
     const at = store.resolvePosition(node.id, node.position);
     const size = store.getNodeSize(node);
     return { node, x: at.x, y: at.y, w: size.width, h: size.height };
@@ -124,7 +124,7 @@ export const MiniMap = memo(function MiniMap({
     const graphX = (e.clientX - rect.left - offsetX) / scale + box.x;
     const graphY = (e.clientY - rect.top - offsetY) / scale + box.y;
     const { zoom } = store.getViewport();
-    store.instance.setViewport({
+    void store.instance.setViewport({
       x: pane.width / 2 - graphX * zoom,
       y: pane.height / 2 - graphY * zoom,
       zoom,

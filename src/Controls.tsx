@@ -61,7 +61,7 @@ export const Controls = memo(function Controls({
         <>
           <button
             type="button"
-            onClick={() => { zoomOut({ duration: 200 }); }}
+            onClick={() => { void zoomOut({ duration: 200 }); }}
             aria-label="Zoom out"
             style={buttonStyle}
           >
@@ -69,7 +69,7 @@ export const Controls = memo(function Controls({
           </button>
           <button
             type="button"
-            onClick={() => { zoomIn({ duration: 200 }); }}
+            onClick={() => { void zoomIn({ duration: 200 }); }}
             aria-label="Zoom in"
             style={buttonStyle}
           >
@@ -80,7 +80,7 @@ export const Controls = memo(function Controls({
       {showFit && (
         <button
           type="button"
-          onClick={() => { fitView({ duration: 300 }); }}
+          onClick={() => { void fitView({ duration: 300 }); }}
           aria-label="Fit view"
           style={fitStyle}
         >
