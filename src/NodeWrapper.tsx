@@ -36,6 +36,10 @@ export interface NodeWrapperProps {
   connectable: boolean;
   /** Whether `node.selected` is what says so (a controlled flow), as opposed to the store's own set. */
   controlledSelection: boolean;
+  /** Where this node's parent sits on the canvas (the origin for a root), and how many parents deep it is. */
+  parentX: number;
+  parentY: number;
+  depth: number;
 }
 
 /**
@@ -51,6 +55,9 @@ export const NodeWrapper = memo(function NodeWrapper({
   selectable,
   connectable,
   controlledSelection,
+  parentX,
+  parentY,
+  depth,
 }: NodeWrapperProps) {
   const store = useFlowingerStore();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -63,9 +70,14 @@ export const NodeWrapper = memo(function NodeWrapper({
     (listener: () => void) => store.subscribeNode(node.id, listener),
     [store, node.id],
   );
-  const readPosition = () => store.resolvePosition(node.id, node.position);
-  // No drag has happened on the server; the layout's own position is it.
-  const position = useSyncExternalStore(subscribe, readPosition, readPosition);
+  const readPosition = () => store.absolutePosition(node);
+  // No drag has happened on the server, and nothing is registered there: the
+  // layout's own position, placed inside its parent, is it.
+  const asLaidOut = useMemo(
+    () => ({ x: parentX + node.position.x, y: parentY + node.position.y }),
+    [parentX, parentY, node.position.x, node.position.y],
+  );
+  const position = useSyncExternalStore(subscribe, readPosition, () => asLaidOut);
 
   // Selection is per node: selecting one re-renders it (and whichever it replaces), not the rest.
   const selected = useSyncExternalStore(
@@ -198,7 +210,8 @@ export const NodeWrapper = memo(function NodeWrapper({
         position: 'absolute',
         transform: `translate(${String(position.x)}px, ${String(position.y)}px)`,
         pointerEvents: 'all',
-        zIndex: dragging ? 1000 : 1,
+        // Above its parent by depth, unless it says otherwise; above all while dragged.
+        zIndex: dragging ? 1000 : (node.zIndex ?? 1 + depth),
         ...(draggable ? { cursor: dragging ? 'grabbing' : 'grab' } : {}),
       }}
       onPointerDown={onPointerDown}

@@ -93,6 +93,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
 | `snapToGrid`, `snapGrid` | `false`, `[15, 15]` | A dragged node lands on the grid; a selection keeps its shape, snapping by the node you hold. |
+| `onlyRenderVisibleElements` | `false` | Draw only the nodes and edges in view (plus a margin of a quarter of the view), so a huge diagram costs what is on screen. Selected and dragged nodes are always drawn; an edge is drawn if either end is, or it crosses the view. |
 | `fitView`, `fitViewOptions` | `false` | Frame the nodes once, as soon as every one has been measured. |
 | `defaultEdgeOptions` | | Defaults for every edge (`animated`, `markerEnd`, `style`…); an edge's own fields win. Compared by value, so writing it inline is fine. |
 | `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
@@ -136,6 +137,26 @@ edits `edges` itself (they are your prop), so you add it:
 
 The dashed line follows the pointer, snaps to a handle that would make a valid connection, and Escape
 cancels. The gesture is tracked on `window`, so it survives leaving the node and the canvas.
+
+### Nodes inside nodes
+
+Give a node a `parentId` and it becomes a child: its `position` is *relative to its parent's*, it moves with
+it, it is drawn above it (a deeper node above a shallower; `zIndex` overrides), and it is hidden and deleted
+with it. That nests as deep as you like.
+
+```tsx
+const nodes = [
+  { id: 'group', position: { x: 100, y: 50 }, width: 300, height: 200, data: {} },
+  { id: 'inside', parentId: 'group', extent: 'parent', position: { x: 20, y: 30 }, data: {} },
+];
+```
+
+`extent: 'parent'` keeps a child inside its parent's box while it is dragged. Everything that draws or
+hit-tests — edges, the minimap, `fitView`, box selection, `getIntersectingNodes`, `nodeExtent`, `snapToGrid`
+(to the canvas' grid, not the parent's) — works from the node's place on the canvas, which a custom node gets
+as `positionAbsoluteX` / `positionAbsoluteY`; the `position` in your data stays relative, in a `position`
+change too. Drag or nudge a parent together with its own children and they move once, not twice. **Not built:**
+a parent growing to fit a child dragged past its edge (`expandParent`).
 
 ### The instance
 

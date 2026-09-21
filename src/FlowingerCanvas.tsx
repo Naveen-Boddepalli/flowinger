@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ComponentType,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -18,6 +19,7 @@ import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
+import { treeInfo } from './parents.ts';
 import { SelectionBox } from './SelectionBox.tsx';
 import { viewportTransform } from './store.ts';
 import {
@@ -129,6 +131,7 @@ function InnerCanvas({
   connectionMode = 'strict',
   edgesFocusable = true,
   deleteKeyCode = 'Backspace',
+  onlyRenderVisibleElements = false,
   fitView = false,
   fitViewOptions,
   defaultEdgeOptions,
@@ -236,8 +239,25 @@ function InnerCanvas({
       snapGrid: snapToGrid ? [gridX, gridY] : null,
       nodeExtent: nodeExtent ?? null,
       connectionMode,
+      onlyRenderVisibleElements,
     });
-  }, [store, nodesDraggable, elementsSelectable, snapToGrid, gridX, gridY, nodeExtent, connectionMode]);
+  }, [
+    store,
+    nodesDraggable,
+    elementsSelectable,
+    snapToGrid,
+    gridX,
+    gridY,
+    nodeExtent,
+    connectionMode,
+    onlyRenderVisibleElements,
+  ]);
+
+  // Nesting, read from the nodes as given: where each one's parent sits, how deep
+  // it is, and what is hidden along with a hidden parent.
+  const tree = useMemo(() => treeInfo(nodes), [nodes]);
+  // With `onlyRenderVisibleElements`: what is in view. Null (everything) otherwise, and on the server.
+  const visible = useSyncExternalStore(store.subscribeVisible, store.getVisible, () => null);
 
 
   useIsomorphicLayoutEffect(() => {
@@ -610,6 +630,8 @@ function InnerCanvas({
             elementsSelectable={elementsSelectable}
             edgesFocusable={edgesFocusable}
             controlledSelection={edgesChange !== undefined}
+            hiddenNodeIds={tree.hidden}
+            visibleEdgeIds={visible?.edges}
           />
         </EdgeLabelHost.Provider>
         {/* Above the edges, below the nodes; takes no events of its own. */}
@@ -629,7 +651,9 @@ function InnerCanvas({
         />
 
         <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>
-          {nodes.filter((node) => !node.hidden).map((node) => (
+          {nodes
+            .filter((node) => !tree.hidden.has(node.id) && (!visible || visible.nodes.has(node.id)))
+            .map((node) => (
             <NodeWrapper
               key={node.id}
               node={node}
@@ -640,6 +664,9 @@ function InnerCanvas({
               selectable={elementsSelectable && node.selectable !== false}
               connectable={node.connectable ?? nodesConnectable}
               controlledSelection={nodesChange !== undefined}
+              parentX={tree.origin.get(node.id)?.x ?? 0}
+              parentY={tree.origin.get(node.id)?.y ?? 0}
+              depth={tree.depth.get(node.id) ?? 0}
             />
           ))}
         </div>

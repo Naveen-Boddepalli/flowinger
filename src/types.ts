@@ -82,8 +82,18 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   connectable?: boolean;
   /** A CSS selector: when set, the node can only be dragged by an element that matches it. */
   dragHandle?: string;
-  /** Keeps the node inside this region of graph space while it is dragged or nudged. */
-  extent?: TranslateExtent;
+  /**
+   * Keeps the node inside a region while it is dragged or nudged: a region of
+   * graph space, or `'parent'` for the box of its parent node.
+   */
+  extent?: TranslateExtent | 'parent';
+  /**
+   * Makes this node a child of another: its `position` is then relative to the
+   * parent's, it moves with it, is drawn above it, and is deleted with it.
+   */
+  parentId?: string;
+  /** Stacking order; by default a child sits above its parent. */
+  zIndex?: number;
 }
 
 export interface NodeProps<N extends Node = Node> {
@@ -442,6 +452,12 @@ export interface FlowingerProps {
   /** Called whenever the set of selected nodes or edges changes. */
   onSelectionChange?: (selection: { nodes: Node[]; edges: Edge[] }) => void;
   onInit?: (instance: FlowingerInstance) => void;
+  /**
+   * Draw only the nodes (and edges) that are in view, or near it, so a huge
+   * diagram costs what is on screen rather than everything. Selected and dragged
+   * nodes are always drawn. Default false.
+   */
+  onlyRenderVisibleElements?: boolean;
   /**
    * Fit the view to the nodes once, as soon as all of them have been measured.
    * `fitViewOptions` shapes that fit (and is what `fitView()` on the instance

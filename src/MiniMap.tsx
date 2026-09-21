@@ -85,7 +85,7 @@ export const MiniMap = memo(function MiniMap({
       : null;
 
   const rects = store.getNodes().filter((node) => node.hidden !== true).map((node) => {
-    const at = store.resolvePosition(node.id, node.position);
+    const at = store.absolutePosition(node);
     const size = store.getNodeSize(node);
     return { node, x: at.x, y: at.y, w: size.width, h: size.height };
   });

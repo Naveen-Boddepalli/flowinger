@@ -1,3 +1,4 @@
+import { absolutePositionOf, descendantsOf } from './parents.ts';
 import {
   FALLBACK_SIZE,
   clampMove,
@@ -123,6 +124,14 @@ export interface EngineOptions {
   /** Keep every dragged node inside this region of graph space. */
   nodeExtent: TranslateExtent | null;
   connectionMode: ConnectionMode;
+  /** Draw only what is in view. */
+  onlyRenderVisibleElements: boolean;
+}
+
+/** What is worth drawing right now — null means everything. */
+export interface VisibleSet {
+  nodes: ReadonlySet<string>;
+  edges: ReadonlySet<string>;
 }
 
 /** A node drag in progress — one node, or the whole selection moving with it. */
@@ -257,6 +266,7 @@ export function createFlowingerStore(
     snapGrid: null,
     nodeExtent: null,
     connectionMode: 'strict',
+    onlyRenderVisibleElements: false,
   };
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
@@ -283,6 +293,13 @@ export function createFlowingerStore(
   const stateListeners = new Set<Listener>();
   const selectionRectListeners = new Set<Listener>();
   const selectionChangeListeners = new Set<Listener>();
+  const visibleListeners = new Set<Listener>();
+  /** The children of each parent, and each one's absolute position, as last worked out. */
+  let childrenOf = new Map<string, string[]>();
+  const absCache = new Map<string, XYPosition>();
+  let visible: VisibleSet | null = null;
+  /** Nodes being dragged right now: never culled, or the pointer would lose them. */
+  const draggingIds = new Set<string>();
   /** The box being dragged, in pane pixels — null when there is none. */
   let selectionRect: Rect | null = null;
   const nodeListeners = new Map<string, Set<Listener>>();
@@ -348,6 +365,7 @@ export function createFlowingerStore(
     if (viewportEl) viewportEl.style.transform = viewportTransform(next);
     emit(viewportListeners);
     touch();
+    recomputeVisible();
   };
 
   /** Stops a tween. Whoever awaited it hears `finished` — false when something interrupted it. */
@@ -430,12 +448,80 @@ export function createFlowingerStore(
     y: (containerEl?.clientHeight ?? 0) / 2,
   });
 
+  // --- what is worth drawing ------------------------------------------------
+
+  /**
+   * Works out which nodes and edges are in (or near) view, and tells the canvas
+   * only when that set changes — a pan that reveals nothing new costs no render.
+   * Off, or before the pane has a size, everything counts (null).
+   */
+  const recomputeVisible = () => {
+    const pane = options.onlyRenderVisibleElements ? paneSize() : null;
+    if (!pane) {
+      if (visible !== null) {
+        visible = null;
+        emit(visibleListeners);
+      }
+      return;
+    }
+    const zoom = viewport.zoom;
+    const left = -viewport.x / zoom;
+    const top = -viewport.y / zoom;
+    const width = pane.width / zoom;
+    const height = pane.height / zoom;
+    // A margin, so a node is drawn a little before it slides into view.
+    const region: Rect = {
+      x: left - width * 0.25,
+      y: top - height * 0.25,
+      width: width * 1.5,
+      height: height * 1.5,
+    };
+    const rects = new Map<string, Rect>();
+    const nodeIds = new Set<string>();
+    for (const n of nodes) {
+      const at = absolutePosition(n);
+      const rect = { x: at.x, y: at.y, ...getNodeSize(n) };
+      rects.set(n.id, rect);
+      if (n.hidden === true) continue;
+      if (isSelected(n.id) || draggingIds.has(n.id) || isRectIntersecting(rect, region, true)) {
+        nodeIds.add(n.id);
+      }
+    }
+    const edgeIds = new Set<string>();
+    for (const e of edges) {
+      if (e.hidden === true) continue;
+      if (nodeIds.has(e.source) || nodeIds.has(e.target)) {
+        edgeIds.add(e.id);
+        continue;
+      }
+      // Both ends out of view: still worth drawing if the line between them crosses it.
+      const a = rects.get(e.source);
+      const b = rects.get(e.target);
+      if (!a || !b) continue;
+      const x = Math.min(a.x, b.x);
+      const y = Math.min(a.y, b.y);
+      const span = {
+        x,
+        y,
+        width: Math.max(a.x + a.width, b.x + b.width) - x,
+        height: Math.max(a.y + a.height, b.y + b.height) - y,
+      };
+      if (isRectIntersecting(span, region, true)) edgeIds.add(e.id);
+    }
+    const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
+      a.size === b.size && [...a].every((id) => b.has(id));
+    if (visible && same(visible.nodes, nodeIds) && same(visible.edges, edgeIds)) return;
+    visible = { nodes: nodeIds, edges: edgeIds };
+    emit(visibleListeners);
+  };
+
   // --- geometry -------------------------------------------------------------
 
   const bumpGeometry = () => {
     geometryVersion += 1;
     emit(geometryListeners);
     touch();
+    recomputeVisible();
   };
 
   const resolvePosition = (id: string, fallback: XYPosition): XYPosition => {
@@ -451,10 +537,37 @@ export function createFlowingerStore(
       height: node.height ?? FALLBACK_SIZE.height,
     };
 
+  /**
+   * A node's place on the canvas: its own position — a drag included — plus its
+   * ancestors'. For a root that is `resolvePosition` itself; for a child it is
+   * remembered by id so `useSyncExternalStore` gets the same object until it moves.
+   */
+  const absolutePosition = (node: Node): XYPosition => {
+    if (node.parentId === undefined) return resolvePosition(node.id, node.position);
+    const at = absolutePositionOf(node, (id) => nodeById.get(id), resolvePosition);
+    const known = absCache.get(node.id);
+    if (known && samePoint(known, at)) return known;
+    absCache.set(node.id, at);
+    return at;
+  };
+
+  /** Tells a node, and everything nested inside it, that it moved. */
+  const emitNodeTree = (id: string) => {
+    emit(nodeListeners.get(id) ?? []);
+    const queue = [...(childrenOf.get(id) ?? [])];
+    const seen = new Set([id]);
+    for (let next = queue.pop(); next !== undefined; next = queue.pop()) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      emit(nodeListeners.get(next) ?? []);
+      queue.push(...(childrenOf.get(next) ?? []));
+    }
+  };
+
   const setNodePosition = (node: Node, position: XYPosition) => {
     overrides.set(node.id, { base: node.position, position });
     bumpGeometry();
-    emit(nodeListeners.get(node.id) ?? []);
+    emitNodeTree(node.id);
   };
 
   const nodesControlled = (): boolean => callbacks.onNodesChange !== undefined;
@@ -571,7 +684,7 @@ export function createFlowingerStore(
   const pointOfHandle = (nodeId: string, record: HandleRecord): XYPosition | null => {
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return null;
-    const at = resolvePosition(nodeId, node.position);
+    const at = absolutePosition(node);
     return record.anchor
       ? { x: at.x + record.anchor.x, y: at.y + record.anchor.y }
       : handleCoordinates(at, record.position, getNodeSize(node));
@@ -860,6 +973,19 @@ export function createFlowingerStore(
    * goes with it; otherwise it is selected (where selecting is on) and goes
    * alone — which is what a press on an unselected node means.
    */
+  /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
+  const extentFor = (n: Node): TranslateExtent | null => {
+    if (n.extent !== 'parent') return n.extent ?? options.nodeExtent;
+    const parent = n.parentId === undefined ? undefined : nodeById.get(n.parentId);
+    if (!parent) return options.nodeExtent;
+    const at = absolutePosition(parent);
+    const size = getNodeSize(parent);
+    return [
+      [at.x, at.y],
+      [at.x + size.width, at.y + size.height],
+    ];
+  };
+
   const beginNodeDrag = (lead: Node, event: React.PointerEvent, additive: boolean): DragSession => {
     const before = selectedNodeIds();
     let group = [lead.id];
@@ -869,11 +995,19 @@ export function createFlowingerStore(
       selectNode(lead.id, additive);
       group = additive ? [...before, lead.id] : [lead.id];
     }
-    const items = group.flatMap((id) => {
+    const movable = group.flatMap((id) => {
       const n = nodeById.get(id) ?? (id === lead.id ? lead : undefined);
       return n && isDraggable(n) ? [n] : [];
     });
+    // A node inside another that is also being dragged moves with it already.
+    const riding = descendantsOf(
+      movable.map((n) => n.id),
+      nodes,
+    );
+    const items = movable.filter((n) => !riding.has(n.id));
+    for (const n of items) draggingIds.add(n.id);
     const origins = new Map(items.map((n) => [n.id, resolvePosition(n.id, n.position)]));
+    const absOrigins = new Map(items.map((n) => [n.id, absolutePosition(n)]));
     const leadOf = (moved: Node[]): Node => moved.find((n) => n.id === lead.id) ?? lead;
     const at = (n: Node, dx: number, dy: number, dragging: boolean): Node => {
       const from = origins.get(n.id) ?? n.position;
@@ -885,14 +1019,15 @@ export function createFlowingerStore(
     // Where the drag may take these nodes: onto the grid (by the lead, so the
     // others keep their offsets from it), and inside every node's own extent.
     const boxes = items.map((n) => {
-      const from = origins.get(n.id) ?? n.position;
+      const from = absOrigins.get(n.id) ?? n.position;
       return { x: from.x, y: from.y, ...getNodeSize(n) };
     });
-    const extents = items.map((n) => n.extent ?? options.nodeExtent);
+    const extents = items.map(extentFor);
     const constrainMove = (dx: number, dy: number): XYPosition => {
       let move = { x: dx, y: dy };
       const grid = options.snapGrid;
-      const origin = origins.get(lead.id);
+      // On the canvas' grid, which is the canvas' own coordinates, not the parent's.
+      const origin = absOrigins.get(lead.id);
       if (grid && origin) {
         move = {
           x: snapTo(origin.x + dx, grid[0]) - origin.x,
@@ -920,6 +1055,8 @@ export function createFlowingerStore(
         callbacks.onNodeDrag?.(e, leadOf(moved), moved);
       },
       end: (e) => {
+        for (const n of items) draggingIds.delete(n.id);
+        recomputeVisible();
         if (nodesControlled()) {
           emitNodeChanges(items.map((n) => ({ type: 'position', id: n.id, dragging: false })));
         }
@@ -935,25 +1072,28 @@ export function createFlowingerStore(
    * four of them. Bounded by the extents, like a drag, and reported the same way.
    */
   const nudgeSelection = (dirX: number, dirY: number, large: boolean) => {
-    const items = selectedNodeIds().flatMap((id) => {
+    const movable = selectedNodeIds().flatMap((id) => {
       const n = nodeById.get(id);
       return n && isDraggable(n) ? [n] : [];
     });
+    const riding = descendantsOf(
+      movable.map((n) => n.id),
+      nodes,
+    );
+    const items = movable.filter((n) => !riding.has(n.id));
     if (items.length === 0) return;
     const unit = options.snapGrid ?? [5, 5];
     const factor = large ? 4 : 1;
-    const boxes = items.map((n) => ({ ...resolvePosition(n.id, n.position), ...getNodeSize(n) }));
-    const move = clampMove(
-      boxes,
-      items.map((n) => n.extent ?? options.nodeExtent),
-      { x: dirX * unit[0] * factor, y: dirY * unit[1] * factor },
-    );
+    const boxes = items.map((n) => ({ ...absolutePosition(n), ...getNodeSize(n) }));
+    const move = clampMove(boxes, items.map(extentFor), {
+      x: dirX * unit[0] * factor,
+      y: dirY * unit[1] * factor,
+    });
     if (move.x === 0 && move.y === 0) return;
     const changes: NodePositionChange[] = [];
-    items.forEach((n, i) => {
-      const from = boxes[i];
-      if (!from) return;
-      const position = { x: from.x + move.x, y: from.y + move.y };
+    items.forEach((n) => {
+      const own = resolvePosition(n.id, n.position);
+      const position = { x: own.x + move.x, y: own.y + move.y };
       if (nodesControlled()) changes.push({ type: 'position', id: n.id, position, dragging: false });
       else setNodePosition(n, position);
     });
@@ -975,7 +1115,13 @@ export function createFlowingerStore(
     const none = { deletedNodes: [], deletedEdges: [] };
     const wantedNodes = new Set((params.nodes ?? []).map((n) => n.id));
     const wantedEdges = new Set((params.edges ?? []).map((e) => e.id));
-    const goneNodes = nodes.filter((n) => wantedNodes.has(n.id) && n.deletable !== false);
+    const direct = nodes.filter((n) => wantedNodes.has(n.id) && n.deletable !== false);
+    // What is nested inside a node goes with it, whatever it says about itself.
+    const inside = descendantsOf(
+      direct.map((n) => n.id),
+      nodes,
+    );
+    const goneNodes = nodes.filter((n) => direct.includes(n) || inside.has(n.id));
     const goneIds = new Set(goneNodes.map((n) => n.id));
     const goneEdges = edges.filter(
       (e) =>
@@ -1007,6 +1153,14 @@ export function createFlowingerStore(
     const before = nodeById;
     nodes = next;
     nodeById = new Map(next.map((n) => [n.id, n]));
+    childrenOf = new Map();
+    for (const n of next) {
+      if (n.parentId === undefined) continue;
+      const list = childrenOf.get(n.parentId);
+      if (list) list.push(n.id);
+      else childrenOf.set(n.parentId, [n.id]);
+    }
+    absCache.clear();
     let pruned = false;
     for (const id of [...sizes.keys()]) {
       if (!nodeById.has(id)) {
@@ -1032,7 +1186,12 @@ export function createFlowingerStore(
       }
     }
     if (pruned || relaid) bumpGeometry();
-    else touch();
+    else {
+      touch();
+      recomputeVisible();
+    }
+    // A child's place depends on its ancestors', which this may have moved.
+    if (relaid) for (const [, ids] of childrenOf) for (const id of ids) emit(nodeListeners.get(id) ?? []);
     announceIfChanged();
     flushDimensions();
   };
@@ -1042,6 +1201,7 @@ export function createFlowingerStore(
     edgeById = new Map(next.map((e) => [e.id, e]));
     for (const id of [...selectedEdges]) if (!edgeById.has(id)) selectedEdges.delete(id);
     touch();
+    recomputeVisible();
     announceIfChanged();
   };
 
@@ -1066,7 +1226,13 @@ export function createFlowingerStore(
   const snapshotEdge = (e: Edge): Edge => (isEdgeSelected(e.id) === (e.selected === true) ? e : { ...e, selected: !e.selected });
 
   const boundsOfNodes = (list: readonly Node[]): Rect =>
-    getNodesBounds(list.map((n) => ({ ...snapshotNode(n), measured: sizes.get(n.id) ?? n.measured })));
+    getNodesBounds(
+      list.map((n) => ({
+        ...snapshotNode(n),
+        position: absolutePosition(n),
+        measured: sizes.get(n.id) ?? n.measured,
+      })),
+    );
 
   const fitBounds = (bounds: Rect, opts?: FitViewOptions): Promise<boolean> => {
     const pane = paneSize();
@@ -1164,7 +1330,7 @@ export function createFlowingerStore(
     if ('width' in target && 'x' in target) return target;
     const n = nodeById.get(target.id);
     if (!n) return null;
-    const at = resolvePosition(n.id, n.position);
+    const at = absolutePosition(n);
     const size = sizes.get(n.id) ?? getNodeSize(n);
     return { x: at.x, y: at.y, ...size };
   };
@@ -1357,6 +1523,7 @@ export function createFlowingerStore(
     },
     setOptions: (next: EngineOptions) => {
       options = next;
+      recomputeVisible();
     },
     getCallbacks: () => callbacks,
 
@@ -1365,7 +1532,10 @@ export function createFlowingerStore(
     getGeometryVersion: () => geometryVersion,
 
     resolvePosition,
+    absolutePosition,
     getNodeSize,
+    getVisible: (): VisibleSet | null => visible,
+    subscribeVisible: subscribeTo(visibleListeners),
     setNodePosition,
     setSize,
     registerNodeElement,

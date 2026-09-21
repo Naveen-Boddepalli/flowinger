@@ -12,6 +12,7 @@ import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
 import { EdgeContext } from './edgeContext.ts';
 import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
+import { absolutePositionOf } from './parents.ts';
 import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
 import {
   type Edge,
@@ -35,6 +36,10 @@ export interface FlowingerEdgesProps {
   edgesFocusable?: boolean;
   /** Whether `edge.selected` is what says so (a controlled edge list), as opposed to the store's own set. */
   controlledSelection?: boolean;
+  /** Nodes not drawn — hidden, or inside something hidden — and so no edges to or from them. */
+  hiddenNodeIds?: ReadonlySet<string> | undefined;
+  /** When only what is in view is drawn: the edges that are. */
+  visibleEdgeIds?: ReadonlySet<string> | undefined;
 }
 
 /**
@@ -313,6 +318,8 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   elementsSelectable = false,
   edgesFocusable = true,
   controlledSelection = false,
+  hiddenNodeIds,
+  visibleEdgeIds,
 }: FlowingerEdgesProps) {
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
@@ -348,10 +355,15 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   const paths = edges.map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
-    if (!source || !target || edge.hidden || source.hidden || target.hidden) return null;
+    if (!source || !target || edge.hidden) return null;
+    if (hiddenNodeIds ? hiddenNodeIds.has(source.id) || hiddenNodeIds.has(target.id) : source.hidden || target.hidden) {
+      return null;
+    }
+    if (visibleEdgeIds && !visibleEdgeIds.has(edge.id)) return null;
 
-    const sourceAt = store.resolvePosition(source.id, source.position);
-    const targetAt = store.resolvePosition(target.id, target.position);
+    const lookup = (id: string) => byId.get(id);
+    const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition);
+    const targetAt = absolutePositionOf(target, lookup, store.resolvePosition);
 
     // With nothing to go on, leave the source's bottom for the target's top
     // when the target sits below it, else run sideways.
