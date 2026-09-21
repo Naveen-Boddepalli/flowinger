@@ -85,6 +85,8 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
 | `elementsSelectable` | `false` | A click selects a node (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`). A node's own `selectable: false` opts it out. |
+| `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out. |
+| `onConnect`, `isValidConnection` | | `onConnect({ source, target, sourceHandle, targetHandle })` — always source → target, whichever end the drag began at. `isValidConnection` can veto, and decides whether the line snaps to a handle. |
 | `onSelectionChange`, `onNodeClick`, `onPaneClick` | | Selection is held by the engine; `onSelectionChange({ nodes })` tells you. A pan's closing click is not a pane click. |
 | `onNodeDrag`, `onNodeDragStop`, `onInit` | | |
 
@@ -100,13 +102,28 @@ An edge names a handle by `id`; its end decides the type (`sourceHandle` finds a
 none and it takes the first handle of that type. A handle moved with `style` (say `left: '30%'`) still
 gets its edge, because the engine measures where each one is actually drawn.
 
+With `nodesConnectable`, a drag from one handle to a compatible one calls `onConnect`. The engine never
+edits `edges` itself (they are your prop), so you add it:
+
+```tsx
+<FlowingerCanvas
+  nodesConnectable
+  onConnect={(c) => setEdges((edges) => [...edges, { id: `${c.source}-${c.target}`, ...c }])}
+  /* … */
+/>
+```
+
+The dashed line follows the pointer, snaps to a handle that would make a valid connection, and Escape
+cancels. The gesture is tracked on `window`, so it survives leaving the node and the canvas.
+
 ## Theming
 
 The default node, `Controls` and edges are styled inline from CSS variables, each with a fallback, so
 they need no stylesheet and no utility framework. Set any of these on an ancestor:
 
 `--flowinger-surface` · `--flowinger-surface-raised` · `--flowinger-border` · `--flowinger-text` ·
-`--flowinger-text-dim` · `--flowinger-edge` · `--flowinger-selected` · `--flowinger-radius`
+`--flowinger-text-dim` · `--flowinger-edge` · `--flowinger-selected` (a selected node, and the line you drag) ·
+`--flowinger-radius`
 
 Nodes you supply are yours to style. The elements carry `react-flow__*` class names as well as
 `flowinger-*` ones, so existing stylesheets and tests that select on React Flow's keep working.
@@ -115,8 +132,8 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore` (only `panZoom` and `isReady`), `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
-all exported under React Flow's names. **Not built:** connecting edges by dragging, a minimap, and
-`animated` (style an edge with a class instead). Selection is uncontrolled and covers nodes only (not
+all exported under React Flow's names. **Not built:** a minimap, and `animated` (style an edge with a
+class instead). Selection is uncontrolled and covers nodes only (not
 edges), and dragging a selected node moves just that node.
 
 ## Server rendering

@@ -74,6 +74,14 @@ export interface Edge {
   data?: Record<string, unknown>;
 }
 
+/** A finished connection: which handle of which node, to which. Always source → target. */
+export interface Connection {
+  source: string;
+  target: string;
+  sourceHandle: string | null;
+  targetHandle: string | null;
+}
+
 /** What a custom edge component receives. */
 export interface EdgeProps {
   id: string;
@@ -134,6 +142,8 @@ export interface HandleProps {
   id?: string;
   type: HandleType;
   position: Position;
+  /** Whether a connection can start or end here. Default true — once the canvas has `nodesConnectable`. */
+  isConnectable?: boolean;
   className?: string;
   style?: CSSProperties;
 }
@@ -163,7 +173,6 @@ export interface FlowingerProps {
   minZoom?: number;
   maxZoom?: number;
   nodesDraggable?: boolean;
-  nodesConnectable?: boolean;
   /**
    * Let a click select a node (Shift/Ctrl/⌘ adds or removes one), a click on the
    * canvas clear the selection, and make nodes focusable so Enter/Space selects
@@ -196,6 +205,15 @@ export interface FlowingerProps {
   onNodeClick?: (event: React.MouseEvent, node: Node) => void;
   /** A click on the empty canvas — but not the click that ends a pan. */
   onPaneClick?: (event: React.MouseEvent) => void;
+  /**
+   * Let a handle be dragged to another to make a connection. Default false.
+   * The engine never edits `edges`; it reports the connection through `onConnect`.
+   */
+  nodesConnectable?: boolean;
+  /** A connection was dropped on a compatible handle and `isValidConnection` (if any) allowed it. */
+  onConnect?: (connection: Connection) => void;
+  /** Veto a connection. Also decides whether a handle snaps the in-progress line to itself. */
+  isValidConnection?: (connection: Connection) => boolean;
   /** Called whenever the set of selected nodes changes. */
   onSelectionChange?: (selection: { nodes: Node[] }) => void;
   onInit?: (instance: FlowingerInstance) => void;

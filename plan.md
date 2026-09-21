@@ -84,13 +84,20 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
   a click on a control *inside* a node selects nothing. Selectable nodes are focusable (Enter/Space
   selects, Shift adds) so selection is not mouse-only, and expose state as `aria-current` — a global
   attribute, valid on a plain `div`, where `aria-selected`/`aria-pressed` are not.
+- **Connecting is a `window`-level gesture that reports, never edits.** A handle takes the press (and
+  stops it reaching the node and canvas, or a connection would also drag or pan); the store then follows
+  `pointermove`/`pointerup` on `window` so it survives leaving the node, and resolves the drop with
+  `elementFromPoint`, counting only handles that say `data-connectable`. A drag from either end gives one
+  `source → target` `Connection`; `isValidConnection` can veto it and also decides whether the line
+  snaps. `edges` is the caller's prop, so `onConnect` hands the connection back rather than adding it.
+  Escape, `pointercancel` and unmounting all cancel cleanly.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
 
 ### Not built
 
-- Connecting edges by dragging (`nodesConnectable` is accepted for API compatibility and ignored).
+- Connecting by *keyboard* (a drag is the only way to make a connection), and connection-start/end callbacks.
 - Edge selection, controlled selection (`node.selected`), and dragging a selection as a group.
 - A minimap.
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.

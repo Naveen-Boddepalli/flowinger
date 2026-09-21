@@ -83,6 +83,7 @@ function InnerCanvas({
   zoomOnScroll = true,
   zoomOnPinch = true,
   elementsSelectable = false,
+  nodesConnectable = false,
   translateExtent,
   keyboardNavigation = false,
   ariaLabel = 'Diagram',
@@ -94,6 +95,8 @@ function InnerCanvas({
   onNodeClick,
   onPaneClick,
   onSelectionChange,
+  onConnect,
+  isValidConnection,
   onInit,
 }: FlowingerProps) {
   const store = useFlowingerStore();
@@ -128,8 +131,15 @@ function InnerCanvas({
   }, [store, nodes]);
 
   useIsomorphicLayoutEffect(() => {
-    store.setCallbacks({ onNodeDrag, onNodeDragStop, onNodeClick, onSelectionChange });
-  }, [store, onNodeDrag, onNodeDragStop, onNodeClick, onSelectionChange]);
+    store.setCallbacks({
+      onNodeDrag,
+      onNodeDragStop,
+      onNodeClick,
+      onSelectionChange,
+      onConnect,
+      isValidConnection,
+    });
+  }, [store, onNodeDrag, onNodeDragStop, onNodeClick, onSelectionChange, onConnect, isValidConnection]);
 
   const onInitRef = useRef(onInit);
   useEffect(() => {
@@ -354,6 +364,7 @@ function InnerCanvas({
               View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
               draggable={node.draggable ?? nodesDraggable}
               selectable={elementsSelectable && node.selectable !== false}
+              connectable={nodesConnectable}
             />
           ))}
         </div>

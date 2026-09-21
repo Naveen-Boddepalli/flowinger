@@ -43,6 +43,7 @@ export type {
   XYPosition,
   BackgroundProps,
   TranslateExtent,
+  Connection,
   EdgeMarker,
   EdgeProps,
   EdgeTypes,

@@ -1590,3 +1590,242 @@ describe('Flowinger selection', () => {
     );
   });
 });
+
+describe('Flowinger connecting', () => {
+  function Ports() {
+    return (
+      <div>
+        <Handle id="in" type="target" position={Position.Top} />
+        <Handle id="out" type="source" position={Position.Bottom} />
+      </div>
+    );
+  }
+  const types = { ports: Ports };
+  const nodes: Node[] = [
+    { id: 'a', type: 'ports', position: { x: 0, y: 0 }, width: 100, height: 40, data: {} },
+    { id: 'b', type: 'ports', position: { x: 0, y: 200 }, width: 100, height: 40, data: {} },
+    { id: 'c', type: 'ports', position: { x: 300, y: 200 }, width: 100, height: 40, data: {} },
+  ];
+  const handle = (c: ParentNode, node: string, id: string) =>
+    must<HTMLElement>(c, `[data-id="${node}"] [data-handleid="${id}"]`);
+  const line = (c: ParentNode) => c.querySelector('.react-flow__connection-path');
+  const lineD = (c: ParentNode) => must(c, '.react-flow__connection-path').getAttribute('d') ?? '';
+
+  /** jsdom has no hit-testing: say what is under the pointer. */
+  const pointerOver = (el: Element | null) =>
+    Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => el });
+  afterEach(() => {
+    Reflect.deleteProperty(document, 'elementFromPoint');
+  });
+
+  const press = (el: Element, x: number, y: number) =>
+    fireEvent.pointerDown(el, pointer({ clientX: x, clientY: y }));
+  const move = (x: number, y: number) => fireEvent.pointerMove(window, pointer({ clientX: x, clientY: y }));
+  const release = (x: number, y: number) => fireEvent.pointerUp(window, pointer({ clientX: x, clientY: y }));
+
+  it('is off by default: handles take no pointer events and nothing starts', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} />);
+    expect(handle(container, 'a', 'out').style.pointerEvents).toBe('none');
+    press(handle(container, 'a', 'out'), 50, 40);
+    move(200, 100);
+    expect(line(container)).toBeNull();
+  });
+
+  it('turns handles into hit targets when enabled: bigger, crosshair, pointer events on', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable />);
+    const h = handle(container, 'a', 'out');
+    expect(h.style.pointerEvents).toBe('all');
+    expect(h.style.cursor).toBe('crosshair');
+    expect(h.style.width).toBe('10px');
+    expect(h.getAttribute('data-connectable')).toBe('true');
+  });
+
+  it('draws a line from the handle to the pointer while dragging, and removes it on release', () => {
+    pointerOver(null);
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable />);
+    press(handle(container, 'a', 'out'), 50, 40);
+    expect(line(container)).not.toBeNull();
+    move(300, 120);
+    // a's bottom-middle is (50, 40); the pointer is at (300, 120).
+    expect(lineD(container)).toMatch(/^M 50\.00 40\.00 C/);
+    expect(lineD(container)).toMatch(/300\.00 120\.00$/);
+    release(300, 120);
+    expect(line(container)).toBeNull();
+  });
+
+  it('reports a drop on a compatible handle as a source → target connection', () => {
+    const onConnect = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable onConnect={onConnect} />,
+    );
+    const target = handle(container, 'b', 'in');
+    pointerOver(target);
+    press(handle(container, 'a', 'out'), 50, 40);
+    move(50, 200);
+    release(50, 200);
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(onConnect).toHaveBeenCalledWith({ source: 'a', sourceHandle: 'out', target: 'b', targetHandle: 'in' });
+    expect(line(container)).toBeNull();
+  });
+
+  it('gives the same connection when the drag starts at the target end', () => {
+    const onConnect = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable onConnect={onConnect} />,
+    );
+    pointerOver(handle(container, 'a', 'out'));
+    press(handle(container, 'b', 'in'), 50, 200);
+    release(50, 40);
+    expect(onConnect).toHaveBeenCalledWith({ source: 'a', sourceHandle: 'out', target: 'b', targetHandle: 'in' });
+  });
+
+  it('connects nothing when dropped on empty canvas, or on a handle of the same type', () => {
+    const onConnect = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable onConnect={onConnect} />,
+    );
+    pointerOver(null);
+    press(handle(container, 'a', 'out'), 50, 40);
+    release(500, 500);
+
+    pointerOver(handle(container, 'b', 'out')); // source onto source
+    press(handle(container, 'a', 'out'), 50, 40);
+    release(50, 240);
+    expect(onConnect).not.toHaveBeenCalled();
+    expect(line(container)).toBeNull();
+  });
+
+  it('lets isValidConnection veto, handing it the normalised connection', () => {
+    const onConnect = vi.fn();
+    const isValidConnection = vi.fn(() => false);
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        nodeTypes={types}
+        nodesConnectable
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}
+      />,
+    );
+    pointerOver(handle(container, 'b', 'in'));
+    press(handle(container, 'a', 'out'), 50, 40);
+    move(60, 210);
+    release(60, 210);
+    expect(isValidConnection).toHaveBeenCalledWith({ source: 'a', sourceHandle: 'out', target: 'b', targetHandle: 'in' });
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+
+  it('snaps the line to a handle that would make a valid connection, and not to one that would not', () => {
+    const allow = { current: true };
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        nodeTypes={types}
+        nodesConnectable
+        isValidConnection={() => allow.current}
+      />,
+    );
+    pointerOver(handle(container, 'b', 'in'));
+    press(handle(container, 'a', 'out'), 50, 40);
+    move(63, 212); // near b's top-middle (50, 200), but not on it
+    expect(lineD(container)).toMatch(/50\.00 200\.00$/); // snapped
+
+    allow.current = false;
+    move(63, 212);
+    expect(lineD(container)).toMatch(/63\.00 212\.00$/); // follows the pointer instead
+  });
+
+  it('cancels on Escape and on pointercancel', () => {
+    const onConnect = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable onConnect={onConnect} />,
+    );
+    pointerOver(handle(container, 'b', 'in'));
+    press(handle(container, 'a', 'out'), 50, 40);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(line(container)).toBeNull();
+    release(50, 200); // the gesture is over: this does nothing
+    expect(onConnect).not.toHaveBeenCalled();
+
+    press(handle(container, 'a', 'out'), 50, 40);
+    fireEvent.pointerCancel(window, pointer({ clientX: 50, clientY: 40 }));
+    expect(line(container)).toBeNull();
+  });
+
+  it('honours a handle’s own isConnectable={false}, as a start and as a target', () => {
+    function Locked() {
+      return (
+        <div>
+          <Handle id="in" type="target" position={Position.Top} isConnectable={false} />
+          <Handle id="out" type="source" position={Position.Bottom} isConnectable={false} />
+        </div>
+      );
+    }
+    const mixed: Node[] = [
+      { ...nodes[0]!, type: 'locked' },
+      { ...nodes[1]!, type: 'ports' },
+    ];
+    const onConnect = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={mixed} nodeTypes={{ ports: Ports, locked: Locked }} nodesConnectable onConnect={onConnect} />,
+    );
+    expect(handle(container, 'a', 'out').style.pointerEvents).toBe('none');
+
+    press(handle(container, 'a', 'out'), 50, 40); // cannot start here
+    expect(line(container)).toBeNull();
+
+    // …and cannot be dropped onto, even if the browser reported it under the pointer.
+    pointerOver(handle(container, 'a', 'in'));
+    press(handle(container, 'b', 'out'), 50, 240);
+    release(50, 0);
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+
+  it('does not drag the node or pan the canvas from a handle', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable nodesDraggable />,
+    );
+    pointerOver(null);
+    const h = handle(container, 'a', 'out');
+    press(h, 50, 40);
+    // Moves happen *over* the handle in a browser, so they bubble through the
+    // node and the canvas — which is where a drag or a pan would pick them up.
+    fireEvent.pointerMove(h, pointer({ clientX: 300, clientY: 300 }));
+    expect(line(container)).not.toBeNull(); // the connection is following…
+    expect(must<HTMLElement>(container, '[data-id="a"]').style.transform).toBe('translate(0px, 0px)');
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  it('only starts on the primary button', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable />);
+    fireEvent.pointerDown(handle(container, 'a', 'out'), { pointerId: 1, button: 2, clientX: 50, clientY: 40 });
+    expect(line(container)).toBeNull();
+  });
+
+  it('follows the pointer in graph space, through the current pan and zoom', () => {
+    pointerOver(null);
+    const { container } = render(
+      <FlowingerProvider initialViewport={{ x: 10, y: 20, zoom: 2 }}>
+        <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable />
+      </FlowingerProvider>,
+    );
+    press(handle(container, 'a', 'out'), 60, 100);
+    move(310, 220); // screen (310, 220) is graph ((310 − 10) / 2, (220 − 20) / 2)
+    expect(lineD(container)).toMatch(/150\.00 100\.00$/);
+  });
+
+  it('lets go of the window when the canvas unmounts mid-drag', () => {
+    const onConnect = vi.fn();
+    pointerOver(null);
+    const { container, unmount } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable onConnect={onConnect} />,
+    );
+    press(handle(container, 'a', 'out'), 50, 40);
+    unmount();
+    expect(() => {
+      move(100, 100);
+      release(100, 100);
+    }).not.toThrow();
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+});

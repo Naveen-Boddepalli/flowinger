@@ -1,4 +1,6 @@
+import { handleCoordinates } from './handlePoint.ts';
 import type {
+  Connection,
   FlowingerInstance,
   HandleType,
   Node,
@@ -37,7 +39,31 @@ export interface FlowingerState {
   isReady: boolean;
 }
 
+/** A connection being dragged out: from a handle, to wherever the pointer (or a handle it snapped to) is. */
+export interface ConnectionState {
+  start: XYPosition;
+  startPosition: Position;
+  end: XYPosition;
+  endPosition: Position;
+}
+
+/** Where a connection end lives: a node, one of its handles by id (null = unnamed), and that handle's type. */
+interface Endpoint {
+  nodeId: string;
+  id: string | null;
+  type: HandleType;
+}
+
+const OPPOSITE: Record<Position, Position> = {
+  top: 'bottom',
+  bottom: 'top',
+  left: 'right',
+  right: 'left',
+};
+
 export interface NodeCallbacks {
+  onConnect?: ((connection: Connection) => void) | undefined;
+  isValidConnection?: ((connection: Connection) => boolean) | undefined;
   onNodeClick?: ((event: React.MouseEvent, node: Node) => void) | undefined;
   onSelectionChange?: ((selection: { nodes: Node[] }) => void) | undefined;
   onNodeDrag?: ((event: React.PointerEvent, node: Node) => void) | undefined;
@@ -146,11 +172,14 @@ export function createFlowingerStore(
   const nodeEls = new Map<string, HTMLElement>();
   /** Selected node ids. Uncontrolled: held here, reported through `onSelectionChange`. */
   const selected = new Set<string>();
+  let connection: ConnectionState | null = null;
+  let stopConnecting: (() => void) | null = null;
   let geometryVersion = 0;
 
   const viewportListeners = new Set<Listener>();
   const geometryListeners = new Set<Listener>();
   const mountListeners = new Set<Listener>();
+  const connectionListeners = new Set<Listener>();
   const nodeListeners = new Map<string, Set<Listener>>();
 
   let tween: { frame: number; timer: ReturnType<typeof setTimeout> } | null = null;
@@ -365,6 +394,120 @@ export function createFlowingerStore(
     return undefined;
   };
 
+  // --- connecting -----------------------------------------------------------
+
+  const setConnection = (next: ConnectionState | null) => {
+    connection = next;
+    emit(connectionListeners);
+  };
+
+  /** Where a registered handle sits in graph space: its measured anchor, else its side's midpoint. */
+  const pointOfHandle = (nodeId: string, record: HandleRecord): XYPosition | null => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return null;
+    const at = resolvePosition(nodeId, node.position);
+    return record.anchor
+      ? { x: at.x + record.anchor.x, y: at.y + record.anchor.y }
+      : handleCoordinates(at, record.position, getNodeSize(node));
+  };
+
+  const toGraph = (clientX: number, clientY: number): XYPosition => {
+    const rect = containerEl?.getBoundingClientRect();
+    return {
+      x: (clientX - (rect?.left ?? 0) - viewport.x) / viewport.zoom,
+      y: (clientY - (rect?.top ?? 0) - viewport.y) / viewport.zoom,
+    };
+  };
+
+  /**
+   * The connectable handle under a screen point. A handle says so with
+   * `data-connectable`; browsers also skip `pointer-events: none` in
+   * `elementFromPoint`, but this does not lean on that.
+   */
+  const handleAt = (clientX: number, clientY: number): { nodeId: string; record: HandleRecord } | null => {
+    if (typeof document === 'undefined' || typeof document.elementFromPoint !== 'function') return null;
+    const el = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-nodeid][data-handletype][data-connectable]');
+    const nodeId = el?.dataset.nodeid;
+    if (!el || !nodeId) return null;
+    for (const record of handles.get(nodeId) ?? []) if (record.el === el) return { nodeId, record };
+    return null;
+  };
+
+  /** A source → target connection between two ends, whichever one the drag began at. Null if the types clash. */
+  const connectionBetween = (a: Endpoint, b: Endpoint): Connection | null => {
+    if (a.type === b.type) return null;
+    const [from, to] = a.type === 'source' ? [a, b] : [b, a];
+    return { source: from.nodeId, sourceHandle: from.id, target: to.nodeId, targetHandle: to.id };
+  };
+
+  const isAllowed = (c: Connection): boolean => callbacks.isValidConnection?.(c) !== false;
+
+  const cancelConnection = () => {
+    stopConnecting?.();
+    stopConnecting = null;
+    if (connection) setConnection(null);
+  };
+
+  /** What the line follows: the pointer, or — over a handle that would make a valid connection — that handle. */
+  const connectionEnd = (from: Endpoint, startPosition: Position, clientX: number, clientY: number) => {
+    const hit = handleAt(clientX, clientY);
+    if (hit) {
+      const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
+      const point = pointOfHandle(hit.nodeId, hit.record);
+      if (c && isAllowed(c) && point) return { end: point, endPosition: hit.record.position };
+    }
+    return { end: toGraph(clientX, clientY), endPosition: OPPOSITE[startPosition] };
+  };
+
+  /**
+   * Begins dragging a connection out of a handle. The gesture is followed on
+   * `window`, so it survives the pointer leaving the handle, the node and the
+   * canvas; Escape cancels it. Nothing here edits `edges` — a finished
+   * connection is handed to `onConnect` for the caller to add.
+   */
+  const startConnection = (
+    nodeId: string,
+    handleEl: HTMLElement,
+    at: { clientX: number; clientY: number },
+  ) => {
+    const record = [...(handles.get(nodeId) ?? [])].find((r) => r.el === handleEl);
+    const start = record && pointOfHandle(nodeId, record);
+    if (!record || !start) return;
+    cancelConnection();
+
+    const from: Endpoint = { nodeId, id: record.id, type: record.type };
+    const follow = (clientX: number, clientY: number) => {
+      setConnection({
+        start,
+        startPosition: record.position,
+        ...connectionEnd(from, record.position, clientX, clientY),
+      });
+    };
+    follow(at.clientX, at.clientY);
+
+    const onMove = (e: PointerEvent) => { follow(e.clientX, e.clientY); };
+    const onUp = (e: PointerEvent) => {
+      const hit = handleAt(e.clientX, e.clientY);
+      cancelConnection(); // clear first, so a callback sees a settled canvas
+      if (!hit) return;
+      const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
+      if (c && isAllowed(c)) callbacks.onConnect?.(c);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelConnection();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', cancelConnection);
+    window.addEventListener('keydown', onKey);
+    stopConnecting = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', cancelConnection);
+      window.removeEventListener('keydown', onKey);
+    };
+  };
+
   const isSelected = (id: string): boolean => selected.has(id);
 
   /** Tells the nodes whose state flipped, and the caller once. */
@@ -466,6 +609,7 @@ export function createFlowingerStore(
 
   const detach = () => {
     cancelTween();
+    cancelConnection();
     viewportEl = null;
     containerEl = null;
     state = { panZoom: null, isReady: false };
@@ -519,6 +663,9 @@ export function createFlowingerStore(
     registerHandle,
     measureHandles,
     findHandle,
+    startConnection,
+    getConnection: () => connection,
+    subscribeConnection: subscribeTo(connectionListeners),
     isSelected,
     hasSelection: () => selected.size > 0,
     selectNode,

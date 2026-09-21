@@ -1,5 +1,6 @@
 import { memo, useId, useSyncExternalStore, type CSSProperties, type ComponentType } from 'react';
 import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
+import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
 import {
@@ -12,7 +13,7 @@ import {
   type Node,
   Position,
 } from './types.ts';
-import type { FlowingerStore, Size } from './store.ts';
+import type { FlowingerStore } from './store.ts';
 
 export interface FlowingerEdgesProps {
   edges: Edge[];
@@ -42,19 +43,6 @@ function resolveHandlePosition(handleId: string | null | undefined, fallback: Po
       return Position.Right;
     default:
       return fallback;
-  }
-}
-
-function handleCoordinates(at: { x: number; y: number }, pos: Position, size: Size) {
-  switch (pos) {
-    case Position.Top:
-      return { x: at.x + size.width / 2, y: at.y };
-    case Position.Bottom:
-      return { x: at.x + size.width / 2, y: at.y + size.height };
-    case Position.Left:
-      return { x: at.x, y: at.y + size.height / 2 };
-    case Position.Right:
-      return { x: at.x + size.width, y: at.y + size.height / 2 };
   }
 }
 
@@ -233,6 +221,9 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   // makes this component re-render when either moves.
   useSyncExternalStore(store.subscribeGeometry, store.getGeometryVersion, store.getGeometryVersion);
 
+  // The connection being dragged out, if any: it lives in the store, and only this layer draws it.
+  const connection = useSyncExternalStore(store.subscribeConnection, store.getConnection, () => null);
+
   const byId = new Map(nodes.map((n) => [n.id, n]));
 
   // Identical arrowheads share one <marker>. `useId` keeps ids unique across
@@ -346,6 +337,26 @@ export const FlowingerEdges = memo(function FlowingerEdges({
         </defs>
       )}
       {paths}
+      {connection && (
+        <path
+          className="flowinger-connection-line react-flow__connection-path"
+          d={
+            getBezierPath({
+              sourceX: connection.start.x,
+              sourceY: connection.start.y,
+              sourcePosition: connection.startPosition,
+              targetX: connection.end.x,
+              targetY: connection.end.y,
+              targetPosition: connection.endPosition,
+            })[0]
+          }
+          fill="none"
+          stroke="var(--flowinger-selected, #38bdf8)"
+          strokeWidth={2}
+          strokeDasharray="5 4"
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
     </svg>
   );
 });

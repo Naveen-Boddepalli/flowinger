@@ -1,4 +1,10 @@
-import { type CSSProperties, memo, useContext, useRef } from 'react';
+import {
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  memo,
+  useContext,
+  useRef,
+} from 'react';
 import { NodeContext } from './nodeContext.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { type HandleProps, Position } from './types.ts';
@@ -33,11 +39,16 @@ const POSITION_STYLES: Record<Position, CSSProperties> = {
  * engine it exists: edges name a handle by `id` (and `type`) and attach to
  * wherever it is actually drawn — including a handle moved with `style`, e.g.
  * `left: '30%'`. Give a handle an `id` unless the node has only one of its type.
+ *
+ * With `nodesConnectable` on the canvas it is also where a connection is
+ * dragged from and dropped onto: it then takes pointer events (and a larger
+ * dot), which a plain handle deliberately does not.
  */
 export const Handle = memo(function Handle({
   id,
   type,
   position,
+  isConnectable,
   className = '',
   style = {},
 }: HandleProps) {
@@ -50,13 +61,26 @@ export const Handle = memo(function Handle({
     return node.registerHandle({ id: id ?? null, type, position, el });
   }, [node, id, type, position]);
 
+  const connectable = Boolean(node?.connectable) && isConnectable !== false;
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!node || e.button !== 0) return;
+    // Neither the node (a drag) nor the canvas (a pan) may start from a handle.
+    e.stopPropagation();
+    e.preventDefault();
+    node.startConnection(e.currentTarget, e);
+  };
+
   const combinedStyle: CSSProperties = {
     position: 'absolute',
-    width: 6,
-    height: 6,
+    // Bigger when it has to be hit; the anchor is measured from the centre, so
+    // the size does not move where an edge attaches.
+    width: connectable ? 10 : 6,
+    height: connectable ? 10 : 6,
     borderRadius: '50%',
     backgroundColor: 'currentColor',
-    pointerEvents: 'none',
+    pointerEvents: connectable ? 'all' : 'none',
+    ...(connectable ? { cursor: 'crosshair' } : {}),
     ...POSITION_STYLES[position],
     ...style,
   };
@@ -65,10 +89,13 @@ export const Handle = memo(function Handle({
     <div
       ref={ref}
       data-handleid={id}
+      data-nodeid={node?.nodeId}
+      data-connectable={connectable ? 'true' : undefined}
       data-handletype={type}
       data-handlepos={position}
       className={`flowinger-handle react-flow__handle react-flow__handle-${position} ${className}`}
       style={combinedStyle}
+      {...(connectable ? { onPointerDown } : {})}
     />
   );
 });

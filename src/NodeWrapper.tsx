@@ -32,6 +32,8 @@ export interface NodeWrapperProps {
   draggable: boolean;
   /** Whether a click, or Enter/Space, selects it. */
   selectable: boolean;
+  /** Whether its handles can start and end connections. */
+  connectable: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ export const NodeWrapper = memo(function NodeWrapper({
   View,
   draggable,
   selectable,
+  connectable,
 }: NodeWrapperProps) {
   const store = useFlowingerStore();
   const ref = useRef<HTMLDivElement | null>(null);
@@ -68,8 +71,13 @@ export const NodeWrapper = memo(function NodeWrapper({
 
   // What a `<Handle>` inside this node registers itself with.
   const nodeContext = useMemo<NodeContextValue>(
-    () => ({ registerHandle: (registration) => store.registerHandle(node.id, registration) }),
-    [store, node.id],
+    () => ({
+      nodeId: node.id,
+      connectable,
+      registerHandle: (registration) => store.registerHandle(node.id, registration),
+      startConnection: (handle, at) => { store.startConnection(node.id, handle, at); },
+    }),
+    [store, node.id, connectable],
   );
 
   // The edge layer needs the node's real size, and where its handles sit. The
@@ -187,7 +195,7 @@ export const NodeWrapper = memo(function NodeWrapper({
           data={node.data}
           type={node.type}
           selected={selected}
-          isConnectable={false}
+          isConnectable={connectable}
           positionAbsoluteX={position.x}
           positionAbsoluteY={position.y}
         />
