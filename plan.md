@@ -150,13 +150,19 @@ A third batch, each in its own module where it could be so that unused ones cost
 `ViewportPortal`, `zoomOnDoubleClick`, `connectionLineType` / `connectionLineStyle` / `connectionLineComponent`,
 a `step` edge type, and `smoothstep` that is actually smooth (its `borderRadius` was ignored).
 
+A fourth: **auto-pan** (`autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed`) and **`expandParent`**. Auto-pan
+needed the node drag measured in *graph* space (the pointer's graph position now, less its graph position
+at the press) rather than in screen deltas, or a node would drift from under the pointer as the view pans; that
+also fixes a node's drag when the view moves for any other reason mid-drag. `expandParent` is a pure module
+(`src/expand.ts`): the parent's box only grows, and growing past its top or left moves its corner, so its
+other children are re-based to stay put on the canvas.
+
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
-- Things React Flow has that this does not: `expandParent`, reconnecting an edge (`onReconnect`),
-  auto-pan while dragging near the pane's edge, `nodeOrigin`, `NodeToolbar` for a node other than its own.
-  This list is from memory of React Flow's API, not an audit.
+- Things React Flow has that this does not: reconnecting an edge (`onReconnect`), `nodeOrigin`,
+  `NodeToolbar` for a node other than its own. This list is from memory of React Flow's API, not an audit.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
   see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build

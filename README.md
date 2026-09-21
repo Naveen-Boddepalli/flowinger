@@ -89,6 +89,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `nodesDraggable` | `false` | A node's own `draggable` overrides it, either way. |
 | `panOnDrag` | `true` | `false`, or a list of mouse buttons, e.g. `[1]` for middle only. |
 | `zoomOnScroll`, `zoomOnPinch` | `true` | |
+| `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `true`, `true`, `15` | Hold a dragged node — or the end of a connection you are dragging — near the pane's edge and the view pans that way, faster the nearer the edge (`autoPanSpeed` px per frame at the edge itself). Drags are measured in graph space, so the node stays under the pointer as the view moves. |
 | `zoomOnDoubleClick` | `true` | A double click on the empty canvas zooms in about the pointer (out with Shift). |
 | `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). |
 | `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
@@ -158,8 +159,13 @@ const nodes = [
 hit-tests — edges, the minimap, `fitView`, box selection, `getIntersectingNodes`, `nodeExtent`, `snapToGrid`
 (to the canvas' grid, not the parent's) — works from the node's place on the canvas, which a custom node gets
 as `positionAbsoluteX` / `positionAbsoluteY`; the `position` in your data stays relative, in a `position`
-change too. Drag or nudge a parent together with its own children and they move once, not twice. **Not built:**
-a parent growing to fit a child dragged past its edge (`expandParent`).
+change too. Drag or nudge a parent together with its own children and they move once, not twice.
+
+Give a child `expandParent: true` and dragging it past its parent's edge makes the parent *grow* to hold it
+(instead of `extent: 'parent'`, which would stop it): a `dimensions` change for the parent's size, and past the
+top or left edge a `position` change too — the parent's corner moves out, and its other children are re-based
+so that nothing but the parent's edge moves on the canvas. It never shrinks during a drag, needs a
+[controlled flow](#controlled-flows) (the size is yours to keep), and looks one level up only.
 
 ### The instance
 
@@ -252,9 +258,8 @@ all exported under React Flow's names, and so are `useNodesState`, `useEdgesStat
 `applyEdgeChanges`, `addEdge` and `useNodesInitialized`. `useStore` reads the ten fields above, not React Flow's
 whole internal store.
 
-**Not built** (from memory of React Flow's API, not an audit): `expandParent`, reconnecting an edge
-(`onReconnect`), auto-pan while dragging at the pane's edge, `nodeOrigin`, and a `NodeToolbar` for a node
-other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
+**Not built** (from memory of React Flow's API, not an audit): reconnecting an edge (`onReconnect`),
+`nodeOrigin`, and a `NodeToolbar` for a node other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
 pass a `padding` ratio, and `deleteKeyCode` is `'Backspace'` alone.
 
 ## Server rendering

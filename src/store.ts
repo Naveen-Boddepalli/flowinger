@@ -1,3 +1,4 @@
+import { beginGroup, growGroup, type ExpandGroup } from './expand.ts';
 import { absolutePositionOf, descendantsOf } from './parents.ts';
 import {
   FALLBACK_SIZE,
@@ -128,7 +129,23 @@ export interface EngineOptions {
   connectionMode: ConnectionMode;
   /** Draw only what is in view. */
   onlyRenderVisibleElements: boolean;
+  autoPanOnNodeDrag: boolean;
+  autoPanOnConnect: boolean;
+  autoPanSpeed: number;
 }
+
+/** The options a store starts with, before a canvas has told it otherwise. */
+export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
+  nodesDraggable: false,
+  elementsSelectable: false,
+  snapGrid: null,
+  nodeExtent: null,
+  connectionMode: 'strict',
+  onlyRenderVisibleElements: false,
+  autoPanOnNodeDrag: true,
+  autoPanOnConnect: true,
+  autoPanSpeed: 15,
+};
 
 /** What is worth drawing right now — null means everything. */
 export interface VisibleSet {
@@ -144,6 +161,9 @@ export interface DragSession {
 }
 
 const ZOOM_STEP = 1.25;
+/** How near the pane's edge, in pixels, auto-pan starts. */
+const AUTO_PAN_EDGE = 40;
+const FRAME_MS = 1000 / 60;
 /** A backstop for the tween, see `setViewport`. */
 const TWEEN_GRACE_MS = 100;
 
@@ -262,14 +282,7 @@ export function createFlowingerStore(
   let edges: readonly Edge[] = [];
   let edgeById = new Map<string, Edge>();
   let callbacks: NodeCallbacks = {};
-  let options: EngineOptions = {
-    nodesDraggable: false,
-    elementsSelectable: false,
-    snapGrid: null,
-    nodeExtent: null,
-    connectionMode: 'strict',
-    onlyRenderVisibleElements: false,
-  };
+  let options: EngineOptions = DEFAULT_ENGINE_OPTIONS;
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
   const sizes = new Map<string, Size>();
@@ -773,7 +786,19 @@ export function createFlowingerStore(
     follow(at.clientX, at.clientY);
     callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
 
-    const onMove = (e: PointerEvent) => { follow(e.clientX, e.clientY); };
+    // Held near the edge, the view pans — and the line's free end, being in graph
+    // space, has to be worked out again against the view it has just moved to.
+    let pointer = { x: at.clientX, y: at.clientY };
+    const stopAutoPan = beginAutoPan(
+      'connect',
+      () => pointer,
+      () => { follow(pointer.x, pointer.y); },
+    );
+
+    const onMove = (e: PointerEvent) => {
+      pointer = { x: e.clientX, y: e.clientY };
+      follow(e.clientX, e.clientY);
+    };
     const onUp = (e: PointerEvent) => {
       const hit = handleAt(e.clientX, e.clientY);
       cancelConnection(); // clear first, so a callback sees a settled canvas
@@ -792,6 +817,7 @@ export function createFlowingerStore(
     window.addEventListener('pointercancel', cancelConnection);
     window.addEventListener('keydown', onKey);
     stopConnecting = () => {
+      stopAutoPan();
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', cancelConnection);
@@ -981,6 +1007,8 @@ export function createFlowingerStore(
    */
   /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
   const extentFor = (n: Node): TranslateExtent | null => {
+    // A node that grows its parent is not held inside it.
+    if (n.extent === 'parent' && n.expandParent === true) return options.nodeExtent;
     if (n.extent !== 'parent') return n.extent ?? options.nodeExtent;
     const parent = n.parentId === undefined ? undefined : nodeById.get(n.parentId);
     if (!parent) return options.nodeExtent;
@@ -1015,9 +1043,44 @@ export function createFlowingerStore(
     const origins = new Map(items.map((n) => [n.id, resolvePosition(n.id, n.position)]));
     const absOrigins = new Map(items.map((n) => [n.id, absolutePosition(n)]));
     const leadOf = (moved: Node[]): Node => moved.find((n) => n.id === lead.id) ?? lead;
+
+    // Parents that grow to hold the children dragged past their edge. Only where the
+    // caller applies changes: a parent's size is theirs to keep.
+    const groups: ExpandGroup[] = [];
+    if (nodesControlled()) {
+      const byParent = new Map<string, Node[]>();
+      for (const n of items) {
+        if (n.expandParent !== true || n.parentId === undefined) continue;
+        const list = byParent.get(n.parentId);
+        if (list) list.push(n);
+        else byParent.set(n.parentId, [n]);
+      }
+      for (const [parentId, kids] of byParent) {
+        const parent = nodeById.get(parentId);
+        if (!parent) continue;
+        const at = absolutePosition(parent);
+        const dragged = new Set(items.map((n) => n.id));
+        groups.push(
+          beginGroup(
+            parentId,
+            resolvePosition(parentId, parent.position),
+            { x: at.x, y: at.y, ...getNodeSize(parent) },
+            kids.map((k) => k.id),
+            (childrenOf.get(parentId) ?? []).flatMap((id) => {
+              const sibling = nodeById.get(id);
+              return sibling && !dragged.has(id)
+                ? [{ id, rel: resolvePosition(id, sibling.position) }]
+                : [];
+            }),
+          ),
+        );
+      }
+    }
+    /** Where a grown parent's children sit relative to it, as of the latest step. */
+    let relativeNow = new Map<string, XYPosition>();
     const at = (n: Node, dx: number, dy: number, dragging: boolean): Node => {
       const from = origins.get(n.id) ?? n.position;
-      return { ...n, position: { x: from.x + dx, y: from.y + dy }, dragging };
+      return { ...n, position: relativeNow.get(n.id) ?? { x: from.x + dx, y: from.y + dy }, dragging };
     };
 
     callbacks.onNodeDragStart?.(event, lead, items.map((n) => at(n, 0, 0, false)));
@@ -1048,7 +1111,20 @@ export function createFlowingerStore(
       move: (e, rawDx, rawDy) => {
         const { x: dx, y: dy } = constrainMove(rawDx, rawDy);
         last = { dx, dy };
-        const changes: NodePositionChange[] = [];
+        const changes: NodeChange[] = [];
+        relativeNow = new Map();
+        for (const g of groups) {
+          const grown = growGroup(
+            g,
+            g.kids.flatMap((id) => {
+              const n = nodeById.get(id);
+              const from = absOrigins.get(id);
+              return n && from ? [{ id, x: from.x + dx, y: from.y + dy, ...getNodeSize(n) }] : [];
+            }),
+          );
+          changes.push(...grown.changes);
+          for (const [id, position] of grown.relative) relativeNow.set(id, position);
+        }
         for (const n of items) {
           const position = at(n, dx, dy, true).position;
           if (nodesControlled()) changes.push({ type: 'position', id: n.id, position, dragging: true });
@@ -1270,6 +1346,54 @@ export function createFlowingerStore(
     if (!pane) return Promise.resolve(false);
     const zoom = clampZoom(opts?.zoom ?? target.zoom);
     return setViewport({ x: pane.width / 2 - x * zoom, y: pane.height / 2 - y * zoom, zoom }, opts);
+  };
+
+  // --- auto-pan -------------------------------------------------------------
+
+  /**
+   * Keeps panning the view while `getPointer` reports the pointer near the edge of the
+   * pane — the nearer, the faster, and at full speed once it is outside — and calls
+   * `onPan` after each step so whatever is being dragged can catch up with the graph
+   * that moved under it. Stops when the returned function is called. Does nothing for a
+   * gesture the options have switched off.
+   */
+  const beginAutoPan = (
+    kind: 'node' | 'connect',
+    getPointer: () => XYPosition | null,
+    onPan: () => void,
+  ): (() => void) => {
+    const on = kind === 'node' ? options.autoPanOnNodeDrag : options.autoPanOnConnect;
+    if (!on) return () => {};
+    let frame = 0;
+    let last = 0;
+    let stopped = false;
+    const towards = (pos: number, size: number): number =>
+      pos < AUTO_PAN_EDGE
+        ? 1 - Math.max(pos, 0) / AUTO_PAN_EDGE
+        : pos > size - AUTO_PAN_EDGE
+          ? -(1 - Math.max(size - pos, 0) / AUTO_PAN_EDGE)
+          : 0;
+    const tick = (now: number) => {
+      if (stopped) return;
+      frame = requestAnimationFrame(tick);
+      const pointer = getPointer();
+      const pane = paneSize();
+      const rect = containerEl?.getBoundingClientRect();
+      const elapsed = last === 0 ? 1 : Math.min(3, (now - last) / FRAME_MS);
+      last = now;
+      if (!pointer || !pane || !rect) return;
+      const step = options.autoPanSpeed * elapsed;
+      const dx = towards(pointer.x - rect.left, pane.width) * step;
+      const dy = towards(pointer.y - rect.top, pane.height) * step;
+      if (dx === 0 && dy === 0) return;
+      void setViewport({ x: viewport.x + dx, y: viewport.y + dy, zoom: viewport.zoom });
+      onPan();
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(frame);
+    };
   };
 
   const zoomTo = (zoom: number, opts?: SetViewportOptions): Promise<boolean> => {
@@ -1549,6 +1673,7 @@ export function createFlowingerStore(
     measureHandles,
     findHandle,
     startConnection,
+    beginAutoPan,
     getConnection: () => connection,
     getNodes: (): readonly Node[] => nodes,
     getContainerSize: (): Size | null =>

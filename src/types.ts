@@ -94,6 +94,13 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   parentId?: string;
   /** Stacking order; by default a child sits above its parent. */
   zIndex?: number;
+  /**
+   * Let the parent grow to hold this node when it is dragged past the parent's
+   * edge. Reported as changes to the parent (its size, and its position past the
+   * top or left edge), so it needs a controlled flow; it takes the place of
+   * `extent: 'parent'`, which would stop the node leaving the parent at all.
+   */
+  expandParent?: boolean;
 }
 
 export interface NodeProps<N extends Node = Node> {
@@ -453,6 +460,12 @@ export interface FlowingerProps {
   connectionLineComponent?: ComponentType<ConnectionLineProps>;
   /** Zoom in on a double click on the empty canvas (out with Shift). Default true. */
   zoomOnDoubleClick?: boolean;
+  /** Pan the view when a dragged node is held near the edge of the pane. Default true. */
+  autoPanOnNodeDrag?: boolean;
+  /** Pan the view when a connection is dragged near the edge of the pane. Default true. */
+  autoPanOnConnect?: boolean;
+  /** How fast auto-pan goes, in pixels per frame at the very edge. Default 15. */
+  autoPanSpeed?: number;
   /**
    * How a connection may be made: `'strict'` (default) source → target only, `'loose'`
    * any handle to any other. `Connection` is always source → target either way.

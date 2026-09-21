@@ -135,6 +135,9 @@ function InnerCanvas({
   panOnScrollSpeed = 0.5,
   zoomOnScroll = true,
   zoomOnDoubleClick = true,
+  autoPanOnNodeDrag = true,
+  autoPanOnConnect = true,
+  autoPanSpeed = 15,
   connectionLineType,
   connectionLineStyle,
   connectionLineComponent,
@@ -255,6 +258,9 @@ function InnerCanvas({
       nodeExtent: nodeExtent ?? null,
       connectionMode,
       onlyRenderVisibleElements,
+      autoPanOnNodeDrag,
+      autoPanOnConnect,
+      autoPanSpeed,
     });
   }, [
     store,
@@ -266,6 +272,9 @@ function InnerCanvas({
     nodeExtent,
     connectionMode,
     onlyRenderVisibleElements,
+    autoPanOnNodeDrag,
+    autoPanOnConnect,
+    autoPanSpeed,
   ]);
 
   // Nesting, read from the nodes as given: where each one's parent sits, how deep

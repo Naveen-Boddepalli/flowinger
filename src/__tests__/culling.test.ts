@@ -1,15 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createFlowingerStore, type EngineOptions } from '../store.ts';
+import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore, type EngineOptions } from '../store.ts';
 import type { Edge, Node } from '../types.ts';
 
-const on: EngineOptions = {
-  nodesDraggable: false,
-  elementsSelectable: true,
-  snapGrid: null,
-  nodeExtent: null,
-  connectionMode: 'strict',
-  onlyRenderVisibleElements: true,
-};
+const on: EngineOptions = { ...DEFAULT_ENGINE_OPTIONS, elementsSelectable: true, onlyRenderVisibleElements: true };
 
 /** A store on an 800 × 600 pane with culling switched on. */
 function culled(nodes: Node[], edges: Edge[] = []) {

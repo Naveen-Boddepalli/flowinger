@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createFlowingerStore } from '../store.ts';
+import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 import {
   getNodesBounds,
   isRectIntersecting,
@@ -158,10 +158,10 @@ describe('screen and graph coordinates', () => {
 
   it('snaps to the grid on request — and only when there is one', () => {
     const { store } = mounted(800, 600, 0, 0);
-    store.setOptions({ nodesDraggable: false, elementsSelectable: false, snapGrid: [20, 20], nodeExtent: null, connectionMode: 'strict', onlyRenderVisibleElements: false });
+    store.setOptions({ ...DEFAULT_ENGINE_OPTIONS, snapGrid: [20, 20] });
     expect(store.instance.screenToFlowPosition({ x: 33, y: 47 }, { snapToGrid: true })).toEqual({ x: 40, y: 40 });
     expect(store.instance.screenToFlowPosition({ x: 33, y: 47 })).toEqual({ x: 33, y: 47 });
-    store.setOptions({ nodesDraggable: false, elementsSelectable: false, snapGrid: null, nodeExtent: null, connectionMode: 'strict', onlyRenderVisibleElements: false });
+    store.setOptions({ ...DEFAULT_ENGINE_OPTIONS, snapGrid: null });
     expect(store.instance.screenToFlowPosition({ x: 33, y: 47 }, { snapToGrid: true })).toEqual({ x: 33, y: 47 });
   });
 });

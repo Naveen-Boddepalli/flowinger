@@ -16,7 +16,7 @@ import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
 import type { DragSession } from './store.ts';
-import type { Node, NodeProps } from './types.ts';
+import type { Node, NodeProps, XYPosition } from './types.ts';
 
 interface DragState {
   pointerId: number;
@@ -24,6 +24,11 @@ interface DragState {
   startY: number;
   /** Null until the pointer has travelled `DRAG_THRESHOLD`; then the drag proper. */
   session: DragSession | null;
+  /** Where the press was, in graph space — so a drag is measured in the graph, which auto-pan moves under it. */
+  startGraph: XYPosition;
+  /** The pointer's latest event, for a drag that goes on with the pointer standing still at the pane's edge. */
+  latest: ReactPointerEvent<HTMLDivElement> | null;
+  stopAutoPan: (() => void) | null;
 }
 
 export interface NodeWrapperProps {
@@ -125,6 +130,7 @@ export const NodeWrapper = memo(function NodeWrapper({
   useIsomorphicLayoutEffect(
     () => () => {
       stopClaiming.current?.();
+      drag.current?.stopAutoPan?.();
     },
     [],
   );
@@ -137,7 +143,15 @@ export const NodeWrapper = memo(function NodeWrapper({
     // Claimed from the first press, so the canvas underneath does not start a
     // pan — even though the drag proper only begins past the threshold.
     e.stopPropagation();
-    const pressed = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, session: null };
+    const pressed: DragState = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      session: null,
+      startGraph: store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+      latest: null,
+      stopAutoPan: null,
+    };
     drag.current = pressed;
 
     // The pointer is only captured once the press has become a drag (capturing at
@@ -179,16 +193,30 @@ export const NodeWrapper = memo(function NodeWrapper({
       justDragged.current = true;
       setDragging(true);
       capturePointer(e.currentTarget, e.pointerId);
+      // Held near the pane's edge the view pans, and the nodes must follow the pointer across it.
+      const started = d;
+      d.stopAutoPan = store.beginAutoPan(
+        'node',
+        () => (started.latest ? { x: started.latest.clientX, y: started.latest.clientY } : null),
+        () => { if (started.latest) moveTo(started, started.latest); },
+      );
     }
     e.stopPropagation();
-    const zoom = store.getViewport().zoom;
-    d.session.move(e, (e.clientX - d.startX) / zoom, (e.clientY - d.startY) / zoom);
+    moveTo(d, e);
+  };
+
+  /** Moves the dragged nodes to where the pointer is *in the graph*, from where it was when pressed. */
+  const moveTo = (d: DragState, e: ReactPointerEvent<HTMLDivElement>) => {
+    d.latest = e;
+    const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    d.session?.move(e, at.x - d.startGraph.x, at.y - d.startGraph.y);
   };
 
   const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (d?.pointerId !== e.pointerId) return;
     drag.current = null;
+    d.stopAutoPan?.();
     if (!d.session) return;
     e.stopPropagation();
     releasePointer(e.currentTarget, e.pointerId);
