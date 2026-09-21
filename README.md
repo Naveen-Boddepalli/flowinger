@@ -2,7 +2,9 @@
 
 A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
 drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
-About 11 kB gzipped, everything included; the only peer dependencies are `react` and `react-dom` (18 or 19).
+Pay for what you use: the core is about 15 kB gzipped and each feature adds only its own code — about 23 kB with
+all of them (see [Pay for what you use](#pay-for-what-you-use)). The only peer dependencies are `react` and
+`react-dom` (18 or 19).
 
 ```tsx
 import {
@@ -64,7 +66,8 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 
 | | |
 |---|---|
-| `FlowingerCanvas` | The canvas. Pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. |
+| `FlowingerCanvas` | The whole canvas, every feature: pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. Also `ReactFlow`. |
+| `FlowingerCore` | The same canvas with only the [features](#pay-for-what-you-use) you name — pan, zoom, nodes, edges and selection are always there. |
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
@@ -77,6 +80,54 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor` (a colour or a function of the node), `maskColor`, `pannable`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
 | `useFlowinger()`, `useViewport()` | The instance (below), and the current viewport. |
 | `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY]`. |
+
+## Pay for what you use
+
+`FlowingerCanvas` (alias `ReactFlow`) does everything on this page, and is what most apps want. An app that only
+*shows* a graph — pan, zoom, nodes, edges, handles, `fitView` — needs far less, so the canvas is a small core
+plus **features**, and you import the ones you use:
+
+```tsx
+import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
+
+<FlowingerCore
+  nodes={nodes} edges={edges}
+  features={[dragFeature, connectFeature]}   // read once, when the canvas mounts
+  nodesDraggable nodesConnectable
+/>
+```
+
+With no features `FlowingerCore` costs about 15 kB gzipped (23 for the whole canvas); each feature you name adds
+only its own code. The props, the nodes and the instance are the same either way.
+
+| Feature | What it adds | Props that need it |
+|---|---|---|
+| `dragFeature` | Dragging nodes and selections, snapping, extents, `expandParent`, the arrow keys, auto-pan | `nodesDraggable`, `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, `snapToGrid`, `snapGrid`, `nodeExtent`, `autoPanOnNodeDrag`, `autoPanSpeed` |
+| `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `autoPanOnConnect` |
+| `reconnectFeature` | Dragging an end of a selected edge to another handle (brings `connectFeature`) | `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` |
+| `boxSelectFeature` | Selecting with a box | `selectionOnDrag`, `selectionMode`, `onSelectionStart`, `onSelectionEnd` |
+| `deleteFeature` | The delete key, and `deleteElements` | `deleteKeyCode`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` |
+| `cullingFeature` | Drawing only what is in view | `onlyRenderVisibleElements` |
+| `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `getIntersectingNodes`, `isNodeIntersecting` | |
+
+Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
+labels, arrowheads, custom edges) and handles, selection (`elementsSelectable`, `onSelectionChange`, clicks and
+keys), the viewport calls and `fitView`, sub-flows, `useStore`, and the hooks. `allFeatures` is the list the whole
+canvas has.
+
+- **A prop for a feature the canvas lacks does nothing**, and in development the console says so, once, with the
+  feature to pass. (Switched off — `nodesDraggable={false}` — is not "given".)
+- **An instance method a feature supplies** is on the instance from the start, so `const { setNodes } =
+  useReactFlow()` works wherever it is taken; without the feature, calling it throws and names the feature.
+- `defaultNodes` / `defaultEdges` need `FlowingerCanvas`, which can own the graph; `FlowingerCore` shows the
+  `nodes` it is given and reports changes.
+- `NodeResizer`, `MiniMap`, `Controls` and the hooks cost something only when imported; the resizer installs
+  what it needs itself.
+- Your own feature is a plain object — `install(ctx)` to add to the store, `useCanvas` / `useNode` to add to the
+  canvas's and each node's handlers, `Layer`, `EdgesLayer` and `EdgeAdornment` to draw, and `needs` for the
+  features it builds on. The type and its slots are documented in [`src/features.ts`](src/features.ts).
+- The development warnings read `process.env.NODE_ENV`, which a bundler replaces (as it does for React); a
+  production build drops them.
 
 ### `FlowingerCanvas` props
 
@@ -190,8 +241,10 @@ effect's dependencies; `onInit` hands you the same one.
   `toObject()`. They report the nodes as they stand: a dragged position, a measured size and the selection
   included.
 - **Edit**: `setNodes`, `setEdges` (a list or an updater), `addNodes`, `addEdges`, `updateNode`,
-  `updateNodeData`, `updateEdge`. They are reported as changes, so they need a [controlled flow](#controlled-flows)
-  or `defaultNodes`; on nodes you merely pass in, there is nobody to apply them and they do nothing.
+  `updateNodeData`, `updateEdge`, and `deleteElements({ nodes, edges })`. They are reported as changes, so they
+  need a [controlled flow](#controlled-flows) or `defaultNodes`; on nodes you merely pass in, there is nobody to
+  apply them and they do nothing. On a `FlowingerCore` they need `editingFeature` (and `deleteFeature` for
+  `deleteElements`).
 
 **Hooks**: `useKeyPress('Meta+s')` (a key, a combination, or a list; ignores typing in fields unless modified),
 `useOnSelectionChange({ onChange })`, `useNodesData(id | ids)` (re-renders only when that `data` changes),
@@ -258,7 +311,7 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 ## Coming from React Flow
 
-`ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`, `Handle`,
+`ReactFlow` (the whole canvas — `FlowingerCore` is the lean one), `ReactFlowProvider`, `useReactFlow`, `useStore`, `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
 all exported under React Flow's names, and so are `useNodesState`, `useEdgesState`, `applyNodeChanges`,
 `applyEdgeChanges`, `addEdge` and `useNodesInitialized`. `useStore` reads the ten fields above, not React Flow's
@@ -281,7 +334,8 @@ pnpm dev         # the demo, in demo/
 pnpm typecheck
 pnpm test
 pnpm build       # dist/: ESM, CJS and type declarations
-pnpm size        # what a small consumer pays: the gzip size of the subset it imports
+pnpm size        # what a small consumer pays: the gzip size of the subset it imports, whole canvas and core
+node scripts/size-dist.mjs   # the same, from the built package (after pnpm build), which is what an app really bundles
 ```
 
 [`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left.
