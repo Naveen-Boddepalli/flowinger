@@ -6,6 +6,7 @@ import {
   Controls,
   EdgeLabelRenderer,
   FlowingerCanvas,
+  FlowingerCore,
   FlowingerProvider,
   Handle,
   MiniMap,
@@ -15,6 +16,13 @@ import {
   Position,
   ViewportPortal,
   addEdge,
+  boxSelectFeature,
+  connectFeature,
+  cullingFeature,
+  deleteFeature,
+  dragFeature,
+  editingFeature,
+  reconnectFeature,
   getBezierPath,
   reconnectEdge,
   useEdgesState,
@@ -24,6 +32,7 @@ import {
   type Connection,
   type Edge,
   type EdgeProps,
+  type Feature,
   type Node,
   type NodeProps,
 } from '../src/index.ts';
@@ -186,6 +195,17 @@ function DomCount() {
   return <span data-testid="dom-count">{count} nodes in the DOM</span>;
 }
 
+/** What <FlowingerCore> can be given, one at a time — <FlowingerCanvas> has all of them. */
+const PICKABLE: readonly { label: string; feature: Feature }[] = [
+  { label: 'drag', feature: dragFeature },
+  { label: 'connect', feature: connectFeature },
+  { label: 'reconnect', feature: reconnectFeature },
+  { label: 'box select', feature: boxSelectFeature },
+  { label: 'delete', feature: deleteFeature },
+  { label: 'culling', feature: cullingFeature },
+  { label: 'editing', feature: editingFeature },
+];
+
 const edgeId = (c: Connection) => `${c.source}:${String(c.sourceHandle)}->${c.target}:${String(c.targetHandle)}`;
 
 export function App() {
@@ -195,6 +215,11 @@ export function App() {
   const [boxSelect, setBoxSelect] = useState(false);
   const [snap, setSnap] = useState(false);
   const [many, setMany] = useState(false);
+  // The whole canvas, or the core with a few features: read once by a canvas, so a change remounts it.
+  const [whole, setWhole] = useState(true);
+  const [picks, setPicks] = useState<ReadonlySet<string>>(() => new Set(PICKABLE.map((p) => p.label)));
+  const features = useMemo(() => PICKABLE.filter((p) => picks.has(p.label)).map((p) => p.feature), [picks]);
+  const Canvas = whole ? FlowingerCanvas : FlowingerCore;
   const stress = useMemo(() => bigGrid(2000), []);
 
   const isValidConnection = (c: Connection) => c.source !== c.target;
@@ -228,7 +253,9 @@ export function App() {
 
       <div className="relative flex-1 bg-slate-950">
         <FlowingerProvider>
-          <FlowingerCanvas
+          <Canvas
+            key={whole ? 'whole' : [...picks].sort().join(',')}
+            {...(whole ? {} : { features })}
             nodes={many ? stress : nodes}
             edges={many ? [] : edges}
             {...(many ? {} : { onNodesChange, onEdgesChange })}
@@ -280,6 +307,31 @@ export function App() {
                   <input type="checkbox" checked={many} onChange={(e) => { setMany(e.target.checked); }} />
                   2,000 nodes, drawn only in view
                 </label>
+                <div className="mt-1 border-t border-slate-700 pt-1.5 text-slate-400" data-testid="canvas-kind">
+                  {whole ? 'FlowingerCanvas: every feature' : `FlowingerCore + ${String(features.length)} features`}
+                </div>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={whole} onChange={(e) => { setWhole(e.target.checked); }} />
+                  Whole canvas
+                </label>
+                {PICKABLE.map(({ label }) => (
+                  <label key={label} className={`flex items-center gap-2 pl-4 ${whole ? 'opacity-40' : ''}`}>
+                    <input
+                      type="checkbox"
+                      disabled={whole}
+                      checked={picks.has(label)}
+                      onChange={(e) => {
+                        setPicks((all) => {
+                          const next = new Set(all);
+                          if (e.target.checked) next.add(label);
+                          else next.delete(label);
+                          return next;
+                        });
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
                 <div className="text-slate-500" data-testid="picked">{picked}</div>
                 <div className="text-slate-500"><ShiftState /></div>
                 <div className="text-slate-500">
@@ -287,7 +339,7 @@ export function App() {
                 </div>
               </div>
             </Panel>
-          </FlowingerCanvas>
+          </Canvas>
           <div className="absolute bottom-4 left-4 z-50">
             <MiniMap width={160} height={110} nodeColor={(n) => ((n.data as PlanData).highlighted ? '#10b981' : '#64748b')} />
           </div>
