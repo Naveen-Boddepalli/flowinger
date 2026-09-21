@@ -48,7 +48,7 @@ const PADDING = 0.05;
  * It is a pointer shortcut, not a control of its own: keyboard users have the
  * canvas's arrow keys and `Controls`, and the overview is announced as an image.
  */
-export const MiniMap = memo(function MiniMap({
+export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   width = 200,
   height = 150,
   nodeColor = DEFAULT_NODE_COLOR,

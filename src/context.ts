@@ -3,7 +3,7 @@ import { NodeContext } from './nodeContext.ts';
 import type { FlowingerInstance, Viewport } from './types.ts';
 import type { FlowingerState, FlowingerStore } from './store.ts';
 
-export const FlowingerContext = createContext<FlowingerStore | null>(null);
+export const FlowingerContext = /*#__PURE__*/ createContext<FlowingerStore | null>(null);
 
 /** The store itself, for the engine's own components. Not part of the public surface. */
 export function useFlowingerStore(): FlowingerStore {

@@ -3,14 +3,12 @@ import { absolutePositionOf } from './parents.ts';
 import {
   FALLBACK_SIZE,
   getNodesBounds,
-  isRectIntersecting,
   snapTo,
   viewportForBounds,
   type Size,
 } from './geometry.ts';
 import { layoutSize } from './measure.ts';
 import type {
-  SelectionMode,
   ConnectEndState,
   ConnectStartParams,
   Connection,
@@ -285,7 +283,6 @@ export function createFlowingerStore(
   const mountListeners = new Set<Listener>();
   const connectionListeners = new Set<Listener>();
   const stateListeners = new Set<Listener>();
-  const selectionRectListeners = new Set<Listener>();
   const selectionChangeListeners = new Set<Listener>();
   const visibleListeners = new Set<Listener>();
   /** The children of each parent, and each one's absolute position, as last worked out. */
@@ -294,8 +291,6 @@ export function createFlowingerStore(
   let visible: VisibleSet | null = null;
   /** Nodes being dragged right now: never culled, or the pointer would lose them. */
   const draggingIds = new Set<string>();
-  /** The box being dragged, in pane pixels — null when there is none. */
-  let selectionRect: Rect | null = null;
   const nodeListeners = new Map<string, Set<Listener>>();
 
   let tween: {
@@ -709,50 +704,10 @@ export function createFlowingerStore(
     setSelection(new Set(), new Set());
   };
 
-  /**
-   * Makes the selection whatever a box (in pane pixels) covers — `base`, if
-   * given, kept as well — and remembers the box so it can be drawn. Edges join
-   * when both their ends are in: a box that also grabbed every line leading out
-   * of it would select things it does not visibly contain.
-   */
-  const boxSelect = (
-    rect: Rect,
-    mode: SelectionMode,
-    base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null,
-  ) => {
-    const area: Rect = {
-      x: (rect.x - viewport.x) / viewport.zoom,
-      y: (rect.y - viewport.y) / viewport.zoom,
-      width: rect.width / viewport.zoom,
-      height: rect.height / viewport.zoom,
-    };
-    const nodeIds = new Set(base?.nodes);
-    for (const n of nodes) {
-      if (n.hidden === true || !isSelectable(n)) continue;
-      const box = rectOf(n);
-      if (box && isRectIntersecting(box, area, mode === 'partial')) nodeIds.add(n.id);
-    }
-    const edgeIds = new Set(base?.edges);
-    for (const e of edges) {
-      if (e.hidden !== true && e.selectable !== false && nodeIds.has(e.source) && nodeIds.has(e.target)) {
-        edgeIds.add(e.id);
-      }
-    }
-    setSelection(nodeIds, edgeIds);
-    selectionRect = rect;
-    emit(selectionRectListeners);
-  };
-
   /** Where a node is and how big, in graph units: the dragged position, the measured size. */
   const getNodeRect = (id: string): Rect | null => {
     const n = nodeById.get(id);
     return n ? { ...resolvePosition(id, n.position), ...getNodeSize(n) } : null;
-  };
-
-  const endBoxSelect = () => {
-    if (selectionRect === null) return;
-    selectionRect = null;
-    emit(selectionRectListeners);
   };
 
   /** The selection as it stands, as elements. */
@@ -1184,13 +1139,9 @@ export function createFlowingerStore(
     selectNode,
     selectEdge,
     clearSelection,
-    boxSelect,
-    endBoxSelect,
     getNodeRect,
     getSelectedNodeCount: (): number => selectedNodeIds().length,
     subscribeSelection: subscribeTo(selectionChangeListeners),
-    getSelectionRect: (): Rect | null => selectionRect,
-    subscribeSelectionRect: subscribeTo(selectionRectListeners),
     getSelection,
     areNodesInitialized,
 

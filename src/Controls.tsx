@@ -44,7 +44,7 @@ const buttonStyle: CSSProperties = {
 
 const fitStyle: CSSProperties = { ...buttonStyle, padding: '0 8px', fontSize: 12 };
 
-export const Controls = memo(function Controls({
+export const Controls = /*#__PURE__*/ memo(function Controls({
   className = '',
   style,
   showZoom = true,

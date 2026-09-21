@@ -269,7 +269,7 @@ interface EdgePathProps extends Omit<EdgeChrome, 'edge'>, EdgeEnds {
 }
 
 /** Memoised on primitives: a drag moves one node, so most edges keep the same `d`. */
-const EdgePath = memo(function EdgePath({
+const EdgePath = /*#__PURE__*/ memo(function EdgePath({
   edge,
   selected,
   selectable,
@@ -332,7 +332,7 @@ interface CustomEdgeProps extends EdgeChrome {
 }
 
 /** A user's edge component, in the same wrapper as a built-in edge, and memoised the same way. */
-const CustomEdge = memo(function CustomEdge({
+const CustomEdge = /*#__PURE__*/ memo(function CustomEdge({
   View,
   edge,
   selected,

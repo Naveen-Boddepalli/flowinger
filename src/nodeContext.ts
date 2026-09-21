@@ -12,4 +12,4 @@ export interface NodeContextValue {
 }
 
 /** Null outside a node — a `<Handle>` rendered there simply draws, and registers nowhere. */
-export const NodeContext = createContext<NodeContextValue | null>(null);
+export const NodeContext = /*#__PURE__*/ createContext<NodeContextValue | null>(null);

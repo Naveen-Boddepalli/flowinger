@@ -12,7 +12,6 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
 import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
 import { resolveFeatures, type Feature } from './features.ts';
@@ -22,7 +21,6 @@ import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
-import { SelectionBox } from './SelectionBox.tsx';
 import { viewportTransform } from './store.ts';
 import {
   DRAG_THRESHOLD,
@@ -36,10 +34,8 @@ import {
 } from './pointer.ts';
 import type {
   Edge,
-  EdgeChange,
   FlowingerProps,
   Node,
-  NodeChange,
   NodeProps,
   Viewport,
   XYPosition,
@@ -95,18 +91,6 @@ const WHEEL_PIXELS_PER_UNIT = [1, 20, 400] as const;
 const KEY_PAN_STEP = 50;
 const KEY_PAN_STEP_LARGE = 200;
 
-interface BoxState {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  /** The pane's place on the page, so the box can be worked in pane pixels. */
-  left: number;
-  top: number;
-  active: boolean;
-  /** What stays selected under it, when Ctrl or ⌘ held the selection at the start. */
-  base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null;
-}
-
 interface PanState {
   pointerId: number;
   startX: number;
@@ -120,8 +104,6 @@ function InnerCanvas(props: FlowingerProps) {
     features = NO_FEATURES,
     nodes: nodesProp,
     edges: edgesProp,
-    defaultNodes,
-    defaultEdges,
     onNodesChange,
     onEdgesChange,
     nodeTypes = {},
@@ -131,9 +113,6 @@ function InnerCanvas(props: FlowingerProps) {
     nodesDraggable = false,
     panOnDrag = true,
     selectionOnDrag = false,
-    selectionMode = 'full',
-    onSelectionStart,
-    onSelectionEnd,
     panOnScroll = false,
     panOnScrollSpeed = 0.5,
     zoomOnScroll = true,
@@ -192,11 +171,6 @@ function InnerCanvas(props: FlowingerProps) {
     return resolveFeatures(features);
   });
 
-  // With no `nodes` (or `edges`) prop the canvas owns the list, starting from
-  // `defaultNodes`, and applies its own changes to it — the same path a
-  // controlled flow's caller takes, so there is one way things happen.
-  const ownsNodes = nodesProp === undefined;
-  const ownsEdges = edgesProp === undefined;
   // `defaultEdgeOptions` is compared by value, so `{ animated: true }` written
   // inline does not remake every edge on every render.
   const edgeDefaultsKey = defaultEdgeOptions === undefined ? undefined : JSON.stringify(defaultEdgeOptions);
@@ -204,31 +178,15 @@ function InnerCanvas(props: FlowingerProps) {
     () => (edgeDefaultsKey === undefined ? undefined : (JSON.parse(edgeDefaultsKey) as Partial<Edge>)),
     [edgeDefaultsKey],
   );
-  const [ownNodes, setOwnNodes] = useState<Node[]>(() => defaultNodes ?? NO_NODES);
-  const [ownEdges, setOwnEdges] = useState<Edge[]>(() => defaultEdges ?? NO_EDGES);
-  const nodes = nodesProp ?? ownNodes;
-  const givenEdges = edgesProp ?? ownEdges;
+  const nodes = nodesProp ?? NO_NODES;
+  const givenEdges = edgesProp ?? NO_EDGES;
   const edges = useMemo(
     () => (edgeDefaults ? givenEdges.map((e) => ({ ...edgeDefaults, ...e })) : givenEdges),
     [givenEdges, edgeDefaults],
   );
-  const changeNodes = useCallback(
-    (changes: NodeChange[]) => {
-      if (ownsNodes) setOwnNodes((current) => applyNodeChanges(changes, current));
-      onNodesChange?.(changes);
-    },
-    [ownsNodes, onNodesChange],
-  );
-  const changeEdges = useCallback(
-    (changes: EdgeChange[]) => {
-      if (ownsEdges) setOwnEdges((current) => applyEdgeChanges(changes, current));
-      onEdgesChange?.(changes);
-    },
-    [ownsEdges, onEdgesChange],
-  );
   // The flow is controlled — changes are reported, not done — when someone is listening.
-  const nodesChange = ownsNodes || onNodesChange ? changeNodes : undefined;
-  const edgesChange = ownsEdges || onEdgesChange ? changeEdges : undefined;
+  const nodesChange = onNodesChange;
+  const edgesChange = onEdgesChange;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   // The layer an edge's HTML labels portal into; state, so they render once it exists.
@@ -239,7 +197,6 @@ function InnerCanvas(props: FlowingerProps) {
   /** Every pointer currently down, so a second finger can be told from a click. */
   const pointers = useRef(new Map<number, XYPosition>());
   const pinch = useRef<PinchStart | null>(null);
-  const box = useRef<BoxState | null>(null);
   /** A pan just ended: the click that follows it is not a click on the canvas. */
   const justPanned = useRef(false);
   // What each feature adds to the canvas's own handlers, in the order they were given.
@@ -430,30 +387,8 @@ function InnerCanvas(props: FlowingerProps) {
         return;
       }
     }
-    // A bare press on the pane draws a selection box when that is asked for
-    // (always with Shift); everything else falls through to panning.
-    if (
-      elementsSelectable &&
-      e.button === 0 &&
-      e.target === e.currentTarget &&
-      (selectionOnDrag || e.shiftKey)
-    ) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const keep = e.ctrlKey || e.metaKey ? store.getSelection() : null;
-      box.current = {
-        pointerId: e.pointerId,
-        startX: e.clientX,
-        startY: e.clientY,
-        left: rect.left,
-        top: rect.top,
-        active: false,
-        base: keep && {
-          nodes: new Set(keep.nodes.map((n) => n.id)),
-          edges: new Set(keep.edges.map((n) => n.id)),
-        },
-      };
-      return;
-    }
+    // A feature may take the press — a selection box — before it becomes a pan.
+    if (bits.some((b) => b.onPointerDown?.(e))) return;
     if (!canPan(e.button) || isInteractive(e.target)) return;
     pan.current = {
       pointerId: e.pointerId,
@@ -477,27 +412,7 @@ function InnerCanvas(props: FlowingerProps) {
       return;
     }
 
-    const b = box.current;
-    if (b?.pointerId === e.pointerId) {
-      if (!b.active) {
-        if (Math.hypot(e.clientX - b.startX, e.clientY - b.startY) < DRAG_THRESHOLD) return;
-        b.active = true;
-        justPanned.current = true; // the click that ends it is not a click on the pane
-        capturePointer(e.currentTarget, e.pointerId);
-        onSelectionStart?.(e);
-      }
-      store.boxSelect(
-        {
-          x: Math.min(b.startX, e.clientX) - b.left,
-          y: Math.min(b.startY, e.clientY) - b.top,
-          width: Math.abs(e.clientX - b.startX),
-          height: Math.abs(e.clientY - b.startY),
-        },
-        selectionMode,
-        b.base,
-      );
-      return;
-    }
+    if (bits.some((b) => b.onPointerMove?.(e))) return;
 
     const p = pan.current;
     if (p?.pointerId !== e.pointerId) return;
@@ -523,18 +438,7 @@ function InnerCanvas(props: FlowingerProps) {
     // it would jump. A fresh touch starts one.
     if (pointers.current.size < 2) pinch.current = null;
 
-    const b = box.current;
-    if (b?.pointerId === e.pointerId) {
-      box.current = null;
-      if (b.active) {
-        releasePointer(e.currentTarget, e.pointerId);
-        store.endBoxSelect();
-        onSelectionEnd?.(e);
-        // Leave focus where the delete key will find it.
-        e.currentTarget.focus({ preventScroll: true });
-      }
-      return;
-    }
+    if (bits.some((b) => b.onPointerEnd?.(e))) return;
 
     const p = pan.current;
     if (p?.pointerId !== e.pointerId) return;
@@ -625,7 +529,6 @@ function InnerCanvas(props: FlowingerProps) {
     touchAction: 'none',
     ...(focusableForKeys ? { outline: 'none' } : {}),
     ...(panOnDrag && !selectionOnDrag ? { cursor: 'grab' } : {}),
-    ...(selectionOnDrag && elementsSelectable ? { cursor: 'crosshair' } : {}),
     ...Object.assign({}, ...bits.map((b) => b.style)),
     ...style,
   };
@@ -651,7 +554,7 @@ function InnerCanvas(props: FlowingerProps) {
       >
         {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
         {children}
-        <SelectionBox />
+        {feats.map((f) => (f.Layer ? <f.Layer key={f.name} /> : null))}
 
         {/* The layer the viewport transform is written to. */}
         <div

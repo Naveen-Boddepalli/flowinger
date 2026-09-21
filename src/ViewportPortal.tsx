@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 /** The layer `ViewportPortal` draws into: inside the viewport, above the nodes and the edge labels. */
-export const ViewportPortalHost = createContext<HTMLElement | null>(null);
+export const ViewportPortalHost = /*#__PURE__*/ createContext<HTMLElement | null>(null);
 
 /**
  * Draws your own elements in the graph's coordinate space: they pan and zoom

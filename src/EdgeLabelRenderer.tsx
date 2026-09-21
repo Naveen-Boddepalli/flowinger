@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 /** The layer edge labels are drawn into: inside the viewport, so they pan and zoom with the graph. */
-export const EdgeLabelHost = createContext<HTMLElement | null>(null);
+export const EdgeLabelHost = /*#__PURE__*/ createContext<HTMLElement | null>(null);
 
 /**
  * Draws HTML — a button, an input, styled text — at a point of an edge, from

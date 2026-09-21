@@ -206,6 +206,3 @@ export function resolveFeatures(list: readonly Feature[]): Feature[] {
   list.forEach(visit);
   return out;
 }
-
-/** What each hook of `Feature` would say for a canvas with none. */
-export const NO_BITS: Readonly<Record<string, never>> = Object.freeze({});

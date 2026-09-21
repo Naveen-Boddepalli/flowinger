@@ -1,26 +1,39 @@
-// Bundles scripts/size-entry.ts the way an app would (minified, React external) and prints its gzip size.
-//   pnpm size            print it
-//   pnpm size --max 22   fail if it is over 22 kB
+// Bundles what an app would import (minified, React external) and prints the gzip size of each:
+//   full  — <ReactFlow>, every feature: what a React Flow app gets (scripts/size-entry.ts)
+//   lean  — <FlowingerCore> with no features: an app that only shows and pans a graph (scripts/size-entry-lean.ts)
+//
+//   pnpm size                          print both
+//   pnpm size --max-full 24 --max-lean 16   fail if either is over its budget
 import { gzipSync } from 'node:zlib';
 import { build } from 'vite';
 
-const maxArg = process.argv.indexOf('--max');
-const max = maxArg === -1 ? null : Number(process.argv[maxArg + 1]);
+const budget = (flag) => {
+  const at = process.argv.indexOf(flag);
+  return at === -1 ? null : Number(process.argv[at + 1]);
+};
+const entries = [
+  { name: 'full', entry: 'scripts/size-entry.ts', max: budget('--max-full') },
+  { name: 'lean', entry: 'scripts/size-entry-lean.ts', max: budget('--max-lean') },
+];
 
-const result = await build({
-  configFile: false,
-  logLevel: 'silent',
-  build: {
-    write: false,
-    minify: true,
-    lib: { entry: 'scripts/size-entry.ts', formats: ['es'], fileName: 'size' },
-    rollupOptions: { external: ['react', 'react-dom', 'react/jsx-runtime'] },
-  },
-});
-const output = (Array.isArray(result) ? result[0] : result).output[0];
-const kb = gzipSync(output.code, { level: 9 }).length / 1000;
-console.log(`consumer subset: ${(output.code.length / 1000).toFixed(1)} kB minified, ${kb.toFixed(1)} kB gzip`);
-if (max !== null && kb > max) {
-  console.error(`over the ${String(max)} kB budget`);
-  process.exit(1);
+let failed = false;
+for (const { name, entry, max } of entries) {
+  const result = await build({
+    configFile: false,
+    logLevel: 'silent',
+    build: {
+      write: false,
+      minify: true,
+      lib: { entry, formats: ['es'], fileName: 'size' },
+      rollupOptions: { external: ['react', 'react-dom', 'react/jsx-runtime'] },
+    },
+  });
+  const output = (Array.isArray(result) ? result[0] : result).output[0];
+  const kb = gzipSync(output.code, { level: 9 }).length / 1000;
+  console.log(`${name}: ${(output.code.length / 1000).toFixed(1)} kB minified, ${kb.toFixed(1)} kB gzip`);
+  if (max !== null && kb > max) {
+    console.error(`${name} is over its ${String(max)} kB budget`);
+    failed = true;
+  }
 }
+if (failed) process.exit(1);

@@ -44,7 +44,7 @@ const POSITION_STYLES: Record<Position, CSSProperties> = {
  * dragged from and dropped onto: it then takes pointer events (and a larger
  * dot), which a plain handle deliberately does not.
  */
-export const Handle = memo(function Handle({
+export const Handle = /*#__PURE__*/ memo(function Handle({
   id,
   type,
   position,

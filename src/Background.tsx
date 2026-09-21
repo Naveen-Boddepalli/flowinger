@@ -9,7 +9,7 @@ const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
   [BackgroundVariant.Cross]: 6,
 };
 
-export const Background = memo(function Background({
+export const Background = /*#__PURE__*/ memo(function Background({
   variant = BackgroundVariant.Dots,
   gap = 20,
   size = DEFAULT_SIZE[variant],

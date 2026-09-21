@@ -7,4 +7,4 @@ export interface EdgeContextValue {
   selectable: boolean;
 }
 
-export const EdgeContext = createContext<EdgeContextValue>({ selected: false, selectable: false });
+export const EdgeContext = /*#__PURE__*/ createContext<EdgeContextValue>({ selected: false, selectable: false });
