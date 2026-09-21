@@ -80,6 +80,19 @@ describe('EdgeLabelRenderer', () => {
     expect(label.textContent).toBe('ab');
   });
 
+  it('is above the nodes, so a label over a node can be clicked', () => {
+    const under = [box('a', 0, 0, { zIndex: 500 }), box('b', 0, 200)];
+    const { container } = render(
+      <FlowingerCanvas nodes={under} edges={edges} edgeTypes={{ labelled: LabelledEdge }} nodesDraggable />,
+    );
+    const layer = must<HTMLElement>(container, '.flowinger-edge-labels');
+    // Even above a node being dragged (1000) and one that asked for a high z-index of its own.
+    expect(Number(layer.style.zIndex)).toBeGreaterThan(1000);
+    for (const id of ['a', 'b']) {
+      expect(Number(layer.style.zIndex)).toBeGreaterThan(Number(node(container, id).style.zIndex));
+    }
+  });
+
   it('follows the edge as a node moves', () => {
     const { container, getByTestId } = render(
       <FlowingerCanvas nodes={nodes} edges={edges} edgeTypes={{ labelled: LabelledEdge }} nodesDraggable />,

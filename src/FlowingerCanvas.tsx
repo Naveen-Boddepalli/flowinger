@@ -77,6 +77,9 @@ function DefaultNodeView({ id, data, selected }: NodeProps) {
   );
 }
 
+/** Above every node — even one being dragged (1000) or given a large `zIndex` of its own. */
+const EDGE_LABEL_LAYER_Z = 10000;
+
 /** Wheel deltas arrive in pixels, lines or pages depending on device and browser. */
 const WHEEL_PIXELS_PER_UNIT = [1, 20, 400] as const;
 
@@ -634,7 +637,8 @@ function InnerCanvas({
             visibleEdgeIds={visible?.edges}
           />
         </EdgeLabelHost.Provider>
-        {/* Above the edges, below the nodes; takes no events of its own. */}
+        {/* Above the edges and the nodes — a label is there to be read and clicked, and a
+            node under it would take the click. Takes no events of its own. */}
         <div
           ref={setLabelHost}
           className="flowinger-edge-labels react-flow__edgelabel-renderer"
@@ -646,7 +650,7 @@ function InnerCanvas({
             height: '100%',
             pointerEvents: 'none',
             userSelect: 'none',
-            zIndex: 0,
+            zIndex: EDGE_LABEL_LAYER_Z,
           }}
         />
 

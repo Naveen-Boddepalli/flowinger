@@ -7,7 +7,7 @@
 edges, selection, connecting, the minimap, `translateExtent`, and the render-loop regression),
 `flowingerStore.test.ts` (the pure store), `pointer.test.ts` (pinch maths), `ssr.test.tsx` (a server render
 in vitest's `node` environment, where there really is no `document`) and `hydration.test.tsx`.
-`pnpm typecheck`, `pnpm test` (188 tests) and `pnpm build` pass on React 19 **and** React 18, and the
+`pnpm typecheck`, `pnpm test` (427 tests, in 17 files) and `pnpm build` pass on React 19 **and** React 18, and the
 installed tarball renders, hydrates and type-checks (TypeScript 7, `skipLibCheck` off) on both.
 
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
@@ -113,9 +113,44 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
 
+### Second round: what React Flow had that flowinger lacked
+
+Added after the trial swap, in checkpoints (one commit each), every new guard mutation-tested — break it,
+confirm a test fails, restore:
+
+1. **Controlled flows** — `onNodesChange` / `onEdgesChange`, `applyNodeChanges`, `useNodesState`, `addEdge`,
+   `defaultNodes`, `node.selected`, `dimensions` reporting (and `measured`), `useNodesInitialized`, group drag,
+   `dragHandle`. A flow is controlled when someone listens; without a listener nothing changes.
+2. **The instance** — `zoomTo`, `setCenter`, `fitBounds`, `fitView` options, `screenToFlowPosition`, node/edge
+   getters and mutators, intersection helpers, promise-returning view calls; `nodeExtent`, `snapToGrid`,
+   `defaultEdgeOptions`, `hidden`, the `fitView` prop, a wider `useStore`.
+3. **Edges and keys** — edge selection, `animated`, delete (`deleteKeyCode`, `deleteElements`,
+   `onBeforeDelete`), `connectionMode`, `onConnectStart`/`onConnectEnd`, arrow-key nudging.
+4. **Selection box, `panOnScroll`, `Panel`.**
+5. **`EdgeLabelRenderer`, `NodeToolbar`, `NodeResizer`**, and a declared `width`/`height` is now applied.
+6. **Sub-flows** (`parentId`, `extent: 'parent'`) and `onlyRenderVisibleElements`.
+
+What testing in a real browser found that jsdom could not: (1) **a quick drag lost the node** — pointer
+capture is deliberately deferred until the drag threshold (capturing at once would send the click of
+anything *inside* a node to the node), but the first `pointermove` could land on the pane or the node
+underneath, whose events never reached the dragged node; a window listener now captures on the move that
+crosses the threshold, wherever it lands; (2) **an HTML edge label under a node could not be clicked** — the
+label layer now sits above the nodes. Both have tests. Two smaller ones came from the tests themselves: a
+stray pointer left in the canvas after a resize (the next touch looked like half a pinch), and a `fitView`
+prop that framed against the *previous* node list.
+
+Re-verified against QueryLens: the trial branch's suites, run with the packed tarball of this build in place
+of its pinned commit — typecheck clean, **1170** unit tests, **79 / 79** e2e (installed Chrome). The branch
+itself still pins the earlier commit; nothing in QueryLens was changed.
+
 ### Not built
 
-- Connecting by *keyboard* (a drag is the only way to make a connection).
+- Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
+  as far as I know.
+- Things React Flow has that this does not: `expandParent`, reconnecting an edge (`onReconnect`),
+  `connectionLineComponent`, auto-pan while dragging near the pane's edge, `zoomOnDoubleClick`,
+  `ViewportPortal`, `useOnSelectionChange`, `useKeyPress`, `useNodesData`, `useNodeConnections`, `nodeOrigin`,
+  `NodeToolbar` for a node other than its own. This list is from memory of React Flow's API, not an audit.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
   see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build

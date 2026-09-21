@@ -64,6 +64,8 @@ export const NodeWrapper = memo(function NodeWrapper({
   const drag = useRef<DragState | null>(null);
   /** A drag just ended: the click that follows it is not a click on the node. */
   const justDragged = useRef(false);
+  /** Stops watching for a press to become a drag; null when nothing is being watched. */
+  const stopClaiming = useRef<(() => void) | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const subscribe = useCallback(
@@ -120,6 +122,13 @@ export const NodeWrapper = memo(function NodeWrapper({
     // of layout to read now — not whenever the observer next gets round to it.
   }, [store, node.id, node.width, node.height]);
 
+  useIsomorphicLayoutEffect(
+    () => () => {
+      stopClaiming.current?.();
+    },
+    [],
+  );
+
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     justDragged.current = false;
     if (!draggable || e.button !== 0 || isInteractive(e.target)) return;
@@ -128,7 +137,37 @@ export const NodeWrapper = memo(function NodeWrapper({
     // Claimed from the first press, so the canvas underneath does not start a
     // pan — even though the drag proper only begins past the threshold.
     e.stopPropagation();
-    drag.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, session: null };
+    const pressed = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, session: null };
+    drag.current = pressed;
+
+    // The pointer is only captured once the press has become a drag (capturing at
+    // once would send the click of anything inside the node to the node). Until
+    // then a quick move can leave the node — landing on the pane, or on the node
+    // beneath — and its events would go there, never reaching this one. So watch
+    // the window for the move that crosses the threshold and capture then, wherever
+    // the pointer is; every move after that comes here.
+    const element = e.currentTarget;
+    stopClaiming.current?.();
+    const stop = () => {
+      window.removeEventListener('pointermove', claim, true);
+      window.removeEventListener('pointerup', stop, true);
+      window.removeEventListener('pointercancel', stop, true);
+      if (stopClaiming.current === stop) stopClaiming.current = null;
+    };
+    const claim = (ev: PointerEvent) => {
+      if (ev.pointerId !== pressed.pointerId) return;
+      if (drag.current !== pressed || pressed.session) {
+        stop();
+        return;
+      }
+      if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < DRAG_THRESHOLD) return;
+      capturePointer(element, pressed.pointerId);
+      stop();
+    };
+    window.addEventListener('pointermove', claim, true);
+    window.addEventListener('pointerup', stop, true);
+    window.addEventListener('pointercancel', stop, true);
+    stopClaiming.current = stop;
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {

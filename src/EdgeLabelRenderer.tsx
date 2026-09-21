@@ -6,8 +6,8 @@ export const EdgeLabelHost = createContext<HTMLElement | null>(null);
 
 /**
  * Draws HTML — a button, an input, styled text — at a point of an edge, from
- * inside a custom edge component. The children go to a layer above the edges,
- * in graph space, so position them with a transform from the edge's own numbers:
+ * inside a custom edge component. The children go to a layer above the edges
+ * *and* the nodes, in graph space, so position them with a transform from the edge's own numbers:
  *
  * ```tsx
  * <EdgeLabelRenderer>

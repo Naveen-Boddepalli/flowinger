@@ -215,6 +215,92 @@ describe('dragging a selection', () => {
   });
 });
 
+describe('capturing the pointer for a drag', () => {
+  // jsdom has no pointer capture; a stand-in records which element asked, and for which pointer.
+  const asked: { el: Element; id: number }[] = [];
+  const install = () => {
+    Object.defineProperty(Element.prototype, 'setPointerCapture', {
+      configurable: true,
+      value(this: Element, id: number) {
+        asked.push({ el: this, id });
+      },
+    });
+  };
+  afterEach(() => {
+    asked.length = 0;
+    Reflect.deleteProperty(Element.prototype, 'setPointerCapture');
+  });
+
+  it('takes it on the move that crosses the threshold, even when that move lands off the node', () => {
+    install();
+    const { container } = render(<FlowingerCanvas nodes={three()} nodesDraggable />);
+    const pane = container.firstElementChild as Element;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    // A quick drag: the first move is already past the node, over the pane (or whatever is under it).
+    fireEvent.pointerMove(pane, pointer({ clientX: 1, clientY: 1 }));
+    expect(asked).toEqual([]); // not yet a drag
+    fireEvent.pointerMove(pane, pointer({ clientX: 60, clientY: 40 }));
+    expect(asked).toHaveLength(1);
+    expect(asked[0]?.el).toBe(el(container, 'a'));
+    expect(asked[0]?.id).toBe(1);
+  });
+
+  it('then lets the node drag from what it is sent next, from where the press began', () => {
+    install();
+    const { container } = render(<FlowingerCanvas nodes={three()} nodesDraggable />);
+    const pane = container.firstElementChild as Element;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 60, clientY: 40 }));
+    // Captured, so the next move is delivered to the node itself.
+    fireEvent.pointerMove(el(container, 'a'), pointer({ clientX: 70, clientY: 45 }));
+    expect(at(container, 'a')).toBe('translate(70px, 45px)');
+  });
+
+  it('asks once per press, and not for a press that ended before it became a drag', () => {
+    install();
+    const { container } = render(<FlowingerCanvas nodes={three()} nodesDraggable />);
+    const pane = container.firstElementChild as Element;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 60, clientY: 40 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 80, clientY: 40 }));
+    expect(asked).toHaveLength(1);
+    fireEvent.pointerUp(pane, pointer({ clientX: 80, clientY: 40 }));
+
+    asked.length = 0;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerUp(el(container, 'a'), pointer({ clientX: 0, clientY: 0 })); // a click
+    fireEvent.pointerMove(pane, pointer({ clientX: 200, clientY: 200 })); // a later, unrelated move
+    expect(asked).toEqual([]);
+  });
+
+  it('ignores another pointer, and a node that cannot be dragged', () => {
+    install();
+    const { container, rerender } = render(<FlowingerCanvas nodes={three()} nodesDraggable />);
+    const pane = container.firstElementChild as Element;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, { pointerId: 2, button: 0, clientX: 90, clientY: 90 });
+    expect(asked).toEqual([]);
+    fireEvent.pointerUp(pane, pointer({ clientX: 0, clientY: 0 }));
+
+    rerender(<FlowingerCanvas nodes={three()} />);
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 90, clientY: 90 }));
+    // The press pans the canvas instead, so the canvas takes the pointer — never the node.
+    expect(asked.some((a) => a.el === el(container, 'a'))).toBe(false);
+  });
+
+  it('stops watching when the node goes away', () => {
+    install();
+    const { container, unmount } = render(<FlowingerCanvas nodes={three()} nodesDraggable />);
+    const pane = container.firstElementChild as Element;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    unmount();
+    fireEvent.pointerMove(document.body, pointer({ clientX: 90, clientY: 90 }));
+    void pane;
+    expect(asked).toEqual([]);
+  });
+});
+
 describe('dragHandle', () => {
   function Grip() {
     return (

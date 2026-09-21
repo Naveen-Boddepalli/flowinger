@@ -1,15 +1,23 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
   BaseEdge,
   Controls,
+  EdgeLabelRenderer,
   FlowingerCanvas,
   FlowingerProvider,
   Handle,
   MiniMap,
+  NodeResizer,
+  NodeToolbar,
+  Panel,
   Position,
+  addEdge,
   getBezierPath,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
   type Connection,
   type Edge,
   type EdgeProps,
@@ -17,18 +25,40 @@ import {
   type NodeProps,
 } from '../src/index.ts';
 
-function CustomPlanNode({ data, selected }: NodeProps) {
-  const d = data as { label: string; kind: string; detail?: string; highlighted?: boolean };
+type PlanData = { label: string; kind: string; detail?: string; highlighted?: boolean };
+
+const button =
+  'rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-xs text-slate-200 hover:border-slate-400';
+
+/** A plan operator: handles on four sides, and a toolbar that appears while it is the only thing selected. */
+function PlanNode({ id, data, selected }: NodeProps) {
+  const d = data as PlanData;
+  const { deleteElements, getNode, addNodes } = useReactFlow();
+  const duplicate = () => {
+    const from = getNode(id);
+    if (!from) return;
+    addNodes({ ...from, id: `${id}-copy-${String(Date.now())}`, selected: false, position: { x: from.position.x + 30, y: from.position.y + 30 } });
+  };
   return (
     <div
-      className={`rounded-lg border px-3 py-2 text-center shadow-lg transition-all duration-150 min-w-36 ${
+      className={`min-w-36 rounded-lg border px-3 py-2 text-center shadow-lg transition-colors duration-150 ${
         selected ? 'outline outline-2 outline-offset-2 outline-sky-400' : ''
       } ${
         d.highlighted
-          ? 'border-emerald-500 bg-emerald-950/40 text-emerald-200 ring-2 ring-emerald-500/50'
+          ? 'border-emerald-500 bg-emerald-950/40 text-emerald-200'
           : 'border-slate-700 bg-slate-900 text-slate-100 hover:border-slate-500'
       }`}
     >
+      <NodeToolbar>
+        <div className="flex gap-1 rounded-md border border-slate-700 bg-slate-900 p-1 shadow-lg">
+          <button type="button" className={button} onClick={duplicate}>
+            Duplicate
+          </button>
+          <button type="button" className={button} onClick={() => void deleteElements({ nodes: [{ id }] })}>
+            Delete
+          </button>
+        </div>
+      </NodeToolbar>
       <Handle id="in" type="target" position={Position.Top} className="text-slate-500" />
       <Handle id="prev" type="target" position={Position.Left} className="text-slate-500" />
       <div className="font-mono text-sm font-semibold">{d.label}</div>
@@ -40,57 +70,60 @@ function CustomPlanNode({ data, selected }: NodeProps) {
   );
 }
 
-/** A custom edge: the default drawing, plus a pill of text riding on the curve. */
-function CostEdge({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, style, data }: EdgeProps) {
+/** A box other nodes live inside — resizable while it is selected. */
+function GroupNode({ data, selected }: NodeProps) {
+  return (
+    <div className="h-full w-full rounded-xl border border-dashed border-slate-600 bg-slate-900/40">
+      <NodeResizer minWidth={220} minHeight={140} isVisible={selected === true} />
+      <div className="px-3 py-1.5 text-xs uppercase tracking-wider text-slate-400">{String((data as PlanData).label)}</div>
+    </div>
+  );
+}
+
+/** An edge with an HTML label — a real button — drawn above it. */
+function CostEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, style, data }: EdgeProps) {
+  const { updateEdge } = useReactFlow();
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
-  const text = String(data?.cost ?? '');
   return (
     <>
       <BaseEdge path={path} markerEnd={markerEnd} style={style} />
-      <rect x={labelX - 28} y={labelY - 10} width={56} height={20} rx={10} fill="#0f172a" stroke="#475569" />
-      <text x={labelX} y={labelY} textAnchor="middle" dominantBaseline="central" fontSize={11} fill="#cbd5e1">
-        {text}
-      </text>
+      <EdgeLabelRenderer>
+        <button
+          type="button"
+          className={`nodrag nopan ${button}`}
+          style={{
+            position: 'absolute',
+            pointerEvents: 'all',
+            transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,
+          }}
+          onClick={() => {
+            updateEdge(id, (e) => ({ animated: !e.animated }));
+          }}
+        >
+          {String(data?.cost ?? '')} · animate
+        </button>
+      </EdgeLabelRenderer>
     </>
   );
 }
 
-const nodeTypes = {
-  plan: CustomPlanNode,
-};
-const edgeTypes = {
-  cost: CostEdge,
-};
+const nodeTypes = { plan: PlanNode, group: GroupNode };
+const edgeTypes = { cost: CostEdge };
+
+const plan = (id: string, x: number, y: number, data: PlanData, extra: Partial<Node> = {}): Node => ({
+  id,
+  type: 'plan',
+  position: { x, y },
+  data,
+  ...extra,
+});
 
 const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'plan',
-    position: { x: 300, y: 50 },
-    data: { label: 'IndexScan', kind: 'PLAN OPERATOR', detail: 'idx_users_email', highlighted: true },
-    draggable: true,
-  },
-  {
-    id: '2',
-    type: 'plan',
-    position: { x: 150, y: 180 },
-    data: { label: 'Filter', kind: 'PLAN OPERATOR', detail: 'active = true' },
-    draggable: true,
-  },
-  {
-    id: '3',
-    type: 'plan',
-    position: { x: 450, y: 180 },
-    data: { label: 'Projection', kind: 'PLAN OPERATOR', detail: 'id, name, email', highlighted: true },
-    draggable: true,
-  },
-  {
-    id: '4',
-    type: 'plan',
-    position: { x: 450, y: 310 },
-    data: { label: 'Output', kind: 'SINK', detail: '10 rows', highlighted: true },
-    draggable: true,
-  },
+  { id: 'block', type: 'group', position: { x: 40, y: 140 }, width: 520, height: 300, data: { label: 'Subquery' } },
+  plan('1', 250, 20, { label: 'IndexScan', kind: 'PLAN OPERATOR', detail: 'idx_users_email', highlighted: true }),
+  plan('2', 40, 60, { label: 'Filter', kind: 'PLAN OPERATOR', detail: 'active = true' }, { parentId: 'block', extent: 'parent' }),
+  plan('3', 280, 60, { label: 'Projection', kind: 'PLAN OPERATOR', detail: 'id, name, email', highlighted: true }, { parentId: 'block', extent: 'parent' }),
+  plan('4', 280, 500, { label: 'Output', kind: 'SINK', detail: '10 rows', highlighted: true }),
 ];
 
 const initialEdges: Edge[] = [
@@ -111,57 +144,61 @@ const initialEdges: Edge[] = [
     target: '3',
     sourceHandle: 'out',
     targetHandle: 'in',
-    className: 'is-active',
     label: '10 rows',
+    animated: true,
     markerEnd: 'arrowclosed',
     style: { stroke: '#10b981', strokeWidth: 2 },
   },
-  {
-    id: 'e3-4',
-    source: '3',
-    target: '4',
-    sourceHandle: 'out',
-    targetHandle: 'in',
-    className: 'is-active',
-    markerEnd: 'arrowclosed',
-    style: { stroke: '#10b981', strokeWidth: 2 },
-  },
-  {
-    id: 'e2-3-side',
-    source: '2',
-    target: '3',
-    sourceHandle: 'next',
-    targetHandle: 'prev',
-    markerEnd: 'arrow',
-    style: { stroke: '#38bdf8', strokeWidth: 1.5, strokeDasharray: '3 3' },
-  },
+  { id: 'e3-4', source: '3', target: '4', sourceHandle: 'out', targetHandle: 'in', markerEnd: 'arrowclosed', style: { stroke: '#10b981', strokeWidth: 2 } },
+  { id: 'e2-3-side', source: '2', target: '3', sourceHandle: 'next', targetHandle: 'prev', markerEnd: 'arrow', style: { stroke: '#38bdf8', strokeWidth: 1.5 } },
 ];
+
+/** A big grid of small nodes, for watching what `onlyRenderVisibleElements` saves. */
+function bigGrid(count: number): Node[] {
+  const side = Math.ceil(Math.sqrt(count));
+  return Array.from({ length: count }, (_, i) => ({
+    id: `g${String(i)}`,
+    position: { x: (i % side) * 180, y: Math.floor(i / side) * 70 },
+    width: 140,
+    data: { label: `node ${String(i)}` },
+  }));
+}
+
+/** How many nodes are in the document right now. */
+function DomCount() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const read = () => { setCount(document.querySelectorAll('.react-flow__node').length); };
+    read();
+    const timer = setInterval(read, 400);
+    return () => { clearInterval(timer); };
+  }, []);
+  return <span data-testid="dom-count">{count} nodes in the DOM</span>;
+}
 
 const edgeId = (c: Connection) => `${c.source}:${String(c.sourceHandle)}->${c.target}:${String(c.targetHandle)}`;
 
 export function App() {
-  const [nodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [picked, setPicked] = useState('nothing selected');
+  const [boxSelect, setBoxSelect] = useState(false);
+  const [snap, setSnap] = useState(false);
+  const [many, setMany] = useState(false);
+  const stress = useMemo(() => bigGrid(2000), []);
 
-  // A connection is only a request: the engine never edits `edges`, so add it here —
-  // unless it joins a node to itself, or repeats an edge that already exists.
-  const existing = new Set(
-    edges.map((e) =>
-      edgeId({ source: e.source, target: e.target, sourceHandle: e.sourceHandle ?? null, targetHandle: e.targetHandle ?? null }),
-    ),
+  const isValidConnection = (c: Connection) => c.source !== c.target;
+  const onConnect = useCallback(
+    (c: Connection) => {
+      setEdges((all) =>
+        addEdge({ id: edgeId(c), ...c, markerEnd: 'arrowclosed', style: { stroke: '#a78bfa', strokeWidth: 2 } }, all),
+      );
+    },
+    [setEdges],
   );
-  const isValidConnection = (c: Connection) => c.source !== c.target && !existing.has(edgeId(c));
-  const onConnect = (c: Connection) => {
-    setEdges((all) => [
-      ...all,
-      { id: edgeId(c), ...c, markerEnd: 'arrowclosed', style: { stroke: '#a78bfa', strokeWidth: 2 } },
-    ]);
-  };
 
   return (
     <div className="relative flex h-full w-full flex-col">
-      {/* Header bar */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 backdrop-blur">
         <div className="flex items-center gap-2">
           <span className="font-bold text-emerald-400">Flowinger</span>
@@ -169,38 +206,62 @@ export function App() {
           <span className="hidden whitespace-nowrap text-xs text-slate-500 sm:inline">· Pure React & SVG Node Graph Renderer</span>
         </div>
         <div className="hidden text-xs text-slate-400 md:block">
-          Scroll or pinch to zoom · Drag background to pan · Drag nodes to move · Drag from a dot to connect · Click to select
+          Scroll to zoom · Drag to pan (or box-select) · Shift-drag to box-select · Backspace deletes · Arrow keys nudge
         </div>
       </header>
 
-      {/* Main Canvas Area */}
       <div className="relative flex-1 bg-slate-950">
         <FlowingerProvider>
           <FlowingerCanvas
-            nodes={nodes}
-            edges={edges}
+            nodes={many ? stress : nodes}
+            edges={many ? [] : edges}
+            {...(many ? {} : { onNodesChange, onEdgesChange })}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            nodesDraggable={true}
+            nodesDraggable
             nodesConnectable
             elementsSelectable
+            selectionOnDrag={boxSelect}
+            panOnDrag={boxSelect ? [1, 2] : true}
+            panOnScroll={boxSelect}
+            snapToGrid={snap}
+            snapGrid={[20, 20]}
+            onlyRenderVisibleElements={many}
+            fitView
             isValidConnection={isValidConnection}
             onConnect={onConnect}
-            onSelectionChange={({ nodes: picked }) => { setSelected(picked.map((n) => String((n.data as { label?: string }).label ?? n.id))); }}
-            onInit={(flow) => { flow.fitView(); }}
+            onSelectionChange={({ nodes: n, edges: e }) => {
+              setPicked(n.length + e.length === 0 ? 'nothing selected' : `${String(n.length)} nodes, ${String(e.length)} edges selected`);
+            }}
             keyboardNavigation
             ariaLabel="Query plan"
-            minZoom={0.2}
-            maxZoom={2.0}
+            minZoom={0.05}
+            maxZoom={2}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#334155" />
+            <Panel position="top-right">
+              <div className="flex flex-col gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-2.5 text-xs text-slate-300 shadow-lg">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={boxSelect} onChange={(e) => { setBoxSelect(e.target.checked); }} />
+                  Drag to box-select
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={snap} onChange={(e) => { setSnap(e.target.checked); }} />
+                  Snap to 20px grid
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={many} onChange={(e) => { setMany(e.target.checked); }} />
+                  2,000 nodes, drawn only in view
+                </label>
+                <div className="text-slate-500" data-testid="picked">{picked}</div>
+                <div className="text-slate-500">
+                  <DomCount />
+                </div>
+              </div>
+            </Panel>
           </FlowingerCanvas>
-          <div className="pointer-events-none absolute left-3 top-3 z-50 text-xs text-slate-400">
-            {selected.length > 0 ? `Selected: ${selected.join(', ')}` : 'Nothing selected'}
-            <span className="ml-2 text-slate-600">{edges.length} edges</span>
-          </div>
           <div className="absolute bottom-4 left-4 z-50">
-            <MiniMap width={160} height={110} nodeColor={(n) => (n.data.highlighted ? '#10b981' : '#64748b')} />
+            <MiniMap width={160} height={110} nodeColor={(n) => ((n.data as PlanData).highlighted ? '#10b981' : '#64748b')} />
           </div>
           <div className="absolute bottom-4 right-4 z-50">
             <Controls />

@@ -244,6 +244,12 @@ all exported under React Flow's names, and so are `useNodesState`, `useEdgesStat
 `applyEdgeChanges`, `addEdge` and `useNodesInitialized`. `useStore` reads the ten fields above, not React Flow's
 whole internal store.
 
+**Not built** (from memory of React Flow's API, not an audit): `expandParent`, reconnecting an edge
+(`onReconnect`), `connectionLineComponent`, auto-pan while dragging at the pane's edge, `zoomOnDoubleClick`,
+`ViewportPortal`, `useOnSelectionChange`, `useKeyPress`, `useNodesData`, `useNodeConnections`, `nodeOrigin`, and
+a `NodeToolbar` for a node other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
+pass a `padding` ratio, and `deleteKeyCode` is `'Backspace'` alone.
+
 ## Server rendering
 
 Works on React 18 and 19, including hydration. Nothing measures until the client mounts, so edges are
