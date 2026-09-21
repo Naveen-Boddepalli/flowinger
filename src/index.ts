@@ -65,6 +65,8 @@ export { getNodesBounds, getViewportForBounds, isRectIntersecting, viewportForBo
 // Handles & Ports
 export { Handle } from './Handle.tsx';
 export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
+export { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './builtinEdges.tsx';
+export { isEdge, isNode } from './guards.ts';
 
 // Background & Controls
 export { Background } from './Background.tsx';
@@ -79,9 +81,12 @@ export { NodeResizer, type NodeResizerProps, type ResizeParams } from './NodeRes
 // Edges & Path Math
 export { FlowingerEdges, type FlowingerEdgesProps } from './FlowingerEdges.tsx';
 export {
+  getBezierEdgeCenter,
   getBezierPath,
+  getEdgeCenter,
   getStraightPath,
   getSmoothStepPath,
+  type PathResult,
 } from './paths.ts';
 
 // Types & Enums

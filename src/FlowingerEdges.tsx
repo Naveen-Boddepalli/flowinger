@@ -306,6 +306,12 @@ const EdgePath = /*#__PURE__*/ memo(function EdgePath({
           markerStart={markerStart}
           markerEnd={markerEnd}
           style={style}
+          interactionWidth={edge.interactionWidth}
+          labelStyle={edge.labelStyle}
+          labelShowBg={edge.labelShowBg}
+          labelBgStyle={edge.labelBgStyle}
+          labelBgPadding={edge.labelBgPadding}
+          labelBgBorderRadius={edge.labelBgBorderRadius}
         />
       </EdgeContext.Provider>
       <Adornments
@@ -362,8 +368,18 @@ const CustomEdge = /*#__PURE__*/ memo(function CustomEdge({
           targetHandleId={edge.targetHandle ?? null}
           data={edge.data}
           label={edge.label}
+          labelStyle={edge.labelStyle}
+          labelShowBg={edge.labelShowBg}
+          labelBgStyle={edge.labelBgStyle}
+          labelBgPadding={edge.labelBgPadding}
+          labelBgBorderRadius={edge.labelBgBorderRadius}
           style={edge.style}
           selected={selected}
+          animated={edge.animated}
+          selectable={selectable}
+          deletable={edge.deletable ?? true}
+          interactionWidth={edge.interactionWidth}
+          pathOptions={edge.pathOptions}
           {...ends}
         />
       </EdgeContext.Provider>
@@ -521,7 +537,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
       );
     }
 
-    const path = pathFor(edge.type, from.point, from.position, to.point, to.position);
+    const path = pathFor(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
     return place(
       <EdgePath
         key={edge.id}

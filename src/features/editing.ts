@@ -12,6 +12,7 @@ export type EditingApi = Pick<
   | 'updateNode'
   | 'updateNodeData'
   | 'updateEdge'
+  | 'updateEdgeData'
   | 'getIntersectingNodes'
   | 'isNodeIntersecting'
 >;
@@ -98,6 +99,13 @@ export const editingFeature: Feature<EditingApi> = {
       ]);
     };
 
+    const updateEdgeData: EditingApi['updateEdgeData'] = (id, data, opts) => {
+      updateEdge(id, (edge) => {
+        const next = typeof data === 'function' ? data(edge) : data;
+        return { data: opts?.replace === true ? next : { ...edge.data, ...next } };
+      });
+    };
+
     return {
       setNodes,
       setEdges,
@@ -110,6 +118,7 @@ export const editingFeature: Feature<EditingApi> = {
       updateNode,
       updateNodeData,
       updateEdge,
+      updateEdgeData,
       getIntersectingNodes,
       isNodeIntersecting,
     };

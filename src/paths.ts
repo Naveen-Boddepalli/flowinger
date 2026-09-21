@@ -82,8 +82,52 @@ function getControlPoints(
   return [c1x, c1y, c2x, c2y];
 }
 
+/** What a path function hands back: the path, where its label goes, and how far that is from the source. */
+export type PathResult = [path: string, labelX: number, labelY: number, offsetX: number, offsetY: number];
+
+/** The middle of the straight line between two points, and how far it is from each of them along each axis. */
+export function getEdgeCenter({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+}: GetStraightPathParams): [centerX: number, centerY: number, offsetX: number, offsetY: number] {
+  const offsetX = Math.abs(targetX - sourceX) / 2;
+  const offsetY = Math.abs(targetY - sourceY) / 2;
+  return [
+    targetX < sourceX ? targetX + offsetX : targetX - offsetX,
+    targetY < sourceY ? targetY + offsetY : targetY - offsetY,
+    offsetX,
+    offsetY,
+  ];
+}
+
 /**
- * Generates an SVG cubic bezier path string between two points.
+ * The point half way along a cubic bezier (t = 0.5), which is on the curve where the middle of the line
+ * between its ends is not. `offsetX` and `offsetY` are how far it is from the source.
+ */
+export function getBezierEdgeCenter({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourceControlX,
+  sourceControlY,
+  targetControlX,
+  targetControlY,
+}: GetStraightPathParams & {
+  sourceControlX: number;
+  sourceControlY: number;
+  targetControlX: number;
+  targetControlY: number;
+}): [centerX: number, centerY: number, offsetX: number, offsetY: number] {
+  const centerX = sourceX * 0.125 + sourceControlX * 0.375 + targetControlX * 0.375 + targetX * 0.125;
+  const centerY = sourceY * 0.125 + sourceControlY * 0.375 + targetControlY * 0.375 + targetY * 0.125;
+  return [centerX, centerY, Math.abs(centerX - sourceX), Math.abs(centerY - sourceY)];
+}
+
+/**
+ * Generates an SVG cubic bezier path string between two points. The label goes on the curve, half way along.
  */
 export function getBezierPath({
   sourceX,
@@ -93,7 +137,7 @@ export function getBezierPath({
   targetY,
   targetPosition = Position.Top,
   curvature = 0.25,
-}: GetBezierPathParams): [path: string, labelX: number, labelY: number] {
+}: GetBezierPathParams): PathResult {
   const [c1x, c1y, c2x, c2y] = getControlPoints(
     sourceX,
     sourceY,
@@ -104,13 +148,20 @@ export function getBezierPath({
     curvature,
   );
 
-  // Midpoint approximation for edge labels
-  const labelX = (sourceX + targetX) / 2;
-  const labelY = (sourceY + targetY) / 2;
+  const [labelX, labelY, offsetX, offsetY] = getBezierEdgeCenter({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourceControlX: c1x,
+    sourceControlY: c1y,
+    targetControlX: c2x,
+    targetControlY: c2y,
+  });
 
   const path = `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${targetX.toFixed(2)} ${targetY.toFixed(2)}`;
 
-  return [path, labelX, labelY];
+  return [path, labelX, labelY, offsetX, offsetY];
 }
 
 /**
@@ -121,11 +172,10 @@ export function getStraightPath({
   sourceY,
   targetX,
   targetY,
-}: GetStraightPathParams): [path: string, labelX: number, labelY: number] {
-  const labelX = (sourceX + targetX) / 2;
-  const labelY = (sourceY + targetY) / 2;
+}: GetStraightPathParams): PathResult {
+  const [labelX, labelY, offsetX, offsetY] = getEdgeCenter({ sourceX, sourceY, targetX, targetY });
   const path = `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} L ${targetX.toFixed(2)} ${targetY.toFixed(2)}`;
-  return [path, labelX, labelY];
+  return [path, labelX, labelY, offsetX, offsetY];
 }
 
 /**
@@ -171,14 +221,13 @@ export function getSmoothStepPath({
   targetX,
   targetY,
   borderRadius = 5,
-}: GetSmoothStepPathParams): [path: string, labelX: number, labelY: number] {
+}: GetSmoothStepPathParams): PathResult {
   const isHorizontal = sourcePosition === Position.Left || sourcePosition === Position.Right;
-  const labelX = (sourceX + targetX) / 2;
-  const labelY = (sourceY + targetY) / 2;
+  const [labelX, labelY, offsetX, offsetY] = getEdgeCenter({ sourceX, sourceY, targetX, targetY });
   const points: [number, number][] = isHorizontal
     ? [[sourceX, sourceY], [labelX, sourceY], [labelX, targetY], [targetX, targetY]]
     : [[sourceX, sourceY], [sourceX, labelY], [targetX, labelY], [targetX, targetY]];
-  return [roundedPolyline(points, borderRadius), labelX, labelY];
+  return [roundedPolyline(points, borderRadius), labelX, labelY, offsetX, offsetY];
 }
 
 /** The path an edge of this `type` takes between two ends — a built-in one, whatever else `type` may name. */
@@ -188,15 +237,20 @@ export function pathFor(
   sourcePosition: Position,
   t: { x: number; y: number },
   targetPosition: Position,
+  options?: Edge['pathOptions'],
 ): { d: string; labelX: number; labelY: number } {
   const ends = { sourceX: s.x, sourceY: s.y, targetX: t.x, targetY: t.y };
   const [d, labelX, labelY] =
     type === 'straight'
       ? getStraightPath(ends)
       : type === 'smoothstep'
-        ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition })
+        ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, ...pick(options, 'borderRadius') })
         : type === 'step'
           ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, borderRadius: 0 })
-          : getBezierPath({ ...ends, sourcePosition, targetPosition });
+          : getBezierPath({ ...ends, sourcePosition, targetPosition, ...pick(options, 'curvature') });
   return { d, labelX, labelY };
 }
+
+/** `{ [key]: value }` when the option is there, else nothing — so a default still applies. */
+const pick = <K extends 'curvature' | 'borderRadius'>(o: Edge['pathOptions'], key: K): { [P in K]?: number } =>
+  o?.[key] === undefined ? {} : { [key]: o[key] } as { [P in K]?: number };

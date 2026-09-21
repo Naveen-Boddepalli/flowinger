@@ -1,4 +1,5 @@
 import type { CSSProperties, ComponentType, ReactNode } from 'react';
+import type { NodeConnection } from './connections.ts';
 import type { Feature } from './features.ts';
 
 export const Position = {
@@ -161,6 +162,21 @@ export interface Edge {
   type?: 'bezier' | 'straight' | 'step' | 'smoothstep' | (string & {});
   /** Text drawn at the middle of the edge. */
   label?: string;
+  /** Merged over the label's own style. */
+  labelStyle?: CSSProperties;
+  /** Draw a box behind the label (instead of the halo that keeps it readable). Its size is measured, so it needs a browser. */
+  labelShowBg?: boolean;
+  labelBgStyle?: CSSProperties;
+  /** Space between the label and its box's edge, `[x, y]`. Default `[2, 4]`. */
+  labelBgPadding?: [number, number];
+  labelBgBorderRadius?: number;
+  /**
+   * The width, in graph units, of the invisible strip along the edge that takes the pointer, so a thin edge is
+   * easy to hit. Default 20 when the edge can be clicked or the canvas listens to edge events, else none.
+   */
+  interactionWidth?: number;
+  /** How the built-in `bezier` and `smoothstep` paths bend: the bezier's `curvature` (default 0.25), the smoothstep's `borderRadius` (default 5). */
+  pathOptions?: { curvature?: number; borderRadius?: number };
   markerStart?: MarkerType | EdgeMarker;
   markerEnd?: MarkerType | EdgeMarker;
   data?: Record<string, unknown>;
@@ -217,8 +233,19 @@ export interface EdgeProps {
   targetHandleId: string | null;
   data?: Record<string, unknown> | undefined;
   label?: string | undefined;
+  labelStyle?: CSSProperties | undefined;
+  labelShowBg?: boolean | undefined;
+  labelBgStyle?: CSSProperties | undefined;
+  labelBgPadding?: [number, number] | undefined;
+  labelBgBorderRadius?: number | undefined;
   style?: CSSProperties | undefined;
   selected?: boolean | undefined;
+  animated?: boolean | undefined;
+  /** Whether a click can select it: the canvas allows that, and the edge has not opted out. */
+  selectable?: boolean | undefined;
+  deletable?: boolean | undefined;
+  interactionWidth?: number | undefined;
+  pathOptions?: Edge['pathOptions'];
   /** `url(#…)` references into the shared marker definitions — put them on a `<path>`. */
   markerStart?: string | undefined;
   markerEnd?: string | undefined;
@@ -349,6 +376,18 @@ export interface FlowingerInstance {
     patch: Partial<Edge> | ((edge: Edge) => Partial<Edge>),
     options?: { replace?: boolean },
   ) => void;
+  updateEdgeData: (
+    id: string,
+    data: Record<string, unknown> | ((edge: Edge) => Record<string, unknown>),
+    options?: { replace?: boolean },
+  ) => void;
+  /**
+   * The edges at a node, narrowed by which end of them it is (`type`) and, with a `type`, by handle. As in React
+   * Flow, a `handleId` alone, or `null`, does not narrow.
+   */
+  getNodeConnections: (query: { type?: HandleType; nodeId: string; handleId?: string | null }) => NodeConnection[];
+  /** The edges at one handle — `getNodeConnections` for a `type`, as React Flow's older call has it. */
+  getHandleConnections: (query: { type: HandleType; nodeId: string; id?: string | null }) => NodeConnection[];
 
   /**
    * Delete nodes and edges by id (a node's edges go with it): reports the removal

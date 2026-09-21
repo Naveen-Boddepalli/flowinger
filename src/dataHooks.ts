@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useNodeId, useStore } from './context.ts';
+import { connectionsAt, type NodeConnection } from './connections.ts';
 import type { Edge, HandleType, Node } from './types.ts';
 
 /** The nodes as given to the canvas — a drag in an uncontrolled flow is not in their `position`s. */
@@ -41,14 +42,7 @@ export function useNodesData(target: string | readonly string[]): NodeData | Nod
   return typeof target === 'string' ? (found[0] ?? null) : found;
 }
 
-/** One edge as seen from a node. */
-export interface NodeConnection {
-  edgeId: string;
-  source: string;
-  target: string;
-  sourceHandle: string | null;
-  targetHandle: string | null;
-}
+export type { NodeConnection } from './connections.ts';
 
 export interface UseNodeConnectionsOptions {
   /** The node to look at. Default: the node this component is rendered inside. */
@@ -88,24 +82,7 @@ export function useNodeConnections({
   const own = useNodeId();
   const nodeId = id ?? own;
   const connections = useStore(
-    (s) =>
-      s.edges.flatMap((e): NodeConnection[] => {
-        const asSource = e.source === nodeId && (handleId === undefined || (e.sourceHandle ?? null) === handleId);
-        const asTarget = e.target === nodeId && (handleId === undefined || (e.targetHandle ?? null) === handleId);
-        const wanted =
-          handleType === 'source' ? asSource : handleType === 'target' ? asTarget : asSource || asTarget;
-        return wanted
-          ? [
-              {
-                edgeId: e.id,
-                source: e.source,
-                target: e.target,
-                sourceHandle: e.sourceHandle ?? null,
-                targetHandle: e.targetHandle ?? null,
-              },
-            ]
-          : [];
-      }),
+    (s) => (nodeId === null ? [] : connectionsAt(s.edges, nodeId, { handleType, handleId })),
     sameConnections,
   );
 

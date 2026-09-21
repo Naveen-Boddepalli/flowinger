@@ -1,3 +1,4 @@
+import { connectionsAt } from './connections.ts';
 import { resolveFeatures, type EngineContext, type Feature, type FeatureEvent } from './features.ts';
 import { absolutePositionOf } from './parents.ts';
 import {
@@ -1066,9 +1067,12 @@ export function createFlowingerStore(
     updateNode: lend('editing', 'updateNode'),
     updateNodeData: lend('editing', 'updateNodeData'),
     updateEdge: lend('editing', 'updateEdge'),
+    updateEdgeData: lend('editing', 'updateEdgeData'),
     getIntersectingNodes: lend('editing', 'getIntersectingNodes'),
     isNodeIntersecting: lend('editing', 'isNodeIntersecting'),
     getNodesBounds: (list) => boundsOfNodes(list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n))),
+    getNodeConnections: ({ type, nodeId, handleId }) => connectionsAt(edges, nodeId, { handleType: type, handleId }),
+    getHandleConnections: ({ type, nodeId, id }) => connectionsAt(edges, nodeId, { handleType: type, handleId: id }),
     toObject: () => ({ nodes: getNodesNow(), edges: getEdgesNow(), viewport }),
     deleteElements: lend('delete', 'deleteElements'),
   };
