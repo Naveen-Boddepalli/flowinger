@@ -104,7 +104,9 @@ export const NodeWrapper = memo(function NodeWrapper({
       observer.disconnect();
       unregister();
     };
-  }, [store, node.id]);
+    // A declared size is applied as the node's style, so a change to it is a change
+    // of layout to read now — not whenever the observer next gets round to it.
+  }, [store, node.id, node.width, node.height]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     justDragged.current = false;
@@ -189,6 +191,9 @@ export const NodeWrapper = memo(function NodeWrapper({
         node.className ?? ''
       } ${dragging ? 'dragging' : ''} ${selected ? 'selected' : ''}`}
       style={{
+        // A declared size is the node's size (as in React Flow): what a resize writes back.
+        ...(node.width === undefined ? {} : { width: node.width }),
+        ...(node.height === undefined ? {} : { height: node.height }),
         ...node.style,
         position: 'absolute',
         transform: `translate(${String(position.x)}px, ${String(position.y)}px)`,

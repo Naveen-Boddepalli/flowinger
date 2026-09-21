@@ -27,6 +27,8 @@ describe('Flowinger hydration', () => {
     // …and it is alive afterwards: mounted, with its handles measured or not,
     // and the framing intact.
     expect(container.textContent).toContain('mounted 2');
+    // The HTML edge label is drawn once the layer it goes into has mounted.
+    expect(container.querySelector('.flowinger-edge-labels')?.textContent).toContain('HTML-LABEL');
     expect(container.querySelector<HTMLElement>('.flowinger-viewport')?.style.transform).toBe(
       'translate(5px, 6px) scale(2)',
     );

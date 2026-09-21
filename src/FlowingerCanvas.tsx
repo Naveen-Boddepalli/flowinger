@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
 import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
+import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
@@ -197,6 +198,8 @@ function InnerCanvas({
   const edgesChange = ownsEdges || onEdgesChange ? changeEdges : undefined;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // The layer an edge's HTML labels portal into; state, so they render once it exists.
+  const [labelHost, setLabelHost] = useState<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const pan = useRef<PanState | null>(null);
   /** Every pointer currently down, so a second finger can be told from a click. */
@@ -599,13 +602,30 @@ function InnerCanvas({
           transform: viewportTransform(store.getViewport()),
         }}
       >
-        <FlowingerEdges
-          edges={edges}
-          nodes={nodes}
-          edgeTypes={edgeTypes}
-          elementsSelectable={elementsSelectable}
-          edgesFocusable={edgesFocusable}
-          controlledSelection={edgesChange !== undefined}
+        <EdgeLabelHost.Provider value={labelHost}>
+          <FlowingerEdges
+            edges={edges}
+            nodes={nodes}
+            edgeTypes={edgeTypes}
+            elementsSelectable={elementsSelectable}
+            edgesFocusable={edgesFocusable}
+            controlledSelection={edgesChange !== undefined}
+          />
+        </EdgeLabelHost.Provider>
+        {/* Above the edges, below the nodes; takes no events of its own. */}
+        <div
+          ref={setLabelHost}
+          className="flowinger-edge-labels react-flow__edgelabel-renderer"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 0,
+          }}
         />
 
         <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>

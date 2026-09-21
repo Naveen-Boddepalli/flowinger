@@ -1,4 +1,5 @@
 import { createContext, useContext, useRef, useSyncExternalStore } from 'react';
+import { NodeContext } from './nodeContext.ts';
 import type { FlowingerInstance, Viewport } from './types.ts';
 import type { FlowingerState, FlowingerStore } from './store.ts';
 
@@ -89,4 +90,9 @@ export function useNodesInitialized(): boolean {
     () => store?.areNodesInitialized() ?? false,
     () => false,
   );
+}
+
+/** The id of the node this component is rendered inside; null anywhere else. */
+export function useNodeId(): string | null {
+  return useContext(NodeContext)?.nodeId ?? null;
 }

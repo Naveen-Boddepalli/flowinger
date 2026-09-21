@@ -10,6 +10,7 @@ export {
   useStore,
   useViewport,
   useNodesInitialized,
+  useNodeId,
 } from './context.ts';
 
 // Controlled flows
@@ -35,6 +36,9 @@ export { Background } from './Background.tsx';
 export { MiniMap, type MiniMapProps } from './MiniMap.tsx';
 export { Controls } from './Controls.tsx';
 export { Panel, type PanelProps, type PanelPosition } from './Panel.tsx';
+export { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
+export { NodeToolbar, type NodeToolbarProps } from './NodeToolbar.tsx';
+export { NodeResizer, type NodeResizerProps, type ResizeParams } from './NodeResizer.tsx';
 
 // Edges & Path Math
 export { FlowingerEdges } from './FlowingerEdges.tsx';

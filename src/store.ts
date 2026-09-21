@@ -282,6 +282,7 @@ export function createFlowingerStore(
   const connectionListeners = new Set<Listener>();
   const stateListeners = new Set<Listener>();
   const selectionRectListeners = new Set<Listener>();
+  const selectionChangeListeners = new Set<Listener>();
   /** The box being dragged, in pane pixels — null when there is none. */
   let selectionRect: Rect | null = null;
   const nodeListeners = new Map<string, Set<Listener>>();
@@ -697,6 +698,7 @@ export function createFlowingerStore(
     const key = JSON.stringify([nodeIds, edgeIds]);
     if (key === announced) return;
     announced = key;
+    emit(selectionChangeListeners);
     callbacks.onSelectionChange?.({
       nodes: nodeIds.flatMap((id) => nodeById.get(id) ?? []),
       edges: edgeIds.flatMap((id) => edgeById.get(id) ?? []),
@@ -796,6 +798,42 @@ export function createFlowingerStore(
     setSelection(nodeIds, edgeIds);
     selectionRect = rect;
     emit(selectionRectListeners);
+  };
+
+  /** Where a node is and how big, in graph units: the dragged position, the measured size. */
+  const getNodeRect = (id: string): Rect | null => {
+    const n = nodeById.get(id);
+    return n ? { ...resolvePosition(id, n.position), ...getNodeSize(n) } : null;
+  };
+
+  /**
+   * Resizes a node: its new box, as a `dimensions` change (which writes
+   * `width` / `height`) and, if its top-left moved, a `position` change. Reported
+   * only — a resize needs somebody applying changes, since the size lives on the node.
+   */
+  const resizeNode = (id: string, next: Rect, resizing: boolean) => {
+    const from = getNodeRect(id);
+    if (!from) return;
+    // This *is* the caller hearing the size, so the measurement that follows the
+    // re-render need not tell them again — unless the DOM came out different.
+    reported.set(id, { width: next.width, height: next.height });
+    const changes: NodeChange[] = [
+      {
+        type: 'dimensions',
+        id,
+        dimensions: { width: next.width, height: next.height },
+        resizing,
+        setAttributes: true,
+      },
+    ];
+    if (next.x !== from.x || next.y !== from.y) {
+      changes.push({ type: 'position', id, position: { x: next.x, y: next.y } });
+    }
+    emitNodeChanges(changes);
+  };
+
+  const endResize = (id: string) => {
+    emitNodeChanges([{ type: 'dimensions', id, resizing: false }]);
   };
 
   const endBoxSelect = () => {
@@ -1348,6 +1386,11 @@ export function createFlowingerStore(
     clearSelection,
     boxSelect,
     endBoxSelect,
+    getNodeRect,
+    resizeNode,
+    endResize,
+    getSelectedNodeCount: (): number => selectedNodeIds().length,
+    subscribeSelection: subscribeTo(selectionChangeListeners),
     getSelectionRect: (): Rect | null => selectionRect,
     subscribeSelectionRect: subscribeTo(selectionRectListeners),
     getSelection,

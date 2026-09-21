@@ -1,14 +1,20 @@
 // Shared by ssr.test.tsx (a server: no DOM) and hydration.test.tsx (a client).
 import {
+  BaseEdge,
   Controls,
+  EdgeLabelRenderer,
   FlowingerCanvas,
   FlowingerProvider,
   Handle,
   MiniMap,
+  NodeResizer,
+  NodeToolbar,
   Position,
+  getStraightPath,
   useStore,
   useViewport,
   type Edge,
+  type EdgeProps,
   type Node,
   type NodeProps,
 } from '../index.ts';
@@ -16,10 +22,29 @@ import {
 function PortNode({ data }: NodeProps) {
   return (
     <div>
+      <NodeResizer />
+      <NodeToolbar isVisible>
+        <button type="button">tools</button>
+      </NodeToolbar>
       <Handle id="in" type="target" position={Position.Top} />
       <span>{String(data.label)}</span>
       <Handle id="out" type="source" position={Position.Bottom} />
     </div>
+  );
+}
+
+/** A custom edge whose label is HTML, drawn into a layer that only exists in a browser. */
+function LabelledEdge(props: EdgeProps) {
+  const [path, x, y] = getStraightPath(props);
+  return (
+    <>
+      <BaseEdge path={path} />
+      <EdgeLabelRenderer>
+        <span className="html-label" style={{ position: 'absolute', transform: `translate(${String(x)}px, ${String(y)}px)` }}>
+          HTML-LABEL
+        </span>
+      </EdgeLabelRenderer>
+    </>
   );
 }
 
@@ -44,6 +69,7 @@ const edges: Edge[] = [
     markerEnd: 'arrowclosed',
     animated: true,
   },
+  { id: 'e2', source: 'a', target: 'b', type: 'labelled' },
 ];
 
 const noChanges = () => {};
@@ -54,6 +80,7 @@ export const tree = (
       nodes={nodes}
       edges={edges}
       nodeTypes={{ port: PortNode }}
+      edgeTypes={{ labelled: LabelledEdge }}
       keyboardNavigation
       // Controlled, so `selected` on a node is what the server draws.
       elementsSelectable

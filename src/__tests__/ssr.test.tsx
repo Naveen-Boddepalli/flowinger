@@ -55,6 +55,13 @@ describe('Flowinger server rendering', () => {
     expect(html).toMatch(/class="[^"]*\banimated\b/);
   });
 
+  it('renders a node’s toolbar and resizer, and leaves an HTML edge label for the browser', () => {
+    const html = renderToString(tree);
+    expect(html).toContain('flowinger-node-toolbar');
+    expect(html).toContain('flowinger-resize-control');
+    expect(html).not.toContain('HTML-LABEL'); // its layer does not exist until mounted
+  });
+
   it('reports "not mounted" on the server, where no canvas has attached', () => {
     expect(renderToString(tree)).toContain('unmounted 2');
   });
