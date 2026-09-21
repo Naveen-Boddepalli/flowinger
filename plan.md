@@ -7,7 +7,7 @@
 edges, selection, connecting, the minimap, `translateExtent`, and the render-loop regression),
 `flowingerStore.test.ts` (the pure store), `pointer.test.ts` (pinch maths), `ssr.test.tsx` (a server render
 in vitest's `node` environment, where there really is no `document`) and `hydration.test.tsx`.
-`pnpm typecheck`, `pnpm test` (427 tests, in 17 files) and `pnpm build` pass on React 19 **and** React 18, and the
+`pnpm typecheck`, `pnpm test` (599 tests, in 25 files) and `pnpm build` pass on React 19 **and** React 18, and the
 installed tarball renders, hydrates and type-checks (TypeScript 7, `skipLibCheck` off) on both.
 
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
@@ -172,6 +172,66 @@ at the press) rather than in screen deltas, or a node would drift from under the
 also fixes a node's drag when the view moves for any other reason mid-drag. `expandParent` is a pure module
 (`src/expand.ts`): the parent's box only grows, and growing past its top or left moves its corner, so its
 other children are re-based to stay put on the canvas.
+
+### Third round: a modular core
+
+The problem was the size trend. QueryLens's `flow` chunk went 14.0 → 21.7 → 24.0 kB gzip as features were added,
+because a canvas and its store carried every feature whether a consumer used it or not — and QueryLens uses none of
+drag, connect, selection boxes, delete or the edit API; it hands a static viewer `nodes` and `edges`.
+
+- **Features.** `FlowingerCore` is the canvas with only the `features` it is given. `FlowingerCanvas` (alias
+  `ReactFlow`) is `FlowingerCore` with `allFeatures`, plus the own-state behind `defaultNodes` / `defaultEdges`
+  (moved out of the core so `changes.ts` is not in a lean bundle). The public API is otherwise unchanged.
+- **A feature has two halves** (`src/features.ts`). `install(ctx)` is the engine half: an `EngineContext` — getters
+  over the store's *current* state, `on('change' | 'detach')`, `changed()`, `api(other)` — and it returns the
+  methods it adds. The React half is five slots: `useCanvas` (pane gestures, keys, container style), `useNode` (a
+  node's pointer and key handlers, `dragging`, `startConnection`), `Layer`, `EdgesLayer` (in the topmost edge
+  layer) and `EdgeAdornment` (with a selected edge). Hooks run in the order the features were given, so the list is
+  read once. `needs` installs dependencies first; a feature is known by its name.
+- **What moved out:** `drag` (with `expandParent` and the arrow keys), `autoPan` (needed by drag and connect),
+  `connect` (with the connection line), `reconnect` (with the grips), `boxSelect` (with the box), `delete` (with the
+  key), `culling`, `editing` (the instance's mutators) and `resize` (installed by `NodeResizer` itself). **What
+  stayed:** selection — small, and slicing it needed node, edge and pane slots for about 0.7 kB — sub-flows, the
+  viewport, handles and measurement, and edges.
+- **Instance methods a feature supplies are stable delegators**, present from the start: `const { setNodes } =
+  useReactFlow()` taken before the canvas renders (the ordinary React Flow pattern) still works, and without the
+  feature it throws and names it.
+- **A dev warning** (`src/devWarnings.ts`, behind `process.env.NODE_ENV`, so a production bundle drops it) says
+  when a prop's feature is missing. Writing it turned up a real flaw — it judged `defaultEdges` only when `nodes`
+  was also absent — found by a test written for it.
+- **What mattered most in measuring:** `dist/index.js` is *one pre-bundled file*, so a consumer's bundler can only
+  drop what nothing at the top level keeps alive. Top-level `memo()` / `createContext()` calls are now marked
+  `/*#__PURE__*/`; without that, `MiniMap` and `Controls` stayed in a lean bundle although never imported (+1.2 kB),
+  and a measurement taken from `src` (a real module graph) would not have shown it. `scripts/size-dist.mjs` and
+  `src/__tests__/bundle.test.ts` build the library and bundle small consumers from the *built* output; the test
+  fails if a feature, an unused component, `changes.ts` or the warning table leaks in (checked by breaking each).
+  It only matches text that survives minification — a function's name is mangled and would prove nothing.
+- **Numbers** (gzip, a consumer importing `Background`, `Handle`, `Position`, the canvas, its provider,
+  `useReactFlow`, `useStore`): the whole canvas **22.8 kB** (21.0 before — the plumbing costs 1.8); the core with no
+  features **15.2 kB** from `dist` (15.4 from `src`). CI holds them to 24 and 16, and the core from `dist` to 16.
+- **Verified:** 599 tests (53 new: resolving, the store's `use` / `api` / hooks, delegators, the lean canvas, one
+  feature at a time, a feature of one's own, a server render of the lean canvas, and the bundle contents);
+  **mutation testing of the seams** — about 70 mutants across the store plumbing, the canvas and node wiring, the
+  edges, the owning wrapper and the warnings, with every survivor killed by a new test or shown equivalent
+  (some of those gaps predate this round: a controlled selection reaching culling, and the wrapper owning *edges*); React 18.3.1; the packed tarball on TypeScript 7 (bundler and nodenext, `skipLibCheck` off,
+  `exactOptionalPropertyTypes`) with a custom `Feature`, and three negative controls that must fail; and a real
+  browser. There: the whole canvas (drag, selection, the node toolbar, a new connection, and a reconnect of *each*
+  end) and the core with nothing, then with only `drag`, then with only `reconnect` (whose `needs` made every
+  handle connectable). In the core, a press on a node pans instead of dragging it, a click still selects, and the
+  delete key does nothing. Two reconnects "failed" first: both would have duplicated an edge that already existed,
+  which `reconnectEdge` refuses by design.
+- **QueryLens** (`flowinger-trial`, pin `d132971`, `FlowTree` on `FlowingerCore` + `FlowingerProvider` and no
+  feature): typecheck and lint clean, 1170 unit tests, **79 / 79** e2e on the installed Chrome. Its `flow` chunk is
+  **18.2 kB** (24.0 carrying the same features in the canvas, 21.7 at the previous pin, 60.5 with React Flow), total
+  377.2 kB; the flow budget there is 25 → 20.
+- **Costs and changes to know about.** `@types/node` is a dev dependency, and `tsconfig.json` sets
+  `types: ["node"]` (TypeScript 6 stopped auto-including `@types/*`), for the tests and for `process.env.NODE_ENV`;
+  the library now reads that one variable, as React does, so a page that loads the ES module *without* a bundler
+  must define it. The exported `FlowingerEdges` draws the connection line and the reconnect grips only when given
+  the features that draw them. An `EdgeAdornment` is drawn only with *selected* edges, so an unselected edge costs
+  what it did.
+  `pnpm size` takes `--max-full` / `--max-lean` (the old `--max` is gone). Not done: making selection itself a
+  feature, and trimming the core further — its floor is the viewport, edges, handles and measurement.
 
 ### Not built
 
