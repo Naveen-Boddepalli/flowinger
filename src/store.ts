@@ -79,6 +79,8 @@ export interface ConnectionState {
   endPosition: Position;
   /** Over a handle that would make a valid connection, over one that would not, or over neither (null). */
   isValid: boolean | null;
+  /** The edge whose end is being dragged, when this is a reconnection — it is not drawn meanwhile. */
+  reconnecting: string | null;
 }
 
 /** Where a connection end lives: a node, one of its handles by id (null = unnamed), and that handle's type. */
@@ -103,6 +105,11 @@ export interface NodeCallbacks {
   onNodeDragStart?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
   onNodeDrag?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
   onNodeDragStop?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
+  onReconnect?: ((oldEdge: Edge, newConnection: Connection) => void) | undefined;
+  onReconnectStart?: ((event: PointerEvent, edge: Edge, handleType: HandleType) => void) | undefined;
+  onReconnectEnd?:
+    | ((event: PointerEvent, edge: Edge, handleType: HandleType, state: ConnectEndState) => void)
+    | undefined;
   onConnectStart?: ((event: PointerEvent, params: ConnectStartParams) => void) | undefined;
   onConnectEnd?: ((event: PointerEvent, state: ConnectEndState) => void) | undefined;
   onEdgeClick?: ((event: React.MouseEvent, edge: Edge) => void) | undefined;
@@ -769,10 +776,38 @@ export function createFlowingerStore(
    * canvas; Escape cancels it. Nothing here edits `edges` — a finished
    * connection is handed to `onConnect` for the caller to add.
    */
+  /** Whether a connection joins the very same two handles an edge already does. */
+  const sameEnds = (edge: Edge, c: Connection): boolean =>
+    edge.source === c.source &&
+    edge.target === c.target &&
+    (edge.sourceHandle ?? null) === c.sourceHandle &&
+    (edge.targetHandle ?? null) === c.targetHandle;
+
   const startConnection = (nodeId: string, handleEl: HTMLElement, at: PointerEvent) => {
     const record = [...(handles.get(nodeId) ?? [])].find((r) => r.el === handleEl);
-    const start = record && pointOfHandle(nodeId, record);
-    if (!record || !start) return;
+    if (record) beginConnection(nodeId, record, at, null);
+  };
+
+  /**
+   * Begins dragging one end of an edge to another handle: the *other* end stays
+   * where it is, and the drag is a connection from it — so it snaps, is vetoed and
+   * cancelled just like one — which on release is reported as a reconnection.
+   */
+  const startReconnect = (edge: Edge, end: HandleType, at: PointerEvent) => {
+    const fixed: HandleType = end === 'source' ? 'target' : 'source';
+    const nodeId = end === 'source' ? edge.target : edge.source;
+    const record = findHandle(nodeId, end === 'source' ? edge.targetHandle : edge.sourceHandle, fixed);
+    if (record) beginConnection(nodeId, record, at, { edge, end });
+  };
+
+  const beginConnection = (
+    nodeId: string,
+    record: HandleRecord,
+    at: PointerEvent,
+    reconnect: { edge: Edge; end: HandleType } | null,
+  ) => {
+    const start = pointOfHandle(nodeId, record);
+    if (!start) return;
     cancelConnection();
 
     const from: Endpoint = { nodeId, id: record.id, type: record.type };
@@ -781,10 +816,12 @@ export function createFlowingerStore(
         start,
         startPosition: record.position,
         ...connectionEnd(from, record.position, clientX, clientY),
+        reconnecting: reconnect?.edge.id ?? null,
       });
     };
     follow(at.clientX, at.clientY);
-    callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
+    if (reconnect) callbacks.onReconnectStart?.(at, reconnect.edge, reconnect.end);
+    else callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
 
     // Held near the edge, the view pans — and the line's free end, being in graph
     // space, has to be worked out again against the view it has just moved to.
@@ -806,6 +843,12 @@ export function createFlowingerStore(
         ? connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type })
         : null;
       const valid = hit === null ? null : c !== null && isAllowed(c);
+      if (reconnect) {
+        // Dropped back where it came from is not a change.
+        if (c && valid && !sameEnds(reconnect.edge, c)) callbacks.onReconnect?.(reconnect.edge, c);
+        callbacks.onReconnectEnd?.(e, reconnect.edge, reconnect.end, { connection: c, isValid: valid });
+        return;
+      }
       if (c && valid) callbacks.onConnect?.(c);
       callbacks.onConnectEnd?.(e, { connection: c, isValid: valid });
     };
@@ -1673,6 +1716,7 @@ export function createFlowingerStore(
     measureHandles,
     findHandle,
     startConnection,
+    startReconnect,
     beginAutoPan,
     getConnection: () => connection,
     getNodes: (): readonly Node[] => nodes,

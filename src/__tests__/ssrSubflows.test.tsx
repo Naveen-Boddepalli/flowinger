@@ -42,4 +42,18 @@ describe('server rendering nested nodes and a culled diagram', () => {
     expect(html).toContain('data-id="near"');
     expect(html).toContain('data-id="far"');
   });
+
+  it('draws a selected, reconnectable edge without its drag handles, which need the browser', () => {
+    const html = renderToString(
+      <FlowingerCanvas
+        nodes={[n('a', 0, 0), n('b', 0, 200)]}
+        edges={[{ id: 'e', source: 'a', target: 'b', selected: true }]}
+        elementsSelectable
+        onEdgesChange={() => {}}
+        onReconnect={() => {}}
+      />,
+    );
+    expect(html).toContain('data-testid="edge-e"');
+    expect(html).not.toContain('flowinger-reconnect-anchor');
+  });
 });

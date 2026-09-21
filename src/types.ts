@@ -146,6 +146,11 @@ export interface Edge {
   selectable?: boolean;
   /** `false` keeps it out of a delete. */
   deletable?: boolean;
+  /**
+   * Whether its ends can be dragged to other handles (see `onReconnect`): `false`
+   * for neither, or `'source'` / `'target'` for just that end. Default true.
+   */
+  reconnectable?: boolean | HandleType;
   /** A built-in path, or a key of the canvas's `edgeTypes`. */
   type?: 'bezier' | 'straight' | 'step' | 'smoothstep' | (string & {});
   /** Text drawn at the middle of the edge. */
@@ -453,6 +458,18 @@ export interface FlowingerProps {
   onConnect?: (connection: Connection) => void;
   /** Veto a connection. Also decides whether a handle snaps the in-progress line to itself. */
   isValidConnection?: (connection: Connection) => boolean;
+  /**
+   * An end of a selected edge was dragged onto another handle: `newConnection` is what it would now
+   * join, source → target. Nothing is edited for you — swap the edge for it (`reconnectEdge`). Giving
+   * this is what shows the drag handles on a selected edge.
+   */
+  onReconnect?: (oldEdge: Edge, newConnection: Connection) => void;
+  /** An end of an edge began to be dragged; `handleType` is which end. */
+  onReconnectStart?: (event: PointerEvent, edge: Edge, handleType: HandleType) => void;
+  /** The drag ended, whether or not it found a handle. */
+  onReconnectEnd?: (event: PointerEvent, edge: Edge, handleType: HandleType, state: ConnectEndState) => void;
+  /** Show the drag handles on a selected edge (with `onReconnect`). Default true. */
+  edgesReconnectable?: boolean;
   /** The shape of the line drawn while connecting. Default `'bezier'`. */
   connectionLineType?: ConnectionLineType;
   connectionLineStyle?: CSSProperties;

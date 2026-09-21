@@ -158,6 +158,43 @@ export function addEdge<E extends Edge = Edge>(edge: E | Connection, edges: E[])
   return [...edges, { ...edge, id } as E];
 }
 
+/**
+ * Moves an edge to a new connection — what `onReconnect` asks for. It stays where
+ * it is in the list, and keeps everything else about it (label, style, data); its
+ * `id` follows the new connection unless `shouldReplaceId` is false. If another edge
+ * already joins those two handles, the list comes back unchanged rather than with a
+ * twin. An `oldEdge` that is not in the list changes nothing.
+ */
+export function reconnectEdge<E extends Edge = Edge>(
+  oldEdge: E,
+  newConnection: Connection,
+  edges: E[],
+  { shouldReplaceId = true }: { shouldReplaceId?: boolean } = {},
+): E[] {
+  const at = edges.findIndex((e) => e.id === oldEdge.id);
+  if (at === -1) return edges;
+  const twin = edges.some(
+    (e) =>
+      e.id !== oldEdge.id &&
+      e.source === newConnection.source &&
+      e.target === newConnection.target &&
+      same(e.sourceHandle, newConnection.sourceHandle) &&
+      same(e.targetHandle, newConnection.targetHandle),
+  );
+  if (twin) return edges;
+  const moved = {
+    ...oldEdge,
+    source: newConnection.source,
+    target: newConnection.target,
+    sourceHandle: newConnection.sourceHandle,
+    targetHandle: newConnection.targetHandle,
+    id: shouldReplaceId
+      ? `flowinger-edge__${newConnection.source}${newConnection.sourceHandle ?? ''}-${newConnection.target}${newConnection.targetHandle ?? ''}`
+      : oldEdge.id,
+  } as E;
+  return edges.map((e, i) => (i === at ? moved : e));
+}
+
 /** The edges that touch any of `nodes`. */
 export function getConnectedEdges<E extends Edge = Edge>(nodes: readonly Node[], edges: readonly E[]): E[] {
   const ids = new Set(nodes.map((n) => n.id));

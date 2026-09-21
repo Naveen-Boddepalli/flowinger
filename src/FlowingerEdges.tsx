@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
 import { EdgeContext } from './edgeContext.ts';
+import { ReconnectAnchors } from './ReconnectAnchors.tsx';
 import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { absolutePositionOf } from './parents.ts';
@@ -44,6 +45,8 @@ export interface FlowingerEdgesProps {
   connectionLineType?: ConnectionLineType | undefined;
   connectionLineStyle?: CSSProperties | undefined;
   connectionLineComponent?: ComponentType<ConnectionLineProps> | undefined;
+  /** Whether a selected edge shows drag handles on its ends — an `onReconnect` is there to hear of them. */
+  reconnectable?: boolean;
 }
 
 /**
@@ -231,7 +234,29 @@ function MarkerDef({ id, marker }: { id: string; marker: ResolvedMarker }) {
   );
 }
 
-interface EdgePathProps extends Omit<EdgeChrome, 'edge'> {
+/** What a selected edge needs to show drag handles on its ends: which ends, and where they are. */
+interface EdgeAnchors {
+  reconnectSource: boolean;
+  reconnectTarget: boolean;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+}
+
+function Anchors({ edge, ...a }: EdgeAnchors & { edge: Edge }) {
+  if (!a.reconnectSource && !a.reconnectTarget) return null;
+  return (
+    <ReconnectAnchors
+      edge={edge}
+      source={{ x: a.sourceX, y: a.sourceY }}
+      target={{ x: a.targetX, y: a.targetY }}
+      ends={{ source: a.reconnectSource, target: a.reconnectTarget }}
+    />
+  );
+}
+
+interface EdgePathProps extends Omit<EdgeChrome, 'edge'>, EdgeAnchors {
   edge: Edge;
   d: string;
   style: CSSProperties | undefined;
@@ -249,6 +274,12 @@ const EdgePath = memo(function EdgePath({
   selected,
   selectable,
   focusable,
+  reconnectSource,
+  reconnectTarget,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
   d,
   style,
   label,
@@ -271,11 +302,22 @@ const EdgePath = memo(function EdgePath({
           style={style}
         />
       </EdgeContext.Provider>
+      <Anchors
+        edge={edge}
+        reconnectSource={reconnectSource}
+        reconnectTarget={reconnectTarget}
+        sourceX={sourceX}
+        sourceY={sourceY}
+        targetX={targetX}
+        targetY={targetY}
+      />
     </g>
   );
 });
 
 interface CustomEdgeProps extends EdgeChrome {
+  reconnectSource: boolean;
+  reconnectTarget: boolean;
   View: ComponentType<EdgeProps>;
   sourceX: number;
   sourceY: number;
@@ -294,6 +336,8 @@ const CustomEdge = memo(function CustomEdge({
   selected,
   selectable,
   focusable,
+  reconnectSource,
+  reconnectTarget,
   ...ends
 }: CustomEdgeProps) {
   const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable });
@@ -313,6 +357,15 @@ const CustomEdge = memo(function CustomEdge({
           {...ends}
         />
       </EdgeContext.Provider>
+      <Anchors
+        edge={edge}
+        reconnectSource={reconnectSource}
+        reconnectTarget={reconnectTarget}
+        sourceX={ends.sourceX}
+        sourceY={ends.sourceY}
+        targetX={ends.targetX}
+        targetY={ends.targetY}
+      />
     </g>
   );
 });
@@ -329,6 +382,7 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   connectionLineType = ConnectionLineType.Bezier,
   connectionLineStyle,
   connectionLineComponent: CustomConnectionLine,
+  reconnectable = false,
 }: FlowingerEdgesProps) {
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
@@ -369,6 +423,8 @@ export const FlowingerEdges = memo(function FlowingerEdges({
       return null;
     }
     if (visibleEdgeIds && !visibleEdgeIds.has(edge.id)) return null;
+    // An edge whose end is being dragged elsewhere is not drawn: the line being dragged stands in for it.
+    if (connection?.reconnecting === edge.id) return null;
 
     const lookup = (id: string) => byId.get(id);
     const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition);
@@ -397,6 +453,9 @@ export const FlowingerEdges = memo(function FlowingerEdges({
     const selectable = elementsSelectable && edge.selectable !== false;
     const selected = controlledSelection ? edge.selected === true : store.isEdgeSelected(edge.id);
     if (edge.animated) anyAnimated = true;
+    const canReconnect = reconnectable && selectable && selected;
+    const reconnectSource = canReconnect && edge.reconnectable !== false && edge.reconnectable !== 'target';
+    const reconnectTarget = canReconnect && edge.reconnectable !== false && edge.reconnectable !== 'source';
     const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : DEFAULT_EDGE_COLOR;
     const markerStart = markerRef(edge.markerStart, stroke);
     const markerEnd = markerRef(edge.markerEnd, stroke);
@@ -412,6 +471,8 @@ export const FlowingerEdges = memo(function FlowingerEdges({
           selected={selected}
           selectable={selectable}
           focusable={edgesFocusable}
+          reconnectSource={reconnectSource}
+          reconnectTarget={reconnectTarget}
           sourceX={from.point.x}
           sourceY={from.point.y}
           targetX={to.point.x}
@@ -432,6 +493,12 @@ export const FlowingerEdges = memo(function FlowingerEdges({
         selected={selected}
         selectable={selectable}
         focusable={edgesFocusable}
+        reconnectSource={reconnectSource}
+        reconnectTarget={reconnectTarget}
+        sourceX={from.point.x}
+        sourceY={from.point.y}
+        targetX={to.point.x}
+        targetY={to.point.y}
         d={path.d}
         style={edge.style}
         label={edge.label}

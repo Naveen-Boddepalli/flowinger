@@ -18,6 +18,7 @@ export {
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
+  reconnectEdge,
   getConnectedEdges,
   getIncomers,
   getOutgoers,

@@ -169,6 +169,10 @@ function InnerCanvas({
   onConnect,
   onConnectStart,
   onConnectEnd,
+  onReconnect,
+  onReconnectStart,
+  onReconnectEnd,
+  edgesReconnectable = true,
   onEdgeClick,
   onBeforeDelete,
   onNodesDelete,
@@ -296,6 +300,9 @@ function InnerCanvas({
       onConnect,
       onConnectStart,
       onConnectEnd,
+      onReconnect,
+      onReconnectStart,
+      onReconnectEnd,
       onEdgeClick,
       onBeforeDelete,
       onNodesDelete,
@@ -315,6 +322,9 @@ function InnerCanvas({
     onConnect,
     onConnectStart,
     onConnectEnd,
+    onReconnect,
+    onReconnectStart,
+    onReconnectEnd,
     onEdgeClick,
     onBeforeDelete,
     onNodesDelete,
@@ -670,6 +680,7 @@ function InnerCanvas({
               connectionLineType={connectionLineType}
               connectionLineStyle={connectionLineStyle}
               connectionLineComponent={connectionLineComponent}
+              reconnectable={edgesReconnectable && onReconnect !== undefined}
             />
           </EdgeLabelHost.Provider>
           {/* Your own elements, in graph space: `ViewportPortal` draws into this. */}

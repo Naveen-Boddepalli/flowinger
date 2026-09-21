@@ -104,6 +104,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out, and so does a node's `connectable: false`. |
 | `connectionLineType`, `connectionLineStyle`, `connectionLineComponent` | `'bezier'` | The line dragged out of a handle: `'bezier'`, `'straight'`, `'step'` or `'smoothstep'`; a style for it (it never takes pointer events, whatever the style says); or your own component, given `fromX/Y`, `toX/Y`, which way each end faces, and `isValid` (`true` over a handle that would be accepted, `false` over one that would not, `null` over neither). |
 | `connectionMode` | `'strict'` | `'strict'` joins a source handle to a target handle; `'loose'` joins any handle to any other (never itself), the end you dragged from becoming the source. |
+| `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` | `true` | Select an edge and drag either end (a ring appears on it) onto another handle: `onReconnect(oldEdge, newConnection)` says what it would now join, source → target. Nothing is edited for you — `setEdges((es) => reconnectEdge(old, next, es))`. Needs `nodesConnectable`, as handles are the drop targets, and an `onReconnect` to switch the rings on; an edge's own `reconnectable` is `false`, `'source'` or `'target'`. Dropped back on its own handle is not a change; the edge is not drawn while its end is dragged. `onReconnectStart(event, edge, handleType)` / `onReconnectEnd(event, edge, handleType, { connection, isValid })` bracket the drag. |
 | `onConnectStart`, `onConnectEnd` | | `onConnectStart(event, { nodeId, handleId, handleType })`; `onConnectEnd(event, { connection, isValid })` when the pointer is released — `isValid` is `true` (made), `false` (refused) or `null` (no handle there). |
 | `onConnect`, `isValidConnection` | | `onConnect({ source, target, sourceHandle, targetHandle })` — always source → target, whichever end the drag began at. `isValidConnection` can veto, and decides whether the line snaps to a handle. |
 | `deleteKeyCode` | `'Backspace'` | The key (or list of keys; `null` for none) that deletes the selection while focus is on the canvas, a node or an edge — never in a field. Deleting is *reported*: see below. |
@@ -225,7 +226,7 @@ write that yourself if you keep nodes in a store. A change is one of `position` 
 `applyNodeChanges` returns the same object for every node a change did not touch, so memoised views skip
 them. `useNodesInitialized()` is true once every node has been measured, and re-renders only when that flips.
 
-Also exported: `addEdge`, `getConnectedEdges`, `getIncomers`, `getOutgoers`.
+Also exported: `addEdge`, `reconnectEdge`, `getConnectedEdges`, `getIncomers`, `getOutgoers`.
 
 **Deleting** works the same way: a delete key (or `instance.deleteElements({ nodes, edges })`) removes the
 selected nodes, the selected edges and every edge touching a removed node, as `remove` changes, after
@@ -258,8 +259,8 @@ all exported under React Flow's names, and so are `useNodesState`, `useEdgesStat
 `applyEdgeChanges`, `addEdge` and `useNodesInitialized`. `useStore` reads the ten fields above, not React Flow's
 whole internal store.
 
-**Not built** (from memory of React Flow's API, not an audit): reconnecting an edge (`onReconnect`),
-`nodeOrigin`, and a `NodeToolbar` for a node other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
+**Not built** (from memory of React Flow's API, not an audit): `nodeOrigin`, and a `NodeToolbar` for a node
+other than its own. Defaults that differ: `fitView` keeps a 40 px margin unless you
 pass a `padding` ratio, and `deleteKeyCode` is `'Backspace'` alone.
 
 ## Server rendering
