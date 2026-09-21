@@ -3,7 +3,6 @@ import {
   useCallback,
   useMemo,
   useRef,
-  useState,
   useSyncExternalStore,
   type ComponentType,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -11,25 +10,15 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore } from './context.ts';
+import type { Feature } from './features.ts';
 import { layoutSize } from './measure.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
-import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
-import type { DragSession } from './store.ts';
-import type { Node, NodeProps, XYPosition } from './types.ts';
+import { isInteractive } from './pointer.ts';
+import type { Node, NodeProps } from './types.ts';
 
-interface DragState {
-  pointerId: number;
-  startX: number;
-  startY: number;
-  /** Null until the pointer has travelled `DRAG_THRESHOLD`; then the drag proper. */
-  session: DragSession | null;
-  /** Where the press was, in graph space — so a drag is measured in the graph, which auto-pan moves under it. */
-  startGraph: XYPosition;
-  /** The pointer's latest event, for a drag that goes on with the pointer standing still at the pane's edge. */
-  latest: ReactPointerEvent<HTMLDivElement> | null;
-  stopAutoPan: (() => void) | null;
-}
+const NO_FEATURES: readonly Feature[] = [];
+const NO_START = () => {};
 
 export interface NodeWrapperProps {
   node: Node;
@@ -45,15 +34,18 @@ export interface NodeWrapperProps {
   parentX: number;
   parentY: number;
   depth: number;
+  /** What the canvas can do with it — dragging, connecting — see `Feature`. Must not change. */
+  features?: readonly Feature[];
 }
 
 /**
- * One node: positions it, measures it, and drags it.
+ * One node: positions it, measures it, and hands its pointer and key events to the features that act
+ * on nodes.
  *
  * Memoised, and subscribed to its own position only — so dragging one node
  * re-renders that node and the edge layer, not the other N-1.
  */
-export const NodeWrapper = memo(function NodeWrapper({
+export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   node,
   View,
   draggable,
@@ -63,15 +55,12 @@ export const NodeWrapper = memo(function NodeWrapper({
   parentX,
   parentY,
   depth,
+  features = NO_FEATURES,
 }: NodeWrapperProps) {
   const store = useFlowingerStore();
   const ref = useRef<HTMLDivElement | null>(null);
-  const drag = useRef<DragState | null>(null);
   /** A drag just ended: the click that follows it is not a click on the node. */
   const justDragged = useRef(false);
-  /** Stops watching for a press to become a drag; null when nothing is being watched. */
-  const stopClaiming = useRef<(() => void) | null>(null);
-  const [dragging, setDragging] = useState(false);
 
   const subscribe = useCallback(
     (listener: () => void) => store.subscribeNode(node.id, listener),
@@ -93,15 +82,21 @@ export const NodeWrapper = memo(function NodeWrapper({
     () => controlledSelection && node.selected === true,
   );
 
-  // What a `<Handle>` inside this node registers itself with.
+  // What each feature adds, in the order they were given.
+  const bits = features.flatMap((f) => f.useNode?.({ store, node, draggable, selected, justDragged }) ?? []);
+  const dragging = bits.some((b) => b.dragging === true);
+  const startConnection = bits.find((b) => b.startConnection)?.startConnection;
+
+  // What a `<Handle>` inside this node registers itself with. Without something to start a
+  // connection with, its handles only draw.
   const nodeContext = useMemo<NodeContextValue>(
     () => ({
       nodeId: node.id,
-      connectable,
+      connectable: connectable && startConnection !== undefined,
       registerHandle: (registration) => store.registerHandle(node.id, registration),
-      startConnection: (handle, at) => { store.startConnection(node.id, handle, at); },
+      startConnection: startConnection ?? NO_START,
     }),
-    [store, node.id, connectable],
+    [store, node.id, connectable, startConnection],
   );
 
   // The edge layer needs the node's real size, and where its handles sit. The
@@ -127,101 +122,15 @@ export const NodeWrapper = memo(function NodeWrapper({
     // of layout to read now — not whenever the observer next gets round to it.
   }, [store, node.id, node.width, node.height]);
 
-  useIsomorphicLayoutEffect(
-    () => () => {
-      stopClaiming.current?.();
-      drag.current?.stopAutoPan?.();
-    },
-    [],
-  );
-
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     justDragged.current = false;
-    if (!draggable || e.button !== 0 || isInteractive(e.target)) return;
-    // With a drag handle, only a press on it drags; elsewhere the canvas pans.
-    if (node.dragHandle && !(e.target instanceof Element && e.target.closest(node.dragHandle))) return;
-    // Claimed from the first press, so the canvas underneath does not start a
-    // pan — even though the drag proper only begins past the threshold.
-    e.stopPropagation();
-    const pressed: DragState = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      session: null,
-      startGraph: store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY }),
-      latest: null,
-      stopAutoPan: null,
-    };
-    drag.current = pressed;
-
-    // The pointer is only captured once the press has become a drag (capturing at
-    // once would send the click of anything inside the node to the node). Until
-    // then a quick move can leave the node — landing on the pane, or on the node
-    // beneath — and its events would go there, never reaching this one. So watch
-    // the window for the move that crosses the threshold and capture then, wherever
-    // the pointer is; every move after that comes here.
-    const element = e.currentTarget;
-    stopClaiming.current?.();
-    const stop = () => {
-      window.removeEventListener('pointermove', claim, true);
-      window.removeEventListener('pointerup', stop, true);
-      window.removeEventListener('pointercancel', stop, true);
-      if (stopClaiming.current === stop) stopClaiming.current = null;
-    };
-    const claim = (ev: PointerEvent) => {
-      if (ev.pointerId !== pressed.pointerId) return;
-      if (drag.current !== pressed || pressed.session) {
-        stop();
-        return;
-      }
-      if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < DRAG_THRESHOLD) return;
-      capturePointer(element, pressed.pointerId);
-      stop();
-    };
-    window.addEventListener('pointermove', claim, true);
-    window.addEventListener('pointerup', stop, true);
-    window.addEventListener('pointercancel', stop, true);
-    stopClaiming.current = stop;
+    for (const b of bits) b.onPointerDown?.(e);
   };
-
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    if (d?.pointerId !== e.pointerId) return;
-    if (!d.session) {
-      if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_THRESHOLD) return;
-      d.session = store.beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
-      justDragged.current = true;
-      setDragging(true);
-      capturePointer(e.currentTarget, e.pointerId);
-      // Held near the pane's edge the view pans, and the nodes must follow the pointer across it.
-      const started = d;
-      d.stopAutoPan = store.beginAutoPan(
-        'node',
-        () => (started.latest ? { x: started.latest.clientX, y: started.latest.clientY } : null),
-        () => { if (started.latest) moveTo(started, started.latest); },
-      );
-    }
-    e.stopPropagation();
-    moveTo(d, e);
+    for (const b of bits) b.onPointerMove?.(e);
   };
-
-  /** Moves the dragged nodes to where the pointer is *in the graph*, from where it was when pressed. */
-  const moveTo = (d: DragState, e: ReactPointerEvent<HTMLDivElement>) => {
-    d.latest = e;
-    const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-    d.session?.move(e, at.x - d.startGraph.x, at.y - d.startGraph.y);
-  };
-
   const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    if (d?.pointerId !== e.pointerId) return;
-    drag.current = null;
-    d.stopAutoPan?.();
-    if (!d.session) return;
-    e.stopPropagation();
-    releasePointer(e.currentTarget, e.pointerId);
-    setDragging(false);
-    d.session.end(e);
+    for (const b of bits) b.onPointerEnd?.(e);
   };
 
   // A click on a control inside the node is that control's, not a selection.
@@ -238,25 +147,10 @@ export const NodeWrapper = memo(function NodeWrapper({
     }
   };
 
-  const ARROWS: Record<string, [number, number]> = {
-    ArrowLeft: [-1, 0],
-    ArrowRight: [1, 0],
-    ArrowUp: [0, -1],
-    ArrowDown: [0, 1],
-  };
-
   // Only when the node itself has focus: Enter or Space inside a field is the field's.
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
-    const arrow = ARROWS[e.key];
-    if (arrow) {
-      // A selected node moves with the arrow keys, as with a drag. An unselected
-      // one leaves them to the page.
-      if (!selected) return;
-      e.preventDefault();
-      store.nudgeSelection(arrow[0], arrow[1], e.shiftKey);
-      return;
-    }
+    for (const b of bits) b.onKeyDown?.(e);
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault(); // Space would otherwise scroll the page
     store.selectNode(node.id, e.shiftKey);
@@ -279,7 +173,7 @@ export const NodeWrapper = memo(function NodeWrapper({
         pointerEvents: 'all',
         // Above its parent by depth, unless it says otherwise; above all while dragged.
         zIndex: dragging ? 1000 : (node.zIndex ?? 1 + depth),
-        ...(draggable ? { cursor: dragging ? 'grabbing' : 'grab' } : {}),
+        ...Object.assign({}, ...bits.map((b) => b.style)),
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

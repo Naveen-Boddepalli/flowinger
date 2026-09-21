@@ -1,16 +1,13 @@
 import { resolveFeatures, type EngineContext, type Feature, type FeatureEvent } from './features.ts';
-import { beginGroup, growGroup, type ExpandGroup } from './expand.ts';
-import { absolutePositionOf, descendantsOf } from './parents.ts';
+import { absolutePositionOf } from './parents.ts';
 import {
   FALLBACK_SIZE,
-  clampMove,
   getNodesBounds,
   isRectIntersecting,
   snapTo,
   viewportForBounds,
   type Size,
 } from './geometry.ts';
-import { handleCoordinates } from './handlePoint.ts';
 import { layoutSize } from './measure.ts';
 import type {
   SelectionMode,
@@ -25,7 +22,6 @@ import type {
   HandleType,
   Node,
   NodeChange,
-  NodePositionChange,
   Position,
   Rect,
   SetCenterOptions,
@@ -83,20 +79,6 @@ export interface ConnectionState {
   /** The edge whose end is being dragged, when this is a reconnection — it is not drawn meanwhile. */
   reconnecting: string | null;
 }
-
-/** Where a connection end lives: a node, one of its handles by id (null = unnamed), and that handle's type. */
-interface Endpoint {
-  nodeId: string;
-  id: string | null;
-  type: HandleType;
-}
-
-const OPPOSITE: Record<Position, Position> = {
-  top: 'bottom',
-  bottom: 'top',
-  left: 'right',
-  right: 'left',
-};
 
 export interface NodeCallbacks {
   onConnect?: ((connection: Connection) => void) | undefined;
@@ -161,17 +143,7 @@ export interface VisibleSet {
   edges: ReadonlySet<string>;
 }
 
-/** A node drag in progress — one node, or the whole selection moving with it. */
-export interface DragSession {
-  /** Moves every dragged node to its start position plus this offset, in graph units. */
-  move: (event: React.PointerEvent, dx: number, dy: number) => void;
-  end: (event: React.PointerEvent) => void;
-}
-
 const ZOOM_STEP = 1.25;
-/** How near the pane's edge, in pixels, auto-pan starts. */
-const AUTO_PAN_EDGE = 40;
-const FRAME_MS = 1000 / 60;
 /** A backstop for the tween, see `setViewport`. */
 const TWEEN_GRACE_MS = 100;
 
@@ -305,7 +277,6 @@ export function createFlowingerStore(
   /** The size last reported through a `dimensions` change, by node. */
   const reported = new Map<string, Size>();
   let connection: ConnectionState | null = null;
-  let stopConnecting: (() => void) | null = null;
   let stopObserving: (() => void) | null = null;
   let geometryVersion = 0;
 
@@ -644,169 +615,11 @@ export function createFlowingerStore(
     emit(connectionListeners);
   };
 
-  /** Where a registered handle sits in graph space: its measured anchor, else its side's midpoint. */
-  const pointOfHandle = (nodeId: string, record: HandleRecord): XYPosition | null => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return null;
-    const at = absolutePosition(node);
-    return record.anchor
-      ? { x: at.x + record.anchor.x, y: at.y + record.anchor.y }
-      : handleCoordinates(at, record.position, getNodeSize(node));
-  };
-
   const toGraph = (clientX: number, clientY: number): XYPosition => {
     const rect = containerEl?.getBoundingClientRect();
     return {
       x: (clientX - (rect?.left ?? 0) - viewport.x) / viewport.zoom,
       y: (clientY - (rect?.top ?? 0) - viewport.y) / viewport.zoom,
-    };
-  };
-
-  /**
-   * The connectable handle under a screen point. A handle says so with
-   * `data-connectable`; browsers also skip `pointer-events: none` in
-   * `elementFromPoint`, but this does not lean on that.
-   */
-  const handleAt = (clientX: number, clientY: number): { nodeId: string; record: HandleRecord } | null => {
-    if (typeof document === 'undefined' || typeof document.elementFromPoint !== 'function') return null;
-    const el = document.elementFromPoint(clientX, clientY)?.closest<HTMLElement>('[data-nodeid][data-handletype][data-connectable]');
-    const nodeId = el?.dataset.nodeid;
-    if (!el || !nodeId) return null;
-    for (const record of handles.get(nodeId) ?? []) if (record.el === el) return { nodeId, record };
-    return null;
-  };
-
-  /**
-   * A source → target connection between two ends, whichever one the drag began
-   * at. Strict, the types must differ; loose, anything joins anything but a
-   * handle to itself, and two of a kind make the end the drag began at the source.
-   */
-  const connectionBetween = (a: Endpoint, b: Endpoint): Connection | null => {
-    const loose = options.connectionMode === 'loose';
-    if (a.type === b.type && !loose) return null;
-    if (loose && a.nodeId === b.nodeId && a.id === b.id) return null;
-    const [from, to] = a.type === 'target' && b.type === 'source' ? [b, a] : [a, b];
-    return { source: from.nodeId, sourceHandle: from.id, target: to.nodeId, targetHandle: to.id };
-  };
-
-  const isAllowed = (c: Connection): boolean => callbacks.isValidConnection?.(c) !== false;
-
-  const cancelConnection = () => {
-    stopConnecting?.();
-    stopConnecting = null;
-    if (connection) setConnection(null);
-  };
-
-  /** What the line follows: the pointer, or — over a handle that would make a valid connection — that handle. */
-  const connectionEnd = (from: Endpoint, startPosition: Position, clientX: number, clientY: number) => {
-    const hit = handleAt(clientX, clientY);
-    if (hit) {
-      const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
-      const point = pointOfHandle(hit.nodeId, hit.record);
-      if (c && isAllowed(c) && point) return { end: point, endPosition: hit.record.position, isValid: true };
-    }
-    return {
-      end: toGraph(clientX, clientY),
-      endPosition: OPPOSITE[startPosition],
-      isValid: hit ? false : null,
-    };
-  };
-
-  /**
-   * Begins dragging a connection out of a handle. The gesture is followed on
-   * `window`, so it survives the pointer leaving the handle, the node and the
-   * canvas; Escape cancels it. Nothing here edits `edges` — a finished
-   * connection is handed to `onConnect` for the caller to add.
-   */
-  /** Whether a connection joins the very same two handles an edge already does. */
-  const sameEnds = (edge: Edge, c: Connection): boolean =>
-    edge.source === c.source &&
-    edge.target === c.target &&
-    (edge.sourceHandle ?? null) === c.sourceHandle &&
-    (edge.targetHandle ?? null) === c.targetHandle;
-
-  const startConnection = (nodeId: string, handleEl: HTMLElement, at: PointerEvent) => {
-    const record = [...(handles.get(nodeId) ?? [])].find((r) => r.el === handleEl);
-    if (record) beginConnection(nodeId, record, at, null);
-  };
-
-  /**
-   * Begins dragging one end of an edge to another handle: the *other* end stays
-   * where it is, and the drag is a connection from it — so it snaps, is vetoed and
-   * cancelled just like one — which on release is reported as a reconnection.
-   */
-  const startReconnect = (edge: Edge, end: HandleType, at: PointerEvent) => {
-    const fixed: HandleType = end === 'source' ? 'target' : 'source';
-    const nodeId = end === 'source' ? edge.target : edge.source;
-    const record = findHandle(nodeId, end === 'source' ? edge.targetHandle : edge.sourceHandle, fixed);
-    if (record) beginConnection(nodeId, record, at, { edge, end });
-  };
-
-  const beginConnection = (
-    nodeId: string,
-    record: HandleRecord,
-    at: PointerEvent,
-    reconnect: { edge: Edge; end: HandleType } | null,
-  ) => {
-    const start = pointOfHandle(nodeId, record);
-    if (!start) return;
-    cancelConnection();
-
-    const from: Endpoint = { nodeId, id: record.id, type: record.type };
-    const follow = (clientX: number, clientY: number) => {
-      setConnection({
-        start,
-        startPosition: record.position,
-        ...connectionEnd(from, record.position, clientX, clientY),
-        reconnecting: reconnect?.edge.id ?? null,
-      });
-    };
-    follow(at.clientX, at.clientY);
-    if (reconnect) callbacks.onReconnectStart?.(at, reconnect.edge, reconnect.end);
-    else callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
-
-    // Held near the edge, the view pans — and the line's free end, being in graph
-    // space, has to be worked out again against the view it has just moved to.
-    let pointer = { x: at.clientX, y: at.clientY };
-    const stopAutoPan = beginAutoPan(
-      'connect',
-      () => pointer,
-      () => { follow(pointer.x, pointer.y); },
-    );
-
-    const onMove = (e: PointerEvent) => {
-      pointer = { x: e.clientX, y: e.clientY };
-      follow(e.clientX, e.clientY);
-    };
-    const onUp = (e: PointerEvent) => {
-      const hit = handleAt(e.clientX, e.clientY);
-      cancelConnection(); // clear first, so a callback sees a settled canvas
-      const c = hit
-        ? connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type })
-        : null;
-      const valid = hit === null ? null : c !== null && isAllowed(c);
-      if (reconnect) {
-        // Dropped back where it came from is not a change.
-        if (c && valid && !sameEnds(reconnect.edge, c)) callbacks.onReconnect?.(reconnect.edge, c);
-        callbacks.onReconnectEnd?.(e, reconnect.edge, reconnect.end, { connection: c, isValid: valid });
-        return;
-      }
-      if (c && valid) callbacks.onConnect?.(c);
-      callbacks.onConnectEnd?.(e, { connection: c, isValid: valid });
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancelConnection();
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', cancelConnection);
-    window.addEventListener('keydown', onKey);
-    stopConnecting = () => {
-      stopAutoPan();
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', cancelConnection);
-      window.removeEventListener('keydown', onKey);
     };
   };
 
@@ -950,192 +763,9 @@ export function createFlowingerStore(
 
   const hasSelection = (): boolean => selectedNodeIds().length > 0 || selectedEdgeIds().length > 0;
 
-  // --- dragging nodes -------------------------------------------------------
+  // --- selectable ---------------------------------------------------------------
 
-  const isDraggable = (n: Node): boolean => n.draggable ?? options.nodesDraggable;
   const isSelectable = (n: Node): boolean => options.elementsSelectable && n.selectable !== false;
-
-  /**
-   * Starts dragging `lead`. If it is part of the selection the whole selection
-   * goes with it; otherwise it is selected (where selecting is on) and goes
-   * alone — which is what a press on an unselected node means.
-   */
-  /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
-  const extentFor = (n: Node): TranslateExtent | null => {
-    // A node that grows its parent is not held inside it.
-    if (n.extent === 'parent' && n.expandParent === true) return options.nodeExtent;
-    if (n.extent !== 'parent') return n.extent ?? options.nodeExtent;
-    const parent = n.parentId === undefined ? undefined : nodeById.get(n.parentId);
-    if (!parent) return options.nodeExtent;
-    const at = absolutePosition(parent);
-    const size = getNodeSize(parent);
-    return [
-      [at.x, at.y],
-      [at.x + size.width, at.y + size.height],
-    ];
-  };
-
-  const beginNodeDrag = (lead: Node, event: React.PointerEvent, additive: boolean): DragSession => {
-    const before = selectedNodeIds();
-    let group = [lead.id];
-    if (before.includes(lead.id)) {
-      group = before;
-    } else if (isSelectable(lead)) {
-      selectNode(lead.id, additive);
-      group = additive ? [...before, lead.id] : [lead.id];
-    }
-    const movable = group.flatMap((id) => {
-      const n = nodeById.get(id) ?? (id === lead.id ? lead : undefined);
-      return n && isDraggable(n) ? [n] : [];
-    });
-    // A node inside another that is also being dragged moves with it already.
-    const riding = descendantsOf(
-      movable.map((n) => n.id),
-      nodes,
-    );
-    const items = movable.filter((n) => !riding.has(n.id));
-    for (const n of items) draggingIds.add(n.id);
-    const origins = new Map(items.map((n) => [n.id, resolvePosition(n.id, n.position)]));
-    const absOrigins = new Map(items.map((n) => [n.id, absolutePosition(n)]));
-    const leadOf = (moved: Node[]): Node => moved.find((n) => n.id === lead.id) ?? lead;
-
-    // Parents that grow to hold the children dragged past their edge. Only where the
-    // caller applies changes: a parent's size is theirs to keep.
-    const groups: ExpandGroup[] = [];
-    if (nodesControlled()) {
-      const byParent = new Map<string, Node[]>();
-      for (const n of items) {
-        if (n.expandParent !== true || n.parentId === undefined) continue;
-        const list = byParent.get(n.parentId);
-        if (list) list.push(n);
-        else byParent.set(n.parentId, [n]);
-      }
-      for (const [parentId, kids] of byParent) {
-        const parent = nodeById.get(parentId);
-        if (!parent) continue;
-        const at = absolutePosition(parent);
-        const dragged = new Set(items.map((n) => n.id));
-        groups.push(
-          beginGroup(
-            parentId,
-            resolvePosition(parentId, parent.position),
-            { x: at.x, y: at.y, ...getNodeSize(parent) },
-            kids.map((k) => k.id),
-            (childrenOf.get(parentId) ?? []).flatMap((id) => {
-              const sibling = nodeById.get(id);
-              return sibling && !dragged.has(id)
-                ? [{ id, rel: resolvePosition(id, sibling.position) }]
-                : [];
-            }),
-          ),
-        );
-      }
-    }
-    /** Where a grown parent's children sit relative to it, as of the latest step. */
-    let relativeNow = new Map<string, XYPosition>();
-    const at = (n: Node, dx: number, dy: number, dragging: boolean): Node => {
-      const from = origins.get(n.id) ?? n.position;
-      return { ...n, position: relativeNow.get(n.id) ?? { x: from.x + dx, y: from.y + dy }, dragging };
-    };
-
-    callbacks.onNodeDragStart?.(event, lead, items.map((n) => at(n, 0, 0, false)));
-
-    // Where the drag may take these nodes: onto the grid (by the lead, so the
-    // others keep their offsets from it), and inside every node's own extent.
-    const boxes = items.map((n) => {
-      const from = absOrigins.get(n.id) ?? n.position;
-      return { x: from.x, y: from.y, ...getNodeSize(n) };
-    });
-    const extents = items.map(extentFor);
-    const constrainMove = (dx: number, dy: number): XYPosition => {
-      let move = { x: dx, y: dy };
-      const grid = options.snapGrid;
-      // On the canvas' grid, which is the canvas' own coordinates, not the parent's.
-      const origin = absOrigins.get(lead.id);
-      if (grid && origin) {
-        move = {
-          x: snapTo(origin.x + dx, grid[0]) - origin.x,
-          y: snapTo(origin.y + dy, grid[1]) - origin.y,
-        };
-      }
-      return clampMove(boxes, extents, move);
-    };
-
-    let last = { dx: 0, dy: 0 };
-    return {
-      move: (e, rawDx, rawDy) => {
-        const { x: dx, y: dy } = constrainMove(rawDx, rawDy);
-        last = { dx, dy };
-        const changes: NodeChange[] = [];
-        relativeNow = new Map();
-        for (const g of groups) {
-          const grown = growGroup(
-            g,
-            g.kids.flatMap((id) => {
-              const n = nodeById.get(id);
-              const from = absOrigins.get(id);
-              return n && from ? [{ id, x: from.x + dx, y: from.y + dy, ...getNodeSize(n) }] : [];
-            }),
-          );
-          changes.push(...grown.changes);
-          for (const [id, position] of grown.relative) relativeNow.set(id, position);
-        }
-        for (const n of items) {
-          const position = at(n, dx, dy, true).position;
-          if (nodesControlled()) changes.push({ type: 'position', id: n.id, position, dragging: true });
-          else setNodePosition(n, position);
-        }
-        emitNodeChanges(changes);
-        // What the callback sees is where the drag put the nodes — even when the
-        // caller, controlling them, has not applied the change yet.
-        const moved = items.map((n) => at(n, dx, dy, true));
-        callbacks.onNodeDrag?.(e, leadOf(moved), moved);
-      },
-      end: (e) => {
-        for (const n of items) draggingIds.delete(n.id);
-        run('change');
-        if (nodesControlled()) {
-          emitNodeChanges(items.map((n) => ({ type: 'position', id: n.id, dragging: false })));
-        }
-        const settled = items.map((n) => at(n, last.dx, last.dy, false));
-        callbacks.onNodeDragStop?.(e, leadOf(settled), settled);
-      },
-    };
-  };
-
-  /**
-   * Moves the selection one step in a direction — what the arrow keys do to a
-   * focused node. A step is 5 units, or one cell of the snap grid; `large` is
-   * four of them. Bounded by the extents, like a drag, and reported the same way.
-   */
-  const nudgeSelection = (dirX: number, dirY: number, large: boolean) => {
-    const movable = selectedNodeIds().flatMap((id) => {
-      const n = nodeById.get(id);
-      return n && isDraggable(n) ? [n] : [];
-    });
-    const riding = descendantsOf(
-      movable.map((n) => n.id),
-      nodes,
-    );
-    const items = movable.filter((n) => !riding.has(n.id));
-    if (items.length === 0) return;
-    const unit = options.snapGrid ?? [5, 5];
-    const factor = large ? 4 : 1;
-    const boxes = items.map((n) => ({ ...absolutePosition(n), ...getNodeSize(n) }));
-    const move = clampMove(boxes, items.map(extentFor), {
-      x: dirX * unit[0] * factor,
-      y: dirY * unit[1] * factor,
-    });
-    if (move.x === 0 && move.y === 0) return;
-    const changes: NodePositionChange[] = [];
-    items.forEach((n) => {
-      const own = resolvePosition(n.id, n.position);
-      const position = { x: own.x + move.x, y: own.y + move.y };
-      if (nodesControlled()) changes.push({ type: 'position', id: n.id, position, dragging: false });
-      else setNodePosition(n, position);
-    });
-    emitNodeChanges(changes);
-  };
 
   // --- what the canvas hands over ------------------------------------------
 
@@ -1264,54 +894,6 @@ export function createFlowingerStore(
     return setViewport({ x: pane.width / 2 - x * zoom, y: pane.height / 2 - y * zoom, zoom }, opts);
   };
 
-  // --- auto-pan -------------------------------------------------------------
-
-  /**
-   * Keeps panning the view while `getPointer` reports the pointer near the edge of the
-   * pane — the nearer, the faster, and at full speed once it is outside — and calls
-   * `onPan` after each step so whatever is being dragged can catch up with the graph
-   * that moved under it. Stops when the returned function is called. Does nothing for a
-   * gesture the options have switched off.
-   */
-  const beginAutoPan = (
-    kind: 'node' | 'connect',
-    getPointer: () => XYPosition | null,
-    onPan: () => void,
-  ): (() => void) => {
-    const on = kind === 'node' ? options.autoPanOnNodeDrag : options.autoPanOnConnect;
-    if (!on) return () => {};
-    let frame = 0;
-    let last = 0;
-    let stopped = false;
-    const towards = (pos: number, size: number): number =>
-      pos < AUTO_PAN_EDGE
-        ? 1 - Math.max(pos, 0) / AUTO_PAN_EDGE
-        : pos > size - AUTO_PAN_EDGE
-          ? -(1 - Math.max(size - pos, 0) / AUTO_PAN_EDGE)
-          : 0;
-    const tick = (now: number) => {
-      if (stopped) return;
-      frame = requestAnimationFrame(tick);
-      const pointer = getPointer();
-      const pane = paneSize();
-      const rect = containerEl?.getBoundingClientRect();
-      const elapsed = last === 0 ? 1 : Math.min(3, (now - last) / FRAME_MS);
-      last = now;
-      if (!pointer || !pane || !rect) return;
-      const step = options.autoPanSpeed * elapsed;
-      const dx = towards(pointer.x - rect.left, pane.width) * step;
-      const dy = towards(pointer.y - rect.top, pane.height) * step;
-      if (dx === 0 && dy === 0) return;
-      void setViewport({ x: viewport.x + dx, y: viewport.y + dy, zoom: viewport.zoom });
-      onPan();
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      stopped = true;
-      cancelAnimationFrame(frame);
-    };
-  };
-
   const zoomTo = (zoom: number, opts?: SetViewportOptions): Promise<boolean> => {
     const c = centre();
     return zoomAt(zoom / target.zoom, c.x, c.y, opts);
@@ -1373,7 +955,6 @@ export function createFlowingerStore(
 
   const detach = () => {
     cancelTween();
-    cancelConnection();
     run('detach');
     stopObserving?.();
     stopObserving = null;
@@ -1592,9 +1173,6 @@ export function createFlowingerStore(
     registerHandle,
     measureHandles,
     findHandle,
-    startConnection,
-    startReconnect,
-    beginAutoPan,
     getConnection: () => connection,
     getNodes: (): readonly Node[] => nodes,
     getContainerSize: (): Size | null =>
@@ -1614,8 +1192,6 @@ export function createFlowingerStore(
     getSelectionRect: (): Rect | null => selectionRect,
     subscribeSelectionRect: subscribeTo(selectionRectListeners),
     getSelection,
-    nudgeSelection,
-    beginNodeDrag,
     areNodesInitialized,
 
     subscribeViewport: subscribeTo(viewportListeners),

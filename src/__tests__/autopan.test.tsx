@@ -228,15 +228,17 @@ describe('auto-pan while dragging a node', () => {
 describe('auto-pan timing', () => {
   it('scales each step by the time since the last frame, up to three frames’ worth', async () => {
     const { createFlowingerStore, DEFAULT_ENGINE_OPTIONS } = await import('../store.ts');
+    const { autoPanFeature } = await import('../features/autoPan.ts');
     const queue: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => queue.push(cb));
     vi.stubGlobal('cancelAnimationFrame', () => {});
     const store = createFlowingerStore();
+    store.use([autoPanFeature]);
     const container = document.createElement('div');
     store.attach(document.createElement('div'), container);
     store.setOptions({ ...DEFAULT_ENGINE_OPTIONS, autoPanSpeed: 10 });
     const onPan = vi.fn();
-    store.beginAutoPan('node', () => ({ x: 0, y: 300 }), onPan); // at the left edge: full speed
+    store.api(autoPanFeature).beginAutoPan('node', () => ({ x: 0, y: 300 }), onPan); // at the left edge: full speed
     const frame = (at: number) => {
       const cb = queue.shift();
       cb?.(at);

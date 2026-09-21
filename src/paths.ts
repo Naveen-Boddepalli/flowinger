@@ -1,4 +1,4 @@
-import { Position } from './types.ts';
+import { Position, type Edge } from './types.ts';
 
 export interface GetBezierPathParams {
   sourceX: number;
@@ -179,4 +179,24 @@ export function getSmoothStepPath({
     ? [[sourceX, sourceY], [labelX, sourceY], [labelX, targetY], [targetX, targetY]]
     : [[sourceX, sourceY], [sourceX, labelY], [targetX, labelY], [targetX, targetY]];
   return [roundedPolyline(points, borderRadius), labelX, labelY];
+}
+
+/** The path an edge of this `type` takes between two ends — a built-in one, whatever else `type` may name. */
+export function pathFor(
+  type: Edge['type'],
+  s: { x: number; y: number },
+  sourcePosition: Position,
+  t: { x: number; y: number },
+  targetPosition: Position,
+): { d: string; labelX: number; labelY: number } {
+  const ends = { sourceX: s.x, sourceY: s.y, targetX: t.x, targetY: t.y };
+  const [d, labelX, labelY] =
+    type === 'straight'
+      ? getStraightPath(ends)
+      : type === 'smoothstep'
+        ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition })
+        : type === 'step'
+          ? getSmoothStepPath({ ...ends, sourcePosition, targetPosition, borderRadius: 0 })
+          : getBezierPath({ ...ends, sourcePosition, targetPosition });
+  return { d, labelX, labelY };
 }

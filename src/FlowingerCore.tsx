@@ -686,6 +686,7 @@ function InnerCanvas(props: FlowingerProps) {
               connectionLineComponent={connectionLineComponent}
               reconnectable={edgesReconnectable && onReconnect !== undefined}
               depths={tree.depth}
+              features={feats}
             />
           </EdgeLabelHost.Provider>
           {/* Your own elements, in graph space: `ViewportPortal` draws into this. */}
@@ -736,6 +737,7 @@ function InnerCanvas(props: FlowingerProps) {
                 parentX={tree.origin.get(node.id)?.x ?? 0}
                 parentY={tree.origin.get(node.id)?.y ?? 0}
                 depth={tree.depth.get(node.id) ?? 0}
+                features={feats}
               />
             ))}
           </div>
