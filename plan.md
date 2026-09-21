@@ -116,7 +116,7 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection), and connection-start/end callbacks.
-- Edge selection, controlled selection (`node.selected`), and dragging a selection as a group.
+- Edge selection. (Controlled selection, `onNodesChange` and dragging a selection as a group are built.)
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
   see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build

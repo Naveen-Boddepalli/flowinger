@@ -1,13 +1,16 @@
 import {
+  useCallback,
   useContext,
   useEffect,
   useRef,
+  useState,
   type CSSProperties,
   type ComponentType,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
+import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
 import { FlowingerContext, useFlowingerStore } from './context.ts';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
@@ -24,7 +27,19 @@ import {
   releasePointer,
   type PinchStart,
 } from './pointer.ts';
-import type { FlowingerProps, NodeProps, Viewport, XYPosition } from './types.ts';
+import type {
+  Edge,
+  EdgeChange,
+  FlowingerProps,
+  Node,
+  NodeChange,
+  NodeProps,
+  Viewport,
+  XYPosition,
+} from './types.ts';
+
+const NO_NODES: Node[] = [];
+const NO_EDGES: Edge[] = [];
 
 // Inline styles reading `--flowinger-*` custom properties (with fallbacks), so
 // the default node needs no stylesheet and themes from any ancestor. Give a node
@@ -72,8 +87,12 @@ interface PanState {
 }
 
 function InnerCanvas({
-  nodes,
-  edges = [],
+  nodes: nodesProp,
+  edges: edgesProp,
+  defaultNodes,
+  defaultEdges,
+  onNodesChange,
+  onEdgesChange,
   nodeTypes = {},
   edgeTypes,
   minZoom = 0.05,
@@ -90,6 +109,7 @@ function InnerCanvas({
   className = '',
   style = {},
   children,
+  onNodeDragStart,
   onNodeDrag,
   onNodeDragStop,
   onNodeClick,
@@ -100,6 +120,34 @@ function InnerCanvas({
   onInit,
 }: FlowingerProps) {
   const store = useFlowingerStore();
+
+  // With no `nodes` (or `edges`) prop the canvas owns the list, starting from
+  // `defaultNodes`, and applies its own changes to it — the same path a
+  // controlled flow's caller takes, so there is one way things happen.
+  const ownsNodes = nodesProp === undefined;
+  const ownsEdges = edgesProp === undefined;
+  const [ownNodes, setOwnNodes] = useState<Node[]>(() => defaultNodes ?? NO_NODES);
+  const [ownEdges, setOwnEdges] = useState<Edge[]>(() => defaultEdges ?? NO_EDGES);
+  const nodes = nodesProp ?? ownNodes;
+  const edges = edgesProp ?? ownEdges;
+  const changeNodes = useCallback(
+    (changes: NodeChange[]) => {
+      if (ownsNodes) setOwnNodes((current) => applyNodeChanges(changes, current));
+      onNodesChange?.(changes);
+    },
+    [ownsNodes, onNodesChange],
+  );
+  const changeEdges = useCallback(
+    (changes: EdgeChange[]) => {
+      if (ownsEdges) setOwnEdges((current) => applyEdgeChanges(changes, current));
+      onEdgesChange?.(changes);
+    },
+    [ownsEdges, onEdgesChange],
+  );
+  // The flow is controlled — changes are reported, not done — when someone is listening.
+  const nodesChange = ownsNodes || onNodesChange ? changeNodes : undefined;
+  const edgesChange = ownsEdges || onEdgesChange ? changeEdges : undefined;
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const pan = useRef<PanState | null>(null);
@@ -126,12 +174,17 @@ function InnerCanvas({
     store.setBounds(minZoom, maxZoom, translateExtent ?? null);
   }, [store, minZoom, maxZoom, translateExtent]);
 
+  // Callbacks and options first: whether the flow is controlled is decided by
+  // them, and the nodes below are read in that light.
   useIsomorphicLayoutEffect(() => {
-    store.setNodes(nodes);
-  }, [store, nodes]);
+    store.setOptions({ nodesDraggable, elementsSelectable });
+  }, [store, nodesDraggable, elementsSelectable]);
 
   useIsomorphicLayoutEffect(() => {
     store.setCallbacks({
+      onNodesChange: nodesChange,
+      onEdgesChange: edgesChange,
+      onNodeDragStart,
       onNodeDrag,
       onNodeDragStop,
       onNodeClick,
@@ -139,7 +192,26 @@ function InnerCanvas({
       onConnect,
       isValidConnection,
     });
-  }, [store, onNodeDrag, onNodeDragStop, onNodeClick, onSelectionChange, onConnect, isValidConnection]);
+  }, [
+    store,
+    nodesChange,
+    edgesChange,
+    onNodeDragStart,
+    onNodeDrag,
+    onNodeDragStop,
+    onNodeClick,
+    onSelectionChange,
+    onConnect,
+    isValidConnection,
+  ]);
+
+  useIsomorphicLayoutEffect(() => {
+    store.setNodes(nodes);
+  }, [store, nodes]);
+
+  useIsomorphicLayoutEffect(() => {
+    store.setEdges(edges);
+  }, [store, edges]);
 
   const onInitRef = useRef(onInit);
   useEffect(() => {
@@ -364,7 +436,8 @@ function InnerCanvas({
               View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
               draggable={node.draggable ?? nodesDraggable}
               selectable={elementsSelectable && node.selectable !== false}
-              connectable={nodesConnectable}
+              connectable={node.connectable ?? nodesConnectable}
+              controlledSelection={nodesChange !== undefined}
             />
           ))}
         </div>

@@ -37,6 +37,16 @@ describe('Flowinger server rendering', () => {
     expect(html).toContain('marker-end="url(#');
   });
 
+  it('draws a controlled node’s selection from the node, since nothing has run to decide it', () => {
+    const html = renderToString(tree);
+    const nodeTags = html.match(/<div[^>]*data-id="[ab]"[^>]*>/g) ?? [];
+    expect(nodeTags).toHaveLength(2);
+    const [a, b] = nodeTags;
+    expect(a).not.toMatch(/selected/);
+    expect(b).toMatch(/class="[^"]*\bselected\b/);
+    expect(b).toContain('aria-current="true"');
+  });
+
   it('reports "not mounted" on the server, where no canvas has attached', () => {
     expect(renderToString(tree)).toContain('unmounted 2');
   });

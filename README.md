@@ -77,7 +77,8 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 
 | Prop | Default | |
 |---|---|---|
-| `nodes`, `edges`, `nodeTypes` | | The graph. `nodeTypes` maps `node.type` to your component. |
+| `nodes`, `edges`, `nodeTypes` | | The graph. `nodeTypes` maps `node.type` to your component. Give `onNodesChange` / `onEdgesChange` and the flow is [controlled](#controlled-flows). |
+| `defaultNodes`, `defaultEdges` | | Start from these and let the canvas own the list (no `nodes` prop). |
 | `edgeTypes` | | Custom edge components by `edge.type`, receiving `EdgeProps` (where each end attaches, which way it leaves, `data`, `label`, marker references). A key overrides a built-in of the same name; an unknown `type` draws a bezier. |
 | `minZoom`, `maxZoom` | `0.05`, `2` | |
 | `nodesDraggable` | `false` | A node's own `draggable` overrides it, either way. |
@@ -88,11 +89,12 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `elementsSelectable` | `false` | A click selects a node (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`). A node's own `selectable: false` opts it out. |
 | `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out. |
 | `onConnect`, `isValidConnection` | | `onConnect({ source, target, sourceHandle, targetHandle })` — always source → target, whichever end the drag began at. `isValidConnection` can veto, and decides whether the line snaps to a handle. |
-| `onSelectionChange`, `onNodeClick`, `onPaneClick` | | Selection is held by the engine; `onSelectionChange({ nodes })` tells you. A pan's closing click is not a pane click. |
-| `onNodeDrag`, `onNodeDragStop`, `onInit` | | |
+| `onSelectionChange`, `onNodeClick`, `onPaneClick` | | `onSelectionChange({ nodes, edges })` tells you when the selection changes. A pan's closing click is not a pane click, and neither is a drag's a node click. |
+| `onNodeDragStart`, `onNodeDrag`, `onNodeDragStop`, `onInit` | | The drag callbacks get `(event, node, nodes)`: `nodes` is everything being dragged. |
 
-`nodes` is never mutated: a dragged position is kept internally, and a fresh layout from you wins over
-it. **Edges**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`
+Without `onNodesChange`, `nodes` is never mutated: a dragged position is kept internally, and a fresh
+layout from you wins over it. Dragging a selected node drags the whole selection; a node with a
+`dragHandle` (a CSS selector) drags only by that element. **Edges**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`
 (`'bezier'` \| `'straight'` \| `'smoothstep'`), `label`, `markerStart`, `markerEnd`
 (`'arrow'`, `'arrowclosed'`, or `{ type, color, width, height }`), `className`, `style`. Give a node
 `width` and `height` if you know them; the engine measures the rendered size once it can.
@@ -119,6 +121,35 @@ edits `edges` itself (they are your prop), so you add it:
 The dashed line follows the pointer, snaps to a handle that would make a valid connection, and Escape
 cancels. The gesture is tracked on `window`, so it survives leaving the node and the canvas.
 
+### Controlled flows
+
+Give the canvas `onNodesChange` and it stops keeping state for you: dragging, selecting and measuring
+are *reported* as a list of changes, and you apply them.
+
+```tsx
+const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+<FlowingerCanvas
+  nodes={nodes}
+  edges={edges}
+  onNodesChange={onNodesChange}
+  onEdgesChange={onEdgesChange}
+  onConnect={(c) => setEdges((es) => addEdge(c, es))}
+  nodesDraggable
+  elementsSelectable
+/>
+```
+
+`useNodesState` is `useState` plus `onNodesChange = (changes) => setNodes((ns) => applyNodeChanges(changes, ns))`;
+write that yourself if you keep nodes in a store. A change is one of `position` (with `dragging`),
+`dimensions` (the measured size, which `applyNodeChanges` writes to `node.measured`), `select`, `remove`,
+`add` and `replace`. Selection then lives on `node.selected`, and the canvas draws it from there.
+`applyNodeChanges` returns the same object for every node a change did not touch, so memoised views skip
+them. `useNodesInitialized()` is true once every node has been measured, and re-renders only when that flips.
+
+Also exported: `addEdge`, `getConnectedEdges`, `getIncomers`, `getOutgoers`.
+
 ## Theming
 
 The default node, `Controls` and edges are styled inline from CSS variables, each with a fallback, so
@@ -135,8 +166,9 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore` (only `panZoom` and `isReady`), `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
-all exported under React Flow's names. **Not built:** `animated` (style an edge with a class instead). Selection is uncontrolled and covers nodes only (not
-edges), and dragging a selected node moves just that node.
+all exported under React Flow's names, and so are `useNodesState`, `useEdgesState`, `applyNodeChanges`,
+`applyEdgeChanges`, `addEdge` and `useNodesInitialized`. **Not built yet:** `animated` edges (style one with a class
+instead) and selecting an edge.
 
 ## Server rendering
 

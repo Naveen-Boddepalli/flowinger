@@ -2,9 +2,13 @@ import { handleCoordinates } from './handlePoint.ts';
 import { layoutSize } from './measure.ts';
 import type {
   Connection,
+  Edge,
+  EdgeChange,
   FlowingerInstance,
   HandleType,
   Node,
+  NodeChange,
+  NodePositionChange,
   Position,
   SetViewportOptions,
   TranslateExtent,
@@ -66,9 +70,27 @@ export interface NodeCallbacks {
   onConnect?: ((connection: Connection) => void) | undefined;
   isValidConnection?: ((connection: Connection) => boolean) | undefined;
   onNodeClick?: ((event: React.MouseEvent, node: Node) => void) | undefined;
-  onSelectionChange?: ((selection: { nodes: Node[] }) => void) | undefined;
-  onNodeDrag?: ((event: React.PointerEvent, node: Node) => void) | undefined;
-  onNodeDragStop?: ((event: React.PointerEvent, node: Node) => void) | undefined;
+  onSelectionChange?: ((selection: { nodes: Node[]; edges: Edge[] }) => void) | undefined;
+  onNodeDragStart?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
+  onNodeDrag?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
+  onNodeDragStop?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
+  /** Given, it makes the *nodes* controlled: what happens is reported here, not done. */
+  onNodesChange?: ((changes: NodeChange[]) => void) | undefined;
+  /** The edge counterpart of `onNodesChange`. */
+  onEdgesChange?: ((changes: EdgeChange[]) => void) | undefined;
+}
+
+/** The canvas's settings the store needs to act on a gesture. */
+export interface EngineOptions {
+  nodesDraggable: boolean;
+  elementsSelectable: boolean;
+}
+
+/** A node drag in progress — one node, or the whole selection moving with it. */
+export interface DragSession {
+  /** Moves every dragged node to its start position plus this offset, in graph units. */
+  move: (event: React.PointerEvent, dx: number, dy: number) => void;
+  end: (event: React.PointerEvent) => void;
 }
 
 /**
@@ -192,15 +214,24 @@ export function createFlowingerStore(
   let state: FlowingerState = { panZoom: null, isReady: false };
 
   let nodes: readonly Node[] = [];
+  let nodeById = new Map<string, Node>();
+  let edges: readonly Edge[] = [];
+  let edgeById = new Map<string, Edge>();
   let callbacks: NodeCallbacks = {};
+  let options: EngineOptions = { nodesDraggable: false, elementsSelectable: false };
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
   const sizes = new Map<string, Size>();
   /** Registered handles by node, in registration (DOM) order. */
   const handles = new Map<string, Set<HandleRecord>>();
   const nodeEls = new Map<string, HTMLElement>();
-  /** Selected node ids. Uncontrolled: held here, reported through `onSelectionChange`. */
+  /** Selected ids while the nodes / edges are *not* controlled; otherwise `selected` on the element says. */
   const selected = new Set<string>();
+  const selectedEdges = new Set<string>();
+  /** What `onSelectionChange` last heard, so it fires on a change and only then. */
+  let announced = JSON.stringify([[], []]);
+  /** The size last reported through a `dimensions` change, by node. */
+  const reported = new Map<string, Size>();
   let connection: ConnectionState | null = null;
   let stopConnecting: (() => void) | null = null;
   let stopObserving: (() => void) | null = null;
@@ -355,6 +386,35 @@ export function createFlowingerStore(
     emit(nodeListeners.get(node.id) ?? []);
   };
 
+  const nodesControlled = (): boolean => callbacks.onNodesChange !== undefined;
+  const edgesControlled = (): boolean => callbacks.onEdgesChange !== undefined;
+
+  const emitNodeChanges = (changes: NodeChange[]) => {
+    if (changes.length > 0) callbacks.onNodesChange?.(changes);
+  };
+  const emitEdgeChanges = (changes: EdgeChange[]) => {
+    if (changes.length > 0) callbacks.onEdgesChange?.(changes);
+  };
+
+  /**
+   * Tells a controlled flow the sizes it has not heard yet. Runs after a
+   * measurement and after the nodes arrive — the first measurements happen
+   * before the canvas has registered either the nodes or the callback.
+   */
+  const flushDimensions = () => {
+    if (!nodesControlled()) return;
+    const changes: NodeChange[] = [];
+    for (const [id, size] of sizes) {
+      const node = nodeById.get(id);
+      const last = reported.get(id);
+      if (!node || (last?.width === size.width && last.height === size.height)) continue;
+      reported.set(id, size);
+      if (node.measured?.width === size.width && node.measured.height === size.height) continue;
+      changes.push({ type: 'dimensions', id, dimensions: { width: size.width, height: size.height } });
+    }
+    emitNodeChanges(changes);
+  };
+
   /** Records a measured size. Ignores zero — an unmeasurable node keeps its declared size. */
   const setSize = (id: string, width: number, height: number) => {
     if (width <= 0 || height <= 0) return;
@@ -362,7 +422,12 @@ export function createFlowingerStore(
     if (known?.width === width && known.height === height) return;
     sizes.set(id, { width, height });
     bumpGeometry();
+    flushDimensions();
   };
+
+  /** Whether every node that is drawn has been measured — false for an empty diagram. */
+  const areNodesInitialized = (): boolean =>
+    nodes.length > 0 && nodes.every((n) => n.hidden === true || sizes.has(n.id));
 
   /** Lets handle measurement find the node a handle belongs to. Returns its cleanup. */
   const registerNodeElement = (id: string, el: HTMLElement): (() => void) => {
@@ -538,12 +603,67 @@ export function createFlowingerStore(
     };
   };
 
-  const isSelected = (id: string): boolean => selected.has(id);
+  // --- selection ------------------------------------------------------------
 
-  /** Tells the nodes whose state flipped, and the caller once. */
-  const announceSelection = (changed: Iterable<string>) => {
-    for (const id of changed) emit(nodeListeners.get(id) ?? []);
-    callbacks.onSelectionChange?.({ nodes: nodes.filter((n) => selected.has(n.id)) });
+  /** Controlled, the element says; otherwise the store's own set does. */
+  const isSelected = (id: string): boolean =>
+    nodesControlled() ? nodeById.get(id)?.selected === true : selected.has(id);
+  const isEdgeSelected = (id: string): boolean =>
+    edgesControlled() ? edgeById.get(id)?.selected === true : selectedEdges.has(id);
+
+  const selectedNodeIds = (): string[] => nodes.filter((n) => isSelected(n.id)).map((n) => n.id);
+  const selectedEdgeIds = (): string[] => edges.filter((e) => isEdgeSelected(e.id)).map((e) => e.id);
+
+  /** Tells `onSelectionChange` — once per change, and never for a selection that has not changed. */
+  const announceIfChanged = () => {
+    const nodeIds = selectedNodeIds();
+    const edgeIds = selectedEdgeIds();
+    const key = JSON.stringify([nodeIds, edgeIds]);
+    if (key === announced) return;
+    announced = key;
+    callbacks.onSelectionChange?.({
+      nodes: nodeIds.flatMap((id) => nodeById.get(id) ?? []),
+      edges: edgeIds.flatMap((id) => edgeById.get(id) ?? []),
+    });
+  };
+
+  /**
+   * Makes exactly these nodes and edges the selection. Controlled, that is a
+   * list of `select` changes for whoever owns the state; otherwise it is done
+   * here and the affected nodes are told.
+   */
+  const setSelection = (nodeIds: ReadonlySet<string>, edgeIds: ReadonlySet<string>) => {
+    const nodeChanges: NodeChange[] = [];
+    const flipped: string[] = [];
+    for (const n of nodes) {
+      const now = isSelected(n.id);
+      const next = nodeIds.has(n.id);
+      if (now === next) continue;
+      if (nodesControlled()) nodeChanges.push({ type: 'select', id: n.id, selected: next });
+      else {
+        if (next) selected.add(n.id);
+        else selected.delete(n.id);
+        flipped.push(n.id);
+      }
+    }
+    const edgeChanges: EdgeChange[] = [];
+    let edgesFlipped = false;
+    for (const e of edges) {
+      const now = isEdgeSelected(e.id);
+      const next = edgeIds.has(e.id);
+      if (now === next) continue;
+      if (edgesControlled()) edgeChanges.push({ type: 'select', id: e.id, selected: next });
+      else {
+        if (next) selectedEdges.add(e.id);
+        else selectedEdges.delete(e.id);
+        edgesFlipped = true;
+      }
+    }
+    for (const id of flipped) emit(nodeListeners.get(id) ?? []);
+    if (edgesFlipped) bumpGeometry();
+    emitNodeChanges(nodeChanges);
+    emitEdgeChanges(edgeChanges);
+    announceIfChanged();
   };
 
   /**
@@ -552,50 +672,118 @@ export function createFlowingerStore(
    * says nothing.
    */
   const selectNode = (id: string, additive = false) => {
-    const before = new Set(selected);
-    if (additive) {
-      if (!selected.delete(id)) selected.add(id);
-    } else {
-      selected.clear();
-      selected.add(id);
-    }
-    const changed = [...new Set([...before, ...selected])].filter(
-      (n) => before.has(n) !== selected.has(n),
-    );
-    if (changed.length > 0) announceSelection(changed);
+    const nodeIds = new Set(additive ? selectedNodeIds() : []);
+    if (!additive || !nodeIds.delete(id)) nodeIds.add(id);
+    setSelection(nodeIds, new Set(additive ? selectedEdgeIds() : []));
   };
 
   const clearSelection = () => {
-    if (selected.size === 0) return;
-    const changed = [...selected];
-    selected.clear();
-    announceSelection(changed);
+    setSelection(new Set(), new Set());
   };
+
+  const hasSelection = (): boolean => selectedNodeIds().length > 0 || selectedEdgeIds().length > 0;
+
+  // --- dragging nodes -------------------------------------------------------
+
+  const isDraggable = (n: Node): boolean => n.draggable ?? options.nodesDraggable;
+  const isSelectable = (n: Node): boolean => options.elementsSelectable && n.selectable !== false;
+
+  /**
+   * Starts dragging `lead`. If it is part of the selection the whole selection
+   * goes with it; otherwise it is selected (where selecting is on) and goes
+   * alone — which is what a press on an unselected node means.
+   */
+  const beginNodeDrag = (lead: Node, event: React.PointerEvent, additive: boolean): DragSession => {
+    const before = selectedNodeIds();
+    let group = [lead.id];
+    if (before.includes(lead.id)) {
+      group = before;
+    } else if (isSelectable(lead)) {
+      selectNode(lead.id, additive);
+      group = additive ? [...before, lead.id] : [lead.id];
+    }
+    const items = group.flatMap((id) => {
+      const n = nodeById.get(id) ?? (id === lead.id ? lead : undefined);
+      return n && isDraggable(n) ? [n] : [];
+    });
+    const origins = new Map(items.map((n) => [n.id, resolvePosition(n.id, n.position)]));
+    const leadOf = (moved: Node[]): Node => moved.find((n) => n.id === lead.id) ?? lead;
+    const at = (n: Node, dx: number, dy: number, dragging: boolean): Node => {
+      const from = origins.get(n.id) ?? n.position;
+      return { ...n, position: { x: from.x + dx, y: from.y + dy }, dragging };
+    };
+
+    callbacks.onNodeDragStart?.(event, lead, items.map((n) => at(n, 0, 0, false)));
+
+    let last = { dx: 0, dy: 0 };
+    return {
+      move: (e, dx, dy) => {
+        last = { dx, dy };
+        const changes: NodePositionChange[] = [];
+        for (const n of items) {
+          const position = at(n, dx, dy, true).position;
+          if (nodesControlled()) changes.push({ type: 'position', id: n.id, position, dragging: true });
+          else setNodePosition(n, position);
+        }
+        emitNodeChanges(changes);
+        // What the callback sees is where the drag put the nodes — even when the
+        // caller, controlling them, has not applied the change yet.
+        const moved = items.map((n) => at(n, dx, dy, true));
+        callbacks.onNodeDrag?.(e, leadOf(moved), moved);
+      },
+      end: (e) => {
+        if (nodesControlled()) {
+          emitNodeChanges(items.map((n) => ({ type: 'position', id: n.id, dragging: false })));
+        }
+        const settled = items.map((n) => at(n, last.dx, last.dy, false));
+        callbacks.onNodeDragStop?.(e, leadOf(settled), settled);
+      },
+    };
+  };
+
+  // --- what the canvas hands over ------------------------------------------
 
   const setNodes = (next: readonly Node[]) => {
     // Anything drawing from geometry (the edge layer, a minimap) must hear of a
     // new layout, not only of a measurement or a drag.
     const relaid = !sameLayout(nodes, next);
+    const before = nodeById;
     nodes = next;
-    const byId = new Map(next.map((n) => [n.id, n]));
+    nodeById = new Map(next.map((n) => [n.id, n]));
     let pruned = false;
     for (const id of [...sizes.keys()]) {
-      if (!byId.has(id)) {
+      if (!nodeById.has(id)) {
         sizes.delete(id);
+        reported.delete(id);
         pruned = true;
       }
     }
     for (const [id, dragged] of [...overrides]) {
-      const node = byId.get(id);
+      const node = nodeById.get(id);
       if (!node || !samePoint(node.position, dragged.base)) {
         overrides.delete(id);
         pruned = true;
       }
     }
-    const gone = [...selected].filter((id) => !byId.has(id));
-    for (const id of gone) selected.delete(id);
+    for (const id of [...selected]) if (!nodeById.has(id)) selected.delete(id);
+    // A controlled node's selection lives on the node: whoever it flipped for must redraw.
+    if (nodesControlled()) {
+      for (const n of next) {
+        if ((before.get(n.id)?.selected === true) !== (n.selected === true)) {
+          emit(nodeListeners.get(n.id) ?? []);
+        }
+      }
+    }
     if (pruned || relaid) bumpGeometry();
-    if (gone.length > 0) announceSelection(gone);
+    announceIfChanged();
+    flushDimensions();
+  };
+
+  const setEdges = (next: readonly Edge[]) => {
+    edges = next;
+    edgeById = new Map(next.map((e) => [e.id, e]));
+    for (const id of [...selectedEdges]) if (!edgeById.has(id)) selectedEdges.delete(id);
+    announceIfChanged();
   };
 
   const fitView = (options?: SetViewportOptions) => {
@@ -695,8 +883,12 @@ export function createFlowingerStore(
       if (changed && extent) instance.setViewport(viewport);
     },
     setNodes,
+    setEdges,
     setCallbacks: (next: NodeCallbacks) => {
       callbacks = next;
+    },
+    setOptions: (next: EngineOptions) => {
+      options = next;
     },
     getCallbacks: () => callbacks,
 
@@ -719,9 +911,12 @@ export function createFlowingerStore(
       containerEl ? { width: containerEl.clientWidth, height: containerEl.clientHeight } : null,
     subscribeConnection: subscribeTo(connectionListeners),
     isSelected,
-    hasSelection: () => selected.size > 0,
+    isEdgeSelected,
+    hasSelection,
     selectNode,
     clearSelection,
+    beginNodeDrag,
+    areNodesInitialized,
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),

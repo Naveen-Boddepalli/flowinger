@@ -54,3 +54,16 @@ export function useStore<T>(selector: (state: FlowingerState) => T): T {
     () => selector(NOT_MOUNTED),
   );
 }
+
+/**
+ * Whether every node has been measured — false for an empty diagram. Re-renders
+ * its caller only when that flips, not on every drag or pan.
+ */
+export function useNodesInitialized(): boolean {
+  const store = useContext(FlowingerContext);
+  return useSyncExternalStore(
+    store ? store.subscribeGeometry : noSubscription,
+    () => store?.areNodesInitialized() ?? false,
+    () => false,
+  );
+}

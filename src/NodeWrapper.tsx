@@ -15,16 +15,15 @@ import { layoutSize } from './measure.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
-import type { Node, NodeProps, XYPosition } from './types.ts';
+import type { DragSession } from './store.ts';
+import type { Node, NodeProps } from './types.ts';
 
 interface DragState {
   pointerId: number;
   startX: number;
   startY: number;
-  /** Where the node was when the press began, in graph units. */
-  origin: XYPosition;
-  /** False until the pointer has travelled `DRAG_THRESHOLD`. */
-  active: boolean;
+  /** Null until the pointer has travelled `DRAG_THRESHOLD`; then the drag proper. */
+  session: DragSession | null;
 }
 
 export interface NodeWrapperProps {
@@ -35,6 +34,8 @@ export interface NodeWrapperProps {
   selectable: boolean;
   /** Whether its handles can start and end connections. */
   connectable: boolean;
+  /** Whether `node.selected` is what says so (a controlled flow), as opposed to the store's own set. */
+  controlledSelection: boolean;
 }
 
 /**
@@ -49,10 +50,13 @@ export const NodeWrapper = memo(function NodeWrapper({
   draggable,
   selectable,
   connectable,
+  controlledSelection,
 }: NodeWrapperProps) {
   const store = useFlowingerStore();
   const ref = useRef<HTMLDivElement | null>(null);
   const drag = useRef<DragState | null>(null);
+  /** A drag just ended: the click that follows it is not a click on the node. */
+  const justDragged = useRef(false);
   const [dragging, setDragging] = useState(false);
 
   const subscribe = useCallback(
@@ -67,7 +71,7 @@ export const NodeWrapper = memo(function NodeWrapper({
   const selected = useSyncExternalStore(
     subscribe,
     () => store.isSelected(node.id),
-    () => false,
+    () => controlledSelection && node.selected === true,
   );
 
   // What a `<Handle>` inside this node registers itself with.
@@ -103,54 +107,50 @@ export const NodeWrapper = memo(function NodeWrapper({
   }, [store, node.id]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    justDragged.current = false;
     if (!draggable || e.button !== 0 || isInteractive(e.target)) return;
+    // With a drag handle, only a press on it drags; elsewhere the canvas pans.
+    if (node.dragHandle && !(e.target instanceof Element && e.target.closest(node.dragHandle))) return;
     // Claimed from the first press, so the canvas underneath does not start a
     // pan — even though the drag proper only begins past the threshold.
     e.stopPropagation();
-    drag.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      origin: position,
-      active: false,
-    };
+    drag.current = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, session: null };
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (d?.pointerId !== e.pointerId) return;
-    if (!d.active) {
+    if (!d.session) {
       if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_THRESHOLD) return;
-      d.active = true;
+      d.session = store.beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
+      justDragged.current = true;
       setDragging(true);
       capturePointer(e.currentTarget, e.pointerId);
     }
     e.stopPropagation();
-
     const zoom = store.getViewport().zoom;
-    const next = {
-      x: d.origin.x + (e.clientX - d.startX) / zoom,
-      y: d.origin.y + (e.clientY - d.startY) / zoom,
-    };
-    store.setNodePosition(node, next);
-    store.getCallbacks().onNodeDrag?.(e, { ...node, position: next });
+    d.session.move(e, (e.clientX - d.startX) / zoom, (e.clientY - d.startY) / zoom);
   };
 
   const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (d?.pointerId !== e.pointerId) return;
     drag.current = null;
-    if (!d.active) return;
+    if (!d.session) return;
     e.stopPropagation();
     releasePointer(e.currentTarget, e.pointerId);
     setDragging(false);
-    store
-      .getCallbacks()
-      .onNodeDragStop?.(e, { ...node, position: store.resolvePosition(node.id, node.position) });
+    d.session.end(e);
   };
 
   // A click on a control inside the node is that control's, not a selection.
   const onClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    // Pointer capture retargets the click that ends a drag onto this node, and
+    // it would otherwise collapse a group selection to the one node.
+    if (justDragged.current) {
+      justDragged.current = false;
+      return;
+    }
     store.getCallbacks().onNodeClick?.(e, node);
     if (selectable && !isInteractive(e.target)) {
       store.selectNode(node.id, e.shiftKey || e.metaKey || e.ctrlKey);

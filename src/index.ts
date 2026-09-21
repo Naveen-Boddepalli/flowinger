@@ -4,7 +4,24 @@ export {
   FlowingerProvider,
   FlowingerProvider as ReactFlowProvider,
 } from './FlowingerProvider.tsx';
-export { useFlowinger, useReactFlow, useStore, useViewport } from './context.ts';
+export {
+  useFlowinger,
+  useReactFlow,
+  useStore,
+  useViewport,
+  useNodesInitialized,
+} from './context.ts';
+
+// Controlled flows
+export {
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+  getConnectedEdges,
+  getIncomers,
+  getOutgoers,
+} from './changes.ts';
+export { useNodesState, useEdgesState } from './hooks.ts';
 
 // Handles & Ports
 export { Handle } from './Handle.tsx';
@@ -48,5 +65,17 @@ export type {
   EdgeMarker,
   EdgeProps,
   EdgeTypes,
+  NodeChange,
+  NodePositionChange,
+  NodeDimensionChange,
+  NodeSelectionChange,
+  NodeRemoveChange,
+  NodeAddChange,
+  NodeReplaceChange,
+  EdgeChange,
+  EdgeSelectionChange,
+  EdgeRemoveChange,
+  EdgeAddChange,
+  EdgeReplaceChange,
 } from './types.ts';
 export type { FlowingerState } from './store.ts';
