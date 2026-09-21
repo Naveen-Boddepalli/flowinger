@@ -4,6 +4,7 @@ import {
   FlowingerCanvas,
   FlowingerProvider,
   Handle,
+  MiniMap,
   Position,
   useStore,
   useViewport,
@@ -55,5 +56,6 @@ export const tree = (
       <Probe />
     </FlowingerCanvas>
     <Controls />
+    <MiniMap />
   </FlowingerProvider>
 );

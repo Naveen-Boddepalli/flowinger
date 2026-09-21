@@ -108,6 +108,21 @@ const sameExtent = (a: TranslateExtent | null, b: TranslateExtent | null): boole
     a[1][0] === b[1][0] &&
     a[1][1] === b[1][1]);
 
+/** Whether two node lists lay out the same: same ids, positions and declared sizes, in order. */
+const sameLayout = (a: readonly Node[], b: readonly Node[]): boolean =>
+  a === b ||
+  (a.length === b.length &&
+    a.every((n, i) => {
+      const m = b[i];
+      return (
+        m !== undefined &&
+        n.id === m.id &&
+        samePoint(n.position, m.position) &&
+        n.width === m.width &&
+        n.height === m.height
+      );
+    }));
+
 const sameAnchor = (a: XYPosition | null, b: XYPosition | null): boolean =>
   a === null || b === null ? a === b : samePoint(a, b);
 
@@ -174,6 +189,7 @@ export function createFlowingerStore(
   const selected = new Set<string>();
   let connection: ConnectionState | null = null;
   let stopConnecting: (() => void) | null = null;
+  let stopObserving: (() => void) | null = null;
   let geometryVersion = 0;
 
   const viewportListeners = new Set<Listener>();
@@ -543,6 +559,9 @@ export function createFlowingerStore(
   };
 
   const setNodes = (next: readonly Node[]) => {
+    // Anything drawing from geometry (the edge layer, a minimap) must hear of a
+    // new layout, not only of a measurement or a drag.
+    const relaid = !sameLayout(nodes, next);
     nodes = next;
     const byId = new Map(next.map((n) => [n.id, n]));
     let pruned = false;
@@ -561,7 +580,7 @@ export function createFlowingerStore(
     }
     const gone = [...selected].filter((id) => !byId.has(id));
     for (const id of gone) selected.delete(id);
-    if (pruned) bumpGeometry();
+    if (pruned || relaid) bumpGeometry();
     if (gone.length > 0) announceSelection(gone);
   };
 
@@ -603,6 +622,20 @@ export function createFlowingerStore(
     containerEl = container;
     // A remount (StrictMode's, or a route change back) gets the viewport it left.
     viewportEl.style.transform = viewportTransform(viewport);
+    stopObserving?.();
+    if (typeof ResizeObserver !== 'undefined') {
+      // A resized pane changes what a minimap should show as "visible".
+      let width = container.clientWidth;
+      let height = container.clientHeight;
+      const observer = new ResizeObserver(() => {
+        if (container.clientWidth === width && container.clientHeight === height) return;
+        width = container.clientWidth;
+        height = container.clientHeight;
+        bumpGeometry();
+      });
+      observer.observe(container);
+      stopObserving = () => { observer.disconnect(); };
+    }
     state = { panZoom: instance, isReady: true };
     emit(mountListeners);
   };
@@ -610,6 +643,8 @@ export function createFlowingerStore(
   const detach = () => {
     cancelTween();
     cancelConnection();
+    stopObserving?.();
+    stopObserving = null;
     viewportEl = null;
     containerEl = null;
     state = { panZoom: null, isReady: false };
@@ -665,6 +700,9 @@ export function createFlowingerStore(
     findHandle,
     startConnection,
     getConnection: () => connection,
+    getNodes: (): readonly Node[] => nodes,
+    getContainerSize: (): Size | null =>
+      containerEl ? { width: containerEl.clientWidth, height: containerEl.clientHeight } : null,
     subscribeConnection: subscribeTo(connectionListeners),
     isSelected,
     hasSelection: () => selected.size > 0,

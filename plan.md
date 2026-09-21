@@ -91,6 +91,14 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
   `source → target` `Connection`; `isValidConnection` can veto it and also decides whether the line
   snaps. `edges` is the caller's prop, so `onConnect` hands the connection back rather than adding it.
   Escape, `pointercancel` and unmounting all cancel cleanly.
+- **The minimap is an SVG of the same geometry the edges use.** It draws from the store (positions,
+  measured sizes, the node list, the pane's size), so it needed the store to announce two things it
+  previously did not: a new layout from the parent, and a resized pane (both now bump the geometry
+  version, which the edge layer also benefits from). It always includes the visible region as well as the
+  nodes, so panning far away zooms it out. Because that makes its own box move whenever the view does,
+  a drag *freezes* the box — otherwise the map rescales under the pointer and the drag swims — and it
+  refits on release. It is a pointer shortcut (announced as an image); the keyboard paths are the
+  canvas's arrows and `Controls`.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
@@ -99,10 +107,11 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
 
 - Connecting by *keyboard* (a drag is the only way to make a connection), and connection-start/end callbacks.
 - Edge selection, controlled selection (`node.selected`), and dragging a selection as a group.
-- A minimap.
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
-  see the README), but has not been published, and there is no CI.
+  see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build
+  on React 18 and 19) exists, and both legs pass locally, but the first GitHub run has not been read —
+  the repo is private and nothing here could view it.
 
 ## 1. Context and Goals
 

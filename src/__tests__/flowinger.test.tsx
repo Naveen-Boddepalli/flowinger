@@ -7,6 +7,7 @@ import {
   FlowingerCanvas,
   FlowingerProvider,
   Controls,
+  MiniMap,
   Handle,
   MarkerType,
   Position,
@@ -1827,5 +1828,211 @@ describe('Flowinger connecting', () => {
       release(100, 100);
     }).not.toThrow();
     expect(onConnect).not.toHaveBeenCalled();
+  });
+});
+
+describe('Flowinger minimap', () => {
+  const nodes: Node[] = [
+    { id: 'a', position: { x: 0, y: 0 }, data: {}, width: 100, height: 40 },
+    { id: 'b', position: { x: 300, y: 200 }, data: {}, width: 100, height: 40 },
+  ];
+  /** An 800 × 600 pane. Everything below is worked out from that and the two nodes. */
+  const sizePane = () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+  };
+  const map = (c: ParentNode) => must<SVGSVGElement>(c, '.flowinger-minimap');
+  const viewRect = (c: ParentNode) => must(c, '.flowinger-minimap-view');
+  const centreOf = (c: ParentNode) => {
+    const vp = viewportOf(c);
+    return { x: (400 - vp.x) / vp.zoom, y: (300 - vp.y) / vp.zoom }; // what the pane's middle shows
+  };
+  const tap = (el: Element, x: number, y: number) =>
+    fireEvent.pointerDown(el, pointer({ clientX: x, clientY: y }));
+  const drag = (el: Element, x: number, y: number) =>
+    fireEvent.pointerMove(el, pointer({ clientX: x, clientY: y }));
+
+  function Zoomer() {
+    const { zoomIn } = useFlowinger();
+    return <button onClick={() => { zoomIn(); }}>zoom</button>;
+  }
+  const setup = (over: { canvas?: Partial<Parameters<typeof FlowingerCanvas>[0]>; mini?: Partial<Parameters<typeof MiniMap>[0]> } = {}) =>
+    render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes} {...over.canvas} />
+        <MiniMap width={200} height={150} {...over.mini} />
+        <Zoomer />
+      </FlowingerProvider>,
+    );
+
+  it('draws every node where it is, at its size, in one colour or a function of the node', () => {
+    sizePane();
+    const { container } = setup();
+    const rects = [...container.querySelectorAll('.flowinger-minimap-node')];
+    expect(rects).toHaveLength(2);
+    expect(rects[0]?.getAttribute('x')).toBe('0');
+    expect(rects[0]?.getAttribute('width')).toBe('100');
+    expect(rects[1]?.getAttribute('x')).toBe('300');
+    expect(rects[1]?.getAttribute('y')).toBe('200');
+    expect(rects[0]?.getAttribute('fill')).toContain('--flowinger-text-dim');
+
+    const colored = setup({ mini: { nodeColor: (n) => (n.id === 'a' ? 'red' : 'blue') } });
+    const fills = [...colored.container.querySelectorAll('.flowinger-minimap-node')].map((r) => r.getAttribute('fill'));
+    expect(fills.slice(-2)).toEqual(['red', 'blue']);
+  });
+
+  it('shows the whole graph and the visible region, with the region cut out of the mask', () => {
+    sizePane();
+    const { container } = setup();
+    // The view is (0, 0, 800, 600) and covers both nodes, so it sets the bounds;
+    // 5% of the longer side (40) is left around it.
+    expect(map(container).getAttribute('viewBox')).toBe('-40 -40 880 680');
+    const view = viewRect(container);
+    expect([view.getAttribute('x'), view.getAttribute('y'), view.getAttribute('width'), view.getAttribute('height')])
+      .toEqual(['0', '0', '800', '600']);
+    const mask = must(container, '.flowinger-minimap-mask');
+    expect(mask.getAttribute('d')).toBe('M-40,-40h880v680h-880z M0,0h800v600h-800z');
+    expect(mask.getAttribute('fill-rule')).toBe('evenodd');
+  });
+
+  it('follows the viewport: zooming in shrinks the visible region', () => {
+    sizePane();
+    const { container } = setup();
+    fireEvent.click(screen.getByText('zoom')); // ×1.25 about the pane's middle
+    const view = viewRect(container);
+    // 800 / 1.25 = 640 wide, 600 / 1.25 = 480 high, still centred on (400, 300).
+    expect([view.getAttribute('x'), view.getAttribute('y'), view.getAttribute('width'), view.getAttribute('height')])
+      .toEqual(['80', '60', '640', '480']);
+  });
+
+  it('moves the view to where you click, and keeps following while you drag', () => {
+    sizePane();
+    const { container } = setup();
+    // The 880 × 680 box fits 200 × 150 at 150 / 680 (the height limits it), and is
+    // centred sideways by the letterbox: (200 − 880 · 150/680) / 2 ≈ 2.94.
+    const scale = 150 / 680;
+    const letterbox = (200 - 880 * scale) / 2;
+    const graphAt = (px: number, py: number) => ({ x: (px - letterbox) / scale - 40, y: py / scale - 40 });
+
+    tap(map(container), 150, 75);
+    expect(centreOf(container).x).toBeCloseTo(graphAt(150, 75).x, 1);
+    expect(centreOf(container).y).toBeCloseTo(graphAt(150, 75).y, 1);
+
+    drag(map(container), 60, 30); // dragging on: the view keeps following
+    expect(centreOf(container).x).toBeCloseTo(graphAt(60, 30).x, 1);
+    expect(centreOf(container).y).toBeCloseTo(graphAt(60, 30).y, 1);
+
+    fireEvent.pointerUp(map(container), pointer({ clientX: 60, clientY: 30 }));
+    const settled = viewportOf(container);
+    drag(map(container), 180, 120); // released: further moves do nothing
+    expect(viewportOf(container)).toEqual(settled);
+  });
+
+  it('holds the map still during a drag, then refits it to the view on release', () => {
+    sizePane();
+    const { container } = setup();
+    const viewBox = () => map(container).getAttribute('viewBox');
+    const before = viewBox();
+
+    tap(map(container), 190, 75); // far right: the view moves well past the nodes
+    drag(map(container), 195, 75);
+    expect(viewBox()).toBe(before); // frozen: the map does not swim under the pointer
+
+    fireEvent.pointerUp(map(container), pointer({ clientX: 195, clientY: 75 }));
+    expect(viewBox()).not.toBe(before); // refitted to include where the view now is
+    const [bx = 0, by = 0, bw = 0, bh = 0] = (viewBox() ?? '').split(' ').map(Number);
+    const view = viewRect(container);
+    const vx = Number(view.getAttribute('x'));
+    const vy = Number(view.getAttribute('y'));
+    expect(vx).toBeGreaterThanOrEqual(bx - 1e-6);
+    expect(vy).toBeGreaterThanOrEqual(by - 1e-6);
+    expect(vx + Number(view.getAttribute('width'))).toBeLessThanOrEqual(bx + bw + 1e-6);
+    expect(vy + Number(view.getAttribute('height'))).toBeLessThanOrEqual(by + bh + 1e-6);
+  });
+
+  it('keeps the zoom when it moves the view', () => {
+    sizePane();
+    const { container } = setup();
+    fireEvent.click(screen.getByText('zoom'));
+    const zoom = viewportOf(container).zoom;
+    tap(map(container), 40, 40);
+    expect(viewportOf(container).zoom).toBeCloseTo(zoom);
+  });
+
+  it('does nothing on a press when pannable is off', () => {
+    sizePane();
+    const { container } = setup({ mini: { pannable: false } });
+    tap(map(container), 150, 75);
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+  });
+
+  it('is not a pan, a drag or a pane click when it sits inside the canvas', () => {
+    sizePane();
+    const onPaneClick = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} onPaneClick={onPaneClick}>
+        <MiniMap width={200} height={150} />
+      </FlowingerCanvas>,
+    );
+    // The middle of the overview is the middle of the view: pressing there moves nothing.
+    tap(map(container), 100, 75);
+    // …so if the press had also reached the canvas, this move would pan it.
+    fireEvent.pointerMove(must(container, '.flowinger'), pointer({ clientX: 160, clientY: 75 }));
+    expect(viewportOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
+    fireEvent.click(map(container));
+    expect(onPaneClick).not.toHaveBeenCalled();
+  });
+
+  it('follows a dragged node, and a new layout from the parent', () => {
+    sizePane();
+    const { container, rerender } = render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes} nodesDraggable />
+        <MiniMap width={200} height={150} />
+      </FlowingerProvider>,
+    );
+    const b = must(container, '[data-id="b"]');
+    fireEvent.pointerDown(b, pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(b, pointer({ clientX: 40, clientY: 30 }));
+    const rectB = () => [...container.querySelectorAll('.flowinger-minimap-node')][1];
+    expect(rectB()?.getAttribute('x')).toBe('340');
+    expect(rectB()?.getAttribute('y')).toBe('230');
+
+    // A parent laying the graph out afresh is heard by the overview too.
+    rerender(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes.map((n) => (n.id === 'b' ? { ...n, position: { x: 500, y: 100 } } : n))} nodesDraggable />
+        <MiniMap width={200} height={150} />
+      </FlowingerProvider>,
+    );
+    expect(rectB()?.getAttribute('x')).toBe('500');
+    expect(rectB()?.getAttribute('y')).toBe('100');
+  });
+
+  it('draws only the nodes while the pane has no size, and an empty box for an empty graph', () => {
+    const { container } = render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes} />
+        <MiniMap width={200} height={150} />
+      </FlowingerProvider>,
+    ); // jsdom: the pane measures zero
+    expect(container.querySelectorAll('.flowinger-minimap-node')).toHaveLength(2);
+    expect(container.querySelector('.flowinger-minimap-view')).toBeNull();
+    expect(container.querySelector('.flowinger-minimap-mask')).toBeNull();
+
+    const none = render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={[]} />
+        <MiniMap width={200} height={150} />
+      </FlowingerProvider>,
+    );
+    expect(none.container.querySelectorAll('.flowinger-minimap-node')).toHaveLength(0);
+    expect(must(none.container, '.flowinger-minimap').getAttribute('viewBox')).toBe('0 0 200 150');
+  });
+
+  it('is announced as an image with a name', () => {
+    const { container } = setup({ mini: { ariaLabel: 'Query plan overview' } });
+    expect(map(container).getAttribute('role')).toBe('img');
+    expect(map(container).getAttribute('aria-label')).toBe('Query plan overview');
   });
 });

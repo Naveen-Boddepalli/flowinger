@@ -21,6 +21,7 @@ describe('Flowinger server rendering', () => {
     expect(html).toContain('beta');
     expect(html).toContain('joins'); // the edge label
     expect(html).toContain('Zoom in'); // Controls
+    expect(html).toContain('aria-label="Minimap"'); // the overview draws server-side too
     expect(html).toContain('translate(10px, 20px)'); // a node, where the layout put it
   });
 

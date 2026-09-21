@@ -2,7 +2,7 @@
 
 A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
 drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
-About 8.5 kB gzipped; the only peer dependencies are `react` and `react-dom` (18 or 19).
+About 10 kB gzipped; the only peer dependencies are `react` and `react-dom` (18 or 19).
 
 ```tsx
 import {
@@ -69,6 +69,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
 | `Background`, `Controls` | A dot/line/cross backdrop; zoom and fit buttons. Both go inside the provider. |
+| `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor` (a colour or a function of the node), `maskColor`, `pannable`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
 | `useFlowinger()`, `useViewport()` | The viewport controls (`setViewport`, `zoomIn`, `zoomOut`, `fitView`, `getViewport`), and the current viewport. |
 | `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY]`. |
 
@@ -132,8 +133,7 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore` (only `panZoom` and `isReady`), `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
-all exported under React Flow's names. **Not built:** a minimap, and `animated` (style an edge with a
-class instead). Selection is uncontrolled and covers nodes only (not
+all exported under React Flow's names. **Not built:** `animated` (style an edge with a class instead). Selection is uncontrolled and covers nodes only (not
 edges), and dragging a selected node moves just that node.
 
 ## Server rendering

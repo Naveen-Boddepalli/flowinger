@@ -12,6 +12,7 @@ export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
 
 // Background & Controls
 export { Background } from './Background.tsx';
+export { MiniMap, type MiniMapProps } from './MiniMap.tsx';
 export { Controls } from './Controls.tsx';
 
 // Edges & Path Math

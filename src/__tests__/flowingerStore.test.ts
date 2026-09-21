@@ -496,3 +496,67 @@ describe('flowinger store — selection', () => {
     expect(store.hasSelection()).toBe(true);
   });
 });
+
+describe('flowinger store — geometry notifications for overviews', () => {
+  it('bumps geometry when nodes are laid out afresh, not when the same layout is passed again', () => {
+    const { store } = mounted();
+    const a = node('a', 0, 0, { width: 100, height: 40 });
+    store.setNodes([a]);
+    const v = store.getGeometryVersion();
+
+    store.setNodes([{ ...a }]); // a new array and object, the same layout
+    expect(store.getGeometryVersion()).toBe(v);
+
+    store.setNodes([{ ...a, position: { x: 5, y: 0 } }]);
+    expect(store.getGeometryVersion()).toBe(v + 1);
+    store.setNodes([{ ...a, position: { x: 5, y: 0 }, width: 120 }]); // a declared size changed
+    expect(store.getGeometryVersion()).toBe(v + 2);
+    store.setNodes([]); // gone
+    expect(store.getGeometryVersion()).toBeGreaterThan(v + 2);
+  });
+
+  it('bumps geometry when the pane is resized, and only when its size really changed', () => {
+    let notify: () => void = () => {};
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(cb: () => void) {
+          notify = cb;
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    let width = 800;
+    const container = document.createElement('div');
+    Object.defineProperty(container, 'clientWidth', { get: () => width, configurable: true });
+    Object.defineProperty(container, 'clientHeight', { value: 600 });
+    const store = createFlowingerStore();
+    store.attach(document.createElement('div'), container);
+
+    const v = store.getGeometryVersion();
+    notify(); // an observer callback with nothing changed
+    expect(store.getGeometryVersion()).toBe(v);
+    width = 500;
+    notify();
+    expect(store.getGeometryVersion()).toBe(v + 1);
+    expect(store.getContainerSize()).toEqual({ width: 500, height: 600 });
+  });
+
+  it('lets go of the observer on detach', () => {
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect = disconnect;
+      },
+    );
+    const { store } = mounted();
+    store.detach();
+    expect(disconnect).toHaveBeenCalled();
+    expect(store.getContainerSize()).toBeNull();
+  });
+});
