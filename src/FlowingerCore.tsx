@@ -218,8 +218,10 @@ function InnerCanvas(props: FlowingerProps) {
     justPanned.current = true;
   }, []);
   const bits = feats.flatMap((f) => f.useCanvas?.({ store, props, suppressPaneClick }) ?? []);
-  // Nodes and edges are selectable where the canvas allows it *and* a feature acts on selecting.
-  const selectable = elementsSelectable && bits.some((b) => b.selectable === true);
+  // Selecting needs a feature that acts on it. Given that, a node or edge is selectable where it says so itself,
+  // else where the canvas allows it (`elementsSelectable`).
+  const canSelect = bits.some((b) => b.selectable === true);
+  const selectable = elementsSelectable && canSelect;
 
   // Layout effects, not passive ones: a parent's passive effect (one that
   // frames the diagram, say) runs after these, and must find the canvas
@@ -619,6 +621,7 @@ function InnerCanvas(props: FlowingerProps) {
               nodes={nodes}
               edgeTypes={edgeTypes}
               elementsSelectable={selectable}
+              selectionActs={canSelect}
               edgesFocusable={edgesFocusable}
               interactive={onEdgeClick !== undefined || bits.some((b) => b.edgesInteractive === true)}
               controlledSelection={edgesChange !== undefined}
@@ -674,7 +677,7 @@ function InnerCanvas(props: FlowingerProps) {
                 // cannot be checked here; `NodeTypes` accepts any.
                 View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
                 draggable={node.draggable ?? nodesDraggable}
-                selectable={selectable && node.selectable !== false}
+                selectable={canSelect && (node.selectable ?? elementsSelectable)}
                 connectable={node.connectable ?? nodesConnectable}
                 controlledSelection={nodesChange !== undefined}
                 parentX={tree.origin.get(node.id)?.x ?? 0}

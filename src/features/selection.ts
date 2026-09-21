@@ -3,7 +3,7 @@ import { isInteractive } from '../pointer.ts';
 import type { EdgeChange, Node, NodeChange } from '../types.ts';
 
 export interface SelectionApi {
-  /** Whether a click, or Enter and Space, may select it: the canvas's `elementsSelectable`, unless it opts out. */
+  /** Whether a click, or Enter and Space, may select it: what the node says itself, else the canvas's `elementsSelectable`. */
   isSelectable: (node: Node) => boolean;
   /**
    * Makes exactly these nodes and edges the selection. Controlled, that is a
@@ -35,7 +35,7 @@ export interface SelectionApi {
 export const selectionFeature: Feature<SelectionApi> = {
   name: 'selection',
   install(ctx) {
-    const isSelectable: SelectionApi['isSelectable'] = (n) => ctx.options.elementsSelectable && n.selectable !== false;
+    const isSelectable: SelectionApi['isSelectable'] = (n) => n.selectable ?? ctx.options.elementsSelectable;
 
     const setSelection: SelectionApi['setSelection'] = (nodeIds, edgeIds) => {
       const nodeChanges: NodeChange[] = [];

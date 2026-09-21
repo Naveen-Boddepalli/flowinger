@@ -11,7 +11,6 @@ import {
 } from 'react';
 import { useFlowingerStore } from './context.ts';
 import type { Feature } from './features.ts';
-import { layoutSize } from './measure.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
 import type { Node, NodeProps } from './types.ts';
@@ -88,6 +87,8 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const focusable = bits.some((b) => b.focusable === true);
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
+  // Above its parent by depth, unless it says otherwise; above all while dragged.
+  const zIndex = dragging ? 1000 : (node.zIndex ?? 1 + depth);
 
   // What a `<Handle>` inside this node registers itself with. Without something to start a
   // connection with, its handles only draw.
@@ -109,9 +110,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
     if (!el) return;
     const unregister = store.registerNodeElement(node.id, el);
     const measure = () => {
-      const { width, height } = layoutSize(el);
-      store.setSize(node.id, width, height);
-      store.measureHandles(node.id);
+      store.remeasure(node.id);
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -169,8 +168,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
         position: 'absolute',
         transform: `translate(${String(position.x)}px, ${String(position.y)}px)`,
         pointerEvents: 'all',
-        // Above its parent by depth, unless it says otherwise; above all while dragged.
-        zIndex: dragging ? 1000 : (node.zIndex ?? 1 + depth),
+        zIndex,
         ...Object.assign({}, ...bits.map((b) => b.style)),
       }}
       onPointerDown={onPointerDown}
@@ -193,6 +191,15 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
           isConnectable={connectable}
           positionAbsoluteX={position.x}
           positionAbsoluteY={position.y}
+          selectable={selectable}
+          draggable={draggable}
+          deletable={node.deletable ?? true}
+          dragging={dragging}
+          dragHandle={node.dragHandle}
+          parentId={node.parentId}
+          zIndex={zIndex}
+          width={node.width}
+          height={node.height}
         />
       </NodeContext.Provider>
     </div>

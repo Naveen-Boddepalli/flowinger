@@ -33,8 +33,10 @@ export interface FlowingerEdgesProps {
   edges: Edge[];
   nodes: Node[];
   edgeTypes?: EdgeTypes | undefined;
-  /** Whether a click on an edge selects it (an edge's own `selectable: false` opts it out). */
+  /** Whether a click on an edge selects it, where the edge says nothing itself (its own `selectable` wins). */
   elementsSelectable?: boolean;
+  /** Whether anything acts on selecting — an edge's own `selectable: true` means nothing without it. Default true. */
+  selectionActs?: boolean;
   /** Whether selectable edges are tab stops. */
   edgesFocusable?: boolean;
   /** Whether something listens to events on edges, so that every edge takes the pointer, selectable or not. */
@@ -408,6 +410,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     nodes,
     edgeTypes,
     elementsSelectable = false,
+    selectionActs = true,
     edgesFocusable = true,
     interactive = false,
     controlledSelection = false,
@@ -500,7 +503,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
       below ? Position.Top : Position.Left,
     );
 
-    const selectable = elementsSelectable && edge.selectable !== false;
+    const selectable = edge.selectable === undefined ? elementsSelectable : edge.selectable && selectionActs;
     const selected = controlledSelection ? edge.selected === true : store.isEdgeSelected(edge.id);
     if (edge.animated) anyAnimated = true;
     const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : DEFAULT_EDGE_COLOR;

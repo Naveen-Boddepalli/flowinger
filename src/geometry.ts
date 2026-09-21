@@ -11,10 +11,10 @@ export interface Size {
  */
 export const FALLBACK_SIZE: Size = { width: 150, height: 40 };
 
-/** What a node measured, else what it declared, else the fallback. */
+/** What a node measured, else what it declared, else what it says it will be, else the fallback. */
 export const sizeOfNode = (node: Node): Size => ({
-  width: node.measured?.width ?? node.width ?? FALLBACK_SIZE.width,
-  height: node.measured?.height ?? node.height ?? FALLBACK_SIZE.height,
+  width: node.measured?.width ?? node.width ?? node.initialWidth ?? FALLBACK_SIZE.width,
+  height: node.measured?.height ?? node.height ?? node.initialHeight ?? FALLBACK_SIZE.height,
 });
 
 /** The smallest rectangle holding every node. Empty in, an empty rectangle out. */

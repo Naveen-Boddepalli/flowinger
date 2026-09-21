@@ -50,6 +50,7 @@ export {
 export { useNodesState, useEdgesState } from './hooks.ts';
 export { useOnSelectionChange } from './selectionHooks.ts';
 export { useOnViewportChange, type UseOnViewportChangeOptions } from './viewportHooks.ts';
+export { useUpdateNodeInternals } from './useUpdateNodeInternals.ts';
 export {
   useNodes,
   useEdges,

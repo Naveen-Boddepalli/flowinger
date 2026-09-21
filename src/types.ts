@@ -62,12 +62,16 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   data: T;
   type?: Type;
   draggable?: boolean;
+  /** Whether a click can select it: `true` even where the canvas does not allow it (`elementsSelectable`), `false` to opt out. */
   selectable?: boolean;
   className?: string;
   style?: CSSProperties;
   /** Sets the node's width in graph units. Unset, the node's content decides. */
   width?: number;
   height?: number;
+  /** What a node not yet measured is taken to be — by `fitView`, an edge to it — instead of 150 × 40. */
+  initialWidth?: number;
+  initialHeight?: number;
   /** What the engine measured, written back by `applyNodeChanges` from a `dimensions` change. */
   measured?: { width?: number; height?: number };
   /** Whether the node is selected. Read only when the flow is controlled (see `onNodesChange`). */
@@ -113,6 +117,20 @@ export interface NodeProps<N extends Node = Node> {
   isConnectable?: boolean;
   positionAbsoluteX?: number;
   positionAbsoluteY?: number;
+  /** Whether a click can select it: the canvas allows it, and the node has not opted out. */
+  selectable?: boolean | undefined;
+  /** Whether it can be dragged: the canvas's `nodesDraggable`, or the node's own say. */
+  draggable?: boolean | undefined;
+  deletable?: boolean | undefined;
+  /** Being dragged now. */
+  dragging?: boolean | undefined;
+  dragHandle?: string | undefined;
+  parentId?: string | undefined;
+  /** What it is stacked at — the `z-index` the canvas gave it. */
+  zIndex?: number | undefined;
+  /** The size the node declares (`width`, `height`); the content decides where it does not. */
+  width?: number | undefined;
+  height?: number | undefined;
 }
 
 export const MarkerType = {
@@ -144,7 +162,7 @@ export interface Edge {
   /** Whether the edge is selected. Read only when the edge list is controlled (see `onEdgesChange`). */
   selected?: boolean;
   hidden?: boolean;
-  /** `false` opts the edge out of selection by click. */
+  /** Whether a click can select it: `true` even where the canvas does not allow it (`elementsSelectable`), `false` to opt out. */
   selectable?: boolean;
   /** `false` keeps it out of a delete. */
   deletable?: boolean;

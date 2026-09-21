@@ -510,8 +510,8 @@ export function createFlowingerStore(
 
   const getNodeSize = (node: Node): Size =>
     sizes.get(node.id) ?? {
-      width: node.width ?? FALLBACK_SIZE.width,
-      height: node.height ?? FALLBACK_SIZE.height,
+      width: node.width ?? node.initialWidth ?? FALLBACK_SIZE.width,
+      height: node.height ?? node.initialHeight ?? FALLBACK_SIZE.height,
     };
 
   /**
@@ -596,6 +596,15 @@ export function createFlowingerStore(
     return () => {
       if (nodeEls.get(id) === el) nodeEls.delete(id);
     };
+  };
+
+  /** Reads a node's size and where its handles sit, again: something it is made of has changed. */
+  const remeasure = (id: string) => {
+    const el = nodeEls.get(id);
+    if (!el) return;
+    const { width, height } = layoutSize(el);
+    setSize(id, width, height);
+    measureHandles(id);
   };
 
   /** Re-reads where each of a node's handles sits. Bumps geometry only if one moved. */
@@ -1126,6 +1135,7 @@ export function createFlowingerStore(
     registerNodeElement,
     registerHandle,
     measureHandles,
+    remeasure,
     findHandle,
     getConnection: () => connection,
     getNodes: (): readonly Node[] => nodes,
