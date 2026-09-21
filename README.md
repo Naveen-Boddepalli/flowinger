@@ -2,7 +2,7 @@
 
 A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
 drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
-About 10 kB gzipped; the only peer dependencies are `react` and `react-dom` (18 or 19).
+About 11 kB gzipped, everything included; the only peer dependencies are `react` and `react-dom` (18 or 19).
 
 ```tsx
 import {

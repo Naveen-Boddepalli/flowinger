@@ -2,9 +2,13 @@
 
 ## 0. Status
 
-*Updated September 2026.* The engine is in `src/`; tests are in `src/__tests__/` (components: pan, wheel
-zoom, drag, `fitView`, the render-loop regression; `flowingerStore.test.ts`: the pure store — clamping,
-tweens, hidden-tab snap, geometry). `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+*Updated September 2026.* The engine is in `src/`; tests are in `src/__tests__/` — `flowinger.test.tsx`
+(components: pan, wheel zoom, pinch, keyboard, drag, `fitView`, handles, arrowheads and labels, custom
+edges, selection, connecting, the minimap, `translateExtent`, and the render-loop regression),
+`flowingerStore.test.ts` (the pure store), `pointer.test.ts` (pinch maths), `ssr.test.tsx` (a server render
+in vitest's `node` environment, where there really is no `document`) and `hydration.test.tsx`.
+`pnpm typecheck`, `pnpm test` (178 tests) and `pnpm build` pass on React 19 **and** React 18, and the
+installed tarball renders, hydrates and type-checks (TypeScript 7, `skipLibCheck` off) on both.
 
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
 flowinger is complete — the way QueryLens imports React Flow today — rather than carrying a copy (§5).
