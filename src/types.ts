@@ -489,6 +489,19 @@ export interface FlowingerProps {
   /** The wheel turned over the empty canvas — whether or not it zoomed. */
   onPaneScroll?: (event?: React.WheelEvent) => void;
   /**
+   * Where the view starts. Once, when the canvas mounts — `fitView` then replaces it, as in React Flow. Inside a
+   * `FlowingerProvider`, the canvas moves the provider's view there.
+   */
+  defaultViewport?: Viewport;
+  /**
+   * The view is moving — from its first change to its last. `event` is what moves it (the pointer, the
+   * wheel) or null for a call such as `fitView`; a run of wheel ticks is one move, ended when the wheel has
+   * been still for 150 ms.
+   */
+  onMoveStart?: (event: MouseEvent | TouchEvent | null, viewport: Viewport) => void;
+  onMove?: (event: MouseEvent | TouchEvent | null, viewport: Viewport) => void;
+  onMoveEnd?: (event: MouseEvent | TouchEvent | null, viewport: Viewport) => void;
+  /**
    * Let a handle be dragged to another to make a connection. Default false.
    * The engine never edits `edges`; it reports the connection through `onConnect`.
    */

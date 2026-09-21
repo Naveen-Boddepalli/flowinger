@@ -85,6 +85,9 @@ const VIEWPORT_PORTAL_Z = 10001;
 /** Above every node — even one being dragged (1000) or given a large `zIndex` of its own. */
 const EDGE_LABEL_LAYER_Z = 10000;
 
+/** How long the wheel is still before a move by it is over. */
+const WHEEL_QUIET_MS = 150;
+
 /** Wheel deltas arrive in pixels, lines or pages depending on device and browser. */
 const WHEEL_PIXELS_PER_UNIT = [1, 20, 400] as const;
 
@@ -162,6 +165,10 @@ function InnerCanvas(props: FlowingerProps) {
     onDelete,
     isValidConnection,
     onInit,
+    defaultViewport,
+    onMove,
+    onMoveStart,
+    onMoveEnd,
   } = props;
   const store = useFlowingerStore();
   // Installed while rendering, so they are there for every effect below and for whoever holds the
@@ -231,6 +238,16 @@ function InnerCanvas(props: FlowingerProps) {
     store.setBounds(minZoom, maxZoom, translateExtent ?? null);
   }, [store, minZoom, maxZoom, translateExtent]);
 
+  // A canvas that made its own store started there already; one inside a caller's provider is moved to it.
+  useIsomorphicLayoutEffect(() => {
+    const at = store.getViewport();
+    if (defaultViewport && (at.x !== defaultViewport.x || at.y !== defaultViewport.y || at.zoom !== defaultViewport.zoom)) {
+      void store.instance.setViewport(defaultViewport);
+    }
+    // Once: it is where the canvas starts, not where it is kept.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
+
   // Callbacks and options first: whether the flow is controlled is decided by
   // them, and the nodes below are read in that light.
   const [gridX, gridY] = snapGrid ?? [15, 15];
@@ -289,6 +306,9 @@ function InnerCanvas(props: FlowingerProps) {
       onEdgesDelete,
       onDelete,
       isValidConnection,
+      onMove,
+      onMoveStart,
+      onMoveEnd,
     });
   }, [
     store,
@@ -311,6 +331,9 @@ function InnerCanvas(props: FlowingerProps) {
     onEdgesDelete,
     onDelete,
     isValidConnection,
+    onMove,
+    onMoveStart,
+    onMoveEnd,
   ]);
 
   useIsomorphicLayoutEffect(() => {
@@ -346,11 +369,15 @@ function InnerCanvas(props: FlowingerProps) {
     const container = containerRef.current;
     if (!container || (!zoomOnScroll && !panOnScroll)) return;
     const onWheel = (e: WheelEvent) => {
+      // Something inside that scrolls, or zooms, for itself: `nowheel` lets the wheel through to it.
+      if (e.target instanceof Element && e.target.closest('.nowheel')) return;
       const unit = WHEEL_PIXELS_PER_UNIT[e.deltaMode as 0 | 1 | 2];
       // A trackpad pinch arrives as ctrl+wheel with small deltas.
       const zooming = panOnScroll ? e.ctrlKey || e.metaKey : true;
       if (zooming && !zoomOnScroll) return;
       e.preventDefault();
+      // A run of ticks is one move; it ends when the wheel goes quiet.
+      store.beginGesture(e, WHEEL_QUIET_MS);
       if (zooming) {
         const rect = container.getBoundingClientRect();
         const factor = 2 ** (-e.deltaY * unit * (e.ctrlKey ? 0.01 : 0.002));
@@ -392,6 +419,7 @@ function InnerCanvas(props: FlowingerProps) {
       if (now) {
         pan.current = null;
         pinch.current = { viewport: store.getViewport(), ...now };
+        store.beginGesture(e.nativeEvent);
         capturePointer(e.currentTarget, e.pointerId);
         return;
       }
@@ -416,6 +444,7 @@ function InnerCanvas(props: FlowingerProps) {
     if (start) {
       const now = fingers(e.currentTarget);
       if (now) {
+        store.beginGesture(e.nativeEvent);
         store.instance.setViewport(pinchViewport(start, now.mid, now.dist, minZoom, maxZoom));
       }
       return;
@@ -434,6 +463,8 @@ function InnerCanvas(props: FlowingerProps) {
       capturePointer(e.currentTarget, e.pointerId);
       e.currentTarget.style.cursor = 'grabbing';
     }
+    // The move carries the event that last moved it.
+    store.beginGesture(e.nativeEvent);
     store.instance.setViewport({
       x: p.viewport.x + dx,
       y: p.viewport.y + dy,
@@ -445,7 +476,10 @@ function InnerCanvas(props: FlowingerProps) {
     pointers.current.delete(e.pointerId);
     // One finger left is not a pinch — and does not carry on as a pan either;
     // it would jump. A fresh touch starts one.
-    if (pointers.current.size < 2) pinch.current = null;
+    if (pointers.current.size < 2 && pinch.current) {
+      pinch.current = null;
+      store.endGesture(e.nativeEvent);
+    }
 
     if (bits.some((b) => b.onPointerEnd?.(e))) return;
 
@@ -455,6 +489,7 @@ function InnerCanvas(props: FlowingerProps) {
     if (!p.active) return;
     releasePointer(e.currentTarget, e.pointerId);
     e.currentTarget.style.cursor = panOnDrag ? 'grab' : '';
+    store.endGesture(e.nativeEvent);
   };
 
   // Pointer capture retargets the click that ends a pan onto the canvas, so a
@@ -664,7 +699,7 @@ export function FlowingerCore(props: FlowingerProps) {
   // in the tree can then drive the viewport); otherwise make one.
   if (useContext(FlowingerContext)) return <InnerCanvas {...props} />;
   return (
-    <FlowingerProvider minZoom={props.minZoom} maxZoom={props.maxZoom}>
+    <FlowingerProvider initialViewport={props.defaultViewport} minZoom={props.minZoom} maxZoom={props.maxZoom}>
       <InnerCanvas {...props} />
     </FlowingerProvider>
   );

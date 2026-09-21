@@ -78,6 +78,15 @@ export interface ConnectionState {
   reconnecting: string | null;
 }
 
+/**
+ * The view moved: `event` is what moved it — the pointer, the wheel — or null for a call (`setViewport`,
+ * `fitView`, the keyboard, a `Controls` button); `viewport` is where it is.
+ */
+export type OnMove = (event: MouseEvent | TouchEvent | null, viewport: Viewport) => void;
+
+/** What listens to the view moving: the props of the same names, and `useOnViewportChange`. */
+export type MoveListener = Pick<NodeCallbacks, 'onMoveStart' | 'onMove' | 'onMoveEnd'>;
+
 export interface NodeCallbacks {
   onConnect?: ((connection: Connection) => void) | undefined;
   isValidConnection?: ((connection: Connection) => boolean) | undefined;
@@ -94,6 +103,9 @@ export interface NodeCallbacks {
   onConnectStart?: ((event: PointerEvent, params: ConnectStartParams) => void) | undefined;
   onConnectEnd?: ((event: PointerEvent, state: ConnectEndState) => void) | undefined;
   onEdgeClick?: ((event: React.MouseEvent, edge: Edge) => void) | undefined;
+  onMoveStart?: OnMove | undefined;
+  onMove?: OnMove | undefined;
+  onMoveEnd?: OnMove | undefined;
   onBeforeDelete?:
     | ((elements: { nodes: Node[]; edges: Edge[] }) => boolean | { nodes: Node[]; edges: Edge[] } | Promise<boolean | { nodes: Node[]; edges: Edge[] }>)
     | undefined;
@@ -299,6 +311,35 @@ export function createFlowingerStore(
     resolve: (finished: boolean) => void;
   } | null = null;
 
+  // A move begins with the first change of the view and ends when what is moving it stops: the pointer
+  // going up (a pan, a pinch), the wheel going quiet, a tween landing — or, for a call that sets the view
+  // in one go, at once.
+  const moveListeners = new Set<MoveListener>();
+  let moving = false;
+  /** What is moving the view — a pan, a pinch, the wheel — and the event that began it. */
+  let gesture: { event: MouseEvent | TouchEvent; quiet?: ReturnType<typeof setTimeout> } | null = null;
+  const fireMove = (name: keyof MoveListener, vp: Viewport) => {
+    const event = gesture?.event ?? null;
+    callbacks[name]?.(event, vp);
+    for (const listener of moveListeners) listener[name]?.(event, vp);
+  };
+  const endMove = () => {
+    if (!moving) return;
+    moving = false;
+    fireMove('onMoveEnd', viewport);
+  };
+  const beginGesture = (event: MouseEvent | TouchEvent, quietMs?: number) => {
+    clearTimeout(gesture?.quiet);
+    gesture = { event, ...(quietMs === undefined ? {} : { quiet: setTimeout(endGesture, quietMs) }) };
+  };
+  /** `event` — what let go — is what the end reports, when given. */
+  function endGesture(event?: MouseEvent | TouchEvent) {
+    clearTimeout(gesture?.quiet);
+    if (gesture && event) gesture.event = event;
+    if (!tween) endMove();
+    gesture = null;
+  }
+
   const emit = (listeners: Iterable<Listener>) => {
     for (const listener of listeners) listener();
   };
@@ -350,11 +391,17 @@ export function createFlowingerStore(
   // --- viewport -------------------------------------------------------------
 
   const commitViewport = (next: Viewport) => {
+    if (!moving) {
+      moving = true;
+      fireMove('onMoveStart', viewport);
+    }
     viewport = next;
     if (viewportEl) viewportEl.style.transform = viewportTransform(next);
     emit(viewportListeners);
     touch();
     run('change');
+    fireMove('onMove', next);
+    if (!gesture && !tween) endMove();
   };
 
   /** Stops a tween. Whoever awaited it hears `finished` — false when something interrupted it. */
@@ -845,6 +892,7 @@ export function createFlowingerStore(
 
   const detach = () => {
     cancelTween();
+    endGesture();
     run('detach');
     stopObserving?.();
     stopObserving = null;
@@ -1033,6 +1081,14 @@ export function createFlowingerStore(
     detach,
     zoomAt,
     fitView,
+    beginGesture,
+    endGesture,
+    onMove: (listener: MoveListener): (() => void) => {
+      moveListeners.add(listener);
+      return () => {
+        moveListeners.delete(listener);
+      };
+    },
     setBounds: (min: number, max: number, nextExtent: TranslateExtent | null = null) => {
       minZoom = min;
       maxZoom = max;

@@ -47,6 +47,7 @@ export {
 } from './changes.ts';
 export { useNodesState, useEdgesState } from './hooks.ts';
 export { useOnSelectionChange } from './selectionHooks.ts';
+export { useOnViewportChange, type UseOnViewportChangeOptions } from './viewportHooks.ts';
 export {
   useNodes,
   useEdges,
@@ -59,7 +60,7 @@ export {
 export { useKeyPress, type UseKeyPressOptions } from './useKeyPress.ts';
 
 // Geometry
-export { getNodesBounds, isRectIntersecting, viewportForBounds } from './geometry.ts';
+export { getNodesBounds, getViewportForBounds, isRectIntersecting, viewportForBounds } from './geometry.ts';
 
 // Handles & Ports
 export { Handle } from './Handle.tsx';

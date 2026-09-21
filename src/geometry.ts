@@ -79,6 +79,38 @@ export function viewportForBounds(
   };
 }
 
+/**
+ * React Flow's `getViewportForBounds`, for the numeric `padding` it shares with this library — a ratio, so
+ * `0.1` leaves a tenth around the bounds — and the same view to the pixel: it too works in whole pixels of
+ * padding, and nudges the view where the fit leaves less than that. With none there is no margin at all
+ * (`viewportForBounds` leaves 40 px). React Flow's `'10px'`, `'5%'` and per-side paddings are not taken.
+ */
+export function getViewportForBounds(
+  bounds: Rect,
+  width: number,
+  height: number,
+  minZoom: number,
+  maxZoom: number,
+  padding = 0,
+): Viewport {
+  const padX = Math.floor((width - width / (1 + padding)) * 0.5);
+  const padY = Math.floor((height - height / (1 + padding)) * 0.5);
+  const raw = Math.min((width - padX * 2) / bounds.width, (height - padY * 2) / bounds.height);
+  const zoom = Math.max(minZoom, Math.min(maxZoom, raw));
+  const x = width / 2 - (bounds.x + bounds.width / 2) * zoom;
+  const y = height / 2 - (bounds.y + bounds.height / 2) * zoom;
+  // What the fit leaves on each side, in whole pixels; short of what was asked, the view moves by the shortfall.
+  const left = Math.floor(bounds.x * zoom + x);
+  const top = Math.floor(bounds.y * zoom + y);
+  const right = Math.floor(width - ((bounds.x + bounds.width) * zoom + x));
+  const bottom = Math.floor(height - ((bounds.y + bounds.height) * zoom + y));
+  return {
+    x: x - Math.min(left - padX, 0) + Math.min(right - padX, 0),
+    y: y - Math.min(top - padY, 0) + Math.min(bottom - padY, 0),
+    zoom,
+  };
+}
+
 /** `value` moved to the nearest multiple of `grid`. A grid of 0 or less leaves it alone. */
 export const snapTo = (value: number, grid: number): number =>
   grid > 0 ? Math.round(value / grid) * grid : value;
