@@ -11,6 +11,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore } from './context.ts';
+import { layoutSize } from './measure.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from './pointer.ts';
@@ -82,13 +83,14 @@ export const NodeWrapper = memo(function NodeWrapper({
 
   // The edge layer needs the node's real size, and where its handles sit. The
   // handles have registered by now — children's layout effects run first.
-  // offset* is layout size, so the viewport's scale does not leak into it.
+  // Layout size, so the viewport's scale does not leak into it — and fractional.
   useIsomorphicLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const unregister = store.registerNodeElement(node.id, el);
     const measure = () => {
-      store.setSize(node.id, el.offsetWidth, el.offsetHeight);
+      const { width, height } = layoutSize(el);
+      store.setSize(node.id, width, height);
       store.measureHandles(node.id);
     };
     measure();

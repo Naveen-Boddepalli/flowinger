@@ -1,4 +1,5 @@
 import { handleCoordinates } from './handlePoint.ts';
+import { layoutSize } from './measure.ts';
 import type {
   Connection,
   FlowingerInstance,
@@ -28,7 +29,7 @@ export interface HandleRegistration {
 
 /** A registered handle, plus where it actually sits — null until measured. */
 export interface HandleRecord extends HandleRegistration {
-  /** Centre of the handle relative to its node's top-left, in graph units. */
+  /** Where an edge attaches, relative to its node's top-left, in graph units: the handle's outer edge. */
   anchor: XYPosition | null;
 }
 
@@ -127,7 +128,10 @@ const sameAnchor = (a: XYPosition | null, b: XYPosition | null): boolean =>
   a === null || b === null ? a === b : samePoint(a, b);
 
 /**
- * Where a handle's centre sits inside its node, in graph units.
+ * Where an edge attaches to a handle, inside its node, in graph units: the
+ * handle's *outer* edge — the side facing away from the node — as in React
+ * Flow, so an edge stops at the handle's dot rather than running into it (which
+ * matters when the handle is invisible, or has an arrowhead pointing at it).
  *
  * Read from rects rather than offsets so a handle nested under a positioned
  * ancestor, or moved with a CSS transform, still reports where it is drawn.
@@ -135,17 +139,27 @@ const sameAnchor = (a: XYPosition | null, b: XYPosition | null): boolean =>
  * width takes it back out. Null when either box has no size (jsdom,
  * `display: none`) — the caller then falls back to the side's midpoint.
  */
-function anchorOf(handle: HTMLElement, node: HTMLElement): XYPosition | null {
+function anchorOf(handle: HTMLElement, node: HTMLElement, position: Position): XYPosition | null {
   const nodeRect = node.getBoundingClientRect();
-  const layoutWidth = node.offsetWidth;
-  if (nodeRect.width === 0 || nodeRect.height === 0 || layoutWidth === 0) return null;
+  const layout = layoutSize(node);
+  if (nodeRect.width === 0 || nodeRect.height === 0 || layout.width === 0) return null;
   const rect = handle.getBoundingClientRect();
   if (rect.width === 0 && rect.height === 0) return null;
-  const scale = nodeRect.width / layoutWidth;
-  return {
-    x: (rect.left + rect.width / 2 - nodeRect.left) / scale,
-    y: (rect.top + rect.height / 2 - nodeRect.top) / scale,
-  };
+  const scale = nodeRect.width / layout.width;
+  const x = (rect.left + rect.width / 2 - nodeRect.left) / scale;
+  const y = (rect.top + rect.height / 2 - nodeRect.top) / scale;
+  const halfW = rect.width / 2 / scale;
+  const halfH = rect.height / 2 / scale;
+  switch (position) {
+    case 'top':
+      return { x, y: y - halfH };
+    case 'bottom':
+      return { x, y: y + halfH };
+    case 'left':
+      return { x: x - halfW, y };
+    case 'right':
+      return { x: x + halfW, y };
+  }
 }
 
 /**
@@ -365,7 +379,7 @@ export function createFlowingerStore(
     if (!records || !nodeEl) return;
     let changed = false;
     for (const record of records) {
-      const next = anchorOf(record.el, nodeEl);
+      const next = anchorOf(record.el, nodeEl, record.position);
       if (!sameAnchor(record.anchor, next)) {
         record.anchor = next;
         changed = true;

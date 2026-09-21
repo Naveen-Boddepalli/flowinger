@@ -103,6 +103,12 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
   a drag *freezes* the box — otherwise the map rescales under the pointer and the drag swims — and it
   refits on release. It is a pointer shortcut (announced as an image); the keyboard paths are the
   canvas's arrows and `Controls`.
+- **Edges attach at a handle's outer edge, and node sizes are fractional.** Both found by trial-swapping
+  flowinger into QueryLens and diffing the rendered geometry against React Flow's: React Flow ends an
+  edge at the *outer* edge of the handle's dot (about 3 units past the node's border for a 6px handle);
+  the first cut ended it at the dot's centre. And `offsetWidth` rounds to whole pixels, which put every
+  edge up to half a unit off a node's true middle *and* skewed the zoom scale used to place handles;
+  the computed width is the used value, fractions included (`src/measure.ts`).
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.

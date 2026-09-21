@@ -101,7 +101,9 @@ it. **Edges**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`
 
 An edge names a handle by `id`; its end decides the type (`sourceHandle` finds a `source` handle). Name
 none and it takes the first handle of that type. A handle moved with `style` (say `left: '30%'`) still
-gets its edge, because the engine measures where each one is actually drawn.
+gets its edge, because the engine measures where each one is actually drawn. An edge attaches at the
+handle's *outer* edge (the side facing away from the node), as React Flow's do, so it stops at the dot
+rather than running into it.
 
 With `nodesConnectable`, a drag from one handle to a compatible one calls `onConnect`. The engine never
 edits `edges` itself (they are your prop), so you add it:

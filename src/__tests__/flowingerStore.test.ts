@@ -332,8 +332,9 @@ describe('flowinger store — handle registry', () => {
     store.registerNodeElement('n', nodeEl);
     store.registerHandle('n', reg('p', 'source', el));
 
-    // Centre (220, 100) minus the node's (200, 100).
-    expect(store.findHandle('n', 'p', 'source')?.anchor).toEqual({ x: 20, y: 0 });
+    // The handle's centre (220, 100) minus the node's (200, 100) is (20, 0); it
+    // is a bottom handle, so the edge attaches at its outer edge, 3 units on.
+    expect(store.findHandle('n', 'p', 'source')?.anchor).toEqual({ x: 20, y: 3 });
 
     const before = store.getGeometryVersion();
     store.measureHandles('n'); // nothing moved
@@ -341,7 +342,7 @@ describe('flowinger store — handle registry', () => {
 
     handleRect.mockReturnValue(rectOf(237, 97, 6, 6));
     store.measureHandles('n');
-    expect(store.findHandle('n', 'p', 'source')?.anchor).toEqual({ x: 40, y: 0 });
+    expect(store.findHandle('n', 'p', 'source')?.anchor).toEqual({ x: 40, y: 3 });
     expect(store.getGeometryVersion()).toBe(before + 1);
   });
 

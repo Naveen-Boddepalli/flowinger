@@ -694,7 +694,10 @@ describe('Flowinger handles', () => {
       toJSON: () => ({}),
     });
 
-    /** A top handle pushed 30% along the node, drawn at `scale` × its layout size. */
+    /**
+     * A 6-unit top handle pushed 30% along the node, everything drawn at `scale` ×
+     * its layout size — the handle included, as at that zoom it really would be.
+     */
     function mockLayout(scale: number) {
       vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
       vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40);
@@ -702,7 +705,7 @@ describe('Flowinger handles', () => {
         this: HTMLElement,
       ) {
         if (this.dataset.id) return rect(500, 300, 100 * scale, 40 * scale);
-        if (this.dataset.handleid) return rect(500 + 30 * scale - 3, 300 - 3, 6, 6);
+        if (this.dataset.handleid) return rect(500 + 30 * scale - 3 * scale, 300 - 3 * scale, 6 * scale, 6 * scale);
         return rect(0, 0, 0, 0);
       });
     }
@@ -716,21 +719,43 @@ describe('Flowinger handles', () => {
     ];
     const edges: Edge[] = [{ id: 'e', source: 'a', target: 'b', sourceHandle: 'p' }];
 
-    it('attaches to where a handle is actually drawn, not its side midpoint', () => {
+    it('attaches to where a handle is actually drawn, at its outer edge, not its side midpoint', () => {
       mockLayout(1);
       const { container } = render(
         <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={{ offset: OffsetNode }} />,
       );
-      // 30px along a's top edge: node (100, 50) + anchor (30, 0).
-      expect(edgeD(container)).toMatch(/^M 130\.00 50\.00 C/);
+      // 30 along a's top edge, and out past the 6-unit dot's top: node (100, 50)
+      // + (30, 0), then 3 units outward — as React Flow does.
+      expect(edgeD(container)).toMatch(/^M 130\.00 47\.00 C/);
     });
 
-    it('takes the viewport zoom out of what it measures', () => {
-      mockLayout(2); // rects are twice the layout size, as at zoom 2
+    it('centres an edge on a node’s true fractional width, not its rounded one', () => {
+      // A node 142.703 wide: offsetWidth reports 143, so an edge to its middle
+      // would land 0.15 off. (A handle-less node, so the side's midpoint is used.)
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(143);
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(43);
+      const real = window.getComputedStyle.bind(window);
+      vi.spyOn(window, 'getComputedStyle').mockImplementation((el, pseudo) =>
+        el instanceof HTMLElement && el.dataset.id
+          ? ({ width: '142.703px', height: '42.7px' } as CSSStyleDeclaration)
+          : real(el, pseudo),
+      );
+      const plain: Node[] = [
+        { id: 'a', position: { x: 0, y: 0 }, data: {} },
+        { id: 'b', position: { x: 0, y: 200 }, data: {} },
+      ];
+      const { container } = render(
+        <FlowingerCanvas nodes={plain} edges={[{ id: 'e', source: 'a', target: 'b' }]} />,
+      );
+      expect(edgeD(container)).toMatch(/^M 71\.35 42\.70 C/); // 142.703 / 2, and 42.7 tall
+    });
+
+    it('takes the viewport zoom out of what it measures — the handle’s size included', () => {
+      mockLayout(2); // everything is twice the layout size, as at zoom 2
       const { container } = render(
         <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={{ offset: OffsetNode }} />,
       );
-      expect(edgeD(container)).toMatch(/^M 130\.00 50\.00 C/);
+      expect(edgeD(container)).toMatch(/^M 130\.00 47\.00 C/); // the same, at any zoom
     });
   });
 });
