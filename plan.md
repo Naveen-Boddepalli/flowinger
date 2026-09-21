@@ -115,8 +115,7 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
 
 ### Not built
 
-- Connecting by *keyboard* (a drag is the only way to make a connection), and connection-start/end callbacks.
-- Edge selection. (Controlled selection, `onNodesChange` and dragging a selection as a group are built.)
+- Connecting by *keyboard* (a drag is the only way to make a connection).
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
   see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build

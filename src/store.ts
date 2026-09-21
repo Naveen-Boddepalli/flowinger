@@ -10,7 +10,10 @@ import {
 import { handleCoordinates } from './handlePoint.ts';
 import { layoutSize } from './measure.ts';
 import type {
+  ConnectEndState,
+  ConnectStartParams,
   Connection,
+  ConnectionMode,
   Edge,
   EdgeChange,
   FitViewOptions,
@@ -95,6 +98,15 @@ export interface NodeCallbacks {
   onNodeDragStart?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
   onNodeDrag?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
   onNodeDragStop?: ((event: React.PointerEvent, node: Node, nodes: Node[]) => void) | undefined;
+  onConnectStart?: ((event: PointerEvent, params: ConnectStartParams) => void) | undefined;
+  onConnectEnd?: ((event: PointerEvent, state: ConnectEndState) => void) | undefined;
+  onEdgeClick?: ((event: React.MouseEvent, edge: Edge) => void) | undefined;
+  onBeforeDelete?:
+    | ((elements: { nodes: Node[]; edges: Edge[] }) => boolean | { nodes: Node[]; edges: Edge[] } | Promise<boolean | { nodes: Node[]; edges: Edge[] }>)
+    | undefined;
+  onNodesDelete?: ((nodes: Node[]) => void) | undefined;
+  onEdgesDelete?: ((edges: Edge[]) => void) | undefined;
+  onDelete?: ((elements: { nodes: Node[]; edges: Edge[] }) => void) | undefined;
   /** Given, it makes the *nodes* controlled: what happens is reported here, not done. */
   onNodesChange?: ((changes: NodeChange[]) => void) | undefined;
   /** The edge counterpart of `onNodesChange`. */
@@ -109,6 +121,7 @@ export interface EngineOptions {
   snapGrid: readonly [number, number] | null;
   /** Keep every dragged node inside this region of graph space. */
   nodeExtent: TranslateExtent | null;
+  connectionMode: ConnectionMode;
 }
 
 /** A node drag in progress — one node, or the whole selection moving with it. */
@@ -242,6 +255,7 @@ export function createFlowingerStore(
     elementsSelectable: false,
     snapGrid: null,
     nodeExtent: null,
+    connectionMode: 'strict',
   };
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
@@ -580,10 +594,16 @@ export function createFlowingerStore(
     return null;
   };
 
-  /** A source → target connection between two ends, whichever one the drag began at. Null if the types clash. */
+  /**
+   * A source → target connection between two ends, whichever one the drag began
+   * at. Strict, the types must differ; loose, anything joins anything but a
+   * handle to itself, and two of a kind make the end the drag began at the source.
+   */
   const connectionBetween = (a: Endpoint, b: Endpoint): Connection | null => {
-    if (a.type === b.type) return null;
-    const [from, to] = a.type === 'source' ? [a, b] : [b, a];
+    const loose = options.connectionMode === 'loose';
+    if (a.type === b.type && !loose) return null;
+    if (loose && a.nodeId === b.nodeId && a.id === b.id) return null;
+    const [from, to] = a.type === 'target' && b.type === 'source' ? [b, a] : [a, b];
     return { source: from.nodeId, sourceHandle: from.id, target: to.nodeId, targetHandle: to.id };
   };
 
@@ -612,11 +632,7 @@ export function createFlowingerStore(
    * canvas; Escape cancels it. Nothing here edits `edges` — a finished
    * connection is handed to `onConnect` for the caller to add.
    */
-  const startConnection = (
-    nodeId: string,
-    handleEl: HTMLElement,
-    at: { clientX: number; clientY: number },
-  ) => {
+  const startConnection = (nodeId: string, handleEl: HTMLElement, at: PointerEvent) => {
     const record = [...(handles.get(nodeId) ?? [])].find((r) => r.el === handleEl);
     const start = record && pointOfHandle(nodeId, record);
     if (!record || !start) return;
@@ -631,14 +647,18 @@ export function createFlowingerStore(
       });
     };
     follow(at.clientX, at.clientY);
+    callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
 
     const onMove = (e: PointerEvent) => { follow(e.clientX, e.clientY); };
     const onUp = (e: PointerEvent) => {
       const hit = handleAt(e.clientX, e.clientY);
       cancelConnection(); // clear first, so a callback sees a settled canvas
-      if (!hit) return;
-      const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
-      if (c && isAllowed(c)) callbacks.onConnect?.(c);
+      const c = hit
+        ? connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type })
+        : null;
+      const valid = hit === null ? null : c !== null && isAllowed(c);
+      if (c && valid) callbacks.onConnect?.(c);
+      callbacks.onConnectEnd?.(e, { connection: c, isValid: valid });
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') cancelConnection();
@@ -729,9 +749,22 @@ export function createFlowingerStore(
     setSelection(nodeIds, new Set(additive ? selectedEdgeIds() : []));
   };
 
+  /** Selects an edge, replacing the selection or — `additive` — toggling it in or out. */
+  const selectEdge = (id: string, additive = false) => {
+    const edgeIds = new Set(additive ? selectedEdgeIds() : []);
+    if (!additive || !edgeIds.delete(id)) edgeIds.add(id);
+    setSelection(new Set(additive ? selectedNodeIds() : []), edgeIds);
+  };
+
   const clearSelection = () => {
     setSelection(new Set(), new Set());
   };
+
+  /** The selection as it stands, as elements. */
+  const getSelection = (): { nodes: Node[]; edges: Edge[] } => ({
+    nodes: selectedNodeIds().flatMap((id) => nodeById.get(id) ?? []),
+    edges: selectedEdgeIds().flatMap((id) => edgeById.get(id) ?? []),
+  });
 
   const hasSelection = (): boolean => selectedNodeIds().length > 0 || selectedEdgeIds().length > 0;
 
@@ -812,6 +845,75 @@ export function createFlowingerStore(
         callbacks.onNodeDragStop?.(e, leadOf(settled), settled);
       },
     };
+  };
+
+  /**
+   * Moves the selection one step in a direction — what the arrow keys do to a
+   * focused node. A step is 5 units, or one cell of the snap grid; `large` is
+   * four of them. Bounded by the extents, like a drag, and reported the same way.
+   */
+  const nudgeSelection = (dirX: number, dirY: number, large: boolean) => {
+    const items = selectedNodeIds().flatMap((id) => {
+      const n = nodeById.get(id);
+      return n && isDraggable(n) ? [n] : [];
+    });
+    if (items.length === 0) return;
+    const unit = options.snapGrid ?? [5, 5];
+    const factor = large ? 4 : 1;
+    const boxes = items.map((n) => ({ ...resolvePosition(n.id, n.position), ...getNodeSize(n) }));
+    const move = clampMove(
+      boxes,
+      items.map((n) => n.extent ?? options.nodeExtent),
+      { x: dirX * unit[0] * factor, y: dirY * unit[1] * factor },
+    );
+    if (move.x === 0 && move.y === 0) return;
+    const changes: NodePositionChange[] = [];
+    items.forEach((n, i) => {
+      const from = boxes[i];
+      if (!from) return;
+      const position = { x: from.x + move.x, y: from.y + move.y };
+      if (nodesControlled()) changes.push({ type: 'position', id: n.id, position, dragging: false });
+      else setNodePosition(n, position);
+    });
+    emitNodeChanges(changes);
+  };
+
+  // --- deleting ----------------------------------------------------------------
+
+  /**
+   * Deletes nodes and edges by id, as the changes that would remove them. A node
+   * takes its edges with it; `deletable: false` is honoured; `onBeforeDelete` may
+   * veto or narrow it, asynchronously. Where nobody applies changes (nodes you
+   * only pass in) the callbacks still fire, and removing them is up to you.
+   */
+  const deleteElements = async (params: {
+    nodes?: readonly { id: string }[];
+    edges?: readonly { id: string }[];
+  }): Promise<{ deletedNodes: Node[]; deletedEdges: Edge[] }> => {
+    const none = { deletedNodes: [], deletedEdges: [] };
+    const wantedNodes = new Set((params.nodes ?? []).map((n) => n.id));
+    const wantedEdges = new Set((params.edges ?? []).map((e) => e.id));
+    const goneNodes = nodes.filter((n) => wantedNodes.has(n.id) && n.deletable !== false);
+    const goneIds = new Set(goneNodes.map((n) => n.id));
+    const goneEdges = edges.filter(
+      (e) =>
+        goneIds.has(e.source) ||
+        goneIds.has(e.target) ||
+        (wantedEdges.has(e.id) && e.deletable !== false),
+    );
+    let doomed = { nodes: goneNodes.map(snapshotNode), edges: goneEdges.map(snapshotEdge) };
+    if (doomed.nodes.length === 0 && doomed.edges.length === 0) return none;
+
+    const verdict = await callbacks.onBeforeDelete?.(doomed);
+    if (verdict === false) return none;
+    if (typeof verdict === 'object') doomed = verdict;
+
+    emitNodeChanges(doomed.nodes.map((n) => ({ type: 'remove', id: n.id })));
+    emitEdgeChanges(doomed.edges.map((e) => ({ type: 'remove', id: e.id })));
+    if (doomed.edges.length > 0) callbacks.onEdgesDelete?.(doomed.edges);
+    if (doomed.nodes.length > 0) callbacks.onNodesDelete?.(doomed.nodes);
+    callbacks.onDelete?.(doomed);
+    return { deletedNodes: doomed.nodes, deletedEdges: doomed.edges };
   };
 
   // --- what the canvas hands over ------------------------------------------
@@ -1148,6 +1250,7 @@ export function createFlowingerStore(
     isNodeIntersecting,
     getNodesBounds: (list) => boundsOfNodes(list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n))),
     toObject: () => ({ nodes: getNodesNow(), edges: getEdgesNow(), viewport }),
+    deleteElements,
   };
 
   return {
@@ -1197,7 +1300,11 @@ export function createFlowingerStore(
     isEdgeSelected,
     hasSelection,
     selectNode,
+    selectEdge,
     clearSelection,
+    getSelection,
+    nudgeSelection,
+    deleteElements,
     beginNodeDrag,
     areNodesInitialized,
 

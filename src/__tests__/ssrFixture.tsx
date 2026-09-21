@@ -42,6 +42,7 @@ const edges: Edge[] = [
     targetHandle: 'in',
     label: 'joins',
     markerEnd: 'arrowclosed',
+    animated: true,
   },
 ];
 

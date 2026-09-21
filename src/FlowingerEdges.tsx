@@ -1,5 +1,15 @@
-import { memo, useId, useSyncExternalStore, type CSSProperties, type ComponentType } from 'react';
+import {
+  memo,
+  useId,
+  useMemo,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ComponentType,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
+import { EdgeContext } from './edgeContext.ts';
 import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
@@ -19,6 +29,78 @@ export interface FlowingerEdgesProps {
   edges: Edge[];
   nodes: Node[];
   edgeTypes?: EdgeTypes | undefined;
+  /** Whether a click on an edge selects it (an edge's own `selectable: false` opts it out). */
+  elementsSelectable?: boolean;
+  /** Whether selectable edges are tab stops. */
+  edgesFocusable?: boolean;
+  /** Whether `edge.selected` is what says so (a controlled edge list), as opposed to the store's own set. */
+  controlledSelection?: boolean;
+}
+
+/**
+ * The stylesheet for `animated` edges. A `<style>` inside the `<svg>` keeps the
+ * package free of a stylesheet to import, and `prefers-reduced-motion` is
+ * honoured where it belongs, in CSS.
+ */
+const ANIMATED_EDGE_CSS =
+  '@keyframes flowinger-dash{to{stroke-dashoffset:-10}}' +
+  '.flowinger-edge-animated .flowinger-edge-path{stroke-dasharray:5;animation:flowinger-dash .5s linear infinite}' +
+  '@media (prefers-reduced-motion:reduce){.flowinger-edge-animated .flowinger-edge-path{animation:none}}';
+
+interface EdgeChrome {
+  edge: Edge;
+  selected: boolean;
+  selectable: boolean;
+  focusable: boolean;
+}
+
+/**
+ * What every edge's `<g>` shares, built or built on: its classes, the click
+ * that selects it, and Enter / Space from the keyboard.
+ */
+function useEdgeChrome({ edge, selected, selectable, focusable }: EdgeChrome) {
+  const store = useFlowingerStore();
+  const context = useMemo(() => ({ selected, selectable }), [selected, selectable]);
+  const className = [
+    'flowinger-edge react-flow__edge',
+    edge.animated ? 'flowinger-edge-animated animated' : '',
+    selected ? 'selected' : '',
+    selectable ? 'selectable' : '',
+    edge.className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const onClick = (e: ReactMouseEvent<SVGGElement>) => {
+    store.getCallbacks().onEdgeClick?.(e, edge);
+    if (selectable) store.selectEdge(edge.id, e.shiftKey || e.metaKey || e.ctrlKey);
+  };
+  const onKeyDown = (e: ReactKeyboardEvent<SVGGElement>) => {
+    if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    store.selectEdge(edge.id, e.shiftKey);
+  };
+  const props = {
+    className,
+    'data-testid': `edge-${edge.id}`,
+    // Events only where there is something to do with them; the svg itself takes none.
+    ...(selectable
+      ? {
+          style: { pointerEvents: 'stroke', cursor: 'pointer' } as CSSProperties,
+          onClick,
+          ...(focusable
+            ? {
+                tabIndex: 0,
+                role: 'button',
+                'aria-label': `Edge from ${edge.source} to ${edge.target}`,
+                'aria-pressed': selected,
+                onKeyDown,
+              }
+            : {}),
+        }
+      : { onClick }),
+  };
+  return { context, props };
 }
 
 /**
@@ -138,10 +220,9 @@ function MarkerDef({ id, marker }: { id: string; marker: ResolvedMarker }) {
   );
 }
 
-interface EdgePathProps {
-  id: string;
+interface EdgePathProps extends Omit<EdgeChrome, 'edge'> {
+  edge: Edge;
   d: string;
-  className: string;
   style: CSSProperties | undefined;
   label: string | undefined;
   labelX: number;
@@ -153,9 +234,11 @@ interface EdgePathProps {
 
 /** Memoised on primitives: a drag moves one node, so most edges keep the same `d`. */
 const EdgePath = memo(function EdgePath({
-  id,
+  edge,
+  selected,
+  selectable,
+  focusable,
   d,
-  className,
   style,
   label,
   labelX,
@@ -163,25 +246,26 @@ const EdgePath = memo(function EdgePath({
   markerStart,
   markerEnd,
 }: EdgePathProps) {
+  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable });
   return (
-    <g className={`flowinger-edge react-flow__edge ${className}`} data-testid={`edge-${id}`}>
-      <BaseEdge
-        path={d}
-        label={label}
-        labelX={labelX}
-        labelY={labelY}
-        markerStart={markerStart}
-        markerEnd={markerEnd}
-        style={style}
-      />
+    <g {...props}>
+      <EdgeContext.Provider value={context}>
+        <BaseEdge
+          path={d}
+          label={label}
+          labelX={labelX}
+          labelY={labelY}
+          markerStart={markerStart}
+          markerEnd={markerEnd}
+          style={style}
+        />
+      </EdgeContext.Provider>
     </g>
   );
 });
 
-interface CustomEdgeProps {
+interface CustomEdgeProps extends EdgeChrome {
   View: ComponentType<EdgeProps>;
-  /** Stable while the caller's `edges` array is, so an untouched edge is skipped. */
-  edge: Edge;
   sourceX: number;
   sourceY: number;
   targetX: number;
@@ -193,20 +277,31 @@ interface CustomEdgeProps {
 }
 
 /** A user's edge component, in the same wrapper as a built-in edge, and memoised the same way. */
-const CustomEdge = memo(function CustomEdge({ View, edge, ...ends }: CustomEdgeProps) {
+const CustomEdge = memo(function CustomEdge({
+  View,
+  edge,
+  selected,
+  selectable,
+  focusable,
+  ...ends
+}: CustomEdgeProps) {
+  const { context, props } = useEdgeChrome({ edge, selected, selectable, focusable });
   return (
-    <g className={`flowinger-edge react-flow__edge ${edge.className ?? ''}`} data-testid={`edge-${edge.id}`}>
-      <View
-        id={edge.id}
-        source={edge.source}
-        target={edge.target}
-        sourceHandleId={edge.sourceHandle ?? null}
-        targetHandleId={edge.targetHandle ?? null}
-        data={edge.data}
-        label={edge.label}
-        style={edge.style}
-        {...ends}
-      />
+    <g {...props}>
+      <EdgeContext.Provider value={context}>
+        <View
+          id={edge.id}
+          source={edge.source}
+          target={edge.target}
+          sourceHandleId={edge.sourceHandle ?? null}
+          targetHandleId={edge.targetHandle ?? null}
+          data={edge.data}
+          label={edge.label}
+          style={edge.style}
+          selected={selected}
+          {...ends}
+        />
+      </EdgeContext.Provider>
     </g>
   );
 });
@@ -215,6 +310,9 @@ export const FlowingerEdges = memo(function FlowingerEdges({
   edges,
   nodes,
   edgeTypes,
+  elementsSelectable = false,
+  edgesFocusable = true,
+  controlledSelection = false,
 }: FlowingerEdgesProps) {
   const store = useFlowingerStore();
   // Positions and sizes live in the store, not in props. The version is what
@@ -246,6 +344,7 @@ export const FlowingerEdges = memo(function FlowingerEdges({
     return `url(#${entry.id})`;
   };
 
+  let anyAnimated = false;
   const paths = edges.map((edge) => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
@@ -274,6 +373,9 @@ export const FlowingerEdges = memo(function FlowingerEdges({
       below ? Position.Top : Position.Left,
     );
 
+    const selectable = elementsSelectable && edge.selectable !== false;
+    const selected = controlledSelection ? edge.selected === true : store.isEdgeSelected(edge.id);
+    if (edge.animated) anyAnimated = true;
     const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : DEFAULT_EDGE_COLOR;
     const markerStart = markerRef(edge.markerStart, stroke);
     const markerEnd = markerRef(edge.markerEnd, stroke);
@@ -286,6 +388,9 @@ export const FlowingerEdges = memo(function FlowingerEdges({
           key={edge.id}
           View={View}
           edge={edge}
+          selected={selected}
+          selectable={selectable}
+          focusable={edgesFocusable}
           sourceX={from.point.x}
           sourceY={from.point.y}
           targetX={to.point.x}
@@ -302,9 +407,11 @@ export const FlowingerEdges = memo(function FlowingerEdges({
     return (
       <EdgePath
         key={edge.id}
-        id={edge.id}
+        edge={edge}
+        selected={selected}
+        selectable={selectable}
+        focusable={edgesFocusable}
         d={path.d}
-        className={edge.className ?? ''}
         style={edge.style}
         label={edge.label}
         labelX={path.labelX}
@@ -329,6 +436,7 @@ export const FlowingerEdges = memo(function FlowingerEdges({
         zIndex: 0,
       }}
     >
+      {anyAnimated && <style>{ANIMATED_EDGE_CSS}</style>}
       {markers.size > 0 && (
         <defs>
           {[...markers.values()].map(({ id, marker }) => (

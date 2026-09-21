@@ -22,6 +22,7 @@ import {
   DRAG_THRESHOLD,
   capturePointer,
   distance,
+  isEditable,
   isInteractive,
   midpoint,
   pinchViewport,
@@ -105,6 +106,9 @@ function InnerCanvas({
   elementsSelectable = false,
   nodesConnectable = false,
   translateExtent,
+  connectionMode = 'strict',
+  edgesFocusable = true,
+  deleteKeyCode = 'Backspace',
   fitView = false,
   fitViewOptions,
   defaultEdgeOptions,
@@ -123,6 +127,13 @@ function InnerCanvas({
   onPaneClick,
   onSelectionChange,
   onConnect,
+  onConnectStart,
+  onConnectEnd,
+  onEdgeClick,
+  onBeforeDelete,
+  onNodesDelete,
+  onEdgesDelete,
+  onDelete,
   isValidConnection,
   onInit,
 }: FlowingerProps) {
@@ -201,8 +212,9 @@ function InnerCanvas({
       elementsSelectable,
       snapGrid: snapToGrid ? [gridX, gridY] : null,
       nodeExtent: nodeExtent ?? null,
+      connectionMode,
     });
-  }, [store, nodesDraggable, elementsSelectable, snapToGrid, gridX, gridY, nodeExtent]);
+  }, [store, nodesDraggable, elementsSelectable, snapToGrid, gridX, gridY, nodeExtent, connectionMode]);
 
 
   useIsomorphicLayoutEffect(() => {
@@ -215,6 +227,13 @@ function InnerCanvas({
       onNodeClick,
       onSelectionChange,
       onConnect,
+      onConnectStart,
+      onConnectEnd,
+      onEdgeClick,
+      onBeforeDelete,
+      onNodesDelete,
+      onEdgesDelete,
+      onDelete,
       isValidConnection,
     });
   }, [
@@ -227,6 +246,13 @@ function InnerCanvas({
     onNodeClick,
     onSelectionChange,
     onConnect,
+    onConnectStart,
+    onConnectEnd,
+    onEdgeClick,
+    onBeforeDelete,
+    onNodesDelete,
+    onEdgesDelete,
+    onDelete,
     isValidConnection,
   ]);
 
@@ -369,9 +395,22 @@ function InnerCanvas({
     if (elementsSelectable) store.clearSelection();
   };
 
-  // Only when the canvas itself has focus: a key pressed inside a node (a text
-  // field, a button) is that node's, not ours.
+  const deleteKeys = deleteKeyCode === null ? [] : Array.isArray(deleteKeyCode) ? deleteKeyCode : [deleteKeyCode];
+
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    // Deleting works from anywhere inside — a focused node or edge as well as the
+    // canvas — but never from a field, where the key edits text.
+    if (deleteKeys.includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && !isEditable(e.target)) {
+      const selection = store.getSelection();
+      if (selection.nodes.length > 0 || selection.edges.length > 0) {
+        e.preventDefault();
+        void store.deleteElements(selection);
+      }
+      return;
+    }
+    // The rest is for the canvas itself: a key pressed inside a node (a text
+    // field, a button) is that node's, not ours.
+    if (!keyboardNavigation) return;
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
     const step = e.shiftKey ? KEY_PAN_STEP_LARGE : KEY_PAN_STEP;
     const vp = store.getViewport();
@@ -413,6 +452,10 @@ function InnerCanvas({
     e.preventDefault();
   };
 
+  // Focusable, but not a tab stop, so a click on empty canvas (or a box selection)
+  // leaves focus somewhere the delete key reaches.
+  const focusableForDelete = elementsSelectable && deleteKeys.length > 0 && !keyboardNavigation;
+
   const containerStyle: CSSProperties = {
     position: 'relative',
     width: '100%',
@@ -420,6 +463,7 @@ function InnerCanvas({
     overflow: 'hidden',
     userSelect: 'none',
     touchAction: 'none',
+    ...(focusableForDelete ? { outline: 'none' } : {}),
     ...(panOnDrag ? { cursor: 'grab' } : {}),
     ...style,
   };
@@ -434,9 +478,12 @@ function InnerCanvas({
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       {...(keyboardNavigation
-        ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel, onKeyDown }
-        : {})}
+        ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel }
+        : focusableForDelete
+          ? { tabIndex: -1 }
+          : {})}
     >
       {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
       {children}
@@ -459,7 +506,14 @@ function InnerCanvas({
           transform: viewportTransform(store.getViewport()),
         }}
       >
-        <FlowingerEdges edges={edges} nodes={nodes} edgeTypes={edgeTypes} />
+        <FlowingerEdges
+          edges={edges}
+          nodes={nodes}
+          edgeTypes={edgeTypes}
+          elementsSelectable={elementsSelectable}
+          edgesFocusable={edgesFocusable}
+          controlledSelection={edgesChange !== undefined}
+        />
 
         <div className="flowinger-nodes react-flow__nodes" style={{ pointerEvents: 'none' }}>
           {nodes.filter((node) => !node.hidden).map((node) => (

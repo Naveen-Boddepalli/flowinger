@@ -48,6 +48,7 @@ export {
   Position,
   BackgroundVariant,
   MarkerType,
+  ConnectionMode,
 } from './types.ts';
 
 export type {
@@ -80,6 +81,8 @@ export type {
   EdgeRemoveChange,
   EdgeAddChange,
   EdgeReplaceChange,
+  ConnectStartParams,
+  ConnectEndState,
   FitViewOptions,
   SetCenterOptions,
   Rect,

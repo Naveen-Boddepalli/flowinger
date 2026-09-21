@@ -13,6 +13,11 @@ const INTERACTIVE = 'input, select, textarea, button, a, .nodrag, .nopan';
 export const isInteractive = (target: EventTarget): boolean =>
   target instanceof Element && target.closest(INTERACTIVE) !== null;
 
+/** Whether a key pressed on `target` is text being edited, and so not the canvas's to act on. */
+export const isEditable = (target: EventTarget): boolean =>
+  target instanceof Element &&
+  target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]') !== null;
+
 // jsdom implements neither call, and a real browser throws if the pointer is
 // no longer active — so both are best-effort.
 export function capturePointer(el: Element, pointerId: number): void {

@@ -90,10 +90,14 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `fitView`, `fitViewOptions` | `false` | Frame the nodes once, as soon as every one has been measured. |
 | `defaultEdgeOptions` | | Defaults for every edge (`animated`, `markerEnd`, `style`…); an edge's own fields win. Compared by value, so writing it inline is fine. |
 | `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
-| `elementsSelectable` | `false` | A click selects a node (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`). A node's own `selectable: false` opts it out. |
-| `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out. |
+| `elementsSelectable` | `false` | A click selects a node *or an edge* (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes and edges become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`), and the arrow keys nudge a selected node (Shift for four times as far). A node's or edge's own `selectable: false` opts it out; `edgesFocusable={false}` takes edges out of the tab order. |
+| `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out, and so does a node's `connectable: false`. |
+| `connectionMode` | `'strict'` | `'strict'` joins a source handle to a target handle; `'loose'` joins any handle to any other (never itself), the end you dragged from becoming the source. |
+| `onConnectStart`, `onConnectEnd` | | `onConnectStart(event, { nodeId, handleId, handleType })`; `onConnectEnd(event, { connection, isValid })` when the pointer is released — `isValid` is `true` (made), `false` (refused) or `null` (no handle there). |
 | `onConnect`, `isValidConnection` | | `onConnect({ source, target, sourceHandle, targetHandle })` — always source → target, whichever end the drag began at. `isValidConnection` can veto, and decides whether the line snaps to a handle. |
-| `onSelectionChange`, `onNodeClick`, `onPaneClick` | | `onSelectionChange({ nodes, edges })` tells you when the selection changes. A pan's closing click is not a pane click, and neither is a drag's a node click. |
+| `deleteKeyCode` | `'Backspace'` | The key (or list of keys; `null` for none) that deletes the selection while focus is on the canvas, a node or an edge — never in a field. Deleting is *reported*: see below. |
+| `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` | | `onBeforeDelete({ nodes, edges })` may return `false`, a smaller `{ nodes, edges }`, or a promise of either; then the removals are reported and these are called with what went. |
+| `onSelectionChange`, `onNodeClick`, `onEdgeClick`, `onPaneClick` | | `onSelectionChange({ nodes, edges })` tells you when the selection changes. A pan's closing click is not a pane click, and neither is a drag's a node click. |
 | `onNodeDragStart`, `onNodeDrag`, `onNodeDragStop`, `onInit` | | The drag callbacks get `(event, node, nodes)`: `nodes` is everything being dragged. |
 
 Without `onNodesChange`, `nodes` is never mutated: a dragged position is kept internally, and a fresh
@@ -180,6 +184,17 @@ them. `useNodesInitialized()` is true once every node has been measured, and re-
 
 Also exported: `addEdge`, `getConnectedEdges`, `getIncomers`, `getOutgoers`.
 
+**Deleting** works the same way: a delete key (or `instance.deleteElements({ nodes, edges })`) removes the
+selected nodes, the selected edges and every edge touching a removed node, as `remove` changes, after
+`onBeforeDelete` has had its say. A node or edge with `deletable: false` stays (but a node's edges go if the
+node does). Where the nodes are only passed in, so nothing applies the changes, the delete callbacks
+still fire and removing them is up to you.
+
+An edge with `animated: true` draws marching dashes (its own `<style>` in the SVG; switched off under
+`prefers-reduced-motion`). A selected edge is drawn in `--flowinger-selected`, its `<g>` gets the `selected`
+class, and a custom edge receives `selected` in its props; `BaseEdge` adds an invisible 20-unit strip
+along the path so a thin edge is easy to click (`interactionWidth` changes it).
+
 ## Theming
 
 The default node, `Controls` and edges are styled inline from CSS variables, each with a fallback, so
@@ -197,8 +212,8 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`, `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
 all exported under React Flow's names, and so are `useNodesState`, `useEdgesState`, `applyNodeChanges`,
-`applyEdgeChanges`, `addEdge` and `useNodesInitialized`. **Not built yet:** `animated` edges (style one with a class
-instead) and selecting an edge. `useStore` reads the ten fields above, not React Flow's whole internal store.
+`applyEdgeChanges`, `addEdge` and `useNodesInitialized`. `useStore` reads the ten fields above, not React Flow's
+whole internal store.
 
 ## Server rendering
 

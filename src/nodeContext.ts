@@ -8,7 +8,7 @@ export interface NodeContextValue {
   /** Registers a handle with the node it is rendered inside. Returns its cleanup. */
   registerHandle: (registration: HandleRegistration) => () => void;
   /** Begins dragging a connection out of one of this node's handles. */
-  startConnection: (handle: HTMLElement, at: { clientX: number; clientY: number }) => void;
+  startConnection: (handle: HTMLElement, at: PointerEvent) => void;
 }
 
 /** Null outside a node — a `<Handle>` rendered there simply draws, and registers nowhere. */

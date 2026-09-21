@@ -11,6 +11,33 @@ export type Position = (typeof Position)[keyof typeof Position];
 
 export type HandleType = 'source' | 'target';
 
+/**
+ * How a connection may be made. `strict` (the default) joins a `source` handle to
+ * a `target` handle; `loose` lets any handle join any other, the end the drag
+ * began at becoming the source.
+ */
+export const ConnectionMode = {
+  Strict: 'strict',
+  Loose: 'loose',
+} as const;
+
+export type ConnectionMode = (typeof ConnectionMode)[keyof typeof ConnectionMode];
+
+/** Which handle a connection is being dragged out of. */
+export interface ConnectStartParams {
+  nodeId: string;
+  handleId: string | null;
+  handleType: HandleType;
+}
+
+/** How a connection drag ended. */
+export interface ConnectEndState {
+  /** What would have been connected, if the pointer was released over a compatible handle. */
+  connection: Connection | null;
+  /** `true` it was made, `false` it was refused (a clash of types, or `isValidConnection`), `null` no handle was there. */
+  isValid: boolean | null;
+}
+
 export interface XYPosition {
   x: number;
   y: number;
@@ -126,6 +153,7 @@ export interface EdgeProps {
   data?: Record<string, unknown> | undefined;
   label?: string | undefined;
   style?: CSSProperties | undefined;
+  selected?: boolean | undefined;
   /** `url(#…)` references into the shared marker definitions — put them on a `<path>`. */
   markerStart?: string | undefined;
   markerEnd?: string | undefined;
@@ -257,6 +285,15 @@ export interface FlowingerInstance {
     options?: { replace?: boolean },
   ) => void;
 
+  /**
+   * Delete nodes and edges by id (a node's edges go with it): reports the removal
+   * like a key press does, after `onBeforeDelete`. Resolves with what was deleted.
+   */
+  deleteElements: (elements: {
+    nodes?: { id: string }[];
+    edges?: { id: string }[];
+  }) => Promise<{ deletedNodes: Node[]; deletedEdges: Edge[] }>;
+
   /** Nodes that overlap a node or rectangle (`partially`, the default) or lie wholly inside it. */
   getIntersectingNodes: (
     target: Node | Rect | { id: string },
@@ -343,6 +380,35 @@ export interface FlowingerProps {
   onConnect?: (connection: Connection) => void;
   /** Veto a connection. Also decides whether a handle snaps the in-progress line to itself. */
   isValidConnection?: (connection: Connection) => boolean;
+  /**
+   * How a connection may be made: `'strict'` (default) source → target only, `'loose'`
+   * any handle to any other. `Connection` is always source → target either way.
+   */
+  connectionMode?: ConnectionMode;
+  /** A connection drag began at a handle. */
+  onConnectStart?: (event: PointerEvent, params: ConnectStartParams) => void;
+  /** A connection drag ended — whether or not it made a connection. */
+  onConnectEnd?: (event: PointerEvent, state: ConnectEndState) => void;
+  /** A click on an edge (a selectable one, or a custom edge that draws its own hit area). */
+  onEdgeClick?: (event: React.MouseEvent, edge: Edge) => void;
+  /** Whether selectable edges are tab stops, selected by Enter or Space. Default true. */
+  edgesFocusable?: boolean;
+  /**
+   * The key that deletes the selection while focus is on the canvas, a node or an
+   * edge (and not in a field). A `KeyboardEvent.key`, or a list of them; `null`
+   * turns it off. Default `'Backspace'`. Deleting is *reported* — see `onNodesChange`.
+   */
+  deleteKeyCode?: string | string[] | null;
+  /**
+   * Called before anything is deleted, with what is about to go (the selection,
+   * plus the edges of removed nodes). Return `false` to cancel, or a smaller set
+   * to delete only that; it may return a promise — to ask first, say.
+   */
+  onBeforeDelete?: (elements: { nodes: Node[]; edges: Edge[] }) => boolean | { nodes: Node[]; edges: Edge[] } | Promise<boolean | { nodes: Node[]; edges: Edge[] }>;
+  onNodesDelete?: (nodes: Node[]) => void;
+  onEdgesDelete?: (edges: Edge[]) => void;
+  /** Both lists at once, after `onNodesDelete` and `onEdgesDelete`. */
+  onDelete?: (elements: { nodes: Node[]; edges: Edge[] }) => void;
   /** Called whenever the set of selected nodes or edges changes. */
   onSelectionChange?: (selection: { nodes: Node[]; edges: Edge[] }) => void;
   onInit?: (instance: FlowingerInstance) => void;

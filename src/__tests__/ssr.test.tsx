@@ -47,6 +47,14 @@ describe('Flowinger server rendering', () => {
     expect(b).toContain('aria-current="true"');
   });
 
+  it('draws a selectable, animated edge whole: hit area, focus, and the animation’s own stylesheet', () => {
+    const html = renderToString(tree);
+    expect(html).toContain('@keyframes flowinger-dash');
+    expect(html).toContain('flowinger-edge-interaction');
+    expect(html).toMatch(/<g[^>]*data-testid="edge-e"[^>]*tabindex="0"|<g[^>]*tabindex="0"[^>]*data-testid="edge-e"/);
+    expect(html).toMatch(/class="[^"]*\banimated\b/);
+  });
+
   it('reports "not mounted" on the server, where no canvas has attached', () => {
     expect(renderToString(tree)).toContain('unmounted 2');
   });

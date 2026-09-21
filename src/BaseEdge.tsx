@@ -1,7 +1,12 @@
-import type { CSSProperties } from 'react';
+import { useContext, type CSSProperties } from 'react';
+import { EdgeContext } from './edgeContext.ts';
 
 /** Read from `--flowinger-edge` so a consumer can theme every edge at once. */
 export const DEFAULT_EDGE_COLOR = 'var(--flowinger-edge, #b1b1b7)';
+const SELECTED_EDGE_COLOR = 'var(--flowinger-selected, #38bdf8)';
+
+/** How wide, in graph units, the invisible strip that catches a click on a selectable edge is. */
+const DEFAULT_INTERACTION_WIDTH = 20;
 
 // A halo in the surface colour keeps the text readable where it crosses the
 // line, without measuring the text to size a background box.
@@ -24,6 +29,11 @@ export interface BaseEdgeProps {
   markerStart?: string | undefined;
   markerEnd?: string | undefined;
   style?: CSSProperties | undefined;
+  /**
+   * The width of an invisible strip along the path that takes the click, so a thin
+   * edge is easy to hit. Default 20 when the edge is selectable, else none.
+   */
+  interactionWidth?: number;
 }
 
 /**
@@ -38,7 +48,10 @@ export function BaseEdge({
   markerStart,
   markerEnd,
   style,
+  interactionWidth,
 }: BaseEdgeProps) {
+  const { selected, selectable } = useContext(EdgeContext);
+  const hitWidth = interactionWidth ?? (selectable ? DEFAULT_INTERACTION_WIDTH : 0);
   return (
     <>
       {/* Presentation attributes, so an edge's own `style` or a stylesheet rule wins. */}
@@ -46,12 +59,21 @@ export function BaseEdge({
         className="flowinger-edge-path react-flow__edge-path"
         d={path}
         fill="none"
-        stroke={DEFAULT_EDGE_COLOR}
+        stroke={selected ? SELECTED_EDGE_COLOR : DEFAULT_EDGE_COLOR}
         strokeWidth={1}
         markerStart={markerStart}
         markerEnd={markerEnd}
         style={style}
       />
+      {hitWidth > 0 && (
+        <path
+          className="flowinger-edge-interaction react-flow__edge-interaction"
+          d={path}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={hitWidth}
+        />
+      )}
       {label && (
         <text
           className="flowinger-edge-label react-flow__edge-text"

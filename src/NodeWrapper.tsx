@@ -157,9 +157,25 @@ export const NodeWrapper = memo(function NodeWrapper({
     }
   };
 
+  const ARROWS: Record<string, [number, number]> = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1],
+  };
+
   // Only when the node itself has focus: Enter or Space inside a field is the field's.
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+    const arrow = ARROWS[e.key];
+    if (arrow) {
+      // A selected node moves with the arrow keys, as with a drag. An unselected
+      // one leaves them to the page.
+      if (!selected) return;
+      e.preventDefault();
+      store.nudgeSelection(arrow[0], arrow[1], e.shiftKey);
+      return;
+    }
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault(); // Space would otherwise scroll the page
     store.selectNode(node.id, e.shiftKey);

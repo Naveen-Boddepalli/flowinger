@@ -68,7 +68,7 @@ export const Handle = memo(function Handle({
     // Neither the node (a drag) nor the canvas (a pan) may start from a handle.
     e.stopPropagation();
     e.preventDefault();
-    node.startConnection(e.currentTarget, e);
+    node.startConnection(e.currentTarget, e.nativeEvent);
   };
 
   const combinedStyle: CSSProperties = {
