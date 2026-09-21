@@ -1,4 +1,5 @@
 import type { CSSProperties, ComponentType, ReactNode } from 'react';
+import type { Feature } from './features.ts';
 
 export const Position = {
   Top: 'top',
@@ -379,6 +380,11 @@ export interface FlowingerInstance {
 export type NodeTypes = Record<string, ComponentType<NodeProps<never>>>;
 
 export interface FlowingerProps {
+  /**
+   * What the canvas can do beyond showing a graph and panning it — see `Feature`. `FlowingerCore` has
+   * none unless they are given here; `FlowingerCanvas` has them all. Read once, when the canvas mounts.
+   */
+  features?: readonly Feature[];
   /**
    * The nodes, owned by the caller. Give `onNodesChange` too and the flow is
    * *controlled*: dragging, selecting and measuring are reported as changes for

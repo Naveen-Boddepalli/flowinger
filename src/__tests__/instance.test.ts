@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { allFeatures } from '../features/index.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 import {
   getNodesBounds,
@@ -10,6 +11,7 @@ import type { Edge, EdgeChange, Node, NodeChange } from '../types.ts';
 /** A store attached to detached elements, the pane sized and placed as given. */
 function mounted(width = 800, height = 600, left = 0, top = 0) {
   const store = createFlowingerStore();
+  store.use(allFeatures);
   const viewport = document.createElement('div');
   const container = document.createElement('div');
   Object.defineProperty(container, 'clientWidth', { value: width });

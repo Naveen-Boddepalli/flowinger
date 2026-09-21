@@ -1,12 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
+import { cullingFeature } from '../features/culling.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore, type EngineOptions } from '../store.ts';
 import type { Edge, Node } from '../types.ts';
 
 const on: EngineOptions = { ...DEFAULT_ENGINE_OPTIONS, elementsSelectable: true, onlyRenderVisibleElements: true };
 
+/** A store that can cull. */
+function fresh() {
+  const store = createFlowingerStore();
+  store.use([cullingFeature]);
+  return store;
+}
+
 /** A store on an 800 × 600 pane with culling switched on. */
 function culled(nodes: Node[], edges: Edge[] = []) {
-  const store = createFlowingerStore();
+  const store = fresh();
   const container = document.createElement('div');
   Object.defineProperty(container, 'clientWidth', { value: 800 });
   Object.defineProperty(container, 'clientHeight', { value: 600 });
@@ -28,7 +36,7 @@ const ids = (s: ReadonlySet<string> | undefined) => [...(s ?? [])].sort();
 
 describe('the visible set', () => {
   it('is null when culling is off, and while there is no pane to judge by', () => {
-    const store = createFlowingerStore();
+    const store = fresh();
     store.setNodes([box('a', 0, 0)]);
     store.setOptions(on);
     expect(store.getVisible()).toBeNull(); // not attached: no size

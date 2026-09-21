@@ -1,3 +1,4 @@
+import { resolveFeatures, type EngineContext, type Feature, type FeatureEvent } from './features.ts';
 import { beginGroup, growGroup, type ExpandGroup } from './expand.ts';
 import { absolutePositionOf, descendantsOf } from './parents.ts';
 import {
@@ -387,7 +388,7 @@ export function createFlowingerStore(
     if (viewportEl) viewportEl.style.transform = viewportTransform(next);
     emit(viewportListeners);
     touch();
-    recomputeVisible();
+    run('change');
   };
 
   /** Stops a tween. Whoever awaited it hears `finished` — false when something interrupted it. */
@@ -470,71 +471,12 @@ export function createFlowingerStore(
     y: (containerEl?.clientHeight ?? 0) / 2,
   });
 
-  // --- what is worth drawing ------------------------------------------------
+  // --- features ---------------------------------------------------------------
 
-  /**
-   * Works out which nodes and edges are in (or near) view, and tells the canvas
-   * only when that set changes — a pan that reveals nothing new costs no render.
-   * Off, or before the pane has a size, everything counts (null).
-   */
-  const recomputeVisible = () => {
-    const pane = options.onlyRenderVisibleElements ? paneSize() : null;
-    if (!pane) {
-      if (visible !== null) {
-        visible = null;
-        emit(visibleListeners);
-      }
-      return;
-    }
-    const zoom = viewport.zoom;
-    const left = -viewport.x / zoom;
-    const top = -viewport.y / zoom;
-    const width = pane.width / zoom;
-    const height = pane.height / zoom;
-    // A margin, so a node is drawn a little before it slides into view.
-    const region: Rect = {
-      x: left - width * 0.25,
-      y: top - height * 0.25,
-      width: width * 1.5,
-      height: height * 1.5,
-    };
-    const rects = new Map<string, Rect>();
-    const nodeIds = new Set<string>();
-    for (const n of nodes) {
-      const at = absolutePosition(n);
-      const rect = { x: at.x, y: at.y, ...getNodeSize(n) };
-      rects.set(n.id, rect);
-      if (n.hidden === true) continue;
-      if (isSelected(n.id) || draggingIds.has(n.id) || isRectIntersecting(rect, region, true)) {
-        nodeIds.add(n.id);
-      }
-    }
-    const edgeIds = new Set<string>();
-    for (const e of edges) {
-      if (e.hidden === true) continue;
-      if (nodeIds.has(e.source) || nodeIds.has(e.target)) {
-        edgeIds.add(e.id);
-        continue;
-      }
-      // Both ends out of view: still worth drawing if the line between them crosses it.
-      const a = rects.get(e.source);
-      const b = rects.get(e.target);
-      if (!a || !b) continue;
-      const x = Math.min(a.x, b.x);
-      const y = Math.min(a.y, b.y);
-      const span = {
-        x,
-        y,
-        width: Math.max(a.x + a.width, b.x + b.width) - x,
-        height: Math.max(a.y + a.height, b.y + b.height) - y,
-      };
-      if (isRectIntersecting(span, region, true)) edgeIds.add(e.id);
-    }
-    const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
-      a.size === b.size && [...a].every((id) => b.has(id));
-    if (visible && same(visible.nodes, nodeIds) && same(visible.edges, edgeIds)) return;
-    visible = { nodes: nodeIds, edges: edgeIds };
-    emit(visibleListeners);
+  /** What features asked to hear of. */
+  const hooks: Record<FeatureEvent, Listener[]> = { change: [], detach: [] };
+  const run = (event: FeatureEvent) => {
+    for (const fn of hooks[event]) fn();
   };
 
   // --- geometry -------------------------------------------------------------
@@ -543,7 +485,7 @@ export function createFlowingerStore(
     geometryVersion += 1;
     emit(geometryListeners);
     touch();
-    recomputeVisible();
+    run('change');
   };
 
   const resolvePosition = (id: string, fallback: XYPosition): XYPosition => {
@@ -994,36 +936,6 @@ export function createFlowingerStore(
     return n ? { ...resolvePosition(id, n.position), ...getNodeSize(n) } : null;
   };
 
-  /**
-   * Resizes a node: its new box, as a `dimensions` change (which writes
-   * `width` / `height`) and, if its top-left moved, a `position` change. Reported
-   * only — a resize needs somebody applying changes, since the size lives on the node.
-   */
-  const resizeNode = (id: string, next: Rect, resizing: boolean) => {
-    const from = getNodeRect(id);
-    if (!from) return;
-    // This *is* the caller hearing the size, so the measurement that follows the
-    // re-render need not tell them again — unless the DOM came out different.
-    reported.set(id, { width: next.width, height: next.height });
-    const changes: NodeChange[] = [
-      {
-        type: 'dimensions',
-        id,
-        dimensions: { width: next.width, height: next.height },
-        resizing,
-        setAttributes: true,
-      },
-    ];
-    if (next.x !== from.x || next.y !== from.y) {
-      changes.push({ type: 'position', id, position: { x: next.x, y: next.y } });
-    }
-    emitNodeChanges(changes);
-  };
-
-  const endResize = (id: string) => {
-    emitNodeChanges([{ type: 'dimensions', id, resizing: false }]);
-  };
-
   const endBoxSelect = () => {
     if (selectionRect === null) return;
     selectionRect = null;
@@ -1181,7 +1093,7 @@ export function createFlowingerStore(
       },
       end: (e) => {
         for (const n of items) draggingIds.delete(n.id);
-        recomputeVisible();
+        run('change');
         if (nodesControlled()) {
           emitNodeChanges(items.map((n) => ({ type: 'position', id: n.id, dragging: false })));
         }
@@ -1223,50 +1135,6 @@ export function createFlowingerStore(
       else setNodePosition(n, position);
     });
     emitNodeChanges(changes);
-  };
-
-  // --- deleting ----------------------------------------------------------------
-
-  /**
-   * Deletes nodes and edges by id, as the changes that would remove them. A node
-   * takes its edges with it; `deletable: false` is honoured; `onBeforeDelete` may
-   * veto or narrow it, asynchronously. Where nobody applies changes (nodes you
-   * only pass in) the callbacks still fire, and removing them is up to you.
-   */
-  const deleteElements = async (params: {
-    nodes?: readonly { id: string }[];
-    edges?: readonly { id: string }[];
-  }): Promise<{ deletedNodes: Node[]; deletedEdges: Edge[] }> => {
-    const none = { deletedNodes: [], deletedEdges: [] };
-    const wantedNodes = new Set((params.nodes ?? []).map((n) => n.id));
-    const wantedEdges = new Set((params.edges ?? []).map((e) => e.id));
-    const direct = nodes.filter((n) => wantedNodes.has(n.id) && n.deletable !== false);
-    // What is nested inside a node goes with it, whatever it says about itself.
-    const inside = descendantsOf(
-      direct.map((n) => n.id),
-      nodes,
-    );
-    const goneNodes = nodes.filter((n) => direct.includes(n) || inside.has(n.id));
-    const goneIds = new Set(goneNodes.map((n) => n.id));
-    const goneEdges = edges.filter(
-      (e) =>
-        goneIds.has(e.source) ||
-        goneIds.has(e.target) ||
-        (wantedEdges.has(e.id) && e.deletable !== false),
-    );
-    let doomed = { nodes: goneNodes.map(snapshotNode), edges: goneEdges.map(snapshotEdge) };
-    if (doomed.nodes.length === 0 && doomed.edges.length === 0) return none;
-
-    const verdict = await callbacks.onBeforeDelete?.(doomed);
-    if (verdict === false) return none;
-    if (typeof verdict === 'object') doomed = verdict;
-
-    emitNodeChanges(doomed.nodes.map((n) => ({ type: 'remove', id: n.id })));
-    emitEdgeChanges(doomed.edges.map((e) => ({ type: 'remove', id: e.id })));
-    if (doomed.edges.length > 0) callbacks.onEdgesDelete?.(doomed.edges);
-    if (doomed.nodes.length > 0) callbacks.onNodesDelete?.(doomed.nodes);
-    callbacks.onDelete?.(doomed);
-    return { deletedNodes: doomed.nodes, deletedEdges: doomed.edges };
   };
 
   // --- what the canvas hands over ------------------------------------------
@@ -1313,7 +1181,7 @@ export function createFlowingerStore(
     if (pruned || relaid) bumpGeometry();
     else {
       touch();
-      recomputeVisible();
+      run('change');
     }
     // A child's place depends on its ancestors', which this may have moved.
     if (relaid) for (const [, ids] of childrenOf) for (const id of ids) emit(nodeListeners.get(id) ?? []);
@@ -1326,8 +1194,13 @@ export function createFlowingerStore(
     edgeById = new Map(next.map((e) => [e.id, e]));
     for (const id of [...selectedEdges]) if (!edgeById.has(id)) selectedEdges.delete(id);
     touch();
-    recomputeVisible();
+    run('change');
     announceIfChanged();
+  };
+
+  const setVisible = (next: VisibleSet | null) => {
+    visible = next;
+    emit(visibleListeners);
   };
 
   /** The pane, in pixels — null before a canvas has attached, or while it has no size. */
@@ -1463,42 +1336,6 @@ export function createFlowingerStore(
   const getNodesNow = (): Node[] => nodes.map(snapshotNode);
   const getEdgesNow = (): Edge[] => edges.map(snapshotEdge);
 
-  /**
-   * Replaces the list — as the changes that would produce it, so a controlled
-   * flow's owner applies them like any other. Ones it names that it has, it
-   * replaces; ones it lacks, it removes; ones it has not seen, it adds. Without
-   * `onNodesChange` there is nobody to apply them, and nothing happens.
-   */
-  const requestNodes = (next: Node[] | ((current: Node[]) => Node[])) => {
-    const current = getNodesNow();
-    const wanted = typeof next === 'function' ? next(current) : next;
-    const changes: NodeChange[] = [];
-    const wantedById = new Map(wanted.map((w) => [w.id, w]));
-    nodes.forEach((n, i) => {
-      const w = wantedById.get(n.id);
-      if (!w) changes.push({ type: 'remove', id: n.id });
-      else if (current[i] !== w) changes.push({ type: 'replace', id: n.id, item: w });
-    });
-    for (const w of wanted) if (!nodeById.has(w.id)) changes.push({ type: 'add', item: w });
-    emitNodeChanges(changes);
-  };
-
-  const requestEdges = (next: Edge[] | ((current: Edge[]) => Edge[])) => {
-    const current = getEdgesNow();
-    const wanted = typeof next === 'function' ? next(current) : next;
-    const changes: EdgeChange[] = [];
-    const wantedById = new Map(wanted.map((w) => [w.id, w]));
-    edges.forEach((e, i) => {
-      const w = wantedById.get(e.id);
-      if (!w) changes.push({ type: 'remove', id: e.id });
-      else if (current[i] !== w) changes.push({ type: 'replace', id: e.id, item: w });
-    });
-    for (const w of wanted) if (!edgeById.has(w.id)) changes.push({ type: 'add', item: w });
-    emitEdgeChanges(changes);
-  };
-
-  const toList = <T>(one: T | T[]): T[] => (Array.isArray(one) ? one : [one]);
-
   const rectOf = (target: Node | Rect | { id: string }): Rect | null => {
     if ('width' in target && 'x' in target) return target;
     const n = nodeById.get(target.id);
@@ -1506,68 +1343,6 @@ export function createFlowingerStore(
     const at = absolutePosition(n);
     const size = sizes.get(n.id) ?? getNodeSize(n);
     return { x: at.x, y: at.y, ...size };
-  };
-
-  const isNodeIntersecting = (target: Node | Rect | { id: string }, area: Rect, partially = true): boolean => {
-    const rect = rectOf(target);
-    return rect ? isRectIntersecting(rect, area, partially) : false;
-  };
-
-  const getIntersectingNodes = (
-    target: Node | Rect | { id: string },
-    partially = true,
-    among?: Node[],
-  ): Node[] => {
-    const rect = rectOf(target);
-    if (!rect) return [];
-    const self = 'id' in target ? target.id : null;
-    return (among ?? getNodesNow()).filter((n) => {
-      if (n.id === self) return false;
-      const other = rectOf(n);
-      return other !== null && isRectIntersecting(other, rect, partially);
-    });
-  };
-
-  const updateNode = (
-    id: string,
-    patch: Partial<Node> | ((node: Node) => Partial<Node>),
-    opts?: { replace?: boolean },
-  ) => {
-    const node = nodeById.get(id);
-    if (!node) return;
-    const current = snapshotNode(node);
-    const change = typeof patch === 'function' ? patch(current) : patch;
-    emitNodeChanges([
-      { type: 'replace', id, item: opts?.replace === true ? ({ ...change, id } as Node) : { ...current, ...change } },
-    ]);
-  };
-
-  const updateNodeData = (
-    id: string,
-    data: Record<string, unknown> | ((node: Node) => Record<string, unknown>),
-    opts?: { replace?: boolean },
-  ) => {
-    updateNode(
-      id,
-      (node) => {
-        const next = typeof data === 'function' ? data(node) : data;
-        return { data: opts?.replace === true ? next : { ...node.data, ...next } };
-      },
-    );
-  };
-
-  const updateEdge = (
-    id: string,
-    patch: Partial<Edge> | ((edge: Edge) => Partial<Edge>),
-    opts?: { replace?: boolean },
-  ) => {
-    const edge = edgeById.get(id);
-    if (!edge) return;
-    const current = snapshotEdge(edge);
-    const change = typeof patch === 'function' ? patch(current) : patch;
-    emitEdgeChanges([
-      { type: 'replace', id, item: opts?.replace === true ? ({ ...change, id } as Edge) : { ...current, ...change } },
-    ]);
   };
 
   // --- lifecycle ------------------------------------------------------------
@@ -1599,6 +1374,7 @@ export function createFlowingerStore(
   const detach = () => {
     cancelTween();
     cancelConnection();
+    run('detach');
     stopObserving?.();
     stopObserving = null;
     viewportEl = null;
@@ -1625,6 +1401,109 @@ export function createFlowingerStore(
       };
     }
     return cachedState;
+  };
+
+  // --- features -------------------------------------------------------------
+
+  const installed = new Map<string, unknown>();
+
+  const api = <A,>(feature: Feature<A>): A => {
+    if (!installed.has(feature.name)) {
+      throw new Error(`flowinger: the "${feature.name}" feature is not enabled — pass it in \`features\``);
+    }
+    return installed.get(feature.name) as A;
+  };
+
+  /** What features are handed: the parts of the store they build on. */
+  const ctx: EngineContext = {
+    get nodes() {
+      return nodes;
+    },
+    get edges() {
+      return edges;
+    },
+    get nodeById() {
+      return nodeById;
+    },
+    get edgeById() {
+      return edgeById;
+    },
+    get childrenOf() {
+      return childrenOf;
+    },
+    get options() {
+      return options;
+    },
+    get callbacks() {
+      return callbacks;
+    },
+    get viewport() {
+      return viewport;
+    },
+    get container() {
+      return containerEl;
+    },
+    get visible() {
+      return visible;
+    },
+    reported,
+    draggingIds,
+    paneSize,
+    setViewport: (next) => setViewport(next),
+    toGraph,
+    resolvePosition,
+    absolutePosition,
+    getNodeSize,
+    rectOf,
+    getNodeRect,
+    snapshotNode,
+    snapshotEdge,
+    snapshotNodes: getNodesNow,
+    snapshotEdges: getEdgesNow,
+    handlesOf: (nodeId) => handles.get(nodeId) ?? [],
+    findHandle,
+    nodesControlled,
+    edgesControlled,
+    emitNodeChanges,
+    emitEdgeChanges,
+    setNodePosition,
+    isSelected,
+    selectedNodeIds,
+    isSelectable,
+    selectNode,
+    setSelection,
+    setConnection,
+    setVisible,
+    on: (event, fn) => {
+      hooks[event].push(fn);
+    },
+    changed: () => {
+      run('change');
+    },
+    api,
+  };
+
+  /**
+   * An instance method a feature supplies. It is there from the start, so code that took it off the
+   * instance before the canvas rendered — `const { setNodes } = useReactFlow()` — still holds a working
+   * one; it says so plainly if the feature was never given.
+   */
+  const lend = <T extends (...args: never[]) => unknown>(feature: string, method: string): T =>
+    ((...args: unknown[]) => {
+      const impl = (installed.get(feature) as Record<string, ((...a: unknown[]) => unknown) | undefined> | undefined)?.[
+        method
+      ];
+      if (!impl) {
+        throw new Error(`flowinger: ${method} needs the "${feature}" feature — pass it in \`features\``);
+      }
+      return impl(...args);
+    }) as unknown as T;
+
+  /** Installs features, and whatever they need, that are not installed yet. */
+  const use = (list: readonly Feature[]) => {
+    for (const feature of resolveFeatures(list)) {
+      if (!installed.has(feature.name)) installed.set(feature.name, feature.install?.(ctx));
+    }
   };
 
   /** Created once. Its identity is the contract: it never changes. */
@@ -1656,26 +1535,24 @@ export function createFlowingerStore(
       const e = edgeById.get(id);
       return e && snapshotEdge(e);
     },
-    setNodes: requestNodes,
-    setEdges: requestEdges,
-    addNodes: (added) => {
-      emitNodeChanges(toList(added).map((item) => ({ type: 'add', item })));
-    },
-    addEdges: (added) => {
-      emitEdgeChanges(toList(added).map((item) => ({ type: 'add', item })));
-    },
-    updateNode,
-    updateNodeData,
-    updateEdge,
-    getIntersectingNodes,
-    isNodeIntersecting,
+    setNodes: lend('editing', 'setNodes'),
+    setEdges: lend('editing', 'setEdges'),
+    addNodes: lend('editing', 'addNodes'),
+    addEdges: lend('editing', 'addEdges'),
+    updateNode: lend('editing', 'updateNode'),
+    updateNodeData: lend('editing', 'updateNodeData'),
+    updateEdge: lend('editing', 'updateEdge'),
+    getIntersectingNodes: lend('editing', 'getIntersectingNodes'),
+    isNodeIntersecting: lend('editing', 'isNodeIntersecting'),
     getNodesBounds: (list) => boundsOfNodes(list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n))),
     toObject: () => ({ nodes: getNodesNow(), edges: getEdgesNow(), viewport }),
-    deleteElements,
+    deleteElements: lend('delete', 'deleteElements'),
   };
 
   return {
     instance,
+    use,
+    api,
     attach,
     detach,
     zoomAt,
@@ -1696,7 +1573,7 @@ export function createFlowingerStore(
     },
     setOptions: (next: EngineOptions) => {
       options = next;
-      recomputeVisible();
+      run('change');
     },
     getCallbacks: () => callbacks,
 
@@ -1732,15 +1609,12 @@ export function createFlowingerStore(
     boxSelect,
     endBoxSelect,
     getNodeRect,
-    resizeNode,
-    endResize,
     getSelectedNodeCount: (): number => selectedNodeIds().length,
     subscribeSelection: subscribeTo(selectionChangeListeners),
     getSelectionRect: (): Rect | null => selectionRect,
     subscribeSelectionRect: subscribeTo(selectionRectListeners),
     getSelection,
     nudgeSelection,
-    deleteElements,
     beginNodeDrag,
     areNodesInitialized,
 

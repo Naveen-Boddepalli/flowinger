@@ -1,5 +1,6 @@
 import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
+import { resizeFeature } from './features/resize.ts';
 import { capturePointer, releasePointer } from './pointer.ts';
 import type { Rect } from './types.ts';
 
@@ -92,6 +93,9 @@ export function NodeResizer({
   onResizeEnd,
 }: NodeResizerProps) {
   const store = useFlowingerStore();
+  // A resizer needs nothing of the canvas but this, so it brings it (idempotently, and only if it is drawn).
+  store.use([resizeFeature]);
+  const { resizeNode, endResize } = store.api(resizeFeature);
   const id = useNodeId();
   const session = useRef<Session | null>(null);
   if (!isVisible || id === null) return null;
@@ -136,7 +140,7 @@ export function NodeResizer({
     const zoom = store.getViewport().zoom;
     const next = boxFor(c, s.from, (e.clientX - s.startX) / zoom, (e.clientY - s.startY) / zoom);
     if (shouldResize && !shouldResize(e, next)) return;
-    store.resizeNode(id, next, true);
+    resizeNode(id, next, true);
     onResize?.(e, next);
   };
 
@@ -146,7 +150,7 @@ export function NodeResizer({
     session.current = null;
     e.stopPropagation();
     releasePointer(e.currentTarget, e.pointerId);
-    store.endResize(id);
+    endResize(id);
     onResizeEnd?.(e, store.getNodeRect(id) ?? s.from);
   };
 
