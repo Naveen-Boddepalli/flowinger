@@ -131,8 +131,15 @@ export type BackgroundVariant = (typeof BackgroundVariant)[keyof typeof Backgrou
 
 export interface BackgroundProps {
   variant?: BackgroundVariant;
+  /** The spacing of the pattern, in graph units. Default 20. */
   gap?: number;
+  /**
+   * As in React Flow: a dot's *diameter*, or a cross's arm length, in graph units
+   * (so it scales with zoom). Default 1 for dots, 6 for crosses; lines ignore it.
+   */
   size?: number;
+  /** The stroke width of lines and crosses. Default 1. */
+  lineWidth?: number;
   color?: string;
   className?: string;
   style?: CSSProperties;

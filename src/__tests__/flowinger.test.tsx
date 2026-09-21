@@ -2036,3 +2036,64 @@ describe('Flowinger minimap', () => {
     expect(map(container).getAttribute('aria-label')).toBe('Query plan overview');
   });
 });
+
+describe('Flowinger background', () => {
+  const pattern = (c: ParentNode) => must(c, 'pattern');
+  const dot = (c: ParentNode) => must(pattern(c), 'circle');
+  const rendered = (ui: React.ReactElement) => render(<FlowingerProvider>{ui}</FlowingerProvider>);
+
+  it('takes a dot’s size as its diameter, as React Flow does', () => {
+    const { container } = rendered(<Background size={4} gap={20} color="tomato" />);
+    expect(dot(container).getAttribute('r')).toBe('2'); // a 4-wide dot
+    expect(dot(container).getAttribute('fill')).toBe('tomato');
+    expect(pattern(container).getAttribute('width')).toBe('20');
+    // Centred in its cell.
+    expect([dot(container).getAttribute('cx'), dot(container).getAttribute('cy')]).toEqual(['10', '10']);
+  });
+
+  it('defaults to a 1-wide dot: a migrated size={1} draws the same, not twice as big', () => {
+    expect(dot(rendered(<Background />).container).getAttribute('r')).toBe('0.5');
+    expect(dot(rendered(<Background size={1} />).container).getAttribute('r')).toBe('0.5');
+  });
+
+  it('draws lines with lineWidth, and lets size alone leave them be', () => {
+    const { container } = rendered(<Background variant="lines" size={9} lineWidth={3} />);
+    const path = must(pattern(container), 'path');
+    expect(path.getAttribute('stroke-width')).toBe('3');
+    expect(rendered(<Background variant="lines" />).container.querySelector('pattern path')?.getAttribute('stroke-width')).toBe('1');
+  });
+
+  it('draws a cross whose arms are `size` long, 6 by default', () => {
+    const custom = rendered(<Background variant="cross" size={8} gap={20} lineWidth={2} />);
+    // Centred on (10, 10): 4 either way.
+    expect(must(pattern(custom.container), 'path').getAttribute('d')).toBe('M 6 10 H 14 M 10 6 V 14');
+    expect(must(pattern(custom.container), 'path').getAttribute('stroke-width')).toBe('2');
+    const plain = rendered(<Background variant="cross" gap={20} />);
+    expect(must(pattern(plain.container), 'path').getAttribute('d')).toBe('M 7 10 H 13 M 10 7 V 13');
+  });
+
+  it('follows the viewport, so the pattern pans and zooms with the graph', () => {
+    function Zoomer() {
+      const { zoomIn } = useFlowinger();
+      return <button onClick={() => { zoomIn(); }}>zoom</button>;
+    }
+    const { container } = render(
+      <FlowingerProvider initialViewport={{ x: 5, y: 6, zoom: 1 }}>
+        <Background />
+        <Zoomer />
+      </FlowingerProvider>,
+    );
+    expect(pattern(container).getAttribute('patternTransform')).toBe('translate(5, 6) scale(1)');
+    fireEvent.click(screen.getByText('zoom')); // ×1.25 (the default maximum is 2, so start below it)
+    expect(pattern(container).getAttribute('patternTransform')).toContain('scale(1.25)');
+  });
+
+  it('gives each background its own id, made of characters that are safe in url()', () => {
+    const a = rendered(<Background />);
+    const b = rendered(<Background />);
+    const idA = pattern(a.container).id;
+    expect(idA).not.toBe(pattern(b.container).id);
+    expect(idA).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(must(a.container, 'rect').getAttribute('fill')).toBe(`url(#${idA})`);
+  });
+});

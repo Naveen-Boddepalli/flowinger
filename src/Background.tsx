@@ -2,15 +2,25 @@ import { useId, type CSSProperties, memo } from 'react';
 import { BackgroundVariant, type BackgroundProps } from './types.ts';
 import { useViewport } from './context.ts';
 
+/** React Flow's defaults, so a migrated `<Background>` draws the same pattern. */
+const DEFAULT_SIZE: Record<BackgroundVariant, number> = {
+  [BackgroundVariant.Dots]: 1,
+  [BackgroundVariant.Lines]: 1,
+  [BackgroundVariant.Cross]: 6,
+};
+
 export const Background = memo(function Background({
   variant = BackgroundVariant.Dots,
   gap = 20,
-  size = 1,
+  size = DEFAULT_SIZE[variant],
+  lineWidth = 1,
   color = '#94a3b8',
   className = '',
   style = {},
 }: BackgroundProps) {
-  const patternId = useId();
+  // `useId`'s format varies by React version (`:r1:`, `«r1»`, `_r_1_`); keep only
+  // characters that are always safe inside `url(#…)`.
+  const patternId = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const viewport = useViewport();
 
   const patternTransform = `translate(${String(viewport.x)}, ${String(viewport.y)}) scale(${String(viewport.zoom)})`;
@@ -25,6 +35,9 @@ export const Background = memo(function Background({
     zIndex: 0,
     ...style,
   };
+
+  const mid = gap / 2;
+  const arm = size / 2;
 
   return (
     <svg
@@ -42,21 +55,22 @@ export const Background = memo(function Background({
           patternTransform={patternTransform}
         >
           {variant === BackgroundVariant.Dots && (
-            <circle cx={gap / 2} cy={gap / 2} r={size} fill={color} />
+            <circle cx={mid} cy={mid} r={size / 2} fill={color} />
           )}
           {variant === BackgroundVariant.Lines && (
             <path
-              d={`M ${gap} 0 L 0 0 0 ${gap}`}
+              d={`M ${String(gap)} 0 L 0 0 0 ${String(gap)}`}
               fill="none"
               stroke={color}
-              strokeWidth={size}
+              strokeWidth={lineWidth}
             />
           )}
           {variant === BackgroundVariant.Cross && (
             <path
-              d={`M ${gap / 2 - 4} ${gap / 2} L ${gap / 2 + 4} ${gap / 2} M ${gap / 2} ${gap / 2 - 4} L ${gap / 2} ${gap / 2 + 4}`}
+              d={`M ${String(mid - arm)} ${String(mid)} H ${String(mid + arm)} M ${String(mid)} ${String(mid - arm)} V ${String(mid + arm)}`}
+              fill="none"
               stroke={color}
-              strokeWidth={size}
+              strokeWidth={lineWidth}
             />
           )}
         </pattern>
