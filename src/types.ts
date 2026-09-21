@@ -164,6 +164,11 @@ export interface FlowingerProps {
   maxZoom?: number;
   nodesDraggable?: boolean;
   nodesConnectable?: boolean;
+  /**
+   * Let a click select a node (Shift/Ctrl/⌘ adds or removes one), a click on the
+   * canvas clear the selection, and make nodes focusable so Enter/Space selects
+   * from the keyboard. Default false; a node's own `selectable: false` opts it out.
+   */
   elementsSelectable?: boolean;
   panOnDrag?: boolean | number[];
   zoomOnScroll?: boolean;
@@ -187,5 +192,11 @@ export interface FlowingerProps {
   children?: ReactNode;
   onNodeDrag?: (event: React.PointerEvent, node: Node) => void;
   onNodeDragStop?: (event: React.PointerEvent, node: Node) => void;
+  /** A click anywhere on a node (whether or not it is selectable). */
+  onNodeClick?: (event: React.MouseEvent, node: Node) => void;
+  /** A click on the empty canvas — but not the click that ends a pan. */
+  onPaneClick?: (event: React.MouseEvent) => void;
+  /** Called whenever the set of selected nodes changes. */
+  onSelectionChange?: (selection: { nodes: Node[] }) => void;
   onInit?: (instance: FlowingerInstance) => void;
 }

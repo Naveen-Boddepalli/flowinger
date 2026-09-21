@@ -77,14 +77,21 @@ and multi-touch pinch, which needs a touch device (the maths and the pointer han
   is the default drawing, exported so a custom edge can start from it. A registered key wins over a
   built-in name; an unregistered type falls back to a bezier. Memoised on the edge object and its
   coordinates, so a drag elsewhere does not re-render it.
+- **Selection is opt-in and uncontrolled.** `elementsSelectable` (default off, like `nodesDraggable`).
+  The engine holds the set; `onSelectionChange({ nodes })` reports it, and each node re-renders only when
+  its own state flips. Two details that are easy to get wrong: pointer capture sends the click that ends a
+  pan to the canvas, which would deselect everything after every pan, so that one click is swallowed; and
+  a click on a control *inside* a node selects nothing. Selectable nodes are focusable (Enter/Space
+  selects, Shift adds) so selection is not mouse-only, and expose state as `aria-current` — a global
+  attribute, valid on a plain `div`, where `aria-selected`/`aria-pressed` are not.
 - **`react-flow__*` class names are kept** on the engine's elements, and the viewport's
   `translate(Xpx, Ypx) scale(Z)` string is a contract too: stylesheets, browser tests and code migrating
   from React Flow select on them.
 
 ### Not built
 
-- Selection and connecting edges. `nodesConnectable` / `elementsSelectable` are accepted for API
-  compatibility and ignored.
+- Connecting edges by dragging (`nodesConnectable` is accepted for API compatibility and ignored).
+- Edge selection, controlled selection (`node.selected`), and dragging a selection as a group.
 - A minimap.
 - `useStore` is a two-field shim (`panZoom`, `isReady`), just enough for code migrating from React Flow.
 - Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,

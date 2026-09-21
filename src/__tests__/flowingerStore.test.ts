@@ -439,3 +439,60 @@ describe('flowinger store — translateExtent', () => {
     expect(store.getViewport()).toBe(at); // untouched: no needless re-commit
   });
 });
+
+describe('flowinger store — selection', () => {
+  const nodesOf = (...ids: string[]): Node[] => ids.map((id) => node(id, 0, 0));
+  const setup = () => {
+    const { store } = mounted();
+    const onSelectionChange = vi.fn();
+    store.setNodes(nodesOf('a', 'b', 'c'));
+    store.setCallbacks({ onSelectionChange });
+    const ids = () => (onSelectionChange.mock.calls.at(-1)?.[0] as { nodes: Node[] }).nodes.map((n) => n.id);
+    return { store, onSelectionChange, ids };
+  };
+
+  it('replaces the selection, or toggles within it when additive', () => {
+    const { store, ids } = setup();
+    store.selectNode('a');
+    store.selectNode('b');
+    expect(ids()).toEqual(['b']);
+    store.selectNode('a', true);
+    expect(ids()).toEqual(['a', 'b']); // in graph order, not click order
+    store.selectNode('b', true);
+    expect(ids()).toEqual(['a']);
+    expect([store.isSelected('a'), store.isSelected('b')]).toEqual([true, false]);
+  });
+
+  it('stays quiet when nothing changes', () => {
+    const { store, onSelectionChange } = setup();
+    store.selectNode('a');
+    store.selectNode('a'); // already the whole selection
+    store.clearSelection();
+    store.clearSelection(); // already empty
+    expect(onSelectionChange).toHaveBeenCalledTimes(2); // select, then clear
+  });
+
+  it('tells only the nodes whose state flipped', () => {
+    const { store } = setup();
+    const heard: Record<string, number> = { a: 0, b: 0, c: 0 };
+    for (const id of ['a', 'b', 'c']) {
+      store.subscribeNode(id, () => {
+        heard[id] = (heard[id] ?? 0) + 1;
+      });
+    }
+    store.selectNode('a');
+    store.selectNode('b'); // a deselected, b selected
+    expect(heard).toEqual({ a: 2, b: 1, c: 0 });
+  });
+
+  it('drops a selected node that leaves the graph, and reports the survivors', () => {
+    const { store, ids, onSelectionChange } = setup();
+    store.selectNode('a');
+    store.selectNode('c', true);
+    onSelectionChange.mockClear();
+    store.setNodes(nodesOf('b', 'c')); // a is gone
+    expect(ids()).toEqual(['c']);
+    expect(store.isSelected('a')).toBe(false);
+    expect(store.hasSelection()).toBe(true);
+  });
+});

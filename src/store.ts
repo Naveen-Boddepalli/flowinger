@@ -38,6 +38,8 @@ export interface FlowingerState {
 }
 
 export interface NodeCallbacks {
+  onNodeClick?: ((event: React.MouseEvent, node: Node) => void) | undefined;
+  onSelectionChange?: ((selection: { nodes: Node[] }) => void) | undefined;
   onNodeDrag?: ((event: React.PointerEvent, node: Node) => void) | undefined;
   onNodeDragStop?: ((event: React.PointerEvent, node: Node) => void) | undefined;
 }
@@ -142,6 +144,8 @@ export function createFlowingerStore(
   /** Registered handles by node, in registration (DOM) order. */
   const handles = new Map<string, Set<HandleRecord>>();
   const nodeEls = new Map<string, HTMLElement>();
+  /** Selected node ids. Uncontrolled: held here, reported through `onSelectionChange`. */
+  const selected = new Set<string>();
   let geometryVersion = 0;
 
   const viewportListeners = new Set<Listener>();
@@ -361,6 +365,40 @@ export function createFlowingerStore(
     return undefined;
   };
 
+  const isSelected = (id: string): boolean => selected.has(id);
+
+  /** Tells the nodes whose state flipped, and the caller once. */
+  const announceSelection = (changed: Iterable<string>) => {
+    for (const id of changed) emit(nodeListeners.get(id) ?? []);
+    callbacks.onSelectionChange?.({ nodes: nodes.filter((n) => selected.has(n.id)) });
+  };
+
+  /**
+   * Selects a node — replacing the selection, or with `additive` toggling it in
+   * or out. Selecting what is already the whole selection changes nothing, and
+   * says nothing.
+   */
+  const selectNode = (id: string, additive = false) => {
+    const before = new Set(selected);
+    if (additive) {
+      if (!selected.delete(id)) selected.add(id);
+    } else {
+      selected.clear();
+      selected.add(id);
+    }
+    const changed = [...new Set([...before, ...selected])].filter(
+      (n) => before.has(n) !== selected.has(n),
+    );
+    if (changed.length > 0) announceSelection(changed);
+  };
+
+  const clearSelection = () => {
+    if (selected.size === 0) return;
+    const changed = [...selected];
+    selected.clear();
+    announceSelection(changed);
+  };
+
   const setNodes = (next: readonly Node[]) => {
     nodes = next;
     const byId = new Map(next.map((n) => [n.id, n]));
@@ -378,7 +416,10 @@ export function createFlowingerStore(
         pruned = true;
       }
     }
+    const gone = [...selected].filter((id) => !byId.has(id));
+    for (const id of gone) selected.delete(id);
     if (pruned) bumpGeometry();
+    if (gone.length > 0) announceSelection(gone);
   };
 
   const fitView = (options?: SetViewportOptions) => {
@@ -478,6 +519,10 @@ export function createFlowingerStore(
     registerHandle,
     measureHandles,
     findHandle,
+    isSelected,
+    hasSelection: () => selected.size > 0,
+    selectNode,
+    clearSelection,
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),

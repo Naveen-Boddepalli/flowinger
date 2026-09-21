@@ -84,6 +84,8 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `zoomOnScroll`, `zoomOnPinch` | `true` | |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
+| `elementsSelectable` | `false` | A click selects a node (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`). A node's own `selectable: false` opts it out. |
+| `onSelectionChange`, `onNodeClick`, `onPaneClick` | | Selection is held by the engine; `onSelectionChange({ nodes })` tells you. A pan's closing click is not a pane click. |
 | `onNodeDrag`, `onNodeDragStop`, `onInit` | | |
 
 `nodes` is never mutated: a dragged position is kept internally, and a fresh layout from you wins over
@@ -104,7 +106,7 @@ The default node, `Controls` and edges are styled inline from CSS variables, eac
 they need no stylesheet and no utility framework. Set any of these on an ancestor:
 
 `--flowinger-surface` · `--flowinger-surface-raised` · `--flowinger-border` · `--flowinger-text` ·
-`--flowinger-text-dim` · `--flowinger-edge` · `--flowinger-radius`
+`--flowinger-text-dim` · `--flowinger-edge` · `--flowinger-selected` · `--flowinger-radius`
 
 Nodes you supply are yours to style. The elements carry `react-flow__*` class names as well as
 `flowinger-*` ones, so existing stylesheets and tests that select on React Flow's keep working.
@@ -113,8 +115,9 @@ Nodes you supply are yours to style. The elements carry `react-flow__*` class na
 
 `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore` (only `panZoom` and `isReady`), `Handle`,
 `Position`, `Background`, `BackgroundVariant`, `MarkerType` and the `Node`/`Edge`/`NodeProps` types are
-all exported under React Flow's names. **Not built:** selection, connecting edges by dragging, a
-minimap, and `animated` (style an edge with a class instead).
+all exported under React Flow's names. **Not built:** connecting edges by dragging, a minimap, and
+`animated` (style an edge with a class instead). Selection is uncontrolled and covers nodes only (not
+edges), and dragging a selected node moves just that node.
 
 ## Server rendering
 

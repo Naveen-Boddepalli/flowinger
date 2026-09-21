@@ -1374,3 +1374,219 @@ describe('Flowinger custom edges', () => {
     expect(container.querySelector('.react-flow__edge-path')).toBeNull();
   });
 });
+
+describe('Flowinger selection', () => {
+  const commits: Record<string, number> = {};
+  function SelNode({ id, selected, data }: NodeProps) {
+    useEffect(() => {
+      commits[id] = (commits[id] ?? 0) + 1;
+    });
+    return (
+      <div data-testid={`sel-${id}`} data-selected={String(selected)}>
+        <span>{String(data.label)}</span>
+        <button type="button">inner {id}</button>
+      </div>
+    );
+  }
+  const types = { sel: SelNode };
+  const nodes: Node[] = ['a', 'b', 'c'].map((id, i) => ({
+    id,
+    type: 'sel',
+    position: { x: i * 200, y: 0 },
+    data: { label: id.toUpperCase() },
+  }));
+  const el = (c: ParentNode, id: string) => must<HTMLElement>(c, `[data-id="${id}"]`);
+  const selectedIds = (c: ParentNode) => ['a', 'b', 'c'].filter((id) => el(c, id).classList.contains('selected'));
+  const lastSelection = (fn: ReturnType<typeof vi.fn>) =>
+    (fn.mock.calls.at(-1)?.[0] as { nodes: Node[] } | undefined)?.nodes.map((n) => n.id);
+
+  afterEach(() => {
+    for (const key of Object.keys(commits)) delete commits[key];
+  });
+
+  it('is off by default: a click reports but selects nothing, and nodes stay out of the tab order', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} onNodeClick={onNodeClick} />,
+    );
+    fireEvent.click(el(container, 'a'));
+    expect(selectedIds(container)).toEqual([]);
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+    expect(onNodeClick.mock.calls[0]?.[1]).toMatchObject({ id: 'a' });
+    expect(el(container, 'a').hasAttribute('tabindex')).toBe(false);
+  });
+
+  it('selects on click, tells the node and the caller, and marks it for assistive tech', () => {
+    const onSelectionChange = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable onSelectionChange={onSelectionChange} />,
+    );
+    fireEvent.click(el(container, 'a'));
+    expect(selectedIds(container)).toEqual(['a']);
+    expect(screen.getByTestId('sel-a').dataset.selected).toBe('true');
+    expect(screen.getByTestId('sel-b').dataset.selected).toBe('false');
+    expect(el(container, 'a').getAttribute('aria-current')).toBe('true');
+    expect(el(container, 'b').hasAttribute('aria-current')).toBe(false);
+    expect(lastSelection(onSelectionChange)).toEqual(['a']);
+  });
+
+  it('replaces the selection on a plain click, and adds or removes with Shift, Ctrl or ⌘', () => {
+    const onSelectionChange = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable onSelectionChange={onSelectionChange} />,
+    );
+    fireEvent.click(el(container, 'a'));
+    fireEvent.click(el(container, 'b'));
+    expect(selectedIds(container)).toEqual(['b']);
+
+    fireEvent.click(el(container, 'a'), { shiftKey: true });
+    expect(selectedIds(container)).toEqual(['a', 'b']);
+    fireEvent.click(el(container, 'c'), { ctrlKey: true });
+    expect(selectedIds(container)).toEqual(['a', 'b', 'c']);
+    fireEvent.click(el(container, 'b'), { metaKey: true }); // toggles off
+    expect(selectedIds(container)).toEqual(['a', 'c']);
+    expect(lastSelection(onSelectionChange)).toEqual(['a', 'c']);
+  });
+
+  it('says nothing when a click changes nothing', () => {
+    const onSelectionChange = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable onSelectionChange={onSelectionChange} />,
+    );
+    fireEvent.click(el(container, 'a'));
+    fireEvent.click(el(container, 'a')); // already the whole selection
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears on a click on the bare canvas, and reports it', () => {
+    const onPaneClick = vi.fn();
+    const onSelectionChange = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        nodeTypes={types}
+        elementsSelectable
+        onPaneClick={onPaneClick}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+    fireEvent.click(el(container, 'a'));
+    fireEvent.click(must(container, '.flowinger'));
+    expect(selectedIds(container)).toEqual([]);
+    expect(lastSelection(onSelectionChange)).toEqual([]);
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not deselect when the click that ends a pan lands on the canvas', () => {
+    const onPaneClick = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable onPaneClick={onPaneClick} />,
+    );
+    fireEvent.click(el(container, 'a'));
+    const pane = must(container, '.flowinger');
+
+    fireEvent.pointerDown(pane, pointer({ clientX: 100, clientY: 100 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 160, clientY: 100 })); // a real pan
+    fireEvent.pointerUp(pane, pointer({ clientX: 160, clientY: 100 }));
+    fireEvent.click(pane); // pointer capture sends the pan's click here
+    expect(selectedIds(container)).toEqual(['a']);
+    expect(onPaneClick).not.toHaveBeenCalled();
+
+    // …and the very next, deliberate, click on the canvas still clears.
+    fireEvent.pointerDown(pane, pointer({ clientX: 100, clientY: 100 }));
+    fireEvent.pointerUp(pane, pointer({ clientX: 100, clientY: 100 }));
+    fireEvent.click(pane);
+    expect(selectedIds(container)).toEqual([]);
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves a click on a control inside a node to the control', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable onNodeClick={onNodeClick} />,
+    );
+    fireEvent.click(screen.getByText('inner a'));
+    expect(selectedIds(container)).toEqual([]);
+    expect(onNodeClick).toHaveBeenCalledTimes(1); // the node still hears about it
+  });
+
+  it('honours a node’s own selectable: false', () => {
+    const mixed = nodes.map((n) => (n.id === 'b' ? { ...n, selectable: false } : n));
+    const { container } = render(<FlowingerCanvas nodes={mixed} nodeTypes={types} elementsSelectable />);
+    fireEvent.click(el(container, 'b'));
+    expect(selectedIds(container)).toEqual([]);
+    expect(el(container, 'b').hasAttribute('tabindex')).toBe(false);
+    expect(el(container, 'a').getAttribute('tabindex')).toBe('0');
+  });
+
+  it('selects from the keyboard with Enter or Space, only when the node itself has focus', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable />);
+    expect(fireEvent.keyDown(el(container, 'a'), { key: 'Enter' })).toBe(false); // consumed
+    expect(selectedIds(container)).toEqual(['a']);
+    fireEvent.keyDown(el(container, 'b'), { key: ' ', shiftKey: true }); // Shift adds
+    expect(selectedIds(container)).toEqual(['a', 'b']);
+    expect(fireEvent.keyDown(el(container, 'c'), { key: 'a' })).toBe(true); // other keys untouched
+
+    // Enter on the button inside a node is the button's.
+    fireEvent.keyDown(screen.getByText('inner c'), { key: 'Enter' });
+    expect(selectedIds(container)).toEqual(['a', 'b']);
+  });
+
+  it('drops the selection on Escape, but only consumes the key when there is one', () => {
+    const { container } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable keyboardNavigation />,
+    );
+    const pane = must(container, '.flowinger');
+    expect(fireEvent.keyDown(pane, { key: 'Escape' })).toBe(true); // nothing to drop: not ours
+
+    fireEvent.click(el(container, 'a'));
+    expect(fireEvent.keyDown(pane, { key: 'Escape' })).toBe(false);
+    expect(selectedIds(container)).toEqual([]);
+  });
+
+  it('re-renders only the nodes whose selection changed', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable />);
+    const before = { ...commits };
+
+    fireEvent.click(el(container, 'a'));
+    expect(commits.a).toBeGreaterThan(before.a ?? 0);
+    expect(commits.b).toBe(before.b);
+    expect(commits.c).toBe(before.c);
+
+    const afterA = { ...commits };
+    fireEvent.click(el(container, 'b')); // a is deselected, b selected; c is untouched
+    expect(commits.a).toBeGreaterThan(afterA.a ?? 0);
+    expect(commits.b).toBeGreaterThan(afterA.b ?? 0);
+    expect(commits.c).toBe(afterA.c);
+  });
+
+  it('forgets a selected node that leaves the graph, and says so', () => {
+    const onSelectionChange = vi.fn();
+    const { container, rerender } = render(
+      <FlowingerCanvas nodes={nodes} nodeTypes={types} elementsSelectable onSelectionChange={onSelectionChange} />,
+    );
+    fireEvent.click(el(container, 'a'));
+    fireEvent.click(el(container, 'b'), { shiftKey: true });
+
+    rerender(
+      <FlowingerCanvas
+        nodes={nodes.filter((n) => n.id !== 'a')}
+        nodeTypes={types}
+        elementsSelectable
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+    expect(lastSelection(onSelectionChange)).toEqual(['b']);
+  });
+
+  it('shows the selection on the default node view too', () => {
+    const plain: Node[] = [{ id: 'p', position: { x: 0, y: 0 }, data: { label: 'plain' } }];
+    const { container } = render(<FlowingerCanvas nodes={plain} elementsSelectable />);
+    const view = must<HTMLElement>(container, '[data-id="p"] > div');
+    expect(view.getAttribute('style')).not.toContain('--flowinger-selected');
+    fireEvent.click(el(container, 'p'));
+    expect(must<HTMLElement>(container, '[data-id="p"] > div').getAttribute('style')).toContain(
+      'var(--flowinger-selected, #38bdf8)',
+    );
+  });
+});

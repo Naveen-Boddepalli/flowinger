@@ -6,6 +6,8 @@ import {
   useState,
   useSyncExternalStore,
   type ComponentType,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore } from './context.ts';
@@ -28,6 +30,8 @@ export interface NodeWrapperProps {
   node: Node;
   View: ComponentType<NodeProps>;
   draggable: boolean;
+  /** Whether a click, or Enter/Space, selects it. */
+  selectable: boolean;
 }
 
 /**
@@ -36,7 +40,12 @@ export interface NodeWrapperProps {
  * Memoised, and subscribed to its own position only — so dragging one node
  * re-renders that node and the edge layer, not the other N-1.
  */
-export const NodeWrapper = memo(function NodeWrapper({ node, View, draggable }: NodeWrapperProps) {
+export const NodeWrapper = memo(function NodeWrapper({
+  node,
+  View,
+  draggable,
+  selectable,
+}: NodeWrapperProps) {
   const store = useFlowingerStore();
   const ref = useRef<HTMLDivElement | null>(null);
   const drag = useRef<DragState | null>(null);
@@ -49,6 +58,13 @@ export const NodeWrapper = memo(function NodeWrapper({ node, View, draggable }: 
   const readPosition = () => store.resolvePosition(node.id, node.position);
   // No drag has happened on the server; the layout's own position is it.
   const position = useSyncExternalStore(subscribe, readPosition, readPosition);
+
+  // Selection is per node: selecting one re-renders it (and whichever it replaces), not the rest.
+  const selected = useSyncExternalStore(
+    subscribe,
+    () => store.isSelected(node.id),
+    () => false,
+  );
 
   // What a `<Handle>` inside this node registers itself with.
   const nodeContext = useMemo<NodeContextValue>(
@@ -123,13 +139,29 @@ export const NodeWrapper = memo(function NodeWrapper({ node, View, draggable }: 
       .onNodeDragStop?.(e, { ...node, position: store.resolvePosition(node.id, node.position) });
   };
 
+  // A click on a control inside the node is that control's, not a selection.
+  const onClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    store.getCallbacks().onNodeClick?.(e, node);
+    if (selectable && !isInteractive(e.target)) {
+      store.selectNode(node.id, e.shiftKey || e.metaKey || e.ctrlKey);
+    }
+  };
+
+  // Only when the node itself has focus: Enter or Space inside a field is the field's.
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); // Space would otherwise scroll the page
+    store.selectNode(node.id, e.shiftKey);
+  };
+
   return (
     <div
       ref={ref}
       data-id={node.id}
       className={`flowinger-node react-flow__node react-flow__node-${node.type ?? 'default'} ${
         node.className ?? ''
-      } ${dragging ? 'dragging' : ''}`}
+      } ${dragging ? 'dragging' : ''} ${selected ? 'selected' : ''}`}
       style={{
         ...node.style,
         position: 'absolute',
@@ -142,13 +174,19 @@ export const NodeWrapper = memo(function NodeWrapper({ node, View, draggable }: 
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
+      onClick={onClick}
+      // Selectable means reachable from the keyboard too. `aria-current` is a
+      // global attribute, valid on a plain div; `aria-selected` is not.
+      {...(selectable
+        ? { tabIndex: 0, onKeyDown, 'aria-current': selected ? ('true' as const) : undefined }
+        : {})}
     >
       <NodeContext.Provider value={nodeContext}>
         <View
           id={node.id}
           data={node.data}
           type={node.type}
-          selected={false}
+          selected={selected}
           isConnectable={false}
           positionAbsoluteX={position.x}
           positionAbsoluteY={position.y}

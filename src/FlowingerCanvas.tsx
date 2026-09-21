@@ -5,6 +5,7 @@ import {
   type CSSProperties,
   type ComponentType,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { FlowingerContext, useFlowingerStore } from './context.ts';
@@ -36,9 +37,15 @@ const defaultNodeStyle: CSSProperties = {
   color: 'var(--flowinger-text, #e2e8f0)',
 };
 
-function DefaultNodeView({ id, data }: NodeProps) {
+function DefaultNodeView({ id, data, selected }: NodeProps) {
   return (
-    <div style={defaultNodeStyle}>
+    <div
+      style={
+        selected
+          ? { ...defaultNodeStyle, borderColor: 'var(--flowinger-selected, #38bdf8)' }
+          : defaultNodeStyle
+      }
+    >
       <div style={{ fontWeight: 600 }}>{id}</div>
       {'label' in data && (
         <div style={{ fontSize: '0.875em', color: 'var(--flowinger-text-dim, #94a3b8)' }}>
@@ -75,6 +82,7 @@ function InnerCanvas({
   panOnDrag = true,
   zoomOnScroll = true,
   zoomOnPinch = true,
+  elementsSelectable = false,
   translateExtent,
   keyboardNavigation = false,
   ariaLabel = 'Diagram',
@@ -83,6 +91,9 @@ function InnerCanvas({
   children,
   onNodeDrag,
   onNodeDragStop,
+  onNodeClick,
+  onPaneClick,
+  onSelectionChange,
   onInit,
 }: FlowingerProps) {
   const store = useFlowingerStore();
@@ -92,6 +103,8 @@ function InnerCanvas({
   /** Every pointer currently down, so a second finger can be told from a click. */
   const pointers = useRef(new Map<number, XYPosition>());
   const pinch = useRef<PinchStart | null>(null);
+  /** A pan just ended: the click that follows it is not a click on the canvas. */
+  const justPanned = useRef(false);
 
   // Layout effects, not passive ones: a parent's passive effect (one that
   // frames the diagram, say) runs after these, and must find the canvas
@@ -115,8 +128,8 @@ function InnerCanvas({
   }, [store, nodes]);
 
   useIsomorphicLayoutEffect(() => {
-    store.setCallbacks({ onNodeDrag, onNodeDragStop });
-  }, [store, onNodeDrag, onNodeDragStop]);
+    store.setCallbacks({ onNodeDrag, onNodeDragStop, onNodeClick, onSelectionChange });
+  }, [store, onNodeDrag, onNodeDragStop, onNodeClick, onSelectionChange]);
 
   const onInitRef = useRef(onInit);
   useEffect(() => {
@@ -159,6 +172,7 @@ function InnerCanvas({
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    justPanned.current = false;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (zoomOnPinch && pointers.current.size === 2) {
       // A second finger turns whatever the first was doing into a pinch.
@@ -200,6 +214,7 @@ function InnerCanvas({
     if (!p.active) {
       if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
       p.active = true;
+      justPanned.current = true;
       capturePointer(e.currentTarget, e.pointerId);
       e.currentTarget.style.cursor = 'grabbing';
     }
@@ -222,6 +237,19 @@ function InnerCanvas({
     if (!p.active) return;
     releasePointer(e.currentTarget, e.pointerId);
     e.currentTarget.style.cursor = panOnDrag ? 'grab' : '';
+  };
+
+  // Pointer capture retargets the click that ends a pan onto the canvas, so a
+  // pan would otherwise deselect everything. Only a click on the bare canvas —
+  // not on a node, an overlay, or a control — counts.
+  const onClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (justPanned.current) {
+      justPanned.current = false;
+      return;
+    }
+    if (e.target !== e.currentTarget) return;
+    onPaneClick?.(e);
+    if (elementsSelectable) store.clearSelection();
   };
 
   // Only when the canvas itself has focus: a key pressed inside a node (a text
@@ -256,6 +284,12 @@ function InnerCanvas({
       case '0':
         store.instance.fitView();
         break;
+      case 'Escape':
+        // Only ours if there is a selection to drop; otherwise Escape belongs to
+        // whatever else wants it (a dialog this canvas sits in, say).
+        if (!store.hasSelection()) return;
+        store.clearSelection();
+        break;
       default:
         return;
     }
@@ -282,6 +316,7 @@ function InnerCanvas({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
+      onClick={onClick}
       {...(keyboardNavigation
         ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel, onKeyDown }
         : {})}
@@ -318,6 +353,7 @@ function InnerCanvas({
               // cannot be checked here; `NodeTypes` accepts any.
               View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
               draggable={node.draggable ?? nodesDraggable}
+              selectable={elementsSelectable && node.selectable !== false}
             />
           ))}
         </div>
