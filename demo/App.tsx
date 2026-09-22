@@ -251,7 +251,7 @@ export function App() {
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 backdrop-blur">
         <div className="flex items-center gap-2">
           <span className="font-bold text-emerald-400">Flowinger</span>
-          <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">v0.1.0</span>
+          <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">v0.2.0</span>
           <span className="hidden whitespace-nowrap text-xs text-slate-500 sm:inline">· Pure React & SVG Node Graph Renderer</span>
         </div>
         <div className="hidden text-xs text-slate-400 md:block">

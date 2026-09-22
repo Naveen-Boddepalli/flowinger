@@ -324,8 +324,11 @@ description of them.
   handful of hooks (`useConnection`, `useInternalNode`, `useStoreApi`). It is enough for QueryLens (whose
   `FlowTree` uses eight names) and not for an arbitrary React Flow app.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
-- Published to npm as `flowinger@0.1.0` (2026-09-21); the fourth round's additions are on `main` but not yet in a
-  release. CI (`.github/workflows/ci.yml`: typecheck, tests and build on React 18 and 19) is green.
+- Published to npm: `flowinger@0.1.0` (2026-09-21), then `0.2.0` (2026-09-22, the fourth round's additions —
+  events, viewport moves, edge label styling, `NodeProps`, the NOTICE). QueryLens's trial branch tracks the
+  registry version and is bumped at each release (currently `0.2.0`; typecheck, lint, 1170 unit and 79/79 e2e
+  unchanged, `flow` chunk 18.0 → 18.9 kB). CI (`.github/workflows/ci.yml`: typecheck, tests and build on React
+  18 and 19) is green.
 
 ## 1. Context and Goals
 
