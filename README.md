@@ -85,6 +85,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's, `bgColor` behind the pattern — as in React Flow); zoom and fit buttons (`showZoom`, `showFit`/`showFitView`, `fitViewOptions`, `onZoomIn`/`onZoomOut`/`onFitView`, your own `ControlButton`s as children). Both go inside the provider; a `position` pins either to the canvas, as `Panel` does. |
 | `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor`/`nodeStrokeColor`/`nodeClassName` (a value or a function of the node), `nodeStrokeWidth`, `nodeBorderRadius`, `maskColor`, `maskStrokeColor`/`maskStrokeWidth`, `bgColor`, `pannable`, `position`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
 | `useFlowinger()`, `useViewport()`, `useOnViewportChange()`, `useUpdateNodeInternals()` | The instance (below); the current viewport; hearing the view move from anywhere in the tree; having the canvas re-read a node's size and handles after it changes what it is made of without telling the canvas. |
+| `useInternalNode(id)`, `useStoreApi()` | A node plus `internals.positionAbsolute` and `internals.z` — narrower than React Flow's own `InternalNode` (no `handleBounds`, no `userNode`); `getState()` without subscribing, and `subscribe()` — no generic `setState`. |
 | `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge` | The built-in edges, as components — for an `edgeTypes` entry that renders one and adds to it, or is one under another name. |
 | `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY, offsetX, offsetY]`. |
 | `getEdgeCenter`, `getBezierEdgeCenter`, `getViewportForBounds`, `isNode`, `isEdge` | Smaller helpers React Flow also has: the straight-line and on-curve midpoints a label sits at; a `viewportForBounds` that matches React Flow's own fit to the pixel; and the type guards. |
@@ -186,6 +187,12 @@ layout from you wins over it. Dragging a selected node drags the whole selection
 `width` and `height` to fix its size — as in React Flow they are applied to the node, and are what server
 rendering and `fitView` use before it has been measured. Leave them out and the content decides; the engine
 measures the rendered size either way, and reports it (`node.measured`) to a controlled flow.
+
+A node or an edge also takes `ariaLabel`, `ariaRole` (default `'group'` on a node once it is a tab stop; on
+an edge, a `'button'` once it is selectable and focusable) and `domAttributes` — an escape hatch for an
+attribute flowinger has no prop for (`title`, `data-*`, another `aria-*`…). `domAttributes` can never be an
+event handler, or `id` / `style` / `className` / `role`, which are the engine's own to set; it wins over
+anything else it is allowed to touch.
 
 ### Handles
 
@@ -334,11 +341,11 @@ Flow code**: it covers the part of the API an app like [QueryLens](https://githu
 uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **91 of its 211
-exports** (107 of the 120 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
-`ReactFlowInstance` by name will not compile until you rename them), **81 of 119** `ReactFlow` props, 30 of 32
-instance methods, 16 of 22 `Node` fields, 17 of 20 `Edge` fields, 11 of 13 `NodeProps` fields and **20 of 20**
-`EdgeProps` fields. What is missing:
+(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **94 of its 211
+exports** (106 of the 117 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
+`ReactFlowInstance` by name will not compile until you rename them), **81 of 119** `ReactFlow` props, 31 of 32
+instance methods, 19 of 22 `Node` fields, 11 of 13 `NodeProps` fields, and **20 of 20** on both `Edge` and
+`EdgeProps`. What is missing:
 
 - **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onViewportChange` (there is `onMove` /
   `onMoveStart` / `onMoveEnd`, and `useOnViewportChange`); `onClickConnectStart` / `End` (connecting by click,
@@ -354,16 +361,20 @@ instance methods, 16 of 22 `Node` fields, 17 of 20 `Edge` fields, 11 of 13 `Node
   `attributionPosition` are accepted and do nothing — there is no attribution to hide). The canvas takes
   `className`, `style` and `children`, not HTML attributes (`id`, `role`, `data-*`, `onKeyDown`…); the same goes
   for `Panel`, `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge`.
-- **Hooks and instance:** `useConnection`, `useInternalNode`, `useStoreApi`, `useHandleConnections` (there is
-  `useUpdateNodeInternals`, `useOnViewportChange`, `getNodeConnections` and `getHandleConnections`);
-  `getInternalNode`, `viewportInitialized`.
+- **Hooks and instance:** `useConnection`, `useHandleConnections` (there is now `useInternalNode`,
+  `useStoreApi` — `getState()` and `subscribe()`, no generic `setState` — `useUpdateNodeInternals`,
+  `useOnViewportChange`, `getNodeConnections` and `getHandleConnections`). `viewportInitialized`: on
+  purpose — React Flow's own instance is rebuilt when it flips, and flowinger's is created once and never
+  replaced (deliberately, see `plan.md`), so a boolean *field* here would either go stale or be a silently
+  wrong shape; there is no honest way to add it without one of those.
 - **Components:** `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`, `MiniMapNode` (there are
   now `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge`, `isNode`, `isEdge`, `getEdgeCenter`,
   `getBezierEdgeCenter`, `getViewportForBounds` and `ControlButton`). `MiniMap`'s `zoomable`, `nodeComponent`,
   `offsetScale`, `onNodeClick`, `inversePan`; `Controls`' `showInteractive`, `onInteractiveChange`;
   `NodeResizer`'s `autoScale`.
-- **Fields:** a node's `sourcePosition`, `targetPosition`, `handles`, `ariaLabel`, `domAttributes` (there is now
-  `initialWidth` / `initialHeight`); an edge's `ariaLabel`, `domAttributes`. A custom node is not given
+- **Fields:** a node's `sourcePosition`, `targetPosition`, `handles` (there is now `initialWidth` /
+  `initialHeight`, `ariaLabel`, `ariaRole` and `domAttributes` — an escape hatch, never an event handler or
+  `id` / `style` / `className` / `role`, on both a node and an edge). A custom node is not given
   `sourcePosition` or `targetPosition` (it now gets `selectable`, `draggable`, `deletable`, `dragging`,
   `dragHandle`, `parentId`, `zIndex`, `width` and `height`, alongside `id`, `data`, `type`, `selected`,
   `isConnectable` and its absolute position). `fitView` has no `ease` / `interpolate`.

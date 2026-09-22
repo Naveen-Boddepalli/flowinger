@@ -1,6 +1,6 @@
-import { createContext, useContext, useRef, useSyncExternalStore } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useSyncExternalStore } from 'react';
 import { NodeContext } from './nodeContext.ts';
-import type { FlowingerInstance, Viewport } from './types.ts';
+import type { FlowingerInstance, InternalNode, Viewport } from './types.ts';
 import type { FlowingerState, FlowingerStore } from './store.ts';
 
 export const FlowingerContext = /*#__PURE__*/ createContext<FlowingerStore | null>(null);
@@ -95,4 +95,75 @@ export function useNodesInitialized(): boolean {
 /** The id of the node this component is rendered inside; null anywhere else. */
 export function useNodeId(): string | null {
   return useContext(NodeContext)?.nodeId ?? null;
+}
+
+// `measured` is rebuilt from a stable `Size` on every `snapshotNode` call (a fresh `{ width, height }`
+// literal), so comparing it by reference — as `position` and everything else here can be — would never
+// hold once a node has been measured, and `getSnapshot` would never settle.
+const sameSize = (a?: { width?: number; height?: number }, b?: { width?: number; height?: number }): boolean =>
+  a === b || (a?.width === b?.width && a?.height === b?.height);
+
+// `position` and `internals.z` overlap with `positionAbsolute` and `zIndex` for every change `setNodes`
+// itself notices (`sameLayout` — position, width, height, hidden — is what decides a relayout; it does
+// not compare `parentId`, so a pure reparent that does not also move anything is not caught here either,
+// or upstream of it). Kept anyway: cheap, and correct for a case `sameLayout` does learn of.
+const sameInternalNode = (a: InternalNode | undefined, b: InternalNode | undefined): boolean =>
+  a === b ||
+  (a !== undefined &&
+    b !== undefined &&
+    a.position === b.position &&
+    sameSize(a.measured, b.measured) &&
+    a.selected === b.selected &&
+    a.zIndex === b.zIndex &&
+    a.internals.z === b.internals.z &&
+    a.internals.positionAbsolute.x === b.internals.positionAbsolute.x &&
+    a.internals.positionAbsolute.y === b.internals.positionAbsolute.y);
+
+/**
+ * A node plus what the engine has worked out about it — `internals.positionAbsolute`,
+ * `internals.z` — re-read on a drag, a controlled relayout, or that node's own selection flipping.
+ * `undefined` for a node that is not there. Narrower than React Flow's `useInternalNode` (see
+ * `InternalNode`): a plain `zIndex`-only edit, with no accompanying move, is not picked up until
+ * something else invalidates it.
+ */
+export function useInternalNode(id: string): InternalNode | undefined {
+  const store = useContext(FlowingerContext);
+  const subscribe = useCallback(
+    (listener: () => void): (() => void) => {
+      if (!store) return () => {};
+      // Geometry catches a move (a drag, or a controlled relayout); a node's own listener catches a
+      // controlled selection flip alone, which does not otherwise touch geometry.
+      const offGeometry = store.subscribeGeometry(listener);
+      const offNode = store.subscribeNode(id, listener);
+      return () => {
+        offGeometry();
+        offNode();
+      };
+    },
+    [store, id],
+  );
+  const cache = useRef<InternalNode | undefined>(undefined);
+  const getSnapshot = useCallback(() => {
+    const next = store?.getInternalNode(id);
+    if (sameInternalNode(cache.current, next)) return cache.current;
+    cache.current = next;
+    return next;
+  }, [store, id]);
+  return useSyncExternalStore(subscribe, getSnapshot, () => undefined);
+}
+
+export interface FlowingerStoreApi {
+  getState: () => FlowingerState;
+  /** Every change to anything `useStore` can read — a pan included, so this fires often. */
+  subscribe: (listener: () => void) => () => void;
+}
+
+/**
+ * React Flow's `useStoreApi`: `getState()` without subscribing to it — for reading a value from an event
+ * handler, say, rather than a render. No `setState`: flowinger's store is not shaped like React Flow's,
+ * and does not offer generic writes to its internals — use the instance (`useReactFlow()`) instead.
+ */
+export function useStoreApi(): FlowingerStoreApi {
+  const store = useFlowingerStore();
+  return useMemo(() => ({ getState: store.getState, subscribe: store.subscribeState }), [store]);
 }

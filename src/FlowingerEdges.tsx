@@ -117,15 +117,12 @@ function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hoo
     ...(selectable || interactive
       ? { style: { pointerEvents: 'stroke', ...(selectable ? { cursor: 'pointer' } : {}) } as CSSProperties }
       : {}),
-    ...(selectable && focusable
-      ? {
-          tabIndex: 0,
-          role: 'button',
-          'aria-label': `Edge from ${edge.source} to ${edge.target}`,
-          'aria-pressed': selected,
-          onKeyDown,
-        }
-      : {}),
+    ...(selectable && focusable ? { tabIndex: 0, 'aria-pressed': selected, onKeyDown } : {}),
+    role: edge.ariaRole ?? (selectable && focusable ? 'button' : undefined),
+    'aria-label': edge.ariaLabel ?? (selectable && focusable ? `Edge from ${edge.source} to ${edge.target}` : undefined),
+    // An escape hatch, last: never a handler, or `id` / `style` / `className` / `role`, which are the
+    // engine's own — the type excludes them, so this can only add what is not already here.
+    ...edge.domAttributes,
   };
   return { context, props };
 }

@@ -32,9 +32,12 @@ export {
   useFlowinger,
   useReactFlow,
   useStore,
+  useStoreApi,
   useViewport,
   useNodesInitialized,
   useNodeId,
+  useInternalNode,
+  type FlowingerStoreApi,
 } from './context.ts';
 
 // Controlled flows
@@ -104,6 +107,7 @@ export {
 
 export type {
   Node,
+  InternalNode,
   NodeProps,
   NodeTypes,
   Edge,

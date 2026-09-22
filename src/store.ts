@@ -1,5 +1,5 @@
 import { resolveFeatures, type EngineContext, type Feature, type FeatureEvent } from './features.ts';
-import { absolutePositionOf } from './parents.ts';
+import { absolutePositionOf, treeInfo } from './parents.ts';
 import {
   FALLBACK_SIZE,
   getNodesBounds,
@@ -18,6 +18,7 @@ import type {
   FitViewOptions,
   FlowingerInstance,
   HandleType,
+  InternalNode,
   Node,
   NodeChange,
   Position,
@@ -808,6 +809,17 @@ export function createFlowingerStore(
 
   const snapshotEdge = (e: Edge): Edge => (isEdgeSelected(e.id) === (e.selected === true) ? e : { ...e, selected: !e.selected });
 
+  /** A node's position, plus its ancestors' — `absolutePosition` — and its stacking order, as drawn. */
+  const getInternalNode = (id: string): InternalNode | undefined => {
+    const node = nodeById.get(id);
+    if (!node) return undefined;
+    const depth = treeInfo(nodes).depth.get(id) ?? 0;
+    return {
+      ...snapshotNode(node),
+      internals: { positionAbsolute: absolutePosition(node), z: node.zIndex ?? 1 + depth },
+    };
+  };
+
   const boundsOfNodes = (list: readonly Node[]): Rect =>
     getNodesBounds(
       list.map((n) => ({
@@ -1072,6 +1084,7 @@ export function createFlowingerStore(
       const n = nodeById.get(id);
       return n && snapshotNode(n);
     },
+    getInternalNode,
     getEdges: getEdgesNow,
     getEdge: (id) => {
       const e = edgeById.get(id);
@@ -1155,6 +1168,7 @@ export function createFlowingerStore(
     isEdgeSelected,
     hasSelection,
     getNodeRect,
+    getInternalNode,
     getSelectedNodeCount: (): number => selectedNodeIds().length,
     subscribeSelection: subscribeTo(selectionChangeListeners),
     getSelection,

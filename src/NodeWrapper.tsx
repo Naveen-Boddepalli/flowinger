@@ -181,6 +181,11 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       {...(focusable
         ? { tabIndex: 0, onKeyDown, 'aria-current': selected ? ('true' as const) : undefined }
         : {})}
+      role={node.ariaRole ?? (focusable ? 'group' : undefined)}
+      aria-label={node.ariaLabel}
+      // An escape hatch, last: it may set an attribute this element already has (an `aria-*`), never a
+      // handler or the ones the engine itself owns (`id`, `style`, `className`, `role`).
+      {...node.domAttributes}
     >
       <NodeContext.Provider value={nodeContext}>
         <View

@@ -311,24 +311,67 @@ description of them.
   no attempt was made at the rarer props (key-code overrides, `nodeOrigin`, ARIA parity) — see "Not built" below,
   which the audit still drives.
 
+### Fifth round: instance and accessibility completion
+
+Smaller than the fourth: `getInternalNode` and `useInternalNode` (a node plus `internals.positionAbsolute` and
+`internals.z` — narrower than React Flow's own `InternalNode`, no `handleBounds` or `userNode`), `useStoreApi`
+(`getState()` without subscribing, and `subscribe()` — no generic `setState`, since flowinger's store is not
+zustand-shaped and offers no generic write to its internals), and `ariaLabel` / `ariaRole` / `domAttributes` on
+both `Node` and `Edge` (an escape hatch that can never be an event handler or `id`/`style`/`className`/`role`,
+matching React Flow's own `Omit` exactly so it cannot silently break a handler).
+
+- **`viewportInitialized` was deliberately not added.** It is a plain boolean field on React Flow's own
+  instance — and React Flow's `useReactFlow()` rebuilds that whole object with `useMemo` whenever it flips,
+  which is why the field can be a snapshot there. Flowinger's instance is created once and never replaced —
+  on purpose, since the opposite (a fresh object every render) was the exact bug plan.md's "Where the build
+  deliberately departs from §2" describes (an effect keyed on the instance re-running every render). Adding
+  the field as flowinger has it would go stale the moment it flipped true; adding it as a *function* would
+  silently misbehave for code written against React Flow's boolean (`if (instance.viewportInitialized)` is
+  always truthy on a function). Neither is honest, so it stays off the list rather than being faked.
+- **A real bug found on the way, not introduced by it:** `store.ts`'s `snapshotNode` rebuilds `measured` as a
+  fresh `{ width, height }` object on every call once a node has been measured, even when nothing has changed.
+  Nothing before `useInternalNode` needed that object's *identity* to be stable across two calls in the same
+  tick; `useSyncExternalStore` does, to tell "changed" from "call it again to be sure" — so the very first
+  version of `useInternalNode` looped forever once a node had a measured size (real DOM layout, not just
+  jsdom's zeroes). Fixed by comparing `measured` structurally in the cache check, not `snapshotNode` itself,
+  and pinned with a regression test that renders a normal, measured node through the hook.
+- **`useInternalNode`'s subscription is the union of two:** `subscribeGeometry` (a drag, or a controlled
+  relayout) and the node's own `subscribeNode(id)` (a controlled *selection* flip alone touches neither
+  geometry nor `sameLayout` — position, size and `hidden` are unmoved — so it would otherwise go unseen).
+  Even so, it is narrower than React Flow's: `sameLayout` does not compare `parentId`, so a pure reparent
+  that does not also move anything is invisible to it and to this hook alike; and a bare `zIndex` edit with
+  no accompanying move is not picked up until something else invalidates the cache. Both are disclosed in
+  the hook's own doc comment rather than fixed, since fixing the first means changing `sameLayout`'s
+  contract for everything that reads it, not just this one hook.
+- **Verified:** 797 tests (23 new, `internals.test.tsx`, several run against a real `@xyflow/react` —
+  `positionAbsolute` matches its own `getInternalNode` exactly); mutation testing of the new wiring, all
+  survivors closed but one confirmed equivalent (`sameInternalNode`'s `position`/`z`/`positionAbsolute.y`
+  checks overlap with fields already covered by other checks or by `sameLayout`'s own blind spots — removing
+  them changes nothing a real, store-notified change can exercise). Checked in the demo, alongside the fourth
+  round's features, with no console errors and the expected `role="group"` on a selectable node.
+- **Not done:** `useConnection`, `useHandleConnections` (the connect feature does not currently track handle
+  or node objects during a drag, only points and positions — adding them is more than this round's size);
+  `sourcePosition` / `targetPosition` as `Node` fields (a fallback for the default-node case, which needs a
+  design decision about how it interacts with the existing legacy id-to-side table, not made here).
+
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
-- A lot that React Flow has, though less than before the fourth round. Measured (not from memory) with
-  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 91 of its 211 exports (107 of
-  the 120 missing are types), 81 of 119 `ReactFlow` props, 30 of 32 instance methods, 16 of 22 `Node` fields, 17 of
-  20 `Edge` fields, 11 of 13 `NodeProps` fields, 20 of 20 `EdgeProps` fields. The README's "Coming from React Flow"
-  lists what is missing, by category — mostly key-code and threshold props (`selectionKeyCode`,
-  `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, HTML attributes on the canvas and its components, and a
-  handful of hooks (`useConnection`, `useInternalNode`, `useStoreApi`). It is enough for QueryLens (whose
-  `FlowTree` uses eight names) and not for an arbitrary React Flow app.
+- A lot that React Flow has, though less than before the fourth and fifth rounds. Measured (not from memory)
+  with `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 94 of its 211
+  exports (106 of the 117 missing are types), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 19 of 22
+  `Node` fields, 11 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
+  from React Flow" lists what is missing, by category — mostly key-code and threshold props
+  (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, HTML attributes on the canvas itself,
+  and `useConnection` / `useHandleConnections`. It is enough for QueryLens (whose `FlowTree` uses eight names)
+  and not for an arbitrary React Flow app.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Published to npm: `flowinger@0.1.0` (2026-09-21), then `0.2.0` (2026-09-22, the fourth round's additions —
-  events, viewport moves, edge label styling, `NodeProps`, the NOTICE). QueryLens's trial branch tracks the
-  registry version and is bumped at each release (currently `0.2.0`; typecheck, lint, 1170 unit and 79/79 e2e
-  unchanged, `flow` chunk 18.0 → 18.9 kB). CI (`.github/workflows/ci.yml`: typecheck, tests and build on React
-  18 and 19) is green.
+  events, viewport moves, edge label styling, `NodeProps`, the NOTICE). The fifth round's additions are on
+  `main` but not yet in a release. QueryLens's trial branch tracks the registry version and is bumped at each
+  release (currently `0.2.0`; typecheck, lint, 1170 unit and 79/79 e2e unchanged, `flow` chunk 18.0 → 18.9 kB).
+  CI (`.github/workflows/ci.yml`: typecheck, tests and build on React 18 and 19) is green.
 
 ## 1. Context and Goals
 

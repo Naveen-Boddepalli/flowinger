@@ -1,4 +1,12 @@
-import type { CSSProperties, ComponentType, ReactNode } from 'react';
+import type {
+  AriaRole,
+  CSSProperties,
+  ComponentType,
+  DOMAttributes,
+  HTMLAttributes,
+  ReactNode,
+  SVGAttributes,
+} from 'react';
 import type { NodeConnection } from './connections.ts';
 import type { Feature } from './features.ts';
 
@@ -107,6 +115,28 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
    * `extent: 'parent'`, which would stop the node leaving the parent at all.
    */
   expandParent?: boolean;
+  /** The ARIA role on the node's element. Default `'group'` once it is a tab stop, else none. */
+  ariaRole?: AriaRole;
+  ariaLabel?: string;
+  /**
+   * Escape hatch for an attribute flowinger has no prop for (`title`, `data-*`, another `aria-*`…). Never
+   * an event handler, or `id` / `style` / `className` / `role`, which the engine sets itself.
+   */
+  domAttributes?: Omit<
+    HTMLAttributes<HTMLDivElement>,
+    'id' | 'style' | 'className' | 'draggable' | 'role' | 'children' | keyof DOMAttributes<HTMLDivElement>
+  >;
+}
+
+/**
+ * A node plus what the engine has worked out about it. Narrower than React Flow's own `InternalNode`
+ * (no `handleBounds`, no `userNode`) — a snapshot, not the live object a render reads.
+ */
+export interface InternalNode extends Node {
+  internals: {
+    positionAbsolute: XYPosition;
+    z: number;
+  };
 }
 
 export interface NodeProps<N extends Node = Node> {
@@ -171,6 +201,17 @@ export interface Edge {
    * node inside a group is drawn above the group and can be clicked there.
    */
   zIndex?: number;
+  ariaLabel?: string;
+  /** The ARIA role on the edge's `<g>`. Default a `button` once it is selectable and focusable, else none. */
+  ariaRole?: AriaRole;
+  /**
+   * Escape hatch for an attribute flowinger has no prop for. Never an event handler, or `id` / `style` /
+   * `className` / `role`, which the engine sets itself.
+   */
+  domAttributes?: Omit<
+    SVGAttributes<SVGGElement>,
+    'id' | 'style' | 'className' | 'role' | 'children' | keyof DOMAttributes<SVGGElement>
+  >;
   /**
    * Whether its ends can be dragged to other handles (see `onReconnect`): `false`
    * for neither, or `'source'` / `'target'` for just that end. Default true.
@@ -380,6 +421,12 @@ export interface FlowingerInstance {
   /** The nodes as they stand: a dragged position, a measured size and the selection included. */
   getNodes: () => Node[];
   getNode: (id: string) => Node | undefined;
+  /**
+   * A node plus what the engine has worked out about it: `internals.positionAbsolute` (its own position
+   * plus every ancestor's — what an edge or `screenToFlowPosition` uses) and `internals.z` (its stacking
+   * order, as drawn). Narrower than React Flow's own `InternalNode` — no `handleBounds`, no `userNode`.
+   */
+  getInternalNode: (id: string) => InternalNode | undefined;
   getEdges: () => Edge[];
   getEdge: (id: string) => Edge | undefined;
   /**
