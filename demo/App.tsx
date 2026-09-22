@@ -21,7 +21,9 @@ import {
   cullingFeature,
   deleteFeature,
   dragFeature,
+  edgeLabelsFeature,
   editingFeature,
+  eventsFeature,
   reconnectFeature,
   selectionFeature,
   getBezierPath,
@@ -159,6 +161,7 @@ const initialEdges: Edge[] = [
     sourceHandle: 'out',
     targetHandle: 'in',
     label: '10 rows',
+    labelShowBg: true,
     animated: true,
     markerEnd: 'arrowclosed',
     style: { stroke: '#10b981', strokeWidth: 2 },
@@ -206,6 +209,8 @@ const PICKABLE: readonly { label: string; feature: Feature }[] = [
   { label: 'delete', feature: deleteFeature },
   { label: 'culling', feature: cullingFeature },
   { label: 'editing', feature: editingFeature },
+  { label: 'events', feature: eventsFeature },
+  { label: 'edge labels', feature: edgeLabelsFeature },
 ];
 
 const edgeId = (c: Connection) => `${c.source}:${String(c.sourceHandle)}->${c.target}:${String(c.targetHandle)}`;
@@ -214,6 +219,7 @@ export function App() {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [picked, setPicked] = useState('nothing selected');
+  const [lastEvent, setLastEvent] = useState('');
   const [boxSelect, setBoxSelect] = useState(false);
   const [snap, setSnap] = useState(false);
   const [many, setMany] = useState(false);
@@ -279,6 +285,9 @@ export function App() {
             onSelectionChange={({ nodes: n, edges: e }) => {
               setPicked(n.length + e.length === 0 ? 'nothing selected' : `${String(n.length)} nodes, ${String(e.length)} edges selected`);
             }}
+            onNodeDoubleClick={(_e, n) => { setLastEvent(`double-clicked ${n.id}`); }}
+            onNodeContextMenu={(e, n) => { e.preventDefault(); setLastEvent(`right-clicked ${n.id}`); }}
+            onPaneContextMenu={(e) => { e.preventDefault(); setLastEvent('right-clicked the pane'); }}
             keyboardNavigation
             ariaLabel="Query plan"
             minZoom={0.05}
@@ -335,6 +344,7 @@ export function App() {
                   </label>
                 ))}
                 <div className="text-slate-500" data-testid="picked">{picked}</div>
+                <div className="text-slate-500" data-testid="last-event">{lastEvent || 'no events yet — double-click or right-click a node or the pane'}</div>
                 <div className="text-slate-500"><ShiftState /></div>
                 <div className="text-slate-500">
                   <DomCount />
@@ -342,12 +352,15 @@ export function App() {
               </div>
             </Panel>
           </Canvas>
-          <div className="absolute bottom-4 left-4 z-50">
-            <MiniMap width={160} height={110} nodeColor={(n) => ((n.data as PlanData).highlighted ? '#10b981' : '#64748b')} />
-          </div>
-          <div className="absolute bottom-4 right-4 z-50">
-            <Controls />
-          </div>
+          <MiniMap
+            position="bottom-left"
+            width={160}
+            height={110}
+            nodeColor={(n) => ((n.data as PlanData).highlighted ? '#10b981' : '#64748b')}
+            nodeStrokeColor="#1e293b"
+            nodeStrokeWidth={1}
+          />
+          <Controls position="bottom-right" />
         </FlowingerProvider>
       </div>
     </div>

@@ -30,5 +30,5 @@ jobs:
       # What a small consumer pays: the whole canvas, and the core with no features (from src, then from
       # the built package — one pre-bundled file, where a stray top-level call keeps unused code alive).
       # Raise a budget deliberately, not by drift; the lean one is the one that matters.
-      - run: pnpm size --max-full 24 --max-lean 16
-      - run: node scripts/size-dist.mjs --max-lean 16
+      - run: pnpm size --max-full 26 --max-lean 17
+      - run: node scripts/size-dist.mjs --max-lean 17

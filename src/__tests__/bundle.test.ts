@@ -96,6 +96,10 @@ describe('what a consumer bundles', () => {
     expect(code).not.toContain('Zoom in'); // <Controls>
     expect(code).not.toContain('flowinger-minimap'); // <MiniMap>
     expect(code).not.toContain('flowinger-resize'); // <NodeResizer>
+    expect(code).not.toContain('react-flow__edgeupdater'); // reconnect's grips
+    // The built-in edge components: named for use as an `edgeTypes` entry, so importing the canvas alone
+    // must not carry them.
+    expect(code).not.toContain('react-flow__edge-textwrapper');
   }, 60_000);
 
   it('does not carry the canvas for a hook that does not need it', async () => {
