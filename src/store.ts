@@ -34,11 +34,20 @@ type Listener = () => void;
 export type { Size };
 
 /** What a `<Handle>` tells the store about itself. */
+/** What a `<Handle>` says about itself that can change without it registering again: read as a connection is dragged. */
+export interface HandleOptions {
+  isConnectableStart?: boolean | undefined;
+  isConnectableEnd?: boolean | undefined;
+  isValidConnection?: ((connection: Connection) => boolean) | undefined;
+  onConnect?: ((connection: Connection) => void) | undefined;
+}
+
 export interface HandleRegistration {
   id: string | null;
   type: HandleType;
   position: Position;
   el: HTMLElement;
+  options?: { current: HandleOptions };
 }
 
 /** A registered handle, plus where it actually sits — null until measured. */

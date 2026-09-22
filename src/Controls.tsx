@@ -1,11 +1,25 @@
-import { memo, type CSSProperties } from 'react';
+import { memo, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import { useFlowinger } from './context.ts';
+import { Panel, type PanelPosition } from './Panel.tsx';
+import type { FitViewOptions } from './types.ts';
 
 export interface ControlsProps {
   className?: string;
   style?: CSSProperties;
   showZoom?: boolean;
+  /** The fit button. `showFitView` is the same, under React Flow's name; either can turn it off. */
   showFit?: boolean;
+  showFitView?: boolean;
+  /** Shapes what the fit button does (`padding`, `duration`, …). It takes 300 ms unless this says otherwise. */
+  fitViewOptions?: FitViewOptions;
+  /** After the button has zoomed or fitted the view. */
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  onFitView?: () => void;
+  /** Pins the controls to the canvas, as `Panel` does; without it they sit where you put them. */
+  position?: PanelPosition;
+  /** Your own buttons — `ControlButton`s — after the built-in ones. */
+  children?: ReactNode;
 }
 
 // Inline styles, so the controls look right with no stylesheet and no utility
@@ -44,15 +58,34 @@ const buttonStyle: CSSProperties = {
 
 const fitStyle: CSSProperties = { ...buttonStyle, padding: '0 8px', fontSize: 12 };
 
+/** A button of your own among the `Controls`, drawn like theirs: `<ControlButton onClick={…} aria-label="…">`. */
+export function ControlButton({ className = '', style, type = 'button', ...rest }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      {...rest}
+      type={type}
+      className={`flowinger-controls-button react-flow__controls-button ${className}`.trim()}
+      style={{ ...buttonStyle, ...style }}
+    />
+  );
+}
+
 export const Controls = /*#__PURE__*/ memo(function Controls({
   className = '',
   style,
   showZoom = true,
   showFit = true,
+  showFitView = showFit,
+  fitViewOptions,
+  onZoomIn,
+  onZoomOut,
+  onFitView,
+  position,
+  children,
 }: ControlsProps) {
   const { zoomIn, zoomOut, fitView } = useFlowinger();
 
-  return (
+  const controls = (
     <div
       className={`flowinger-controls react-flow__controls ${className}`.trim()}
       style={{ ...containerStyle, ...style }}
@@ -61,7 +94,10 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
         <>
           <button
             type="button"
-            onClick={() => { void zoomOut({ duration: 200 }); }}
+            onClick={() => {
+              void zoomOut({ duration: 200 });
+              onZoomOut?.();
+            }}
             aria-label="Zoom out"
             style={buttonStyle}
           >
@@ -69,7 +105,10 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
           </button>
           <button
             type="button"
-            onClick={() => { void zoomIn({ duration: 200 }); }}
+            onClick={() => {
+              void zoomIn({ duration: 200 });
+              onZoomIn?.();
+            }}
             aria-label="Zoom in"
             style={buttonStyle}
           >
@@ -77,16 +116,21 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
           </button>
         </>
       )}
-      {showFit && (
+      {showFitView && (
         <button
           type="button"
-          onClick={() => { void fitView({ duration: 300 }); }}
+          onClick={() => {
+            void fitView({ duration: 300, ...fitViewOptions });
+            onFitView?.();
+          }}
           aria-label="Fit view"
           style={fitStyle}
         >
           Fit
         </button>
       )}
+      {children}
     </div>
   );
+  return position ? <Panel position={position}>{controls}</Panel> : controls;
 });

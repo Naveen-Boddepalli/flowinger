@@ -74,7 +74,7 @@ export { isEdge, isNode } from './guards.ts';
 // Background & Controls
 export { Background } from './Background.tsx';
 export { MiniMap, type MiniMapProps } from './MiniMap.tsx';
-export { Controls } from './Controls.tsx';
+export { Controls, ControlButton, type ControlsProps } from './Controls.tsx';
 export { Panel, type PanelProps, type PanelPosition } from './Panel.tsx';
 export { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
 export { ViewportPortal } from './ViewportPortal.tsx';

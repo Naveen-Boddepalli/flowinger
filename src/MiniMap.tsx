@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore, useViewport } from './context.ts';
+import { Panel, type PanelPosition } from './Panel.tsx';
 import { capturePointer, releasePointer } from './pointer.ts';
 import type { Node } from './types.ts';
 
@@ -23,8 +24,22 @@ export interface MiniMapProps {
   height?: number;
   /** One colour for every node, or a function of the node. */
   nodeColor?: string | ((node: Node) => string);
+  /** The outline of each node: a colour, or a function of the node. Default none. */
+  nodeStrokeColor?: string | ((node: Node) => string);
+  nodeStrokeWidth?: number;
+  /** A class on each node's rectangle: a name, or a function of the node. */
+  nodeClassName?: string | ((node: Node) => string);
+  /** The rounding of each node's rectangle. Default 2. */
+  nodeBorderRadius?: number;
   /** What dims the part of the graph outside the view. */
   maskColor?: string;
+  /** An outline round the view. */
+  maskStrokeColor?: string;
+  maskStrokeWidth?: number;
+  /** The colour behind the overview. Default the surface colour. */
+  bgColor?: string;
+  /** Pins the overview to the canvas, as `Panel` does; without it it sits where you put it. */
+  position?: PanelPosition;
   /** Click or drag on the overview to move the view. Default true. */
   pannable?: boolean;
   ariaLabel?: string;
@@ -52,7 +67,15 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   width = 200,
   height = 150,
   nodeColor = DEFAULT_NODE_COLOR,
+  nodeStrokeColor,
+  nodeStrokeWidth = 2,
+  nodeClassName,
+  nodeBorderRadius = 2,
   maskColor = DEFAULT_MASK,
+  maskStrokeColor,
+  maskStrokeWidth = 1,
+  bgColor,
+  position,
   pannable = true,
   ariaLabel = 'Minimap',
   className = '',
@@ -151,7 +174,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
     redraw(); // nothing else changes on release, so ask for the box to be refitted
   };
 
-  return (
+  const overview = (
     <svg
       className={`flowinger-minimap react-flow__minimap ${className}`.trim()}
       role="img"
@@ -161,7 +184,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
       viewBox={`${String(box.x)} ${String(box.y)} ${String(box.w)} ${String(box.h)}`}
       style={{
         display: 'block',
-        background: 'var(--flowinger-surface, #1e293b)',
+        background: bgColor ?? 'var(--flowinger-surface, #1e293b)',
         // An inset shadow, not a border: a border would sit outside the drawing
         // area and shift where a pointer maps to by a pixel.
         boxShadow: 'inset 0 0 0 1px var(--flowinger-border, #334155)',
@@ -178,13 +201,19 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
       {rects.map(({ node, x, y, w, h }) => (
         <rect
           key={node.id}
-          className="flowinger-minimap-node"
+          className={`flowinger-minimap-node ${(typeof nodeClassName === 'function' ? nodeClassName(node) : nodeClassName) ?? ''}`.trim()}
           x={x}
           y={y}
           width={w}
           height={h}
-          rx={2}
+          rx={nodeBorderRadius}
           fill={typeof nodeColor === 'function' ? nodeColor(node) : nodeColor}
+          {...(nodeStrokeColor === undefined
+            ? {}
+            : {
+                stroke: typeof nodeStrokeColor === 'function' ? nodeStrokeColor(node) : nodeStrokeColor,
+                strokeWidth: nodeStrokeWidth,
+              })}
         />
       ))}
       {view && (
@@ -194,6 +223,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
             className="flowinger-minimap-mask"
             fillRule="evenodd"
             fill={maskColor}
+            {...(maskStrokeColor === undefined ? {} : { stroke: maskStrokeColor, strokeWidth: maskStrokeWidth })}
             d={`M${String(box.x)},${String(box.y)}h${String(box.w)}v${String(box.h)}h${String(-box.w)}z M${String(view.x)},${String(view.y)}h${String(view.w)}v${String(view.h)}h${String(-view.w)}z`}
           />
           <rect
@@ -211,4 +241,5 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
       )}
     </svg>
   );
+  return position ? <Panel position={position}>{overview}</Panel> : overview;
 });

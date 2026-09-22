@@ -15,6 +15,8 @@ export const Background = /*#__PURE__*/ memo(function Background({
   size = DEFAULT_SIZE[variant],
   lineWidth = 1,
   color = '#94a3b8',
+  bgColor,
+  patternClassName,
   className = '',
   style = {},
 }: BackgroundProps) {
@@ -33,6 +35,7 @@ export const Background = /*#__PURE__*/ memo(function Background({
     left: 0,
     pointerEvents: 'none',
     zIndex: 0,
+    ...(bgColor === undefined ? {} : { backgroundColor: bgColor }),
     ...style,
   };
 
@@ -55,10 +58,11 @@ export const Background = /*#__PURE__*/ memo(function Background({
           patternTransform={patternTransform}
         >
           {variant === BackgroundVariant.Dots && (
-            <circle cx={mid} cy={mid} r={size / 2} fill={color} />
+            <circle className={patternClassName} cx={mid} cy={mid} r={size / 2} fill={color} />
           )}
           {variant === BackgroundVariant.Lines && (
             <path
+              className={patternClassName}
               d={`M ${String(gap)} 0 L 0 0 0 ${String(gap)}`}
               fill="none"
               stroke={color}
@@ -67,6 +71,7 @@ export const Background = /*#__PURE__*/ memo(function Background({
           )}
           {variant === BackgroundVariant.Cross && (
             <path
+              className={patternClassName}
               d={`M ${String(mid - arm)} ${String(mid)} H ${String(mid + arm)} M ${String(mid)} ${String(mid - arm)} V ${String(mid + arm)}`}
               fill="none"
               stroke={color}

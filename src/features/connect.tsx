@@ -126,7 +126,10 @@ export const connectFeature: Feature<ConnectApi> = {
         ?.closest<HTMLElement>('[data-nodeid][data-handletype][data-connectable]');
       const nodeId = el?.dataset.nodeid;
       if (!el || !nodeId) return null;
-      for (const record of ctx.handlesOf(nodeId)) if (record.el === el) return { nodeId, record };
+      for (const record of ctx.handlesOf(nodeId)) {
+        // A handle that cannot end a connection is not there, as far as a drop is concerned.
+        if (record.el === el) return record.options?.current.isConnectableEnd === false ? null : { nodeId, record };
+      }
       return null;
     };
 
@@ -143,7 +146,10 @@ export const connectFeature: Feature<ConnectApi> = {
       return { source: from.nodeId, sourceHandle: from.id, target: to.nodeId, targetHandle: to.id };
     };
 
-    const isAllowed = (c: Connection): boolean => ctx.callbacks.isValidConnection?.(c) !== false;
+    /** The handle a drag began at vets a new connection, if it has a say; otherwise the canvas does. */
+    const isAllowed = (c: Connection, start: HandleRecord, reconnecting: boolean): boolean =>
+      (reconnecting ? ctx.callbacks.isValidConnection : (start.options?.current.isValidConnection ?? ctx.callbacks.isValidConnection))?.(c) !==
+      false;
 
     const cancelConnection = () => {
       stopConnecting?.();
@@ -156,16 +162,24 @@ export const connectFeature: Feature<ConnectApi> = {
     ctx.on('detach', cancelConnection);
 
     /** What the line follows: the pointer, or — over a handle that would make a valid connection — that handle. */
-    const connectionEnd = (from: Endpoint, startPosition: Position, clientX: number, clientY: number) => {
+    const connectionEnd = (
+      from: Endpoint,
+      start: HandleRecord,
+      reconnecting: boolean,
+      clientX: number,
+      clientY: number,
+    ) => {
       const hit = handleAt(clientX, clientY);
       if (hit) {
         const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
         const point = pointOfHandle(hit.nodeId, hit.record);
-        if (c && isAllowed(c) && point) return { end: point, endPosition: hit.record.position, isValid: true };
+        if (c && isAllowed(c, start, reconnecting) && point) {
+          return { end: point, endPosition: hit.record.position, isValid: true };
+        }
       }
       return {
         end: ctx.toGraph(clientX, clientY),
-        endPosition: OPPOSITE[startPosition],
+        endPosition: OPPOSITE[start.position],
         isValid: hit ? false : null,
       };
     };
@@ -186,7 +200,7 @@ export const connectFeature: Feature<ConnectApi> = {
         ctx.setConnection({
           start,
           startPosition: record.position,
-          ...connectionEnd(from, record.position, clientX, clientY),
+          ...connectionEnd(from, record, reconnect !== null, clientX, clientY),
           reconnecting: reconnect?.edge.id ?? null,
         });
       };
@@ -215,14 +229,17 @@ export const connectFeature: Feature<ConnectApi> = {
         const c = hit
           ? connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type })
           : null;
-        const valid = hit === null ? null : c !== null && isAllowed(c);
+        const valid = hit === null ? null : c !== null && isAllowed(c, record, reconnect !== null);
         if (reconnect) {
           // Dropped back where it came from is not a change.
           if (c && valid && !sameEnds(reconnect.edge, c)) ctx.callbacks.onReconnect?.(reconnect.edge, c);
           ctx.callbacks.onReconnectEnd?.(e, reconnect.edge, reconnect.end, { connection: c, isValid: valid });
           return;
         }
-        if (c && valid) ctx.callbacks.onConnect?.(c);
+        if (c && valid) {
+          ctx.callbacks.onConnect?.(c);
+          record.options?.current.onConnect?.(c);
+        }
         ctx.callbacks.onConnectEnd?.(e, { connection: c, isValid: valid });
       };
       const onKey = (e: KeyboardEvent) => {

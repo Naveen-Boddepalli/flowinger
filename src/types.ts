@@ -332,6 +332,10 @@ export interface BackgroundProps {
   /** The stroke width of lines and crosses. Default 1. */
   lineWidth?: number;
   color?: string;
+  /** The colour behind the pattern. Default: none, so what is behind the canvas shows. */
+  bgColor?: string;
+  /** A class on each dot, line or cross of the pattern. */
+  patternClassName?: string;
   className?: string;
   style?: CSSProperties;
 }
@@ -342,6 +346,14 @@ export interface HandleProps {
   position: Position;
   /** Whether a connection can start or end here. Default true — once the canvas has `nodesConnectable`. */
   isConnectable?: boolean;
+  /** Whether a connection can be dragged out of it. Default true. */
+  isConnectableStart?: boolean;
+  /** Whether a connection can be dropped on it. Default true. */
+  isConnectableEnd?: boolean;
+  /** Vets connections dragged out of this handle, in place of the canvas's `isValidConnection`. */
+  isValidConnection?: (connection: Connection) => boolean;
+  /** A connection dragged out of this handle was made — heard after the canvas's `onConnect`. */
+  onConnect?: (connection: Connection) => void;
   className?: string;
   style?: CSSProperties;
 }
@@ -545,6 +557,12 @@ export interface FlowingerProps {
   onPaneMouseLeave?: (event: React.MouseEvent) => void;
   /** The wheel turned over the empty canvas — whether or not it zoomed. */
   onPaneScroll?: (event?: React.WheelEvent) => void;
+  /**
+   * Accepted so that code written for React Flow compiles; there is nothing to hide, since flowinger draws no
+   * attribution.
+   */
+  proOptions?: { hideAttribution?: boolean; account?: string };
+  attributionPosition?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
   /**
    * Where the view starts. Once, when the canvas mounts — `fitView` then replaces it, as in React Flow. Inside a
    * `FlowingerProvider`, the canvas moves the provider's view there.

@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { NodeContext } from './nodeContext.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
+import type { HandleOptions } from './store.ts';
 import { type HandleProps, Position } from './types.ts';
 
 const POSITION_STYLES: Record<Position, CSSProperties> = {
@@ -49,19 +50,28 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
   type,
   position,
   isConnectable,
+  isConnectableStart,
+  isConnectableEnd,
+  isValidConnection,
+  onConnect,
   className = '',
   style = {},
 }: HandleProps) {
   const node = useContext(NodeContext);
   const ref = useRef<HTMLDivElement | null>(null);
+  // Read when a connection is dragged, so a handler that changes between renders is heard as it now is.
+  const options = useRef<HandleOptions>({});
+  options.current = { isConnectableStart, isConnectableEnd, isValidConnection, onConnect };
 
   useIsomorphicLayoutEffect(() => {
     const el = ref.current;
     if (!node || !el) return;
-    return node.registerHandle({ id: id ?? null, type, position, el });
+    return node.registerHandle({ id: id ?? null, type, position, el, options });
   }, [node, id, type, position]);
 
   const connectable = Boolean(node?.connectable) && isConnectable !== false;
+  // A drop target while it can end a connection or start one; it starts one only if it may.
+  const canStart = connectable && isConnectableStart !== false;
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!node || e.button !== 0) return;
@@ -80,7 +90,7 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
     borderRadius: '50%',
     backgroundColor: 'currentColor',
     pointerEvents: connectable ? 'all' : 'none',
-    ...(connectable ? { cursor: 'crosshair' } : {}),
+    ...(canStart ? { cursor: 'crosshair' } : {}),
     ...POSITION_STYLES[position],
     ...style,
   };
@@ -95,7 +105,7 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
       data-handlepos={position}
       className={`flowinger-handle react-flow__handle react-flow__handle-${position} ${className}`}
       style={combinedStyle}
-      {...(connectable ? { onPointerDown } : {})}
+      {...(canStart ? { onPointerDown } : {})}
     />
   );
 });
