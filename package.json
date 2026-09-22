@@ -1,6 +1,6 @@
 {
   "name": "flowinger",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bespoke, lightweight, and dependency-free React node graph renderer",
   "keywords": [
     "react",

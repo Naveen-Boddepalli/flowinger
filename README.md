@@ -2,7 +2,7 @@
 
 A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
 drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
-Pay for what you use: the core is about 15 kB gzipped and each feature adds only its own code — about 23 kB with
+Pay for what you use: the core is about 16 kB gzipped and each feature adds only its own code — about 25 kB with
 all of them (see [Pay for what you use](#pay-for-what-you-use)). The only peer dependencies are `react` and
 `react-dom` (18 or 19).
 
@@ -82,10 +82,12 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `NodeToolbar` | Inside a node: buttons attached to a side of it (`position`, `align`, `offset`), shown while it is the only thing selected (`isVisible` overrides). It rides on the node, so it follows drags and zoom and never changes the node's size. |
 | `NodeResizer` | Inside a node: eight drag handles (sides and corners) that resize it — `minWidth`, `minHeight`, `maxWidth`, `maxHeight`, `keepAspectRatio`, `isVisible`, `color`, `shouldResize`, `onResizeStart` / `onResize` / `onResizeEnd`. Reported as `dimensions` (written to `width`/`height`) and `position` changes, so it needs a [controlled flow](#controlled-flows) or `defaultNodes`. |
 | `Panel` | A box of your own UI pinned to the canvas — `position` is `top-left` (default), `top-center`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-center` or `bottom-right`. A press on it does not pan, and a click on it is not a pane click. |
-| `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's — as in React Flow); zoom and fit buttons. Both go inside the provider. |
-| `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor` (a colour or a function of the node), `maskColor`, `pannable`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
-| `useFlowinger()`, `useViewport()` | The instance (below), and the current viewport. |
-| `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY]`. |
+| `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's, `bgColor` behind the pattern — as in React Flow); zoom and fit buttons (`showZoom`, `showFit`/`showFitView`, `fitViewOptions`, `onZoomIn`/`onZoomOut`/`onFitView`, your own `ControlButton`s as children). Both go inside the provider; a `position` pins either to the canvas, as `Panel` does. |
+| `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor`/`nodeStrokeColor`/`nodeClassName` (a value or a function of the node), `nodeStrokeWidth`, `nodeBorderRadius`, `maskColor`, `maskStrokeColor`/`maskStrokeWidth`, `bgColor`, `pannable`, `position`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
+| `useFlowinger()`, `useViewport()`, `useOnViewportChange()`, `useUpdateNodeInternals()` | The instance (below); the current viewport; hearing the view move from anywhere in the tree; having the canvas re-read a node's size and handles after it changes what it is made of without telling the canvas. |
+| `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge` | The built-in edges, as components — for an `edgeTypes` entry that renders one and adds to it, or is one under another name. |
+| `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY, offsetX, offsetY]`. |
+| `getEdgeCenter`, `getBezierEdgeCenter`, `getViewportForBounds`, `isNode`, `isEdge` | Smaller helpers React Flow also has: the straight-line and on-curve midpoints a label sits at; a `viewportForBounds` that matches React Flow's own fit to the pixel; and the type guards. |
 
 ## Pay for what you use
 
@@ -103,19 +105,21 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 15 kB gzipped (23 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 16 kB gzipped (25 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
 |---|---|---|
 | `selectionFeature` | Selecting by click (Shift, Ctrl or ⌘ adds), Enter and Space, a click on the empty canvas or Escape clearing it; nodes and edges become tab stops | `elementsSelectable`, `edgesFocusable` |
 | `dragFeature` | Dragging nodes and selections, snapping, extents, `expandParent`, the arrow keys, auto-pan (brings `selectionFeature`) | `nodesDraggable`, `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, `snapToGrid`, `snapGrid`, `nodeExtent`, `autoPanOnNodeDrag`, `autoPanSpeed` |
-| `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `autoPanOnConnect` |
+| `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `autoPanOnConnect`; a `<Handle>`'s own `isConnectableStart` / `isConnectableEnd`, `isValidConnection`, `onConnect` |
 | `reconnectFeature` | Dragging an end of a selected edge to another handle (brings `connectFeature`) | `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` |
 | `boxSelectFeature` | Selecting with a box (brings `selectionFeature`) | `selectionOnDrag`, `selectionMode`, `onSelectionStart`, `onSelectionEnd` |
 | `deleteFeature` | The delete key, and `deleteElements` | `deleteKeyCode`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` |
 | `cullingFeature` | Drawing only what is in view | `onlyRenderVisibleElements` |
-| `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `getIntersectingNodes`, `isNodeIntersecting` | |
+| `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `updateEdgeData`, `getNodeConnections`, `getHandleConnections`, `getIntersectingNodes`, `isNodeIntersecting` | |
+| `eventsFeature` | A double click, a right click, and the pointer entering, moving over and leaving a node, an edge or the pane; the wheel over the pane. Giving any edge event (or `onEdgeClick`) makes every edge take the pointer, selectable or not | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for edges and the pane, `onPaneScroll` |
+| `edgeLabelsFeature` | The box behind an edge's label (`labelShowBg`), sized to the text once a browser has laid it out | `labelShowBg` on an edge |
 
 Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
 labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the
@@ -150,7 +154,10 @@ adds is *changing* it from the pointer and keyboard. `allFeatures` is the list t
 | `zoomOnScroll`, `zoomOnPinch` | `true` | |
 | `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `true`, `true`, `15` | Hold a dragged node — or the end of a connection you are dragging — near the pane's edge and the view pans that way, faster the nearer the edge (`autoPanSpeed` px per frame at the edge itself). Drags are measured in graph space, so the node stays under the pointer as the view moves. |
 | `zoomOnDoubleClick` | `true` | A double click on the empty canvas zooms in about the pointer (out with Shift). |
-| `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). |
+| `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). A `nowheel` class lets the wheel through to something inside that scrolls for itself — a code block, a list. |
+| `defaultViewport` | | Where the view starts, once — a controlled `viewport` is not taken. Inside a `FlowingerProvider`, the canvas moves the provider's view there when it mounts. |
+| `onMoveStart`, `onMove`, `onMoveEnd` | | The view is moving: `(event, viewport)`, `event` the pointer or wheel that moved it, or `null` for a call such as `fitView`. A run of wheel ticks is one move, ended once the wheel has been still for 150 ms; `useOnViewportChange` hears the same moves from anywhere inside a canvas. |
+| `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` | | And the same for edges (`onEdgeDoubleClick`…) and the pane (`onPaneContextMenu`, `onPaneMouseEnter`…), plus `onPaneScroll`. Needs `eventsFeature`; giving any edge event makes every edge take the pointer. |
 | `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
@@ -327,37 +334,39 @@ Flow code**: it covers the part of the API an app like [QueryLens](https://githu
 uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **78 of its 211
-exports** (108 of the 133 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
-`ReactFlowInstance` by name will not compile until you rename them), **60 of 119** `ReactFlow` props, 27 of 32
-instance methods, 14 of 22 `Node` fields, 11 of 20 `Edge` fields and 5 of 13 `NodeProps` fields. What is missing:
+(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **91 of its 211
+exports** (107 of the 120 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
+`ReactFlowInstance` by name will not compile until you rename them), **81 of 119** `ReactFlow` props, 30 of 32
+instance methods, 16 of 22 `Node` fields, 17 of 20 `Edge` fields, 11 of 13 `NodeProps` fields and **20 of 20**
+`EdgeProps` fields. What is missing:
 
-- **Canvas events:** `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for
-  edges; `onPaneContextMenu`, `onPaneMouse*`, `onPaneScroll`; `onSelectionContextMenu`, `onSelectionDrag*`;
-  `onMove*`, `onViewportChange`; `onClickConnectStart` / `End`.
-- **Viewport and gestures:** `defaultViewport` and a controlled `viewport` (the provider takes `initialViewport`);
-  `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode`, `panOnScrollMode`,
-  `selectNodesOnDrag`, `nodesFocusable`, `disableKeyboardA11y`, `connectOnClick`, `connectionRadius`,
-  `reconnectRadius`, the drag and click distance thresholds, `preventScrolling`, `noDragClassName` / `noPanClassName`
-  / `noWheelClassName` (`nodrag` and `nopan` are honoured, `nowheel` is not).
+- **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onViewportChange` (there is `onMove` /
+  `onMoveStart` / `onMoveEnd`, and `useOnViewportChange`); `onClickConnectStart` / `End` (connecting by click,
+  as opposed to dragging). Mouse events on nodes, edges and the pane (double click, context menu, enter, move,
+  leave) and the pane's scroll are covered, as `eventsFeature`.
+- **Viewport and gestures:** a controlled `viewport` (there is `defaultViewport`, and the provider's
+  `initialViewport`); `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
+  `zoomActivationKeyCode`, `panOnScrollMode`, `selectNodesOnDrag`, `nodesFocusable`, `disableKeyboardA11y`,
+  `connectOnClick`, `connectionRadius`, `reconnectRadius`, the drag and click distance thresholds,
+  `preventScrolling`, `noDragClassName` / `noPanClassName` (`nodrag`, `nopan` and now `nowheel` are honoured).
 - **Layout and look:** `nodeOrigin`, `elevateNodesOnSelect` / `elevateEdgesOnSelect`, `zIndexMode`, `colorMode`,
-  `proOptions`, `attributionPosition`, `debug`, `ariaLabelConfig`, `defaultMarkerColor`,
-  `connectionLineContainerStyle`. The canvas takes `className`, `style` and `children`, not HTML attributes
-  (`id`, `role`, `data-*`, `onKeyDown`…); the same goes for `Panel`, `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge`.
-- **Hooks, instance and helpers:** `useUpdateNodeInternals`, `useConnection`, `useInternalNode`,
-  `useOnViewportChange`, `useStoreApi`, `useHandleConnections`; `getInternalNode`, `getNodeConnections`,
-  `getHandleConnections`, `updateEdgeData`, `viewportInitialized`; `isNode`, `isEdge`, `getEdgeCenter`,
-  `getBezierEdgeCenter`, `getSimpleBezierPath`, and `getViewportForBounds` (ours is named `viewportForBounds`).
-- **Components:** `BezierEdge`, `SmoothStepEdge`, `StraightEdge`, `StepEdge`, `SimpleBezierEdge`, `EdgeText`,
-  `EdgeToolbar`, `ControlButton`, `NodeResizeControl`, `MiniMapNode`. Options: `Handle`'s `isConnectableStart` /
-  `End`, `isValidConnection`, `onConnect`; `MiniMap`'s `position`, `zoomable`, `nodeComponent`, `nodeStrokeColor`…;
-  `Controls`' `position`, `showInteractive`, `onZoomIn`…; `Background`'s `bgColor`; `NodeResizer`'s `autoScale`.
-- **Fields:** a node's `sourcePosition`, `targetPosition`, `handles`, `initialWidth` / `initialHeight`, `ariaLabel`,
-  `domAttributes`; an edge's `interactionWidth`, `labelStyle`, `labelShowBg`, `labelBgStyle`, `labelBgPadding`,
-  `labelBgBorderRadius`. A custom node is not given `dragging`, `width`, `height`, `draggable`, `selectable`,
-  `deletable`, `parentId`, `zIndex`, `dragHandle`, `sourcePosition` or `targetPosition` (it gets `id`, `data`, `type`,
-  `selected`, `isConnectable` and its absolute position); a custom edge is not given `animated`, `selectable`,
-  `deletable`, `interactionWidth`, the label styles or `pathOptions`. `fitView` has no `ease` / `interpolate`.
+  `debug`, `ariaLabelConfig`, `defaultMarkerColor`, `connectionLineContainerStyle` (`proOptions` and
+  `attributionPosition` are accepted and do nothing — there is no attribution to hide). The canvas takes
+  `className`, `style` and `children`, not HTML attributes (`id`, `role`, `data-*`, `onKeyDown`…); the same goes
+  for `Panel`, `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge`.
+- **Hooks and instance:** `useConnection`, `useInternalNode`, `useStoreApi`, `useHandleConnections` (there is
+  `useUpdateNodeInternals`, `useOnViewportChange`, `getNodeConnections` and `getHandleConnections`);
+  `getInternalNode`, `viewportInitialized`.
+- **Components:** `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`, `MiniMapNode` (there are
+  now `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge`, `isNode`, `isEdge`, `getEdgeCenter`,
+  `getBezierEdgeCenter`, `getViewportForBounds` and `ControlButton`). `MiniMap`'s `zoomable`, `nodeComponent`,
+  `offsetScale`, `onNodeClick`, `inversePan`; `Controls`' `showInteractive`, `onInteractiveChange`;
+  `NodeResizer`'s `autoScale`.
+- **Fields:** a node's `sourcePosition`, `targetPosition`, `handles`, `ariaLabel`, `domAttributes` (there is now
+  `initialWidth` / `initialHeight`); an edge's `ariaLabel`, `domAttributes`. A custom node is not given
+  `sourcePosition` or `targetPosition` (it now gets `selectable`, `draggable`, `deletable`, `dragging`,
+  `dragHandle`, `parentId`, `zIndex`, `width` and `height`, alongside `id`, `data`, `type`, `selected`,
+  `isConnectable` and its absolute position). `fitView` has no `ease` / `interpolate`.
 
 Counts are not weights — most of the list is niche — but it is a list to check your own code against before
 swapping. Defaults that differ: `fitView` keeps a 40 px margin unless you pass a `padding` ratio, and `deleteKeyCode`

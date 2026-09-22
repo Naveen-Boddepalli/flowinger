@@ -247,20 +247,85 @@ drag, connect, selection boxes, delete or the edit API; it hands a static viewer
   ones that survived: keeping a selected edge when Shift-adding a node, a pane click when the canvas does not allow
   selecting, each Escape guard, and the edge keyboard handler.
 
+### Fourth round: the cheap common React Flow gaps
+
+Closing the audit's most commonly hit gaps — chosen for being cheap, not exhaustive. `@xyflow/react` went in as a
+dev-only dependency (`node_modules`, never a runtime one), read directly for exact behaviour rather than recalled,
+and used as an oracle in tests: several suites assert against React Flow's own functions, not against a
+description of them.
+
+- **Mouse events, as a feature (`eventsFeature`).** A double click, a right click, and the pointer entering,
+  moving over and leaving a node, an edge or the pane; the wheel over the pane (`onPaneScroll`). `onNodeClick`,
+  `onEdgeClick` and `onPaneClick` already worked on any canvas and stayed there — only the rest needed a feature.
+  Giving any edge event (or `onEdgeClick`) makes every edge take the pointer, selectable or not, matching React
+  Flow's `inactive` class logic. The feature reads the canvas's latest props through a ref set in a layout effect,
+  so a handler that changes between renders is heard as it now is, not as the canvas mounted with.
+- **The view moving.** `defaultViewport` (once, at mount; a caller's own `FlowingerProvider` is moved there instead
+  of the canvas making a fresh one); `onMoveStart` / `onMove` / `onMoveEnd`, each `(event, viewport)` with `event`
+  the pointer or wheel that moved it or `null` for a call; `useOnViewportChange` for a listener anywhere in the
+  tree. A pan, a pinch and a run of wheel ticks are each one move — the wheel's ends 150 ms after the last tick,
+  timed so a tween that begins mid-run still holds the move open past it. `nowheel` lets the wheel through to
+  something that scrolls for itself.
+- **Edges.** `interactionWidth`; `pathOptions` (`curvature` for a bezier, `borderRadius` for a smoothstep) reaches
+  the built-in paths and the new `BezierEdge` / `StraightEdge` / `SmoothStepEdge` / `StepEdge` components (an
+  `edgeTypes` entry can render one and add to it, or be one under another name); `labelStyle`, and the box behind a
+  label (`labelShowBg`, `labelBgStyle`, `labelBgPadding`, `labelBgBorderRadius`) as its own feature
+  (`edgeLabelsFeature`) — it needs a browser to measure the text, so it is not in the core. `getBezierPath`'s label
+  now sits where the curve actually is (`getBezierEdgeCenter`, half way along the curve, not the straight line
+  between the ends — the two agree only when the curve is symmetric); every path function also returns
+  `offsetX`/`offsetY`. `updateEdgeData`, `getNodeConnections`, `getHandleConnections` (both React Flow's own
+  reading of a handle id: alone, or `null`, it does not narrow — only paired with a `type`); `isNode`, `isEdge`.
+  A custom edge is now given `animated`, `selectable`, `deletable`, `pathOptions` and the label style fields.
+- **Nodes.** `NodeProps` carries `selectable`, `draggable`, `deletable`, `dragging`, `dragHandle`, `parentId`,
+  `zIndex`, `width` and `height` — checked field by field against what React Flow hands the same component, over
+  five canvas settings. `initialWidth` / `initialHeight` size an unmeasured node (`fitView`, `getNodesBounds`)
+  instead of the 150×40 fallback. `useUpdateNodeInternals` has the canvas re-read a node's size and handle anchors
+  a frame later, for a node that changes what it is made of without the canvas being told. A node's or an edge's
+  own `selectable` now wins over the canvas's `elementsSelectable` either way (`true` even where the canvas
+  disallows it, `false` even where it allows it), as React Flow has it — previously the canvas's flag always
+  answered first, and a node's own `true` did nothing without it.
+- **Handles.** `isConnectableStart` / `isConnectableEnd` (a handle that cannot start a drag still catches one; a
+  handle that cannot end one is invisible to a drop, as if nothing were there); its own `isValidConnection` (asked
+  in place of the canvas's, not as well — and not consulted during a *reconnect*, where the canvas's is what
+  React Flow's own behaviour implies); its own `onConnect`, heard after the canvas's.
+- **Components.** `Controls`: `position` (pins it like `Panel`), `fitViewOptions`, `showFitView` (alongside
+  `showFit`), `onZoomIn`/`onZoomOut`/`onFitView`, and `ControlButton` for a button of your own among the built-in
+  ones. `MiniMap`: `position`, `nodeStrokeColor`/`nodeStrokeWidth`, `nodeClassName`, `nodeBorderRadius`,
+  `maskStrokeColor`/`maskStrokeWidth`, `bgColor`. `Background`: `bgColor`, `patternClassName`. `getViewportForBounds`
+  matches React Flow's fit to the pixel — including its floor-rounded per-side nudge when the fit falls a pixel
+  short of the requested padding on one side (proven over a grid of bounds, panes and paddings, plus one hand-picked
+  case where the two sides fall short by different amounts). `proOptions` and `attributionPosition` are accepted
+  and do nothing, since there is no attribution to hide.
+- **Verified:** 774 tests (111 new, four new files — `events.test.tsx`, `viewport.test.tsx`, `edges.test.tsx`,
+  `nodes.test.tsx`, `handles.test.tsx`, `components.test.tsx` — several running the same input through flowinger
+  and a real `@xyflow/react` and diffing the results); mutation testing of the new seams (viewport gestures, the
+  selectable rule, per-handle connect options, `getViewportForBounds`, the edge label box, `isNode`/`isEdge`, the
+  built-in edge components, `Background`/`Controls`/`MiniMap`) — every survivor closed with a new test but two
+  confirmed equivalent (a redundant-render guard on the label box; setting a style property to `undefined`, which
+  React already treats as absent). CI's size gates moved 24/16 → 26/17 kB gzip to match the measured growth (core
+  16.2 kB from `dist`, whole canvas 25.2 kB); the bundle test's needle table grew for the two new features and the
+  built-in edge components. The demo picks up both new features and exercises `onNodeDoubleClick`,
+  `onPaneContextMenu`, `labelShowBg`, and `Controls`/`MiniMap`'s `position`, checked in a real browser (unchecking a
+  feature removes what it does, at once).
+- **Not done in this round:** the demo's own event wiring is illustrative only (a text banner, not a real feature);
+  no attempt was made at the rarer props (key-code overrides, `nodeOrigin`, ARIA parity) — see "Not built" below,
+  which the audit still drives.
+
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
-- A lot that React Flow has. Measured (not from memory) with `scripts/audit-react-flow.mjs` against `@xyflow/react`
-  12.11.6's type declarations: 78 of its 211 exports (108 of the 133 missing are types), 60 of 119 `ReactFlow`
-  props, 27 of 32 instance methods, 14 of 22 `Node` fields, 11 of 20 `Edge` fields, 5 of 13 `NodeProps` fields.
-  The README's "Coming from React Flow" lists what is missing, by category. It is enough for QueryLens (whose
+- A lot that React Flow has, though less than before the fourth round. Measured (not from memory) with
+  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 91 of its 211 exports (107 of
+  the 120 missing are types), 81 of 119 `ReactFlow` props, 30 of 32 instance methods, 16 of 22 `Node` fields, 17 of
+  20 `Edge` fields, 11 of 13 `NodeProps` fields, 20 of 20 `EdgeProps` fields. The README's "Coming from React Flow"
+  lists what is missing, by category — mostly key-code and threshold props (`selectionKeyCode`,
+  `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, HTML attributes on the canvas and its components, and a
+  handful of hooks (`useConnection`, `useInternalNode`, `useStoreApi`). It is enough for QueryLens (whose
   `FlowTree` uses eight names) and not for an arbitrary React Flow app.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
-- Publishing to npm. It installs from GitHub (`prepare` builds `dist/`; verified with pnpm 11 and npm 12,
-  see the README), but has not been published. CI (`.github/workflows/ci.yml`: typecheck, tests and build
-  on React 18 and 19) exists, and both legs pass locally, but the first GitHub run has not been read —
-  the repo is private and nothing here could view it.
+- Published to npm as `flowinger@0.1.0` (2026-09-21); the fourth round's additions are on `main` but not yet in a
+  release. CI (`.github/workflows/ci.yml`: typecheck, tests and build on React 18 and 19) is green.
 
 ## 1. Context and Goals
 
