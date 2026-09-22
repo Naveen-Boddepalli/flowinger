@@ -119,8 +119,10 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   ariaRole?: AriaRole;
   ariaLabel?: string;
   /**
-   * Escape hatch for an attribute flowinger has no prop for (`title`, `data-*`, another `aria-*`…). Never
-   * an event handler, or `id` / `style` / `className` / `role`, which the engine sets itself.
+   * Escape hatch for an attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom
+   * `data-*` attribute, which needs a cast (`HTMLAttributes` does not declare it by name; nor does React
+   * Flow's own). Never an event handler, or `id` / `style` / `className` / `role`, which the engine sets
+   * itself.
    */
   domAttributes?: Omit<
     HTMLAttributes<HTMLDivElement>,
@@ -568,6 +570,25 @@ export interface FlowingerProps {
   className?: string;
   style?: CSSProperties;
   children?: ReactNode;
+  /** Sets the `id` of the canvas's own element. */
+  id?: string;
+  /**
+   * Escape hatch for an attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom
+   * `data-*` attribute without a cast, same limit `HTMLAttributes` puts on Node's and Edge's own. React
+   * Flow accepts almost any HTML attribute directly on `<ReactFlow>`; this is narrower — never an event
+   * handler, since the canvas owns its own pointer, keyboard and click handling, or `id` / `style` /
+   * `className` / `children` / `role` / `tabIndex`, which are the engine's (or `keyboardNavigation`'s) own.
+   */
+  domAttributes?: Omit<
+    HTMLAttributes<HTMLDivElement>,
+    | 'id'
+    | 'style'
+    | 'className'
+    | 'children'
+    | 'role'
+    | 'tabIndex'
+    | keyof DOMAttributes<HTMLDivElement>
+  >;
   /** A drag began past the threshold. `nodes` is everything being dragged — the selection, when `node` is part of it. */
   onNodeDragStart?: (event: React.PointerEvent, node: Node, nodes: Node[]) => void;
   onNodeDrag?: (event: React.PointerEvent, node: Node, nodes: Node[]) => void;

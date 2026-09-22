@@ -59,10 +59,19 @@ export {
   useEdges,
   useNodesData,
   useNodeConnections,
+  useHandleConnections,
   type NodeData,
   type NodeConnection,
   type UseNodeConnectionsOptions,
+  type UseHandleConnectionsOptions,
 } from './dataHooks.ts';
+export {
+  useConnection,
+  type ConnectionState,
+  type ConnectionInProgress,
+  type NoConnection,
+  type ConnectionHandle,
+} from './connectionHook.ts';
 export { useKeyPress, type UseKeyPressOptions } from './useKeyPress.ts';
 
 // Geometry

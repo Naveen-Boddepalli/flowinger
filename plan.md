@@ -354,24 +354,70 @@ matching React Flow's own `Omit` exactly so it cannot silently break a handler).
   `sourcePosition` / `targetPosition` as `Node` fields (a fallback for the default-node case, which needs a
   design decision about how it interacts with the existing legacy id-to-side table, not made here).
 
+### Sixth round: connections and the canvas's own attributes
+
+Smaller still. Picked up the fifth round's two deferred hooks, now that the connect feature has somewhere to
+put the ids they need, plus what the canvas's own element was still missing.
+
+- **`useConnection`.** The connect feature's internal state (`DragConnection` — renamed from `ConnectionState`,
+  which now names the *public* shape instead) gained `fromNodeId`/`fromHandleId`/`fromHandleType` and
+  `toNodeId`/`toHandleId`/`toHandleType`: the target ones set from whatever `handleAt(x, y)` finds under the
+  pointer *regardless of validity* — so a consumer can colour an incompatible target red, the way React
+  Flow's own doc example does — while `end`/`endPosition`/`isValid`, which decide where the drawn connection
+  line snaps to, are untouched. `useConnection()` resolves those ids into `fromNode`/`toNode` (flowinger's
+  `InternalNode`, reusing the fifth round's `getInternalNode`) and `fromHandle`/`toHandle` (`{ nodeId, id,
+  type }` — no measured position, unlike React Flow's `Handle`) only when the raw connection object's
+  reference has actually changed, the same caching `useInternalNode` needed. It only re-reads on what moves
+  a connection along — a pointer move, or the drag starting or ending — so if the node it started from is
+  removed with nothing else changing meanwhile, that alone is not seen until the next pointer move or the
+  drag's end; disclosed in the hook's own doc comment rather than fixed, since watching the node list too
+  would mean firing on every drag frame for an unrelated reason.
+- **`useHandleConnections`.** React Flow's own docs say it is deprecated in favour of `useNodeConnections`,
+  which flowinger already had; this is a one-line wrapper with the renamed, reordered parameters
+  (`{ type, id, nodeId }` instead of `{ id, handleType, handleId }`) that name — added anyway, since the
+  audit still counts it and the cost is one function.
+- **The canvas's own `id` and `domAttributes`.** React Flow's whole `ReactFlowProps` extends
+  `Omit<HTMLAttributes<HTMLDivElement>, 'onError'>`, so almost any HTML attribute lands directly on
+  `<ReactFlow>` — including, structurally, event handlers, which would collide with the canvas's own pointer
+  and keyboard handling if flowinger copied that literally. Narrower on purpose: `id` as its own prop, and a
+  `domAttributes` object excluding every `DOMAttributes` member (so no handler), plus `id` / `style` /
+  `className` / `children` / `role` / `tabIndex`, which the engine or `keyboardNavigation` already own.
+  Same shape, and same real limit, as the fifth round's `Node.domAttributes` and `Edge.domAttributes`: none
+  of the three accept an arbitrary `data-*` key without a cast, since `HTMLAttributes` does not declare one
+  by name — true of React Flow's own `domAttributes` too, and the fifth round's docs oversold it before this
+  round's tests caught the mismatch (`domAttributes={{ 'data-testid': 'x' }}` does not typecheck; only
+  `AriaAttributes`' *named* `aria-*` members, and anything `HTMLAttributes` itself declares, like `title`,
+  do). Fixed the wording in all three places rather than the type, since matching React Flow's own
+  (also-narrow) contract is the point.
+- **Verified:** 814 tests (17 new, `moreHooks.test.tsx`); mutation testing of the new wiring — one confirmed
+  equivalent (`hit?.nodeId ?? null` reads the same as the ternary it replaced for every real id, and a
+  same-pattern rewrite for `toNode`/`toHandle` resolution), the rest closed, including two that needed a new
+  test rather than a rewrite: a selector applied to the very first (pre-mount) snapshot, and the dragged-from
+  node vanishing mid-drag. Checked in the demo: still renders, no console errors, edge count unchanged
+  after some exploratory dragging (a pixel-coordinate connection drag was not completed there — the pane's
+  viewport-emulation scaling made screen coordinates unreliable enough that the attempt was abandoned in
+  favour of the already-thorough unit and mutation coverage).
+
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
-- A lot that React Flow has, though less than before the fourth and fifth rounds. Measured (not from memory)
-  with `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 94 of its 211
-  exports (106 of the 117 missing are types), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 19 of 22
+- A lot that React Flow has, though less than before each round above. Measured (not from memory) with
+  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 99 of its 211 exports
+  (103 of the 112 missing are types), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 19 of 22
   `Node` fields, 11 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
   from React Flow" lists what is missing, by category — mostly key-code and threshold props
-  (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, HTML attributes on the canvas itself,
-  and `useConnection` / `useHandleConnections`. It is enough for QueryLens (whose `FlowTree` uses eight names)
-  and not for an arbitrary React Flow app.
+  (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, and HTML attributes on `Panel`,
+  `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` (the canvas itself now takes `id` and `domAttributes`).
+  It is enough for QueryLens (whose `FlowTree` uses eight names) and not for an arbitrary React Flow app.
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Published to npm: `flowinger@0.1.0` (2026-09-21), then `0.2.0` (2026-09-22, the fourth round's additions —
   events, viewport moves, edge label styling, `NodeProps`, the NOTICE), then `0.3.0` (2026-09-22, the fifth
-  round — `getInternalNode`, `useInternalNode`, `useStoreApi`, ARIA fields). QueryLens's trial branch tracks
-  the registry version and is bumped at each release (currently `0.3.0`; typecheck, lint, 1170 unit and
-  79/79 e2e unchanged, `flow` chunk 18.0 → 18.9 → 19.0 kB).
+  round — `getInternalNode`, `useInternalNode`, `useStoreApi`, ARIA fields). The sixth round's additions are
+  on `main` but not yet in a release. QueryLens's trial branch tracked the registry version and was bumped at
+  each release before it was merged into QueryLens `main` (2026-09-22, PR #6) — QueryLens now bumps `main`
+  directly at each flowinger release instead; `flow` chunk 18.0 → 18.9 → 19.0 kB across `0.1.0` → `0.2.0` →
+  `0.3.0`.
   CI (`.github/workflows/ci.yml`: typecheck, tests and build on React 18 and 19) is green.
 
 ## 1. Context and Goals

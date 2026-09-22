@@ -76,12 +76,23 @@ export interface FlowingerState {
   nodesInitialized: boolean;
 }
 
-/** A connection being dragged out: from a handle, to wherever the pointer (or a handle it snapped to) is. */
-export interface ConnectionState {
+/**
+ * A connection being dragged out: from a handle, to wherever the pointer (or a handle it snapped to) is.
+ * The engine's own shape — narrower than the public `ConnectionState` (see `connectionHook.ts`), which
+ * resolves the ids here into node and handle objects lazily, only when something reads it.
+ */
+export interface DragConnection {
   start: XYPosition;
   startPosition: Position;
+  fromNodeId: string;
+  fromHandleId: string | null;
+  fromHandleType: HandleType;
   end: XYPosition;
   endPosition: Position;
+  /** The handle under the pointer, whether or not dropping there would connect — `null` over none. */
+  toNodeId: string | null;
+  toHandleId: string | null;
+  toHandleType: HandleType | null;
   /** Over a handle that would make a valid connection, over one that would not, or over neither (null). */
   isValid: boolean | null;
   /** The edge whose end is being dragged, when this is a reconnection — it is not drawn meanwhile. */
@@ -296,7 +307,7 @@ export function createFlowingerStore(
   let announced = JSON.stringify([[], []]);
   /** The size last reported through a `dimensions` change, by node. */
   const reported = new Map<string, Size>();
-  let connection: ConnectionState | null = null;
+  let connection: DragConnection | null = null;
   let stopObserving: (() => void) | null = null;
   let geometryVersion = 0;
 
@@ -671,7 +682,7 @@ export function createFlowingerStore(
 
   // --- connecting -----------------------------------------------------------
 
-  const setConnection = (next: ConnectionState | null) => {
+  const setConnection = (next: DragConnection | null) => {
     connection = next;
     emit(connectionListeners);
   };

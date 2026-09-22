@@ -73,7 +73,7 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | | |
 |---|---|
 | `FlowingerCanvas` | The whole canvas, every feature: pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. Also `ReactFlow`. |
-| `FlowingerCore` | The same canvas with only the [features](#pay-for-what-you-use) you name — pan, zoom, nodes and edges are always there. |
+| `FlowingerCore` | The same canvas with only the [features](#pay-for-what-you-use) you name — pan, zoom, nodes and edges are always there. Takes `id` and a `domAttributes` escape hatch for its own element (never an event handler, or `id`/`style`/`className`/`children`/`role`/`tabIndex`, which are the engine's own). |
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
 | `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
@@ -86,6 +86,8 @@ npm install --allow-git=all github:Naveen-Boddepalli/flowinger
 | `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor`/`nodeStrokeColor`/`nodeClassName` (a value or a function of the node), `nodeStrokeWidth`, `nodeBorderRadius`, `maskColor`, `maskStrokeColor`/`maskStrokeWidth`, `bgColor`, `pannable`, `position`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
 | `useFlowinger()`, `useViewport()`, `useOnViewportChange()`, `useUpdateNodeInternals()` | The instance (below); the current viewport; hearing the view move from anywhere in the tree; having the canvas re-read a node's size and handles after it changes what it is made of without telling the canvas. |
 | `useInternalNode(id)`, `useStoreApi()` | A node plus `internals.positionAbsolute` and `internals.z` — narrower than React Flow's own `InternalNode` (no `handleBounds`, no `userNode`); `getState()` without subscribing, and `subscribe()` — no generic `setState`. |
+| `useConnection(selector?)` | The connection being dragged right now — `fromNode`/`toNode` (flowinger's `InternalNode`), `fromHandle`/`toHandle` (just what names one: `{ nodeId, id, type }`, not a measured position), `isValid`, `from`/`to`. `NoConnection` (`inProgress: false`) when none is. |
+| `useHandleConnections(options)` | `useNodeConnections` narrowed to one handle, under React Flow's older name for it. |
 | `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge` | The built-in edges, as components — for an `edgeTypes` entry that renders one and adds to it, or is one under another name. |
 | `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY, offsetX, offsetY]`. |
 | `getEdgeCenter`, `getBezierEdgeCenter`, `getViewportForBounds`, `isNode`, `isEdge` | Smaller helpers React Flow also has: the straight-line and on-curve midpoints a label sits at; a `viewportForBounds` that matches React Flow's own fit to the pixel; and the type guards. |
@@ -190,7 +192,8 @@ measures the rendered size either way, and reports it (`node.measured`) to a con
 
 A node or an edge also takes `ariaLabel`, `ariaRole` (default `'group'` on a node once it is a tab stop; on
 an edge, a `'button'` once it is selectable and focusable) and `domAttributes` — an escape hatch for an
-attribute flowinger has no prop for (`title`, `data-*`, another `aria-*`…). `domAttributes` can never be an
+attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom `data-*` attribute without a
+cast, since `HTMLAttributes` does not declare it by name. `domAttributes` can never be an
 event handler, or `id` / `style` / `className` / `role`, which are the engine's own to set; it wins over
 anything else it is allowed to touch.
 
@@ -341,8 +344,8 @@ Flow code**: it covers the part of the API an app like [QueryLens](https://githu
 uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **94 of its 211
-exports** (106 of the 117 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
+(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **99 of its 211
+exports** (103 of the 112 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
 `ReactFlowInstance` by name will not compile until you rename them), **81 of 119** `ReactFlow` props, 31 of 32
 instance methods, 19 of 22 `Node` fields, 11 of 13 `NodeProps` fields, and **20 of 20** on both `Edge` and
 `EdgeProps`. What is missing:
@@ -358,15 +361,15 @@ instance methods, 19 of 22 `Node` fields, 11 of 13 `NodeProps` fields, and **20 
   `preventScrolling`, `noDragClassName` / `noPanClassName` (`nodrag`, `nopan` and now `nowheel` are honoured).
 - **Layout and look:** `nodeOrigin`, `elevateNodesOnSelect` / `elevateEdgesOnSelect`, `zIndexMode`, `colorMode`,
   `debug`, `ariaLabelConfig`, `defaultMarkerColor`, `connectionLineContainerStyle` (`proOptions` and
-  `attributionPosition` are accepted and do nothing — there is no attribution to hide). The canvas takes
-  `className`, `style` and `children`, not HTML attributes (`id`, `role`, `data-*`, `onKeyDown`…); the same goes
-  for `Panel`, `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge`.
-- **Hooks and instance:** `useConnection`, `useHandleConnections` (there is now `useInternalNode`,
-  `useStoreApi` — `getState()` and `subscribe()`, no generic `setState` — `useUpdateNodeInternals`,
-  `useOnViewportChange`, `getNodeConnections` and `getHandleConnections`). `viewportInitialized`: on
-  purpose — React Flow's own instance is rebuilt when it flips, and flowinger's is created once and never
-  replaced (deliberately, see `plan.md`), so a boolean *field* here would either go stale or be a silently
-  wrong shape; there is no honest way to add it without one of those.
+  `attributionPosition` are accepted and do nothing — there is no attribution to hide). The canvas now takes
+  `id` and a `domAttributes` escape hatch (never an event handler, or what it already owns); `Panel`,
+  `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` still take only `className`, `style` and `children`.
+- **Hooks and instance:** `useUpdateNodeInternals`, `useOnViewportChange`, `useConnection`,
+  `useHandleConnections`, `useStoreApi` (`getState()` and `subscribe()`, no generic `setState`),
+  `getNodeConnections` and `getHandleConnections` are all there now. `viewportInitialized`: on purpose —
+  React Flow's own instance is rebuilt when it flips, and flowinger's is created once and never replaced
+  (deliberately, see `plan.md`), so a boolean *field* here would either go stale or be a silently wrong
+  shape; there is no honest way to add it without one of those.
 - **Components:** `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`, `MiniMapNode` (there are
   now `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge`, `isNode`, `isEdge`, `getEdgeCenter`,
   `getBezierEdgeCenter`, `getViewportForBounds` and `ControlButton`). `MiniMap`'s `zoomable`, `nodeComponent`,

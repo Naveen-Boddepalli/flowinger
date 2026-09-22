@@ -13,7 +13,7 @@ import type {
 import type { FlowingerEdgesProps } from './FlowingerEdges.tsx';
 import type { Size } from './geometry.ts';
 import type {
-  ConnectionState,
+  DragConnection,
   EngineOptions,
   FlowingerStore,
   HandleRecord,
@@ -139,7 +139,7 @@ export interface EngineContext {
   announceSelection: () => void;
 
   /** The line being dragged out of a handle, as the edge layer draws it. */
-  setConnection: (next: ConnectionState | null) => void;
+  setConnection: (next: DragConnection | null) => void;
   /** Which nodes and edges are worth drawing; null is all. Tells the canvas when it changes. */
   setVisible: (next: VisibleSet | null) => void;
 

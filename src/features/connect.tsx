@@ -170,17 +170,23 @@ export const connectFeature: Feature<ConnectApi> = {
       clientY: number,
     ) => {
       const hit = handleAt(clientX, clientY);
+      // The handle under the pointer, whether or not dropping there would actually connect — so a
+      // consumer of `useConnection` can colour it as a target either way, as React Flow's own does.
+      const to = hit
+        ? { toNodeId: hit.nodeId, toHandleId: hit.record.id, toHandleType: hit.record.type }
+        : { toNodeId: null, toHandleId: null, toHandleType: null };
       if (hit) {
         const c = connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type });
         const point = pointOfHandle(hit.nodeId, hit.record);
         if (c && isAllowed(c, start, reconnecting) && point) {
-          return { end: point, endPosition: hit.record.position, isValid: true };
+          return { end: point, endPosition: hit.record.position, isValid: true, ...to };
         }
       }
       return {
         end: ctx.toGraph(clientX, clientY),
         endPosition: OPPOSITE[start.position],
         isValid: hit ? false : null,
+        ...to,
       };
     };
 
@@ -200,6 +206,9 @@ export const connectFeature: Feature<ConnectApi> = {
         ctx.setConnection({
           start,
           startPosition: record.position,
+          fromNodeId: nodeId,
+          fromHandleId: record.id,
+          fromHandleType: record.type,
           ...connectionEnd(from, record, reconnect !== null, clientX, clientY),
           reconnecting: reconnect?.edge.id ?? null,
         });

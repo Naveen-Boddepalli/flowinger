@@ -144,6 +144,8 @@ function InnerCanvas(props: FlowingerProps) {
     ariaLabel = 'Diagram',
     className = '',
     style = {},
+    id,
+    domAttributes,
     children,
     onNodeDragStart,
     onNodeDrag,
@@ -578,6 +580,7 @@ function InnerCanvas(props: FlowingerProps) {
       <div
         {...Object.assign({}, ...bits.map((b) => b.props))}
         ref={containerRef}
+        id={id}
         className={`flowinger react-flow ${className}`}
         style={containerStyle}
         onPointerDown={onPointerDown}
@@ -592,6 +595,9 @@ function InnerCanvas(props: FlowingerProps) {
           : focusableForKeys
             ? { tabIndex: -1 }
             : {})}
+        // An escape hatch, last: it may set an attribute this element already has (a `data-*`, another
+        // `aria-*`), never a handler, or `id` / `style` / `className` / `children` / `role` / `tabIndex`.
+        {...domAttributes}
       >
         {/* Fixed layers — a <Background> — that follow the viewport themselves. */}
         {children}

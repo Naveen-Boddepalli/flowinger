@@ -109,3 +109,30 @@ export function useNodeConnections({
 
   return connections;
 }
+
+export interface UseHandleConnectionsOptions {
+  /** Which side of the handle: `'source'` or `'target'`. */
+  type: HandleType;
+  /** The handle's own id — only needed when a node has more than one of that type. */
+  id?: string | null;
+  /** The node the handle is on. Default: the node this component is rendered inside. */
+  nodeId?: string;
+  onConnect?: (connections: NodeConnection[]) => void;
+  onDisconnect?: (connections: NodeConnection[]) => void;
+}
+
+/**
+ * `useNodeConnections`, narrowed to one handle — React Flow's own name for it, ahead of
+ * `useNodeConnections`, which does the same job (and is what React Flow itself now points to instead).
+ */
+export function useHandleConnections({
+  type,
+  id,
+  nodeId,
+  onConnect,
+  onDisconnect,
+}: UseHandleConnectionsOptions): NodeConnection[] {
+  // `connectionsAt` treats a missing handle id and an explicit `null` alike (both leave the handle
+  // unnarrowed), so this loses nothing.
+  return useNodeConnections({ id: nodeId, handleType: type, handleId: id ?? undefined, onConnect, onDisconnect });
+}
