@@ -391,3 +391,8 @@ node scripts/audit-react-flow.mjs <path>   # how much of React Flow's API this h
 ```
 
 [`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left.
+
+## License
+
+MIT, see [LICENSE.md](LICENSE.md). A few lines of `src/paths.ts` — the bezier control-point formula, and
+where its label sits on the curve — are adapted from React Flow, credited in [NOTICE.md](NOTICE.md).

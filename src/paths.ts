@@ -28,6 +28,8 @@ export interface GetSmoothStepPathParams {
   offset?: number;
 }
 
+// The offset formula and the control-point placement below are adapted from React Flow's
+// `calculateControlOffset` / `getControlWithCurvature` (MIT, © webkid GmbH) — see NOTICE.md.
 function calculateControlPointOffset(distance: number, curvature: number): number {
   if (distance >= 0) {
     return 0.5 * distance;
@@ -85,6 +87,7 @@ function getControlPoints(
 /** What a path function hands back: the path, where its label goes, and how far that is from the source. */
 export type PathResult = [path: string, labelX: number, labelY: number, offsetX: number, offsetY: number];
 
+// Adapted from React Flow's `getEdgeCenter` (MIT, © webkid GmbH) — see NOTICE.md.
 /** The middle of the straight line between two points, and how far it is from each of them along each axis. */
 export function getEdgeCenter({
   sourceX,
@@ -102,6 +105,7 @@ export function getEdgeCenter({
   ];
 }
 
+// Adapted from React Flow's `getBezierEdgeCenter` (MIT, © webkid GmbH) — see NOTICE.md.
 /**
  * The point half way along a cubic bezier (t = 0.5), which is on the curve where the middle of the line
  * between its ends is not. `offsetX` and `offsetY` are how far it is from the source.
