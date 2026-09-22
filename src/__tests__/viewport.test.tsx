@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { getViewportForBounds as reactFlowsFit } from '@xyflow/react';
+import { FlowingerContext } from '../context.ts';
+import { createFlowingerStore } from '../store.ts';
 import {
   FlowingerCanvas,
   FlowingerCore,
@@ -105,6 +108,40 @@ describe('defaultViewport', () => {
     expect(viewportOf(container)).toBe('translate(100px, 100px) scale(1)');
   });
 
+  it('is in the server\'s markup: the first paint is framed, before any effect has run', () => {
+    const html = renderToString(<FlowingerCore nodes={nodes} defaultViewport={{ x: 30, y: 40, zoom: 1.5 }} />);
+    expect(html).toContain('translate(30px, 40px) scale(1.5)');
+  });
+
+  it.each([
+    ['x', { x: 50, y: 0, zoom: 1 }],
+    ['y', { x: 0, y: 50, zoom: 1 }],
+    ['zoom', { x: 0, y: 0, zoom: 2 }],
+  ])('moves a caller\'s provider that differs from it in %s alone', (_axis, want) => {
+    const { container } = render(
+      <FlowingerProvider>
+        <div style={{ width: 600, height: 400 }}>
+          <FlowingerCore nodes={nodes} defaultViewport={want} />
+        </div>
+      </FlowingerProvider>,
+    );
+    expect(viewportOf(container)).toBe(`translate(${String(want.x)}px, ${String(want.y)}px) scale(${String(want.zoom)})`);
+  });
+
+  it('does not move a provider that is there already, so nothing stirs for it', () => {
+    const at = { x: 30, y: 40, zoom: 1.5 };
+    const store = createFlowingerStore(at);
+    const set = vi.spyOn(store.instance, 'setViewport');
+    render(
+      <FlowingerContext.Provider value={store}>
+        <div style={{ width: 600, height: 400 }}>
+          <FlowingerCore nodes={nodes} defaultViewport={at} />
+        </div>
+      </FlowingerContext.Provider>,
+    );
+    expect(set).not.toHaveBeenCalled();
+  });
+
   it('does not report itself as a move', () => {
     const { log } = watched({ defaultViewport: { x: 10, y: 10, zoom: 1 } });
     expect(log).toEqual([]);
@@ -150,6 +187,24 @@ describe('onMoveStart, onMove and onMoveEnd', () => {
     expect((calls[1]?.event as Event).type).toBe('pointermove');
     expect((calls[calls.length - 1]?.event as Event).type).toBe('pointerup');
     expect(calls[calls.length - 1]?.viewport.x).toBe(30);
+  });
+
+  it('a pinch is one move too, carrying the pointer that let go', () => {
+    const { container, log, calls } = watched();
+    const p = pane(container);
+    fireEvent.pointerDown(p, pointer({ pointerId: 1, clientX: 100, clientY: 100 }));
+    fireEvent.pointerDown(p, pointer({ pointerId: 2, clientX: 200, clientY: 100 }));
+    expect(log).toEqual([]);
+    fireEvent.pointerMove(p, pointer({ pointerId: 2, clientX: 250, clientY: 100 }));
+    fireEvent.pointerMove(p, pointer({ pointerId: 2, clientX: 300, clientY: 100 }));
+    expect(log).toEqual(['start', 'move', 'move']);
+    expect((calls[1]?.event as Event).type).toBe('pointermove');
+    fireEvent.pointerUp(p, pointer({ pointerId: 2, clientX: 300, clientY: 100 }));
+    expect(log).toEqual(['start', 'move', 'move', 'end']);
+    expect((calls[calls.length - 1]?.event as Event).type).toBe('pointerup');
+    // One finger left is not a pinch: nothing more is reported.
+    fireEvent.pointerMove(p, pointer({ pointerId: 1, clientX: 150, clientY: 100 }));
+    expect(log).toHaveLength(4);
   });
 
   it('a press that goes nowhere moves nothing', () => {
@@ -235,6 +290,43 @@ describe('onMoveStart, onMove and onMoveEnd', () => {
     expect(instance().getViewport().x).toBe(5);
   });
 
+  it('a tween that begins within a wheel run holds the move open until it lands, past the wheel\'s quiet', () => {
+    vi.useFakeTimers();
+    const { container, log, instance } = watched();
+    fireEvent.wheel(pane(container), { deltaY: -100, clientX: 300, clientY: 200 });
+    act(() => {
+      void instance().setViewport({ x: 100, y: 0, zoom: 1 }, { duration: 1000 });
+    });
+    // The wheel has been quiet for 150 ms, and the tween is still going: not over.
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(log).not.toContain('end');
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(log.filter((l) => l === 'end')).toHaveLength(1);
+    expect(log[log.length - 1]).toBe('end');
+  });
+
+  it('leaves no timer behind when the canvas goes with a wheel move still open', () => {
+    vi.useFakeTimers();
+    const { container, unmount } = watched();
+    fireEvent.wheel(pane(container), { deltaY: -100, clientX: 300, clientY: 200 });
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('takes the canvas down mid-pan, and says the move is over', () => {
+    const { container, unmount, log } = watched();
+    const p = pane(container);
+    fireEvent.pointerDown(p, pointer({ clientX: 100, clientY: 100 }));
+    fireEvent.pointerMove(p, pointer({ clientX: 140, clientY: 100 }));
+    expect(log).toEqual(['start', 'move']);
+    unmount();
+    expect(log).toEqual(['start', 'move', 'end']);
+  });
+
   it('takes the latest handlers, not the ones the canvas mounted with', () => {
     const first = vi.fn();
     const second = vi.fn();
@@ -249,16 +341,6 @@ describe('onMoveStart, onMove and onMoveEnd', () => {
     });
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not break a canvas taken down mid-pan', () => {
-    const { container, unmount } = watched();
-    const p = pane(container);
-    fireEvent.pointerDown(p, pointer({ clientX: 100, clientY: 100 }));
-    fireEvent.pointerMove(p, pointer({ clientX: 140, clientY: 100 }));
-    expect(() => {
-      unmount();
-    }).not.toThrow();
   });
 });
 
@@ -431,6 +513,15 @@ describe('getViewportForBounds', () => {
         }
       }
     }
+  });
+
+  it('is React Flow\'s exactly on a case where left and right underflow by different amounts', () => {
+    const bounds = { x: 41, y: 10, width: 85, height: 80 };
+    const ours = getViewportForBounds(bounds, 200, 600, 0.05, 2, 0.33);
+    const theirs = reactFlowsFit(bounds, 200, 600, 0.05, 2, 0.33);
+    expect(ours.x).toBeCloseTo(theirs.x, 9);
+    expect(ours.y).toBeCloseTo(theirs.y, 9);
+    expect(ours.zoom).toBeCloseTo(theirs.zoom, 9);
   });
 
   it('respects the zoom limits as they do', () => {

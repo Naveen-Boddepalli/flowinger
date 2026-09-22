@@ -246,6 +246,37 @@ describe('dragging one end to another handle', () => {
     expect((onReconnectEnd.mock.calls[1]?.[3] as { isValid: boolean }).isValid).toBe(false);
   });
 
+  it('does not consult the fixed end\'s own isValidConnection: the canvas\'s says during a reconnect', () => {
+    // a's 'out' handle — the fixed end when the target end is dragged — would allow anything.
+    function PortsThatAllow() {
+      return (
+        <div>
+          <Handle id="in" type="target" position={Position.Top} />
+          <Handle id="out" type="source" position={Position.Bottom} isValidConnection={() => true} />
+        </div>
+      );
+    }
+    const onReconnect = vi.fn();
+    const onReconnectEnd = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes().map((n) => (n.id === 'a' ? { ...n, type: 'permissive' } : n))}
+        edges={[edge()]}
+        nodeTypes={{ ...types, permissive: PortsThatAllow }}
+        nodesConnectable
+        elementsSelectable
+        onEdgesChange={() => {}}
+        onReconnect={onReconnect}
+        onReconnectEnd={onReconnectEnd}
+        isValidConnection={() => false}
+      />,
+    );
+    dragEnd(container, 'target', handle(container, 'c', 'in'), [350, 200]);
+    release(350, 200);
+    expect(onReconnect).not.toHaveBeenCalled();
+    expect((onReconnectEnd.mock.calls[0]?.[3] as { isValid: boolean }).isValid).toBe(false);
+  });
+
   it('is not a change when the end is put back where it was', () => {
     const onReconnect = vi.fn();
     const onReconnectEnd = vi.fn();

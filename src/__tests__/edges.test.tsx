@@ -129,6 +129,7 @@ describe('isNode and isEdge, against React Flow\'s', () => {
     { id: 'x' },
     { source: 'a', target: 'b' },
     { id: 'odd', position: { x: 0, y: 0 }, source: 'a' },
+    { id: 'odd2', position: { x: 0, y: 0 }, target: 'b' },
   ];
   it('agree on every sample', () => {
     for (const sample of samples) {
@@ -401,6 +402,24 @@ describe('an edge\'s label', () => {
       </div>,
     );
     expect(must(view.container, '.react-flow__edge-textbg').getAttribute('width')).toBe('104');
+  });
+
+  it('is measured again when labelStyle changes: a bigger font can widen the box', () => {
+    let w = 60;
+    withBBox(() => ({ ...box, width: w }));
+    const view = withEdge({ label: 'hi', labelShowBg: true }, boxed);
+    expect(must(view.container, '.react-flow__edge-textbg').getAttribute('width')).toBe('64');
+    w = 90;
+    view.rerender(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCore
+          nodes={nodes}
+          edges={[{ id: 'e', source: 'a', target: 'b', label: 'hi', labelShowBg: true, labelStyle: { fontSize: 20 } }]}
+          {...boxed}
+        />
+      </div>,
+    );
+    expect(must(view.container, '.react-flow__edge-textbg').getAttribute('width')).toBe('94');
   });
 
   it('is drawn by BaseEdge inside a custom edge, given the same props', () => {
