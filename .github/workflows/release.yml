@@ -1,0 +1,96 @@
+name: Release
+
+# Pushing a tag `vX.Y.Z` publishes that version to npm, with provenance, and creates a GitHub release
+# from CHANGELOG.md. There is no token: npm trusts this workflow (a "trusted publisher", OIDC), so the
+# package's settings on npmjs.com must name this repository and this file — see CONTRIBUTING.md.
+#
+#   1. Move CHANGELOG.md's "Unreleased" under the new version, and bump `version` in package.json.
+#   2. Merge, then:  git tag v0.4.0 && git push origin v0.4.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) and the provenance attestation
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: The tag is the package's version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+      - name: The changelog has an entry for it
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${version}]' heading"
+            exit 1
+          fi
+      - name: npm is new enough for trusted publishing (11.5.1 or later)
+        run: |
+          node -e '
+            const [a, b, c] = process.argv[1].split(".").map(Number);
+            if (a < 11 || (a === 11 && (b < 5 || (b === 5 && c < 1)))) {
+              console.error("::error::npm " + process.argv[1] + " cannot publish with OIDC; need >= 11.5.1");
+              process.exit(1);
+            }
+          ' "$(npm --version)"
+
+      # The same gate as CI, so a tag cannot publish what a pull request would have refused.
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm size --max-full 26 --max-lean 17
+      - run: node scripts/size-dist.mjs --max-lean 17
+      - run: pnpm check:package
+
+      - name: Publish
+        run: |
+          # A prerelease (v0.5.0-rc.1) goes to the `next` tag, so `npm install flowinger` stays on a release.
+          case "${GITHUB_REF_NAME}" in
+            *-*) npm publish --access public --tag next ;;
+            *)   npm publish --access public ;;
+          esac
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release
+    steps:
+      - uses: actions/checkout@v7
+      - name: Release notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The text between this version's heading and the next heading — or, for the oldest entry, the
+          # link references at the foot of the file.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]"  { on = 1; next }
+            on && /^## \[/         { exit }
+            on && /^\[[^]]+\]: /   { exit }
+            on                     { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "::error::no notes found for ${version}"; exit 1; fi
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=""
+          case "${GITHUB_REF_NAME}" in *-*) flags="--prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file notes.md --verify-tag ${flags}
