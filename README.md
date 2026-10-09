@@ -1,5 +1,13 @@
 # Flowinger
 
+[![npm](https://img.shields.io/npm/v/flowinger)](https://www.npmjs.com/package/flowinger)
+[![CI](https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg)](https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml)
+[![types](https://img.shields.io/npm/types/flowinger)](https://www.npmjs.com/package/flowinger)
+[![license](https://img.shields.io/npm/l/flowinger)](LICENSE.md)
+
+**[Live demo](https://naveen-boddepalli.github.io/flowinger/)** · [Changelog](CHANGELOG.md) ·
+[Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
+
 A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
 drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
 Pay for what you use: the core is about 16 kB gzipped and each feature adds only its own code — about 25 kB with
@@ -46,6 +54,24 @@ export function Diagram() {
   );
 }
 ```
+
+## Is it for you?
+
+**Reach for it when** your app *draws a graph* — a query plan, a syntax tree, a dependency map, a workflow —
+and what it costs matters. Nodes are plain React components, so whatever you can render in a `div` is a node.
+In QueryLens, replacing React Flow with it took the diagram chunk from **60.5 kB to 19.0 kB gzipped**
+(`d3-hierarchy` included in both), with the same geometry to within 0.2 units and its whole end-to-end suite
+passing. It renders on the server, on React 18 and 19, and has no dependencies beyond them.
+
+**Reach for [React Flow](https://reactflow.dev) instead when** you need something on the
+[missing list](#coming-from-react-flow) and cannot wait for it, or want its larger ecosystem of examples,
+templates and answers. Flowinger follows React Flow's API for the part that apps like the one above use; it
+is not a drop-in for all of it, and it is `0.x` — a minor release can change the API (the
+[changelog](CHANGELOG.md) says when it does).
+
+**Positions are yours.** Neither library lays a graph out for you: feed `x` / `y` from
+[`d3-hierarchy`](https://d3js.org/d3-hierarchy), [`dagre`](https://github.com/dagrejs/dagre) or
+[`elkjs`](https://github.com/kieler/elkjs). A worked example of each is on the [roadmap](ROADMAP.md).
 
 ## Install
 
@@ -344,11 +370,18 @@ Flow code**: it covers the part of the API an app like [QueryLens](https://githu
 uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **99 of its 211
-exports** (103 of the 112 missing are type aliases, so code that imports `OnNodesChange`, `ReactFlowProps` or
-`ReactFlowInstance` by name will not compile until you rename them), **81 of 119** `ReactFlow` props, 31 of 32
-instance methods, 19 of 22 `Node` fields, 11 of 13 `NodeProps` fields, and **20 of 20** on both `Edge` and
-`EdgeProps`. What is missing:
+(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **146 of its 211
+exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 19 of 22 `Node` fields, 11 of 13
+`NodeProps` fields, and **20 of 20** on both `Edge` and `EdgeProps`. What is missing:
+
+- **Type names:** the ones an app imports by name — `OnNodesChange`, `OnConnect`, `ReactFlowProps`,
+  `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`… — are exported under React Flow's names, types
+  only. Two things differ on purpose: `ReactFlowProps` and `ReactFlowInstance` are **not generic** (the canvas
+  and the instance are not, so `ReactFlowInstance<MyNode>` is an error here rather than a type argument quietly
+  ignored), and `OnConnectEnd`'s second argument is flowinger's `ConnectEndState`, not React Flow's
+  `FinalConnectionState`. Of the 65 exports still missing, 56 are types — mostly for components and props
+  flowinger does not have (`NodeOrigin`, `ColorMode`, the resize-control and MiniMap-node types), plus a few
+  small ones not yet done (`DeleteElementsOptions`, `FitBoundsOptions`, `HandleConnection`…).
 
 - **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onViewportChange` (there is `onMove` /
   `onMoveStart` / `onMoveEnd`, and `useOnViewportChange`); `onClickConnectStart` / `End` (connecting by click,
@@ -398,13 +431,17 @@ pnpm install
 pnpm dev         # the demo, in demo/
 pnpm typecheck
 pnpm test
-pnpm build       # dist/: ESM, CJS and type declarations
+pnpm build       # dist/: ESM, CJS and type declarations for both
 pnpm size        # what a small consumer pays: the gzip size of the subset it imports, whole canvas and core
 node scripts/size-dist.mjs   # the same, from the built package (after pnpm build), which is what an app really bundles
+pnpm check:package           # publint and Are the Types Wrong, on the packed tarball (after pnpm build)
+pnpm demo:build              # the demo as a static site, in demo-dist/ — what is published to GitHub Pages
 node scripts/audit-react-flow.mjs <path>   # how much of React Flow's API this has, from its own type declarations
 ```
 
-[`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left.
+[`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left;
+[`ROADMAP.md`](ROADMAP.md) is where it is going, and where help is wanted most. To contribute, start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md); security problems go to [`SECURITY.md`](SECURITY.md).
 
 ## License
 
