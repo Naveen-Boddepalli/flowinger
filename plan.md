@@ -7,7 +7,7 @@
 edges, selection, connecting, the minimap, `translateExtent`, and the render-loop regression),
 `flowingerStore.test.ts` (the pure store), `pointer.test.ts` (pinch maths), `ssr.test.tsx` (a server render
 in vitest's `node` environment, where there really is no `document`) and `hydration.test.tsx`.
-`pnpm typecheck`, `pnpm test` (822 tests, in 34 files) and `pnpm build` pass on React 19 **and** React 18, and the
+`pnpm typecheck`, `pnpm test` (867 tests, in 39 files, plus 8 in a real browser) and `pnpm build` pass on React 19 **and** React 18, and the
 installed tarball renders, hydrates and type-checks (TypeScript 7, `skipLibCheck` off) on both.
 
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
