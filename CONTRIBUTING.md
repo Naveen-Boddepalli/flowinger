@@ -46,6 +46,7 @@ pnpm build                      # dist/: ESM, CJS and declarations for both
 pnpm size --max-full 26 --max-lean 17     # gzip kB: the whole canvas, and the core with no features
 node scripts/size-dist.mjs --max-lean 17  # the core again, from the built package
 pnpm check:package              # publint + Are the Types Wrong, on the packed tarball
+pnpm check:examples             # each app in examples/ installed against that tarball, type-checked and built
 ```
 
 **The size budget is a rule, not a hint.** The lean core is what makes the package worth its name; a
@@ -91,7 +92,9 @@ Commit messages: say what changed and why, in plain sentences. No special format
 Maintainers only. A release is a tag; there is no npm token anywhere.
 
 1. In a pull request: move **Unreleased** in `CHANGELOG.md` under the new version heading
-   (`## [0.5.0] - YYYY-MM-DD`), and set `version` in `package.json`. The demo's label follows it.
+   (`## [0.5.0] - YYYY-MM-DD`), and set `version` in `package.json`. The demo's label follows it. If an
+   example now uses API this release adds, raise its `flowinger` range in `examples/*/package.json` — they
+   ask the registry for the released package, so a copied folder works as it is.
 2. After it merges: `git tag v0.5.0 && git push origin v0.5.0`.
 3. [`release.yml`](.github/workflows/release.yml) re-runs the gate, publishes to npm with a provenance
    attestation, and creates the GitHub release from the changelog. A tag with a hyphen (`v0.5.0-rc.1`)

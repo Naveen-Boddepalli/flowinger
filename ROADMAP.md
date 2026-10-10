@@ -17,6 +17,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - React Flow's type names — `OnNodesChange`, `OnConnect`, `ReactFlowProps`, `ReactFlowInstance`… — so a
   migration's first compile error is not an import. Types only, derived from the props they describe, and
   checked against React Flow's own where the shapes agree.
+- Two examples that build against the packed library in CI: layouts (`d3-hierarchy`, `dagre`, `elkjs`
+  behind one signature) and a controlled editor.
 - A release pipeline in the repository — a tag publishes to npm from CI with no stored token and a
   provenance attestation — a changelog, and a demo built for GitHub Pages. (Each needs a one-time switch on
   GitHub or npm; [CONTRIBUTING.md](CONTRIBUTING.md#releasing) lists them.)
@@ -24,12 +26,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 ## Now — be easy to try and to trust
 
-- **Layout recipes.** Positions are yours to supply, and that is where people stop. One worked, tested
-  example each for `d3-hierarchy` (a tree), `dagre` and `elkjs` (a DAG), none of them a dependency of the
-  package.
-- **Examples you can open.** A few small apps under `examples/` — a read-only viewer, a controlled editor,
-  a custom node and edge — each with an "Open in StackBlitz" link, so "does it do X" is answered by running
-  it.
+- **More examples.** `examples/` has a layout viewer and a controlled editor; wanted next: a tree with
+  collapsible subtrees, a graph that loads and saves JSON, and one inside a Next.js app (the server-render
+  story, shown rather than claimed).
 - **A real browser in CI.** Playwright against the demo: pointer capture, wheel, drag, connect. The bugs
   this project has found *only* in a browser (a quick drag losing its node, an unclickable edge label) are
   exactly what jsdom cannot see, and today they are caught by hand.

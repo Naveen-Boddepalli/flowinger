@@ -59,7 +59,8 @@
     "prepare": "npm run build",
     "size": "node scripts/size.mjs",
     "check:package": "publint --strict && attw --pack .",
-    "demo:build": "vite build --config vite.demo.config.ts"
+    "demo:build": "vite build --config vite.demo.config.ts",
+    "check:examples": "node scripts/check-examples.mjs"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

@@ -23,3 +23,18 @@ updates:
       # Pinned on purpose: the oracle the tests diff against, and the version the audit script reads.
       # Moved by hand, with scripts/audit-react-flow.mjs re-run and the README's counts updated.
       - dependency-name: '@xyflow/react'
+
+  # The examples are copied out by people, so their dependencies should be current. `flowinger` itself is
+  # left alone: it is bumped by hand when a release has the API an example uses.
+  - package-ecosystem: npm
+    directories:
+      - /examples/layouts
+      - /examples/editor
+    schedule:
+      interval: monthly
+    groups:
+      example-dependencies:
+        patterns: ['*']
+    ignore:
+      - dependency-name: flowinger
+

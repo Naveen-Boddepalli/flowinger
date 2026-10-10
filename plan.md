@@ -451,6 +451,22 @@ came from looking at the **published artifact and the repository's public face**
   *Known wart:* the demo loads Tailwind from its CDN script, which Tailwind says is not for production —
   fine for a demo, but it is a third-party script on a public page; replacing it with the build-time plugin
   is a small job on `ROADMAP.md`'s list.
+- **Examples, and a bug they found.** `examples/layouts` (a read-only viewer on `FlowingerCore`: one plan
+  laid out by `d3-hierarchy`, `dagre` and `elkjs` behind one signature, top-down or left-to-right, tree or
+  DAG) and `examples/editor` (a controlled editor with a custom node and edge). `scripts/check-examples.mjs`
+  builds each against the *packed* library in a throwaway directory and is a CI job. Every layout × direction
+  × shape combination was walked in a real browser and checked from geometry: no overlaps, children on the
+  right side of parents, every node inside the pane, handles facing the layout. Two things came out of it:
+  (1) **the example's own bug** — it remounted the canvas the moment a button was pressed, while the new
+  positions arrived a moment later, so `fitView` framed the *old* layout; the numbers gave it away (a
+  top-down layout with the scale of a left-to-right one), a screenshot would not have. It now keys the canvas
+  on the finished layout. (2) **a library bug** — the first page load, in a browser pane that had just been
+  opened, stayed unframed: the `fitView` prop set its "done" flag when the nodes were measured even though
+  the pane had no size, where framing is a no-op, and so never framed once shown. That is any canvas mounted
+  in a closed tab, modal or accordion. Fixed (`paneHasSize`), with a red-green test and a mutant for the
+  effect's dependency; the suite also had no StrictMode test, so two were added (they pass). The examples ask
+  the registry for the released package and use only API it has; Vite 6 rather than the repository's 8,
+  because they are meant for StackBlitz — not tested there from here.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the

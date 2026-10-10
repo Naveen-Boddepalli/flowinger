@@ -71,7 +71,9 @@ is not a drop-in for all of it, and it is `0.x` — a minor release can change t
 
 **Positions are yours.** Neither library lays a graph out for you: feed `x` / `y` from
 [`d3-hierarchy`](https://d3js.org/d3-hierarchy), [`dagre`](https://github.com/dagrejs/dagre) or
-[`elkjs`](https://github.com/kieler/elkjs). A worked example of each is on the [roadmap](ROADMAP.md).
+[`elkjs`](https://github.com/kieler/elkjs) — [`examples/layouts`](examples/layouts) does all three, with the
+same signature, in about a hundred lines. [`examples/editor`](examples/editor) is a controlled editor with a
+custom node and edge.
 
 ## Install
 

@@ -57,3 +57,17 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm demo:build
+
+  examples:
+    # Each example is built against the packed library — what a consumer installs — so one that stops
+    # compiling fails the change that broke it. (scripts/check-examples.mjs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/check-examples.mjs
