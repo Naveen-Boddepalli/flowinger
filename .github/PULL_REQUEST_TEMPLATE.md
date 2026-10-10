@@ -13,6 +13,6 @@
 - [ ] `pnpm check:package` if `package.json`, `exports` or the build changed
 - [ ] New behaviour has a test; a new guard has a test that fails without it
 - [ ] Looked at in a real browser (`pnpm dev`) if it depends on layout, pointer capture, wheel or touch — what I did:
-- [ ] README table / "Coming from React Flow" list updated if a prop, field or export changed
+- [ ] `docs/` tables (and the React Flow coverage list) updated if a prop, field or export changed
 - [ ] A line under **Unreleased** in `CHANGELOG.md`
 - [ ] No code copied from another project (or it is credited in `NOTICE.md`)

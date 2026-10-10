@@ -53,9 +53,9 @@ does not pay for it.
 
 ## Later
 
-- **A docs site.** The README is a good reference and a long one; when it stops being findable, it becomes
-  pages (a static site generator, deployed beside the demo). Not before there is more than one reader's
-  worth of questions.
+- **A docs site.** The reference lives in [`docs/`](docs/README.md) as Markdown, which GitHub renders; when
+  that stops being findable — search, a sidebar, versions — it becomes a site (a static site generator,
+  deployed beside the demo). Not before there is more than one reader's worth of questions.
 - **Published benchmarks** against React Flow at 1k, 5k and 10k nodes, reproducible from the repository —
   `onlyRenderVisibleElements` exists; the claim that it is enough should be a chart.
 - **An accessibility pass** with a screen reader and the keyboard alone, written up honestly. The canvas is

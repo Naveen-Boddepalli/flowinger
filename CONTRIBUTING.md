@@ -17,10 +17,10 @@ it such apps use.
   layout recipe; a faster path.
 - **Does not fit:** a new *runtime* dependency (the only peers are `react` and `react-dom`); anything that
   makes a canvas that only *shows* a graph pay for editing it — new behaviour that acts on the graph is
-  a [feature](README.md#pay-for-what-you-use), not core; a layout engine in the package (positions come from
+  a [feature](docs/features.md), not core; a layout engine in the package (positions come from
   you, from `d3-hierarchy`, `dagre`, `elkjs`…).
-- **A drop-in for all of React Flow** is not a goal — the README says which parts are covered, from a
-  measurement. If you need something on its "missing" list, open an issue saying what you were building:
+- **A drop-in for all of React Flow** is not a goal — [the coverage page](docs/react-flow-coverage.md) says which parts are
+  covered, from a measurement. If you need something on its "missing" list, open an issue saying what you were building:
   that is how the list gets ordered.
 
 If a change is bigger than a bug fix, open an issue first. A paragraph is enough, and it saves you a rewrite.
@@ -85,9 +85,10 @@ and a line there. The same goes for any other project's code.
 - Small and focused beats thorough and large. One behaviour per pull request where you can.
 - Explain *what a user sees change*, and anything you chose not to do.
 - Add a line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) for anything a user could notice.
-- If you add or change a prop, field or export, the README's tables are part of the change — and so is
-  its "Coming from React Flow" list, which is measured: `node scripts/audit-react-flow.mjs <path to
-  @xyflow/react's dist/esm/index.d.ts>` regenerates the counts.
+- If you add or change a prop, field or export, the tables in [`docs/`](docs/README.md) are part of the
+  change — [`api.md`](docs/api.md), [`components.md`](docs/components.md) — and so is the measured
+  [coverage list](docs/react-flow-coverage.md) (and the numbers quoted in the README):
+  `node scripts/audit-react-flow.mjs <path to @xyflow/react's dist/esm/index.d.ts>` regenerates the counts.
 
 Commit messages: say what changed and why, in plain sentences. No special format is required.
 

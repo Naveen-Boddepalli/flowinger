@@ -21,12 +21,12 @@ pnpm add flowinger
 ```
 
 - **Delete the stylesheet import.** Flowinger ships none: the default node, `Controls` and edges are styled
-  inline from `--flowinger-*` CSS variables (see the README's *Theming*), so they need no CSS file.
+  inline from `--flowinger-*` CSS variables (see [Theming](theming.md)), so they need no CSS file.
 - **Your own CSS keeps working** where it selects on `react-flow__*` class names — those are kept — but not
   where it relied on React Flow's *stylesheet* (the look of `.react-flow__handle`, the `--xy-*` variables,
   the default node's border). Restyle those, or set the `--flowinger-*` variables.
 - `ReactFlow` is `FlowingerCanvas` under React Flow's name, and `ReactFlowProvider` is `FlowingerProvider`.
-  `FlowingerCore` is the small build with only the [features](../README.md#pay-for-what-you-use) you name.
+  `FlowingerCore` is the small build with only the [features](features.md) you name.
 
 ## 2. Set the defaults you were relying on
 
@@ -74,7 +74,7 @@ import usually needs only the package name changed. Two differences are on purpo
 
 ## 4. What is not there
 
-The README's [*Coming from React Flow*](../README.md#coming-from-react-flow) lists it from a measurement of
+[React Flow coverage](react-flow-coverage.md) lists it all, from a measurement of
 React Flow's own type declarations. The ones most likely to matter, with what to do:
 
 | Missing | Instead |

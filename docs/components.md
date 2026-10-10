@@ -1,0 +1,26 @@
+# Components and hooks
+
+[← Documentation](README.md) · What Flowinger exports, and what each piece is for. Props are in the [API reference](api.md).
+
+
+| | |
+|---|---|
+| `FlowingerCanvas` | The whole canvas, every feature: pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. Also `ReactFlow`. |
+| `FlowingerCore` | The same canvas with only the [features](features.md) you name — pan, zoom, nodes and edges are always there. Takes `id` and a `domAttributes` escape hatch for its own element (never an event handler, or `id`/`style`/`className`/`children`/`role`/`tabIndex`, which are the engine's own). |
+| `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
+| `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
+| `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
+| `ViewportPortal` | Draws your own elements in graph space — they pan and zoom with the diagram and sit above its nodes and edge labels. Renders nothing on the server. |
+| `EdgeLabelRenderer` | Inside a custom edge: draws HTML (a button, an input) at a point of the edge, in a layer above the edges that pans and zooms with the graph. Position it with a `translate(x, y)` from the edge's own label coordinates; give it `pointerEvents: 'all'` and a `nopan` class to make it clickable. |
+| `NodeToolbar` | Inside a node: buttons attached to a side of it (`position`, `align`, `offset`), shown while it is the only thing selected (`isVisible` overrides). It rides on the node, so it follows drags and zoom and never changes the node's size. |
+| `NodeResizer` | Inside a node: eight drag handles (sides and corners) that resize it — `minWidth`, `minHeight`, `maxWidth`, `maxHeight`, `keepAspectRatio`, `isVisible`, `color`, `shouldResize`, `onResizeStart` / `onResize` / `onResizeEnd`. Reported as `dimensions` (written to `width`/`height`) and `position` changes, so it needs a [controlled flow](api.md#controlled-flows) or `defaultNodes`. |
+| `Panel` | A box of your own UI pinned to the canvas — `position` is `top-left` (default), `top-center`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-center` or `bottom-right`. A press on it does not pan, and a click on it is not a pane click. |
+| `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's, `bgColor` behind the pattern — as in React Flow); zoom and fit buttons (`showZoom`, `showFit`/`showFitView`, `fitViewOptions`, `onZoomIn`/`onZoomOut`/`onFitView`, your own `ControlButton`s as children). Both go inside the provider; a `position` pins either to the canvas, as `Panel` does. |
+| `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor`/`nodeStrokeColor`/`nodeClassName` (a value or a function of the node), `nodeStrokeWidth`, `nodeBorderRadius`, `maskColor`, `maskStrokeColor`/`maskStrokeWidth`, `bgColor`, `pannable`, `position`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
+| `useFlowinger()`, `useViewport()`, `useOnViewportChange()`, `useUpdateNodeInternals()` | The instance ([API reference](api.md#the-instance)); the current viewport; hearing the view move from anywhere in the tree; having the canvas re-read a node's size and handles after it changes what it is made of without telling the canvas. |
+| `useInternalNode(id)`, `useStoreApi()` | A node plus `internals.positionAbsolute` and `internals.z` — narrower than React Flow's own `InternalNode` (no `handleBounds`, no `userNode`); `getState()` without subscribing, and `subscribe()` — no generic `setState`. |
+| `useConnection(selector?)` | The connection being dragged right now — `fromNode`/`toNode` (flowinger's `InternalNode`), `fromHandle`/`toHandle` (just what names one: `{ nodeId, id, type }`, not a measured position), `isValid`, `from`/`to`. `NoConnection` (`inProgress: false`) when none is. |
+| `useHandleConnections(options)` | `useNodeConnections` narrowed to one handle, under React Flow's older name for it. |
+| `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge` | The built-in edges, as components — for an `edgeTypes` entry that renders one and adds to it, or is one under another name. |
+| `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY, offsetX, offsetY]`. |
+| `getEdgeCenter`, `getBezierEdgeCenter`, `getViewportForBounds`, `isNode`, `isEdge` | Smaller helpers React Flow also has: the straight-line and on-curve midpoints a label sits at; a `viewportForBounds` that matches React Flow's own fit to the pixel; and the type guards. |
