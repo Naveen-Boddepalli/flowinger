@@ -30,7 +30,7 @@ const result = await build({
 });
 const output = (Array.isArray(result) ? result[0] : result).output[0];
 const kb = gzipSync(output.code, { level: 9 }).length / 1000;
-console.log(`lean, from dist: ${(output.code.length / 1000).toFixed(1)} kB minified, ${kb.toFixed(1)} kB gzip`);
+console.log(`lean, from dist: ${(output.code.length / 1000).toFixed(1)} kB minified, ${kb.toFixed(2)} kB gzip`);
 // A feature that leaked in would leave its own markup behind.
 const leaked = ['flowinger-reconnect-anchor', 'flowinger-selection', 'flowinger-connection-line'].filter(
   (needle) => output.code.includes(needle),

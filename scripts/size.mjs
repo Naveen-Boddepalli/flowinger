@@ -32,7 +32,7 @@ for (const { name, entry, max } of entries) {
   });
   const output = (Array.isArray(result) ? result[0] : result).output[0];
   const kb = gzipSync(output.code, { level: 9 }).length / 1000;
-  console.log(`${name}: ${(output.code.length / 1000).toFixed(1)} kB minified, ${kb.toFixed(1)} kB gzip`);
+  console.log(`${name}: ${(output.code.length / 1000).toFixed(1)} kB minified, ${kb.toFixed(2)} kB gzip`);
   if (max !== null && kb > max) {
     console.error(`${name} is over its ${String(max)} kB budget`);
     failed = true;

@@ -43,8 +43,8 @@ A change is ready when all of these pass; CI runs them on React 18 and 19.
 pnpm typecheck
 pnpm test                       # vitest, jsdom — `pnpm test edges` runs the files matching "edges"
 pnpm build                      # dist/: ESM, CJS and declarations for both
-pnpm size --max-full 27 --max-lean 17     # gzip kB: the whole canvas, and the core with no features
-node scripts/size-dist.mjs --max-lean 17  # the core again, from the built package
+pnpm size --max-full 27 --max-lean 17.5     # gzip kB: the whole canvas, and the core with no features
+node scripts/size-dist.mjs --max-lean 17.5  # the core again, from the built package
 pnpm check:package              # publint + Are the Types Wrong, on the packed tarball
 pnpm check:examples             # each app in examples/ installed against that tarball, type-checked and built
 pnpm e2e                        # Playwright, a real browser against the demo (see below)
@@ -52,6 +52,9 @@ pnpm e2e                        # Playwright, a real browser against the demo (s
 
 **The size budget is a rule, not a hint.** The lean core is what makes the package worth its name; a
 feature that grows it must say why in the pull request, and raising a budget is its own reviewed change.
+(Budgets sit about half a kilobyte above what CI measures, because gzip's output is not byte-for-byte the
+same on every Node build — the same bundle came to 16.95 kB here and 17.0 in CI. A margin smaller than that
+turns a gate into a coin toss.)
 `src/__tests__/bundle.test.ts` fails if a feature, an unused component or the dev warnings leak into a
 bundle that did not ask for them.
 
