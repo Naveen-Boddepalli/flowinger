@@ -467,6 +467,18 @@ came from looking at the **published artifact and the repository's public face**
   effect's dependency; the suite also had no StrictMode test, so two were added (they pass). The examples ask
   the registry for the released package and use only API it has; Vite 6 rather than the repository's 8,
   because they are meant for StackBlitz — not tested there from here.
+- **A real browser in CI, and what it found at once.** `e2e/smoke.spec.ts` (Playwright, against the demo as
+  Pages serves it; `E2E_CHANNEL=chrome` uses the installed Chrome): framing and no console errors, an edge's
+  ends against the *measured* handle, wheel zoom about the pointer, pan, node drag with its edges, a flick, a
+  connection, delete. Written to the behaviours plan.md says only a browser showed. **Three things it found:**
+  (1) *a flick lost the drag* — one far move then the release left the node put. The move that crosses the
+  threshold goes to whatever is under the pointer (the capture it triggers starts with the *next* event), so
+  the node never saw the pointer travel; the unit tests always sent a second move. Fixed at the release,
+  with seven mutants of the new branch killed (two needed new assertions: that the release does not bubble,
+  and that the pointer is let go). (2) *my test's "empty" spot was the minimap*, which is pannable the other
+  way — it read as a pan bug until the number (-220 for a +90 drag) gave it away. (3) *port 4173 already had
+  another project's preview on it* (QueryLens), which Playwright's `reuseExistingServer` quietly adopted: the
+  suite "ran" against the wrong app. The config now uses an unusual port and never reuses a server.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the

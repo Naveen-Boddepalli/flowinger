@@ -47,6 +47,7 @@ pnpm size --max-full 26 --max-lean 17     # gzip kB: the whole canvas, and the c
 node scripts/size-dist.mjs --max-lean 17  # the core again, from the built package
 pnpm check:package              # publint + Are the Types Wrong, on the packed tarball
 pnpm check:examples             # each app in examples/ installed against that tarball, type-checked and built
+pnpm e2e                        # Playwright, a real browser against the demo (see below)
 ```
 
 **The size budget is a rule, not a hint.** The lean core is what makes the package worth its name; a
@@ -64,8 +65,11 @@ bundle that did not ask for them.
   (`positionAbsolute`, `getViewportForBounds`, the `NodeProps` handed to a custom node…). Prefer that to a
   hand-written expectation.
 - **jsdom has no layout and no real pointer.** Anything that depends on measured sizes, pointer capture,
-  wheel or touch needs a look in a real browser (`pnpm dev`) — say what you did in the pull request. The
-  bugs this project has found *only* that way are listed in `plan.md`.
+  wheel or touch needs a look in a real browser — say what you did in the pull request. `pnpm e2e` runs
+  [`e2e/smoke.spec.ts`](e2e/smoke.spec.ts) against the demo with Playwright: `pnpm exec playwright install
+  chromium` once, or `E2E_CHANNEL=chrome pnpm e2e` to use the Chrome you have. A behaviour that was only ever
+  seen in a browser should get a test there. The bugs this project has found *only* that way are in
+  `plan.md`.
 - **Server rendering is part of the contract.** `ssr.test.tsx` and `hydration.test.tsx` render without a
   `document`; a hook that reads `window` at render will fail there.
 

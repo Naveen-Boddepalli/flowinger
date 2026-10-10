@@ -31,6 +31,9 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Fixed
 
+- **A flick did not drag.** A press that was released after one far move, with no move in between, left the
+  node where it was: the move that crosses the drag threshold is delivered to whatever is under the pointer,
+  and the node only ever saw the pointer once it was captured. The release now applies it.
 - **`fitView` did nothing for a canvas mounted hidden.** The prop framed the nodes once they were
   measured, and counted that as done even when the pane had no size yet — a canvas inside a closed tab,
   modal or accordion is 0 × 0, where framing is a no-op — so it never framed when shown. It now waits for

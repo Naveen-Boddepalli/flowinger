@@ -71,3 +71,23 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: node scripts/check-examples.mjs
+
+  e2e:
+    # A real browser against the demo: layout, pointer capture, the wheel — what jsdom cannot see
+    # (e2e/smoke.spec.ts). The first place a drag that "works in the tests" shows it does not.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results
+

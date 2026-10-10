@@ -17,6 +17,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - React Flow's type names — `OnNodesChange`, `OnConnect`, `ReactFlowProps`, `ReactFlowInstance`… — so a
   migration's first compile error is not an import. Types only, derived from the props they describe, and
   checked against React Flow's own where the shapes agree.
+- A real-browser suite in CI (Playwright, against the demo): framing, measured handle anchors, wheel
+  zoom about the pointer, pan, node drag, a flick, connecting, deleting.
 - Two examples that build against the packed library in CI: layouts (`d3-hierarchy`, `dagre`, `elkjs`
   behind one signature) and a controlled editor.
 - A release pipeline in the repository — a tag publishes to npm from CI with no stored token and a
@@ -29,9 +31,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - **More examples.** `examples/` has a layout viewer and a controlled editor; wanted next: a tree with
   collapsible subtrees, a graph that loads and saves JSON, and one inside a Next.js app (the server-render
   story, shown rather than claimed).
-- **A real browser in CI.** Playwright against the demo: pointer capture, wheel, drag, connect. The bugs
-  this project has found *only* in a browser (a quick drag losing its node, an unclickable edge label) are
-  exactly what jsdom cannot see, and today they are caught by hand.
+- **More in the browser suite.** `e2e/smoke.spec.ts` covers load, anchors, wheel, pan, drag, a flick and a
+  connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
+  (`nodrag`, `nopan`, `nowheel`) from a real press.
 - **A migration guide**, from the "Coming from React Flow" list: what changes, what is missing, what is
   better. A codemod is only worth writing if people ask for one.
 

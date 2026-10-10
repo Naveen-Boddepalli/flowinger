@@ -218,6 +218,7 @@ describe('dragging a selection', () => {
 describe('capturing the pointer for a drag', () => {
   // jsdom has no pointer capture; a stand-in records which element asked, and for which pointer.
   const asked: { el: Element; id: number }[] = [];
+  const released: { el: Element; id: number }[] = [];
   const install = () => {
     Object.defineProperty(Element.prototype, 'setPointerCapture', {
       configurable: true,
@@ -225,10 +226,18 @@ describe('capturing the pointer for a drag', () => {
         asked.push({ el: this, id });
       },
     });
+    Object.defineProperty(Element.prototype, 'releasePointerCapture', {
+      configurable: true,
+      value(this: Element, id: number) {
+        released.push({ el: this, id });
+      },
+    });
   };
   afterEach(() => {
     asked.length = 0;
+    released.length = 0;
     Reflect.deleteProperty(Element.prototype, 'setPointerCapture');
+    Reflect.deleteProperty(Element.prototype, 'releasePointerCapture');
   });
 
   it('takes it on the move that crosses the threshold, even when that move lands off the node', () => {
@@ -254,6 +263,70 @@ describe('capturing the pointer for a drag', () => {
     // Captured, so the next move is delivered to the node itself.
     fireEvent.pointerMove(el(container, 'a'), pointer({ clientX: 70, clientY: 45 }));
     expect(at(container, 'a')).toBe('translate(70px, 45px)');
+  });
+
+  it('a flick — one move, then the release, nothing between — still drags the node to where it ended', () => {
+    // The move that crosses the threshold goes to whatever is under the pointer (the capture it triggers only
+    // takes effect from the next event), so with no move after it the node never saw the pointer travel.
+    // Found in a real browser: Playwright's single-step `mouse.move`, with a 100 ms wait, left the node put.
+    install();
+    const onNodeDragStart = vi.fn();
+    const onNodeDragStop = vi.fn();
+    const onNodeClick = vi.fn();
+    const outerRelease = vi.fn();
+    const { container } = render(
+      <div onPointerUp={outerRelease}>
+        <FlowingerCanvas
+          nodes={three()}
+          nodesDraggable
+          elementsSelectable
+          onNodeDragStart={onNodeDragStart}
+          onNodeDragStop={onNodeDragStop}
+          onNodeClick={onNodeClick}
+        />
+      </div>,
+    );
+    const pane = must<Element>(container, '.flowinger');
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 60, clientY: 40 }));
+    // Captured by now, so the release is sent to the node.
+    fireEvent.pointerUp(el(container, 'a'), pointer({ clientX: 60, clientY: 40 }));
+
+    expect(at(container, 'a')).toBe('translate(60px, 40px)');
+    expect(onNodeDragStart).toHaveBeenCalledTimes(1);
+    expect(onNodeDragStop).toHaveBeenCalledTimes(1);
+    // As for any drag: the node's release is the node's own, and the pointer is let go.
+    expect(outerRelease).not.toHaveBeenCalled();
+    expect(released).toEqual([{ el: el(container, 'a'), id: 1 }]);
+    // The click the browser sends after a release is the end of a drag, not a click on the node.
+    fireEvent.click(el(container, 'a'));
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+
+  it('a release that never crossed the threshold is still a click, not a drag', () => {
+    install();
+    const onNodeDragStart = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={three()} nodesDraggable onNodeDragStart={onNodeDragStart} />,
+    );
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerUp(el(container, 'a'), pointer({ clientX: 1, clientY: 1 }));
+    expect(onNodeDragStart).not.toHaveBeenCalled();
+    expect(at(container, 'a')).toBe('translate(0px, 0px)');
+  });
+
+  it('a cancelled press is not a drag, however far the pointer had gone', () => {
+    install();
+    const onNodeDragStart = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas nodes={three()} nodesDraggable onNodeDragStart={onNodeDragStart} />,
+    );
+    const pane = container.firstElementChild as Element;
+    fireEvent.pointerDown(el(container, 'a'), pointer({ clientX: 0, clientY: 0 }));
+    fireEvent.pointerMove(pane, pointer({ clientX: 60, clientY: 40 }));
+    fireEvent.pointerCancel(el(container, 'a'), pointer({ clientX: 60, clientY: 40 }));
+    expect(onNodeDragStart).not.toHaveBeenCalled();
+    expect(at(container, 'a')).toBe('translate(0px, 0px)');
   });
 
   it('asks once per press, and not for a press that ended before it became a drag', () => {

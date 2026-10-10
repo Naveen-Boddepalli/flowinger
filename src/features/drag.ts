@@ -337,7 +337,22 @@ export const dragFeature: Feature<DragApi> = {
       if (d?.pointerId !== e.pointerId) return;
       drag.current = null;
       d.stopAutoPan?.();
-      if (!d.session) return;
+      if (!d.session) {
+        // A flick: one move far past the threshold, then the release. The move that crosses the threshold
+        // is delivered to whatever is under the pointer — the capture it triggers only takes effect from
+        // the next event — so the node never saw the pointer travel, and with no move after it the drag
+        // would be lost. The release is the capture's first event: begin the drag, and end it, there.
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= DRAG_THRESHOLD) {
+          const session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
+          justDragged.current = true;
+          const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+          session.move(e, at.x - d.startGraph.x, at.y - d.startGraph.y);
+          e.stopPropagation();
+          releasePointer(e.currentTarget, e.pointerId);
+          session.end(e);
+        }
+        return;
+      }
       e.stopPropagation();
       releasePointer(e.currentTarget, e.pointerId);
       setDragging(false);
