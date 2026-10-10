@@ -206,6 +206,8 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
           zIndex={zIndex}
           width={node.width}
           height={node.height}
+          sourcePosition={node.sourcePosition}
+          targetPosition={node.targetPosition}
         />
       </NodeContext.Provider>
     </div>

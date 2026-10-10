@@ -13,6 +13,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **`sourcePosition` and `targetPosition` on a node, and React Flow's built-in node types behind them.** A
+  node with no component of its own — no `type`, or one `nodeTypes` does not name — now has handles, as
+  React Flow's `default`, `input` and `output` do: a target on `targetPosition` (default top), a source on
+  `sourcePosition` (default bottom); `input` has only the source, `output` only the target, `group` none. A
+  component of your own is handed both fields. Before, such a node had no handles at all and edges
+  attached to it by direction. The handle sets are compared with React Flow's own rendering.
 - **React Flow's type names**, for the types flowinger already has: `OnNodesChange`, `OnEdgesChange`,
   `OnConnect`, `OnConnectStart`, `OnConnectEnd`, `OnInit`, `OnMove*`, `OnNodeDrag`, `OnDelete`,
   `OnBeforeDelete`, `OnSelectionChangeFunc`, `NodeMouseHandler`, `EdgeMouseHandler`, `IsValidConnection`,

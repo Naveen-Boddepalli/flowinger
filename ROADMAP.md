@@ -43,7 +43,7 @@ Ordered by how often it comes up, from the audit (`node scripts/audit-react-flow
 of 119 canvas props):
 
 1. **A controlled `viewport`** with `onViewportChange`.
-2. **`nodeOrigin`**, and `sourcePosition` / `targetPosition` on a node.
+2. **`nodeOrigin`.**
 3. **Key-code props** — `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
    `zoomActivationKeyCode` — and the click and drag distance thresholds.
 4. **`colorMode`**, `connectOnClick`, `connectionRadius`.

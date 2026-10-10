@@ -81,7 +81,6 @@ React Flow's own type declarations. The ones most likely to matter, with what to
 |---|---|
 | controlled `viewport` / `onViewportChange` | `defaultViewport`, `onMove`/`onMoveEnd`, `useOnViewportChange`, and `setViewport` on the instance |
 | `nodeOrigin` | compute the top-left yourself: `position - size / 2` |
-| `sourcePosition` / `targetPosition` on a node | `<Handle position={…} />` in your own node |
 | `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode` | Shift (and Ctrl/⌘ to add to a selection) are fixed; there is no Space-to-pan |
 | `connectOnClick`, `connectionRadius` | drag from a handle to a handle |
 | `colorMode` | set the `--flowinger-*` variables on an ancestor |
@@ -93,6 +92,10 @@ If something *you* use is on the list, [open an issue](https://github.com/Naveen
 saying what you were building — that is how the list is ordered.
 
 ## 5. Things that look the same and are not
+
+- **A node with no component of your own** is React Flow's `default`, `input` or `output`: `id` and
+  `data.label`, with handles on `targetPosition` / `sourcePosition`. It also shows its `id` in bold above the
+  label, which React Flow's does not.
 
 - **`useStore`** reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`,
   `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store, and **`useStoreApi`** has

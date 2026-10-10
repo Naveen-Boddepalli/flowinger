@@ -97,6 +97,14 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   /** A CSS selector: when set, the node can only be dragged by an element that matches it. */
   dragHandle?: string;
   /**
+   * Which side the built-in node types (`default`, `input`, `output`) put their handles on — a source
+   * handle at `sourcePosition` (default bottom) and a target handle at `targetPosition` (default top). A
+   * horizontal layout sets them to `'right'` and `'left'`. Handed to a node component of your own too,
+   * which is free to use them or not.
+   */
+  sourcePosition?: Position;
+  targetPosition?: Position;
+  /**
    * Keeps the node inside a region while it is dragged or nudged: a region of
    * graph space, or `'parent'` for the box of its parent node.
    */
@@ -163,6 +171,9 @@ export interface NodeProps<N extends Node = Node> {
   /** The size the node declares (`width`, `height`); the content decides where it does not. */
   width?: number | undefined;
   height?: number | undefined;
+  /** Where the node's own `sourcePosition` / `targetPosition` put its handles; undefined unless it set them. */
+  sourcePosition?: Position | undefined;
+  targetPosition?: Position | undefined;
 }
 
 export const MarkerType = {

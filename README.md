@@ -225,6 +225,15 @@ cast, since `HTMLAttributes` does not declare it by name. `domAttributes` can ne
 event handler, or `id` / `style` / `className` / `role`, which are the engine's own to set; it wins over
 anything else it is allowed to touch.
 
+### Nodes with no component of your own
+
+A node whose `type` is missing, or names nothing in `nodeTypes`, is drawn as React Flow's built-ins are: its
+`id`, its `data.label`, and handles — a **target** on `targetPosition` (default `'top'`) and a **source** on
+`sourcePosition` (default `'bottom'`). `type: 'input'` is a start and has only the source, `type: 'output'` is
+an end and has only the target, and `type: 'group'` is a container with none. A horizontal layout sets
+`sourcePosition: 'right'` and `targetPosition: 'left'` on its nodes. A component of your own under any of those
+names in `nodeTypes` replaces it (and is handed both fields, to use or not).
+
 ### Handles
 
 An edge names a handle by `id`; its end decides the type (`sourceHandle` finds a `source` handle). Name
@@ -373,7 +382,7 @@ uses (which it replaced, with identical geometry and its whole end-to-end suite 
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
 (`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **146 of its 211
-exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 19 of 22 `Node` fields, 11 of 13
+exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 `Node` fields, **13 of 13**
 `NodeProps` fields, and **20 of 20** on both `Edge` and `EdgeProps`. What is missing:
 
 - **Type names:** the ones an app imports by name — `OnNodesChange`, `OnConnect`, `ReactFlowProps`,
@@ -410,12 +419,12 @@ exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 19 of 22 
   `getBezierEdgeCenter`, `getViewportForBounds` and `ControlButton`). `MiniMap`'s `zoomable`, `nodeComponent`,
   `offsetScale`, `onNodeClick`, `inversePan`; `Controls`' `showInteractive`, `onInteractiveChange`;
   `NodeResizer`'s `autoScale`.
-- **Fields:** a node's `sourcePosition`, `targetPosition`, `handles` (there is now `initialWidth` /
+- **Fields:** a node's `handles` (there is now `sourcePosition`, `targetPosition`, `initialWidth` /
   `initialHeight`, `ariaLabel`, `ariaRole` and `domAttributes` — an escape hatch, never an event handler or
-  `id` / `style` / `className` / `role`, on both a node and an edge). A custom node is not given
-  `sourcePosition` or `targetPosition` (it now gets `selectable`, `draggable`, `deletable`, `dragging`,
-  `dragHandle`, `parentId`, `zIndex`, `width` and `height`, alongside `id`, `data`, `type`, `selected`,
-  `isConnectable` and its absolute position). `fitView` has no `ease` / `interpolate`.
+  `id` / `style` / `className` / `role`, on both a node and an edge). A custom node is given
+  `sourcePosition` and `targetPosition`, `selectable`, `draggable`, `deletable`, `dragging`, `dragHandle`,
+  `parentId`, `zIndex`, `width` and `height`, alongside `id`, `data`, `type`, `selected`, `isConnectable` and
+  its absolute position. `fitView` has no `ease` / `interpolate`.
 
 Counts are not weights — most of the list is niche — but it is a list to check your own code against before
 swapping. **Defaults differ, and that is the part a compiler will not find:** nodes are not draggable, connectable

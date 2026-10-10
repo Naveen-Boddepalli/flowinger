@@ -352,7 +352,8 @@ matching React Flow's own `Omit` exactly so it cannot silently break a handler).
 - **Not done:** `useConnection`, `useHandleConnections` (the connect feature does not currently track handle
   or node objects during a drag, only points and positions — adding them is more than this round's size);
   `sourcePosition` / `targetPosition` as `Node` fields (a fallback for the default-node case, which needs a
-  design decision about how it interacts with the existing legacy id-to-side table, not made here).
+  design decision about how it interacts with the existing legacy id-to-side table, not made here — made in the
+  seventh round, below).
 
 ### Sixth round: connections and the canvas's own attributes
 
@@ -491,6 +492,16 @@ came from looking at the **published artifact and the repository's public face**
   library's output — which first failed because React Flow itself draws no edge in jsdom until it is told
   where the handles are (its server-rendering inputs: `width`, `height`, `handles`). Six producers, six
   mutants, all killed.
+- **`sourcePosition` / `targetPosition`, which were really "built-in node types".** The fifth round deferred
+  them as needing a design decision about the legacy id-to-side table. Looking at what React Flow does with
+  them settled it: they only mean something to its built-in `default`, `input` and `output` nodes, which
+  render handles — and flowinger's default view drew *none*, so a migrated app's plain nodes lost their
+  handles and edges attached by direction. The default view now registers real handles (a target on
+  `targetPosition`, default top; a source on `sourcePosition`, default bottom; `input` only the source,
+  `output` only the target, `group` neither), and a custom component is handed both fields. The legacy table
+  is untouched: it still answers only for a handle *id* that no registered handle carries, and the built-in
+  handles carry none. Checked against React Flow's own DOM for seven node configurations; ten mutants, all
+  killed. One difference kept: flowinger's default node also shows its `id`.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the
@@ -523,8 +534,8 @@ What is *in the repository* is done; what is left is switches only the owner can
   as far as I know.
 - A lot that React Flow has, though less than before each round above. Measured (not from memory) with
   `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 146 of its 211 exports
-  (56 of the 65 missing are types — 99 of 211 before the seventh round's type names), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 19 of 22
-  `Node` fields, 11 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
+  (56 of the 65 missing are types — 99 of 211 before the seventh round's type names), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 21 of 22
+  `Node` fields, 13 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
   from React Flow" lists what is missing, by category — mostly key-code and threshold props
   (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, and HTML attributes on `Panel`,
   `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` (the canvas itself now takes `id` and `domAttributes`).

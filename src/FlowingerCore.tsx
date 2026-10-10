@@ -20,6 +20,7 @@ import { ViewportPortalHost } from './ViewportPortal.tsx';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
+import { Handle } from './Handle.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
@@ -33,14 +34,7 @@ import {
   releasePointer,
   type PinchStart,
 } from './pointer.ts';
-import type {
-  Edge,
-  FlowingerProps,
-  Node,
-  NodeProps,
-  Viewport,
-  XYPosition,
-} from './types.ts';
+import { Position, type Edge, type FlowingerProps, type Node, type NodeProps, type Viewport, type XYPosition } from './types.ts';
 
 const NO_FEATURES: readonly Feature[] = [];
 const NO_NODES: Node[] = [];
@@ -57,7 +51,13 @@ const defaultNodeStyle: CSSProperties = {
   color: 'var(--flowinger-text, #e2e8f0)',
 };
 
-function DefaultNodeView({ id, data, selected }: NodeProps) {
+/**
+ * What a node with no component of its own is: React Flow's `default`, `input` and `output` types, which
+ * differ in which handles they have — `input` is only a start (a source), `output` only an end (a target) —
+ * placed where the node's `targetPosition` and `sourcePosition` say (top and bottom unless it does).
+ * `group` is a container, and has none.
+ */
+function DefaultNodeView({ id, data, selected, type, sourcePosition, targetPosition }: NodeProps) {
   return (
     <div
       style={
@@ -66,12 +66,14 @@ function DefaultNodeView({ id, data, selected }: NodeProps) {
           : defaultNodeStyle
       }
     >
+      {type !== 'input' && type !== 'group' && <Handle type="target" position={targetPosition ?? Position.Top} />}
       <div style={{ fontWeight: 600 }}>{id}</div>
       {'label' in data && (
         <div style={{ fontSize: '0.875em', color: 'var(--flowinger-text-dim, #94a3b8)' }}>
           {String(data.label)}
         </div>
       )}
+      {type !== 'output' && type !== 'group' && <Handle type="source" position={sourcePosition ?? Position.Bottom} />}
     </div>
   );
 }
