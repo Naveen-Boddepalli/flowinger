@@ -12,7 +12,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
+import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
 import { warnAboutIgnoredProps } from './devWarnings.ts';
 import { resolveFeatures, type Feature } from './features.ts';
@@ -349,14 +349,17 @@ function InnerCanvas(props: FlowingerProps) {
   }, [store, edges]);
 
   // Once, when every node has a size: before that there is nothing to frame. After
-  // `setNodes` above, so it frames the nodes it is given, not the ones before them.
+  // `setNodes` above, so it frames the nodes it is given, not the ones before them. And once the pane has
+  // a size too — a canvas mounted inside a hidden tab or a closed modal is 0 × 0, where framing does
+  // nothing, and must not count as done: it frames when the pane is shown.
   const nodesInitialized = useNodesInitialized();
+  const paneHasSize = useStore((s) => s.width > 0 && s.height > 0);
   const fitted = useRef(false);
   useIsomorphicLayoutEffect(() => {
-    if (!fitView || !nodesInitialized || fitted.current) return;
+    if (!fitView || !nodesInitialized || !paneHasSize || fitted.current) return;
     fitted.current = true;
     void store.fitView(fitViewOptions);
-  }, [store, fitView, fitViewOptions, nodesInitialized]);
+  }, [store, fitView, fitViewOptions, nodesInitialized, paneHasSize]);
 
   const onInitRef = useRef(onInit);
   useEffect(() => {

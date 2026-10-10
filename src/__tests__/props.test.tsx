@@ -1,7 +1,10 @@
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
 import {
   FlowingerCanvas,
+  FlowingerCore,
+  FlowingerProvider,
   MiniMap,
   useStore,
   type Edge,
@@ -238,6 +241,67 @@ describe('the fitView prop', () => {
     stubPane();
     const { container } = render(<FlowingerCanvas nodes={nodes} />);
     expect(viewportOf(container)).toBe('translate(0px, 0px) scale(1)');
+  });
+
+  it('frames under StrictMode too — which is how create-vite and Next.js run an app in development', () => {
+    stubPane();
+    const { container } = render(
+      <StrictMode>
+        <FlowingerCanvas nodes={nodes} fitView fitViewOptions={{ padding: 0 }} />
+      </StrictMode>,
+    );
+    expect(viewportOf(container)).toBe('translate(0px, 260px) scale(2)');
+  });
+
+  it.each([
+    ['a plain tree', false],
+    ['StrictMode', true],
+  ])('frames a canvas remounted by `key` under one provider, as an app that re-lays out does (%s)', (_, strict) => {
+    stubPane();
+    const tree = (key: string, list: Node[]) => {
+      const inner = (
+        <FlowingerProvider>
+          <FlowingerCore key={key} nodes={list} fitView fitViewOptions={{ padding: 0 }} />
+        </FlowingerProvider>
+      );
+      return strict ? <StrictMode>{inner}</StrictMode> : inner;
+    };
+    // Laid out asynchronously: the canvas is first mounted with no nodes, then remounted with them.
+    const { container, rerender } = render(tree('empty', []));
+    rerender(tree('laid-out', nodes));
+    expect(viewportOf(container)).toBe('translate(0px, 260px) scale(2)');
+  });
+
+  it('waits for the pane to have a size: a canvas mounted hidden (a tab, a modal) frames when it is shown', () => {
+    // Nodes can be measured while the pane is 0 × 0 (an ancestor with display: none still gives a
+    // node a declared size), and framing then has nothing to frame against. It must not give up.
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40);
+    let pane = { width: 0, height: 0 };
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => pane.width);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(() => pane.height);
+    const observers: (() => void)[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          observers.push(callback);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+
+    const { container } = render(<FlowingerCanvas nodes={nodes} fitView fitViewOptions={{ padding: 0 }} />);
+    expect(viewportOf(container)).toBe('translate(0px, 0px) scale(1)');
+
+    pane = { width: 800, height: 600 };
+    act(() => {
+      observers.forEach((callback) => { callback(); });
+    });
+    expect(viewportOf(container)).toBe('translate(0px, 260px) scale(2)');
+    vi.unstubAllGlobals();
   });
 
   it('frames once: a later change of nodes does not re-frame', () => {

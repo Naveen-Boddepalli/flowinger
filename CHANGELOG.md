@@ -31,6 +31,10 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Fixed
 
+- **`fitView` did nothing for a canvas mounted hidden.** The prop framed the nodes once they were
+  measured, and counted that as done even when the pane had no size yet — a canvas inside a closed tab,
+  modal or accordion is 0 × 0, where framing is a no-op — so it never framed when shown. It now waits for
+  a pane with a size, and frames then.
 - **Types for `require`.** The package is `"type": "module"`, so the one declaration file was typed as ESM
   even for a `require` consumer; TypeScript's `node16` / `nodenext` resolution from CommonJS rejected it
   (publint and Are the Types Wrong: "masquerading as ESM"). `exports` now gives `require` its own
