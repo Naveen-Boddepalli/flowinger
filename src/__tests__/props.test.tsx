@@ -198,16 +198,16 @@ describe('hidden', () => {
     const { container } = render(<FlowingerCanvas nodes={nodes} edges={edges} />);
     expect(container.querySelector('[data-id="b"]')).toBeNull();
     expect(container.querySelector('[data-id="a"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="edge-ab"]')).toBeNull();
-    expect(container.querySelector('[data-testid="edge-hid"]')).toBeNull();
-    expect(container.querySelector('[data-testid="edge-ac"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-ab"]')).toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-hid"]')).toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-ac"]')).not.toBeNull();
   });
 
   it('draws it again when it is shown', () => {
     const { container, rerender } = render(<FlowingerCanvas nodes={nodes} edges={edges} />);
     rerender(<FlowingerCanvas nodes={nodes.map((n) => ({ ...n, hidden: false }))} edges={edges} />);
     expect(container.querySelector('[data-id="b"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="edge-ab"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-ab"]')).not.toBeNull();
   });
 
   it('keeps a hidden node off the minimap', () => {

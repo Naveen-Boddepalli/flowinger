@@ -155,7 +155,7 @@ describe('Flowinger Engine', () => {
         <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={testNodeTypes} />,
       );
 
-      const edgeEl = must(container, '[data-testid="edge-e1-2"]');
+      const edgeEl = must(container, '[data-testid="rf__edge-e1-2"]');
       expect(edgeEl.classList.contains('is-active')).toBe(true);
       expect(must(edgeEl, 'path').getAttribute('d')).toContain('M');
     });
@@ -189,7 +189,7 @@ describe('Flowinger Engine', () => {
         <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={testNodeTypes} />,
       );
       // node-1 sits at (100, 50): bottom-centre is (150, 90). node-2's top-centre is (150, 200).
-      const d = must(container, '[data-testid="edge-e1-2"] path').getAttribute('d');
+      const d = must(container, '[data-testid="rf__edge-e1-2"] path').getAttribute('d');
       expect(d).toMatch(/^M 150\.00 90\.00 C/);
       expect(d).toMatch(/150\.00 200\.00$/);
     });
@@ -1071,7 +1071,7 @@ describe('Flowinger edge markers and labels', () => {
   ];
   const edge = (over: Partial<Edge> = {}): Edge => ({ id: 'e', source: 'a', target: 'b', ...over });
   const pathOf = (container: ParentNode, id = 'e') =>
-    must(container, `[data-testid="edge-${id}"] path`);
+    must(container, `[data-testid="rf__edge-${id}"] path`);
   /** The <marker> a path's `marker-end` / `marker-start` points at. */
   const markerOf = (container: ParentNode, attr: 'marker-end' | 'marker-start', id = 'e') => {
     const ref = pathOf(container, id).getAttribute(attr) ?? '';
@@ -1178,7 +1178,7 @@ describe('Flowinger edge markers and labels', () => {
       <FlowingerCanvas nodes={nodes} edges={[edge({ label: 'joins' })]} />,
     );
     // a's bottom-middle is (50, 40); b's top-middle is (50, 200).
-    const text = must(container, '[data-testid="edge-e"] text');
+    const text = must(container, '[data-testid="rf__edge-e"] text');
     expect(text.textContent).toBe('joins');
     expect(text.getAttribute('x')).toBe('50');
     expect(text.getAttribute('y')).toBe('120');
@@ -1193,7 +1193,7 @@ describe('Flowinger edge markers and labels', () => {
       />,
     );
     expect(container.querySelectorAll('text')).toHaveLength(1);
-    expect(must(container, '[data-testid="edge-with"] text').getAttribute('y')).toBe('120');
+    expect(must(container, '[data-testid="rf__edge-with"] text').getAttribute('y')).toBe('120');
   });
 
   it('follows a dragged node', () => {
@@ -1207,7 +1207,7 @@ describe('Flowinger edge markers and labels', () => {
     const b = must(container, '[data-id="b"]');
     fireEvent.pointerDown(b, pointer({ clientX: 0, clientY: 0 }));
     fireEvent.pointerMove(b, pointer({ clientX: 0, clientY: 100 })); // b moves down 100
-    const text = must(container, '[data-testid="edge-e"] text');
+    const text = must(container, '[data-testid="rf__edge-e"] text');
     expect(text.getAttribute('y')).toBe('170'); // midway between 40 and 300
   });
 
@@ -1251,7 +1251,7 @@ describe('README quickstart', () => {
     );
     expect(screen.getByText('Scan')).toBeInTheDocument();
     expect(screen.getByText('Filter')).toBeInTheDocument();
-    expect(must(container, '[data-testid="edge-a-b"] path').getAttribute('marker-end')).toMatch(/^url\(#/);
+    expect(must(container, '[data-testid="rf__edge-a-b"] path').getAttribute('marker-end')).toMatch(/^url\(#/);
     expect(container.querySelector('.flowinger-background')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
     expect(must<HTMLElement>(container, '.react-flow__controls').style.position).toBe('absolute');
@@ -1310,7 +1310,7 @@ describe('Flowinger custom edges', () => {
     const { container } = render(
       <FlowingerCanvas nodes={nodes} edgeTypes={types} edges={[custom({ className: 'mine' })]} />,
     );
-    const wrapper = must(container, '[data-testid="edge-e"]');
+    const wrapper = must(container, '[data-testid="rf__edge-e"]');
     expect(wrapper.classList.contains('react-flow__edge')).toBe(true);
     expect(wrapper.classList.contains('mine')).toBe(true);
     expect(wrapper.querySelector('[data-testid="probe-e"]')).not.toBeNull();

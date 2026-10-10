@@ -215,8 +215,8 @@ describe('dragging one end to another handle', () => {
     const others = [edge(), edge({ id: 'f', source: 'b', target: 'c', sourceHandle: 'out', targetHandle: 'in', selected: false })];
     const { container } = render(ui({}, others));
     dragEnd(container, 'target', null, [300, 120]);
-    expect(container.querySelector('[data-testid="edge-e"]')).toBeNull();
-    expect(container.querySelector('[data-testid="edge-f"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-e"]')).toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-f"]')).not.toBeNull();
   });
 
   it('reports nothing when released over no handle, but says how it ended', () => {
@@ -311,14 +311,14 @@ describe('dragging one end to another handle', () => {
       return null;
     }
     const { container } = render(ui({ connectionLineComponent: Line }));
-    expect(container.querySelector('[data-testid="edge-e"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-e"]')).not.toBeNull();
     dragEnd(container, 'target', null, [300, 120]);
     const last = seen.at(-1);
     // The target end is the one moving: the line starts at the source's handle, a.out.
     expect(last).toMatchObject({ fromX: 50, fromY: 40, toX: 300, toY: 120 });
-    expect(container.querySelector('[data-testid="edge-e"]')).toBeNull(); // the line stands in for it
+    expect(container.querySelector('[data-testid="rf__edge-e"]')).toBeNull(); // the line stands in for it
     release(300, 120);
-    expect(container.querySelector('[data-testid="edge-e"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-e"]')).not.toBeNull();
   });
 
   it('draws it from the target when the source end is dragged', () => {

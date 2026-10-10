@@ -51,7 +51,7 @@ describe('Flowinger server rendering', () => {
     const html = renderToString(tree);
     expect(html).toContain('@keyframes flowinger-dash');
     expect(html).toContain('flowinger-edge-interaction');
-    expect(html).toMatch(/<g[^>]*data-testid="edge-e"[^>]*tabindex="0"|<g[^>]*tabindex="0"[^>]*data-testid="edge-e"/);
+    expect(html).toMatch(/<g[^>]*data-testid="rf__edge-e"[^>]*tabindex="0"|<g[^>]*tabindex="0"[^>]*data-testid="rf__edge-e"/);
     expect(html).toMatch(/class="[^"]*\banimated\b/);
   });
 

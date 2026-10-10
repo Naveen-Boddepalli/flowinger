@@ -18,7 +18,7 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
   return el;
 }
 const node = (c: ParentNode, id: string) => must<HTMLElement>(c, `[data-id="${id}"]`);
-const edgeEl = (c: ParentNode, id: string) => must<SVGGElement>(c, `[data-testid="edge-${id}"]`);
+const edgeEl = (c: ParentNode, id: string) => must<SVGGElement>(c, `[data-testid="rf__edge-${id}"]`);
 
 const nodes: Node[] = [
   { id: 'a', position: { x: 0, y: 0 }, width: 100, height: 40, data: {} },

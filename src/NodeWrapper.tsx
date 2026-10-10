@@ -157,6 +157,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       {...Object.assign({}, ...bits.map((b) => b.props))}
       ref={ref}
       data-id={node.id}
+      data-testid={`rf__node-${node.id}`}
       className={`flowinger-node react-flow__node react-flow__node-${node.type ?? 'default'} ${
         node.className ?? ''
       } ${dragging ? 'dragging' : ''} ${selected ? 'selected' : ''}`}

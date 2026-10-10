@@ -44,6 +44,7 @@ export const Background = /*#__PURE__*/ memo(function Background({
 
   return (
     <svg
+      data-testid="rf__background"
       className={`flowinger-background react-flow__background ${className}`}
       style={svgStyle}
     >

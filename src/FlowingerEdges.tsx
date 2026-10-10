@@ -111,7 +111,7 @@ function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hoo
   const props = {
     ...Object.assign({}, ...bits.map((b) => b.props)),
     className,
-    'data-testid': `edge-${edge.id}`,
+    'data-testid': `rf__edge-${edge.id}`,
     onClick,
     // The svg itself takes no events; an edge takes them where there is something to do with them.
     ...(selectable || interactive

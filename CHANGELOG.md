@@ -46,6 +46,11 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Changed
 
+- **Test ids are React Flow's.** An edge's `data-testid` is `rf__edge-<id>` (it was `edge-<id>`), and the
+  canvas, each node, `Controls`, `MiniMap` and `Background` now carry `rf__wrapper`, `rf__node-<id>`,
+  `rf__controls`, `rf__minimap` and `rf__background` — checked against the real library's output — so
+  tests that select on them carry over, as ones on `react-flow__*` class names already did. If you
+  selected an edge on `edge-<id>`, add the prefix.
 - `package.json` `exports` nests `types` under each of `import` and `require`, and exports
   `./package.json`. Resolution by tools that read `exports` is unchanged; the tarball is about 12 kB
   larger for the second set of declarations.

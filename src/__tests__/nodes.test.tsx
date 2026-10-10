@@ -458,7 +458,7 @@ describe('a node\'s or edge\'s own `selectable`', () => {
         />
       </div>,
     );
-    const g = (id: string) => must<SVGGElement>(container, `[data-testid="edge-${id}"]`);
+    const g = (id: string) => must<SVGGElement>(container, `[data-testid="rf__edge-${id}"]`);
     expect(g('yes').classList.contains('selectable')).toBe(true);
     expect(g('plain').classList.contains('selectable')).toBe(false);
     fireEvent.click(g('yes'));
@@ -471,7 +471,7 @@ describe('a node\'s or edge\'s own `selectable`', () => {
         <FlowingerCanvas nodes={two} edges={[{ id: 'no', source: 'a', target: 'b', selectable: false }]} elementsSelectable />
       </div>,
     );
-    expect(must(on.container, '[data-testid="edge-no"]').classList.contains('selectable')).toBe(false);
+    expect(must(on.container, '[data-testid="rf__edge-no"]').classList.contains('selectable')).toBe(false);
   });
 
   it('is no edge selectable on a core with no selection feature, whatever the edge says', () => {
@@ -480,6 +480,6 @@ describe('a node\'s or edge\'s own `selectable`', () => {
         <FlowingerCore nodes={two} edges={[{ id: 'yes', source: 'a', target: 'b', selectable: true }]} elementsSelectable />
       </div>,
     );
-    expect(must(container, '[data-testid="edge-yes"]').classList.contains('selectable')).toBe(false);
+    expect(must(container, '[data-testid="rf__edge-yes"]').classList.contains('selectable')).toBe(false);
   });
 });

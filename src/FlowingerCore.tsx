@@ -584,6 +584,7 @@ function InnerCanvas(props: FlowingerProps) {
         {...Object.assign({}, ...bits.map((b) => b.props))}
         ref={containerRef}
         id={id}
+        data-testid="rf__wrapper"
         className={`flowinger react-flow ${className}`}
         style={containerStyle}
         onPointerDown={onPointerDown}

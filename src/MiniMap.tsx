@@ -176,6 +176,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
 
   const overview = (
     <svg
+      data-testid="rf__minimap"
       className={`flowinger-minimap react-flow__minimap ${className}`.trim()}
       role="img"
       aria-label={ariaLabel}

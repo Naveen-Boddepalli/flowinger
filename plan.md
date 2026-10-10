@@ -479,6 +479,18 @@ came from looking at the **published artifact and the repository's public face**
   way — it read as a pan bug until the number (-220 for a +90 drag) gave it away. (3) *port 4173 already had
   another project's preview on it* (QueryLens), which Playwright's `reuseExistingServer` quietly adopted: the
   suite "ran" against the wrong app. The config now uses an unusual port and never reuses a server.
+- **A migration guide, and what writing it corrected.** `docs/migrating-from-react-flow.md`, with every
+  default read from `@xyflow/react`'s source rather than recalled. That found two things wrong in this
+  project's own docs: (1) the README listed `deleteKeyCode` being `'Backspace'` alone as a *difference* — it
+  is React Flow's default too — and (2) nobody had listed `minZoom` (`0.5` there, `0.05` here) or the one
+  that matters most, that React Flow's `nodesDraggable`, `nodesConnectable` and `elementsSelectable` default
+  to **on** and flowinger's to off. **Test ids:** React Flow stamps `rf__wrapper`, `rf__node-<id>`,
+  `rf__edge-<id>`, `rf__controls`, `rf__minimap` and `rf__background`; flowinger had only `edge-<id>`, so a
+  migrated app's tests would break the way its stylesheet would have. Aligned (a 0.x breaking change to the
+  one id, flagged in the changelog; QueryLens selects on none of them) and compared against the real
+  library's output — which first failed because React Flow itself draws no edge in jsdom until it is told
+  where the handles are (its server-rendering inputs: `width`, `height`, `handles`). Six producers, six
+  mutants, all killed.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the

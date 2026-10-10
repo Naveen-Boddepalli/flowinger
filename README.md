@@ -418,8 +418,12 @@ exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 19 of 22 
   `isConnectable` and its absolute position). `fitView` has no `ease` / `interpolate`.
 
 Counts are not weights — most of the list is niche — but it is a list to check your own code against before
-swapping. Defaults that differ: `fitView` keeps a 40 px margin unless you pass a `padding` ratio, and `deleteKeyCode`
-is `'Backspace'` alone. Nodes and edges do not get React Flow's `role`, `aria-roledescription` or live region.
+swapping. **Defaults differ, and that is the part a compiler will not find:** nodes are not draggable, connectable
+or selectable until you say so (`nodesDraggable`, `nodesConnectable`, `elementsSelectable` — React Flow's are on),
+`minZoom` is `0.05` (React Flow's `0.5`), and `fitView` keeps a 40 px margin unless you pass a `padding` ratio
+(React Flow's is `0.1`). Nodes and edges do not get React Flow's `role`, `aria-roledescription` or live region.
+[**docs/migrating-from-react-flow.md**](docs/migrating-from-react-flow.md) is the checklist, with each default
+read from React Flow's source.
 
 ## Server rendering
 

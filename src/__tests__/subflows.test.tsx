@@ -26,7 +26,7 @@ const el = (c: ParentNode, id: string) => must<HTMLElement>(c, `[data-id="${id}"
 const at = (c: ParentNode, id: string) => el(c, id).style.transform;
 const has = (c: ParentNode, id: string) => c.querySelector(`[data-id="${id}"]`) !== null;
 const edgeD = (c: ParentNode, id: string) =>
-  must(c, `[data-testid="edge-${id}"] .flowinger-edge-path`).getAttribute('d') ?? '';
+  must(c, `[data-testid="rf__edge-${id}"] .flowinger-edge-path`).getAttribute('d') ?? '';
 
 const n = (id: string, x: number, y: number, extra: Partial<Node> = {}): Node => ({
   id,
@@ -161,7 +161,7 @@ describe('a child node', () => {
     expect(has(container, 'p')).toBe(false);
     expect(has(container, 'c')).toBe(false);
     expect(has(container, 'x')).toBe(true);
-    expect(container.querySelector('[data-testid="edge-e"]')).toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-e"]')).toBeNull();
   });
 
   it('is drawn at its canvas position on the minimap', () => {
@@ -516,7 +516,7 @@ describe('onlyRenderVisibleElements', () => {
       { id: 'ef', source: 'e', target: 'f' }, // both out, far from it
     ];
     const { container } = render(<FlowingerCanvas nodes={many} edges={edges} onlyRenderVisibleElements />);
-    const drawn = (id: string) => container.querySelector(`[data-testid="edge-${id}"]`) !== null;
+    const drawn = (id: string) => container.querySelector(`[data-testid="rf__edge-${id}"]`) !== null;
     expect(drawn('ab')).toBe(true);
     expect(drawn('cd')).toBe(true);
     expect(drawn('ef')).toBe(false);

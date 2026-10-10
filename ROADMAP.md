@@ -19,6 +19,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   checked against React Flow's own where the shapes agree.
 - A real-browser suite in CI (Playwright, against the demo): framing, measured handle anchors, wheel
   zoom about the pointer, pan, node drag, a flick, connecting, deleting.
+- A [migration guide](docs/migrating-from-react-flow.md) with every default read from React Flow's source —
+  the part a compiler does not find. (A codemod is only worth writing if people ask for one.)
 - Two examples that build against the packed library in CI: layouts (`d3-hierarchy`, `dagre`, `elkjs`
   behind one signature) and a controlled editor.
 - A release pipeline in the repository — a tag publishes to npm from CI with no stored token and a
@@ -34,8 +36,6 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - **More in the browser suite.** `e2e/smoke.spec.ts` covers load, anchors, wheel, pan, drag, a flick and a
   connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
   (`nodrag`, `nopan`, `nowheel`) from a real press.
-- **A migration guide**, from the "Coming from React Flow" list: what changes, what is missing, what is
-  better. A codemod is only worth writing if people ask for one.
 
 ## Next — close what blocks switching
 

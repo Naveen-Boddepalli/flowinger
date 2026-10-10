@@ -249,7 +249,7 @@ describe('a core canvas with no features', () => {
       <FlowingerCore nodes={pair()} edges={[{ id: 'ab', source: 'a', target: 'b' }]} />,
     );
     expect(at(container, 'b')).toBe('translate(200px, 0px)');
-    expect(container.querySelector('[data-testid="edge-ab"] path')).not.toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-ab"] path')).not.toBeNull();
 
     fireEvent.pointerDown(pane(container), pointer({ clientX: 100, clientY: 100 }));
     fireEvent.pointerMove(pane(container), pointer({ clientX: 140, clientY: 125 }));
@@ -439,13 +439,13 @@ describe('the whole canvas owning the edges', () => {
     const { container } = render(
       <FlowingerCanvas defaultNodes={pair()} defaultEdges={[{ id: 'ab', source: 'a', target: 'b' }]} elementsSelectable />,
     );
-    const edge = must<SVGGElement>(container, '[data-testid="edge-ab"]');
+    const edge = must<SVGGElement>(container, '[data-testid="rf__edge-ab"]');
     fireEvent.click(must(edge, '.flowinger-edge-interaction'));
     expect(edge.classList.contains('selected')).toBe(true); // an edge's `selected` is state it holds itself
     await act(async () => {
       fireEvent.keyDown(pane(container), { key: 'Backspace' });
     });
-    expect(container.querySelector('[data-testid="edge-ab"]')).toBeNull();
+    expect(container.querySelector('[data-testid="rf__edge-ab"]')).toBeNull();
     expect(container.querySelectorAll('.flowinger-node')).toHaveLength(2);
   });
 });
@@ -634,7 +634,7 @@ describe('what a feature adds to the canvas’s own handling', () => {
 
 describe('selection as a feature', () => {
   const link = [{ id: 'ab', source: 'a', target: 'b' }];
-  const edgeG = (c: ParentNode) => must<SVGGElement>(c, '[data-testid="edge-ab"]');
+  const edgeG = (c: ParentNode) => must<SVGGElement>(c, '[data-testid="rf__edge-ab"]');
   const isSelected = (c: ParentNode, id: string) => node(c, id).classList.contains('selected');
 
   it('selects on a click, adds with Shift, and a click on the empty canvas clears — with the feature', () => {
@@ -830,7 +830,7 @@ describe('the slots selecting uses, for a feature of your own', () => {
     const { container } = render(
       <FlowingerCore nodes={pair()} edges={link} elementsSelectable features={[mine]} onEdgeClick={() => order.push('onEdgeClick')} />,
     );
-    const g = must<SVGGElement>(container, '[data-testid="edge-ab"]');
+    const g = must<SVGGElement>(container, '[data-testid="rf__edge-ab"]');
     fireEvent.click(g);
     expect(order).toEqual(['onEdgeClick', 'click ab true']);
     fireEvent.keyDown(g, { key: 'x' });
@@ -859,9 +859,9 @@ describe('the slots selecting uses, for a feature of your own', () => {
   it('selectable: elementsSelectable alone does not make anything selectable; a feature that says so does', () => {
     const says: Feature = { name: 'says', useCanvas: () => ({ selectable: true }) };
     const off = render(<FlowingerCore nodes={pair()} edges={link} features={[says]} />);
-    expect(must(off.container, '[data-testid="edge-ab"]').classList.contains('selectable')).toBe(false); // the canvas has not allowed it
+    expect(must(off.container, '[data-testid="rf__edge-ab"]').classList.contains('selectable')).toBe(false); // the canvas has not allowed it
     off.unmount();
     const on = render(<FlowingerCore nodes={pair()} edges={link} elementsSelectable features={[says]} />);
-    expect(must(on.container, '[data-testid="edge-ab"]').classList.contains('selectable')).toBe(true);
+    expect(must(on.container, '[data-testid="rf__edge-ab"]').classList.contains('selectable')).toBe(true);
   });
 });

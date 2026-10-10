@@ -26,7 +26,7 @@ async function centre(locator: Locator): Promise<{ x: number; y: number }> {
 const node = (page: Page, id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
 const handle = (page: Page, nodeId: string, handleId: string) =>
   page.locator(`.react-flow__handle[data-nodeid="${nodeId}"][data-handleid="${handleId}"]`);
-const edge = (page: Page, id: string) => page.locator(`[data-testid="edge-${id}"]`);
+const edge = (page: Page, id: string) => page.locator(`[data-testid="rf__edge-${id}"]`);
 
 /**
  * A point of empty canvas: inside the pane, clear of every node and of the demo's own widgets — the

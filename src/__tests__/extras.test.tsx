@@ -710,7 +710,7 @@ describe('the step edge type', () => {
       { id: 'smooth', source: 'a', target: 'b', type: 'smoothstep' },
     ];
     const { container } = render(<FlowingerCanvas nodes={[box('a', 0, 0), box('b', 200, 200)]} edges={edges} />);
-    const d = (id: string) => must(container, `[data-testid="edge-${id}"] .flowinger-edge-path`).getAttribute('d') ?? '';
+    const d = (id: string) => must(container, `[data-testid="rf__edge-${id}"] .flowinger-edge-path`).getAttribute('d') ?? '';
     expect(d('step')).not.toContain('Q');
     expect(d('step')).toMatch(/^M [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ L [\d.]+ [\d.]+$/);
     expect(d('smooth')).toContain('Q');
