@@ -9,8 +9,7 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
-`package.json` says `0.4.0-rc.1` while the release candidate is out: set it to `0.4.0` and rename this
-heading to `## [0.4.0] - <date>` when it is released.
+## [0.4.0] - 2026-10-10
 
 ### Added
 
@@ -79,9 +78,9 @@ heading to `## [0.4.0] - <date>` when it is released.
 
 ## [0.4.0-rc.1] - 2026-10-10
 
-A release candidate, published to the `next` dist-tag (`npm install flowinger@next`). It carries everything
-listed under **Unreleased** above, which becomes the `0.4.0` entry; this tag is the first run of the release
-pipeline itself — npm trusted publishing and the provenance attestation — before the real release.
+A release candidate, published to the `next` dist-tag. It carried what became `0.4.0`, above, and was the
+first run of the release pipeline itself — npm trusted publishing and the provenance attestation — before the
+real release.
 
 ## [0.3.0] - 2026-09-22
 
@@ -136,7 +135,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0
 [0.4.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0-rc.1
 [0.3.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.1.0...v0.2.0
