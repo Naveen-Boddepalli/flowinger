@@ -23,6 +23,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   the part a compiler does not find. (A codemod is only worth writing if people ask for one.)
 - Two examples that build against the packed library in CI: layouts (`d3-hierarchy`, `dagre`, `elkjs`
   behind one signature) and a controlled editor.
+- `0.4.0`, published from CI by tag with a provenance attestation and no stored token (after `0.4.0-rc.1`
+  on `next`); the demo live on GitHub Pages.
 - A release pipeline in the repository — a tag publishes to npm from CI with no stored token and a
   provenance attestation — a changelog, and a demo built for GitHub Pages. (Each needs a one-time switch on
   GitHub or npm; [CONTRIBUTING.md](CONTRIBUTING.md#releasing) lists them.)

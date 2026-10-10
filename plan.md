@@ -574,8 +574,26 @@ came from looking at the **published artifact and the repository's public face**
 - **Checked while writing:** the README's first draft said the demo lays out a tree; it does not (positions
   are hand-written) — corrected before it shipped. The release-notes extraction in `release.yml` swallowed
   the changelog's link references for the oldest entry — caught by running it against the real file.
-- **Not done:** actually releasing (no `0.4.0` on npm yet; nothing here was published, pushed or tagged);
-  the Playwright smoke test, layout recipes and `examples/` (see `ROADMAP.md`); a docs site.
+- **Not done:** a docs site, and the rest of `ROADMAP.md`. (The release itself, the browser suite, the layout recipes
+  and the examples were done afterwards — see below.)
+
+### The release candidate, as verified
+
+`v0.4.0-rc.1` went out through `release.yml` with no stored token, and was checked from the outside, not by the
+green ticks:
+
+- **The run** (`publish` 1m 46s, then `release`): every gate step — tag and version agree, a changelog heading,
+  npm ≥ 11.5.1, typecheck, tests, build, both size budgets, package check, examples, browser suite — and then
+  the publish. The first run of `check:package` and of OIDC publishing on CI, both green.
+- **The registry:** `latest` stays `0.3.0`, `next` is `0.4.0-rc.1`; the version carries a SLSA provenance
+  attestation naming `release.yml @ refs/tags/v0.4.0-rc.1` on a GitHub-hosted runner, plus npm's publish
+  attestation.
+- **The artifact, installed from the registry into an empty project:** `npm audit signatures` verifies the
+  registry signatures and the attestations; `require` and `import` load it, a server render from each carries
+  the new test ids and a controlled viewport in the first markup; a strict `nodenext` TypeScript consumer
+  (`.cts` and `.mts`, `skipLibCheck` off) resolves the new type names.
+- **The GitHub release** was created as a prerelease with the changelog's notes.
+- **The npm page:** relative images and links are rewritten to `raw.githubusercontent.com` / `blob/HEAD`.
 
 ### Launch checklist
 
@@ -584,13 +602,13 @@ What is *in the repository* is done; what is left is switches only the owner can
 | # | Step | State |
 |---|---|---|
 | 1 | Make the GitHub repository public. | **done** (it is public; PR #1 is merged) |
-| 2 | Settings → Pages → Source: **GitHub Actions** (then `pages.yml` publishes the demo). Until it is, `deploy` fails with `HttpError: Not Found` / 404 — seen on the first two runs, with `build` green, so the artifact and its `/flowinger/` base are fine. The `github-pages` environment only deploys from `main`, so re-run it there | open |
-| 3 | npmjs.com → `flowinger` → Settings → **Trusted Publisher** → GitHub Actions: owner `Naveen-Boddepalli`, repo `flowinger`, workflow `release.yml`; then *Publishing access* → require 2FA and disallow tokens | open |
+| 2 | Settings → Pages → Source: **GitHub Actions** (then `pages.yml` publishes the demo). Until it was, `deploy` failed with `HttpError: Not Found` / 404 — seen on the first two runs, with `build` green, so the artifact and its `/flowinger/` base were fine | **done**: https://naveen-boddepalli.github.io/flowinger/ answers 200 |
+| 3 | npmjs.com → `flowinger` → Settings → **Trusted Publisher** → GitHub Actions: owner `Naveen-Boddepalli`, repo `flowinger`, workflow `release.yml` | **done**, and validated by the first publish. Still open: *Publishing access* → "Require two-factor authentication and disallow bypass 2fa tokens" — trusted publishing keeps working under it, and npm is restricting bypass tokens anyway |
 | 4 | Settings → Security → enable **private vulnerability reporting**; Settings → enable **Discussions**; set the description, homepage (the demo) and topics | open |
 | 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **done**: tagged, each checked against the registry's `gitHead`, and pushed with the branch |
-| 6 | Merge this work; set `CHANGELOG.md`'s Unreleased to `0.4.0`; push a **prerelease** tag first (`v0.4.0-rc.1` — set the version to match) to prove steps 1–3, then `v0.4.0` | open |
+| 6 | Merge this work; push a **prerelease** tag first (`v0.4.0-rc.1`) to prove steps 1–3, then `v0.4.0` | `v0.4.0-rc.1` **done** (see below); `v0.4.0` is the PR that sets the version and the changelog heading — merge it, then `git tag v0.4.0 && git push origin v0.4.0` |
 | 7 | Replace the contact line in `CODE_OF_CONDUCT.md` with a dedicated address if wanted (it points at the GitHub profile) | optional |
-| 8 | After the first release, look at the README on npmjs.com: its three images are relative paths (right on GitHub, including while private). If npm does not rewrite them, change them to `https://raw.githubusercontent.com/Naveen-Boddepalli/flowinger/main/docs/assets/…` | open |
+| 8 | After the first release, look at the README on npmjs.com: its three images are relative paths. | **done**: npm rewrites them to `raw.githubusercontent.com/…/HEAD/docs/assets/…` and all three load; relative links become `github.com/…/blob/HEAD/…`. No change needed |
 
 ### Not built
 
@@ -607,8 +625,9 @@ What is *in the repository* is done; what is left is switches only the owner can
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Published to npm: `flowinger@0.1.0` (2026-09-21), then `0.2.0` (2026-09-22, the fourth round's additions —
   events, viewport moves, edge label styling, `NodeProps`, the NOTICE), then `0.3.0` (2026-09-22, the fifth
-  round — `getInternalNode`, `useInternalNode`, `useStoreApi`, ARIA fields). The sixth round's additions are
-  on `main` but not yet in a release. QueryLens's trial branch tracked the registry version and was bumped at
+  round — `getInternalNode`, `useInternalNode`, `useStoreApi`, ARIA fields), then `0.4.0` (2026-10-10 — the
+  sixth round and the seventh, published from CI by tag with provenance, after `0.4.0-rc.1` on the `next`
+  tag). QueryLens's trial branch tracked the registry version and was bumped at
   each release before it was merged into QueryLens `main` (2026-09-22, PR #6) — QueryLens now bumps `main`
   directly at each flowinger release instead; `flow` chunk 18.0 → 18.9 → 19.0 kB across `0.1.0` → `0.2.0` →
   `0.3.0`.
