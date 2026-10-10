@@ -550,11 +550,11 @@ What is *in the repository* is done; what is left is switches only the owner can
 
 | # | Step | State |
 |---|---|---|
-| 1 | Make the GitHub repository public (it answers 404 to anonymous requests today) | open |
+| 1 | Make the GitHub repository public. It exists (the branch and tags are pushed) but still answers 404 to anonymous requests, so it is private; Pages, provenance and the badges all need it public | open |
 | 2 | Settings → Pages → Source: **GitHub Actions** (then `pages.yml` publishes the demo) | open |
 | 3 | npmjs.com → `flowinger` → Settings → **Trusted Publisher** → GitHub Actions: owner `Naveen-Boddepalli`, repo `flowinger`, workflow `release.yml`; then *Publishing access* → require 2FA and disallow tokens | open |
 | 4 | Settings → Security → enable **private vulnerability reporting**; Settings → enable **Discussions**; set the description, homepage (the demo) and topics | open |
-| 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **tagged locally**, each checked against the registry's `gitHead`; still to push: `git push origin v0.1.0 v0.2.0 v0.3.0` |
+| 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **done**: tagged, each checked against the registry's `gitHead`, and pushed with the branch |
 | 6 | Merge this work; set `CHANGELOG.md`'s Unreleased to `0.4.0`; push a **prerelease** tag first (`v0.4.0-rc.1` — set the version to match) to prove steps 1–3, then `v0.4.0` | open |
 | 7 | Replace the contact line in `CODE_OF_CONDUCT.md` with a dedicated address if wanted (it points at the GitHub profile) | optional |
 
