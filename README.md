@@ -10,7 +10,7 @@
 
 A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
 drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
-Pay for what you use: the core is about 16 kB gzipped and each feature adds only its own code — about 25 kB with
+Pay for what you use: the core is about 17 kB gzipped and each feature adds only its own code — about 26 kB with
 all of them (see [Pay for what you use](#pay-for-what-you-use)). The only peer dependencies are `react` and
 `react-dom` (18 or 19).
 
@@ -136,7 +136,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 16 kB gzipped (25 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 17 kB gzipped (26 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
@@ -233,7 +233,9 @@ A node whose `type` is missing, or names nothing in `nodeTypes`, is drawn as Rea
 `sourcePosition` (default `'bottom'`). `type: 'input'` is a start and has only the source, `type: 'output'` is
 an end and has only the target, and `type: 'group'` is a container with none. A horizontal layout sets
 `sourcePosition: 'right'` and `targetPosition: 'left'` on its nodes. A component of your own under any of those
-names in `nodeTypes` replaces it (and is handed both fields, to use or not).
+names in `nodeTypes` replaces it (and is handed both fields, to use or not). As in React Flow, a
+`nodeTypes.default` of your own is also what a node with no `type` is, and what a `type` nobody registered
+falls back to — `input`, `output` and `group` stay the built-ins unless you register them.
 
 ### Handles
 
@@ -406,8 +408,11 @@ exports**, **83 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 
 - **Layout and look:** `nodeOrigin`, `elevateNodesOnSelect` / `elevateEdgesOnSelect`, `zIndexMode`, `colorMode`,
   `debug`, `ariaLabelConfig`, `defaultMarkerColor`, `connectionLineContainerStyle` (`proOptions` and
   `attributionPosition` are accepted and do nothing — there is no attribution to hide). The canvas now takes
-  `id` and a `domAttributes` escape hatch (never an event handler, or what it already owns); `Panel`,
-  `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` still take only `className`, `style` and `children`.
+  `id` and a `domAttributes` escape hatch (never an event handler, or what it already owns). `Panel`,
+  `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` take the attributes of their own element — `id`, `title`,
+  `role`, `aria-*`, `tabIndex`, `data-*` — but not its event handlers (`onClick`, `onPointerDown`…), which the
+  canvas's own pointer and keyboard handling would lose to; a handle's `id` stays its handle id, and on
+  `BaseEdge` they land on the path. The engine's own classes, positioning and handlers win over yours.
 - **Hooks and instance:** `useUpdateNodeInternals`, `useOnViewportChange`, `useConnection`,
   `useHandleConnections`, `useStoreApi` (`getState()` and `subscribe()`, no generic `setState`),
   `getNodeConnections` and `getHandleConnections` are all there now. `viewportInitialized`: on purpose —

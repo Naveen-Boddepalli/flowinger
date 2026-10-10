@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import * as ReactFlowLib from '@xyflow/react';
 import {
@@ -143,6 +143,58 @@ describe('a component of your own', () => {
       </div>,
     );
     expect(seen).toEqual({ sourcePosition: undefined, targetPosition: undefined });
+  });
+});
+
+describe('a `default` of your own', () => {
+  const Mine = ({ id }: NodeProps) => <span data-testid={`mine-${id}`}>mine</span>;
+  const minesOf = (root: ParentNode) =>
+    [...root.querySelectorAll('[data-testid^="mine-"]')].map((e) => e.getAttribute('data-testid')).sort();
+
+  it('is what a node with no type is, and what a type nobody registered falls back to — as in React Flow', () => {
+    // React Flow reports an unknown type to the console and draws the `default` instead.
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const list = [
+      at('plain', undefined),
+      at('named', 'default'),
+      at('unknown', 'nobody-registered'),
+      at('input', 'input'),
+      at('output', 'output'),
+      at('group', 'group', { width: 300, height: 200 }),
+    ];
+
+    const ours = render(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCore nodes={list} nodeTypes={{ default: Mine }} />
+      </div>,
+    ).container;
+    const theirs = render(
+      <ReactFlowLib.ReactFlowProvider>
+        <div style={{ width: 800, height: 600 }}>
+          <ReactFlowLib.ReactFlow nodes={list as never} nodeTypes={{ default: Mine } as never} edges={[]} />
+        </div>
+      </ReactFlowLib.ReactFlowProvider>,
+    ).container;
+
+    const expected = minesOf(theirs);
+    // Not vacuous: the oracle draws the component for the nodes that should get it...
+    expect(expected).toContain('mine-plain');
+    expect(expected).toContain('mine-unknown');
+    // ...and not for `input`, `output` or `group`, which are built-ins of their own.
+    for (const builtIn of ['mine-input', 'mine-output', 'mine-group']) expect(expected).not.toContain(builtIn);
+    expect(minesOf(ours)).toEqual(expected);
+  });
+
+  it('is not used for a type that was registered', () => {
+    const Other = ({ id }: NodeProps) => <span data-testid={`other-${id}`}>other</span>;
+    const { container } = render(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCore nodes={[at('a', 'special')]} nodeTypes={{ default: Mine, special: Other }} />
+      </div>,
+    );
+    expect(container.querySelector('[data-testid="other-a"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="mine-a"]')).toBeNull();
   });
 });
 

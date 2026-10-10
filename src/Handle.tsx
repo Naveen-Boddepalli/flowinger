@@ -56,6 +56,7 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
   onConnect,
   className = '',
   style = {},
+  ...rest
 }: HandleProps) {
   const node = useContext(NodeContext);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -97,6 +98,7 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
 
   return (
     <div
+      {...rest}
       ref={ref}
       data-handleid={id}
       data-nodeid={node?.nodeId}

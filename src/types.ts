@@ -7,6 +7,7 @@ import type {
   ReactNode,
   SVGAttributes,
 } from 'react';
+import type { PassThroughHtml } from './attributes.ts';
 import type { NodeConnection } from './connections.ts';
 import type { Feature } from './features.ts';
 
@@ -394,7 +395,8 @@ export interface BackgroundProps {
   style?: CSSProperties;
 }
 
-export interface HandleProps {
+export interface HandleProps extends PassThroughHtml<'id'> {
+  /** The handle's own name, which an edge's `sourceHandle` / `targetHandle` refers to — not a DOM `id`. */
   id?: string;
   type: HandleType;
   position: Position;

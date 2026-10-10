@@ -46,7 +46,6 @@ of 119 canvas props):
 2. **Key-code props** — `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
    `zoomActivationKeyCode` — and the click and drag distance thresholds.
 3. **`colorMode`**, `connectOnClick`, `connectionRadius`.
-4. **Pass-through HTML attributes** on `Panel`, `MiniMap`, `NodeToolbar`, `Handle` and `BaseEdge`.
 
 Each lands the way the rest did: a test that fails without it, the oracle (`@xyflow/react`) run on the same
 input where behaviour should match, and — if it adds code — in a feature, so a canvas that only shows a graph

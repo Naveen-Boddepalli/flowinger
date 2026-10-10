@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import type { PassThroughHtml } from './attributes.ts';
 
 export type PanelPosition =
   | 'top-left'
@@ -21,7 +22,7 @@ const PLACEMENT: Record<PanelPosition, CSSProperties> = {
   'center-right': { top: '50%', right: 0, transform: 'translateY(-50%)' },
 };
 
-export interface PanelProps {
+export interface PanelProps extends PassThroughHtml {
   /** Where on the canvas it sits. Default `top-left`. */
   position?: PanelPosition;
   className?: string;
@@ -35,9 +36,10 @@ export interface PanelProps {
  * provider-wrapped children). A press on it does not pan the canvas, and a click
  * on it is not a click on the pane.
  */
-export function Panel({ position = 'top-left', className = '', style, children }: PanelProps) {
+export function Panel({ position = 'top-left', className = '', style, children, ...rest }: PanelProps) {
   return (
     <div
+      {...rest}
       className={`flowinger-panel react-flow__panel nopan ${position} ${className}`.trim()}
       style={{ position: 'absolute', zIndex: 5, margin: 15, ...PLACEMENT[position], ...style }}
     >

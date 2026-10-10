@@ -78,6 +78,9 @@ function DefaultNodeView({ id, data, selected, type, sourcePosition, targetPosit
   );
 }
 
+/** The node types React Flow has built in, besides `default`: drawn by `DefaultNodeView`, whatever `nodeTypes.default` is. */
+const BUILTIN_TYPES: ReadonlySet<string> = new Set(['input', 'output', 'group']);
+
 /** How long a double-click zoom takes. */
 const DOUBLE_CLICK_ZOOM_MS = 200;
 
@@ -711,7 +714,14 @@ function InnerCanvas(props: FlowingerProps) {
                 node={node}
                 // A component is chosen by string at runtime, so its `data` type
                 // cannot be checked here; `NodeTypes` accepts any.
-                View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
+                // As React Flow resolves it: a registered type; else the built-in of that name (`input`,
+                // `output`, `group`); else — no type, or one nobody registered — `nodeTypes.default`, or
+                // the built-in default.
+                View={
+                  ((node.type && nodeTypes[node.type]) ||
+                    (node.type && BUILTIN_TYPES.has(node.type) ? DefaultNodeView : nodeTypes.default) ||
+                    DefaultNodeView) as ComponentType<NodeProps>
+                }
                 draggable={node.draggable ?? nodesDraggable}
                 selectable={canSelect && (node.selectable ?? elementsSelectable)}
                 connectable={node.connectable ?? nodesConnectable}

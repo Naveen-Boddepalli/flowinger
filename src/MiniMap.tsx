@@ -9,6 +9,7 @@ import {
 import { useFlowingerStore, useViewport } from './context.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import { capturePointer, releasePointer } from './pointer.ts';
+import type { PassThroughHtml } from './attributes.ts';
 import type { Node } from './types.ts';
 
 interface Box {
@@ -18,7 +19,7 @@ interface Box {
   h: number;
 }
 
-export interface MiniMapProps {
+export interface MiniMapProps extends PassThroughHtml<'role', SVGSVGElement> {
   /** The size of the overview, in pixels. Default 200 × 150. */
   width?: number;
   height?: number;
@@ -80,6 +81,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   ariaLabel = 'Minimap',
   className = '',
   style,
+  ...rest
 }: MiniMapProps) {
   const store = useFlowingerStore();
   // Positions, sizes, node lists and the pane's size all arrive as geometry
@@ -177,6 +179,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   const overview = (
     <svg
       data-testid="rf__minimap"
+      {...rest}
       className={`flowinger-minimap react-flow__minimap ${className}`.trim()}
       role="img"
       aria-label={ariaLabel}

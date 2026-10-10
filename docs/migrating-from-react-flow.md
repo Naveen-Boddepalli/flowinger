@@ -99,7 +99,11 @@ saying what you were building — that is how the list is ordered.
 
 - **A node with no component of your own** is React Flow's `default`, `input` or `output`: `id` and
   `data.label`, with handles on `targetPosition` / `sourcePosition`. It also shows its `id` in bold above the
-  label, which React Flow's does not.
+  label, which React Flow's does not. A `default` of your own in `nodeTypes` replaces it for nodes with no
+  type and for types nobody registered, as in React Flow.
+- **`Panel`, `MiniMap`, `NodeToolbar`, `Handle` and `BaseEdge` take their element's attributes** (`id`,
+  `aria-*`, `data-*`…) but not its event handlers; React Flow lets those through, and a handler there would
+  replace what the canvas does with the press. Put a handler on an element inside, or on a wrapper.
 
 - **`useStore`** reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`,
   `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store, and **`useStoreApi`** has

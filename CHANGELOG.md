@@ -13,6 +13,11 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **`Panel`, `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` take the attributes of their own element** —
+  `id`, `title`, `role`, `aria-*`, `tabIndex`, `data-*`. Not its event handlers, which the canvas's own
+  pointer and keyboard handling would lose to (a compile error, rather than a handler that quietly
+  replaces a drag); a handle's `id` is still its handle id; on `BaseEdge` they land on the path. The
+  engine's classes, positioning and handlers win over yours.
 - **A controlled view: `viewport` and `onViewportChange`.** Given `viewport`, the canvas draws exactly it and
   moves nowhere on its own; a pan, a wheel zoom, a zoom button or `fitView` asks through
   `onViewportChange` where it would go, and the view changes when `viewport` does. An animated move is
@@ -25,6 +30,9 @@ The design notes behind each release — what was measured, what was tried and d
   `sourcePosition` (default bottom); `input` has only the source, `output` only the target, `group` none. A
   component of your own is handed both fields. Before, such a node had no handles at all and edges
   attached to it by direction. The handle sets are compared with React Flow's own rendering.
+- **`nodeTypes.default` is used, as in React Flow.** A node with no `type`, or a `type` nobody registered,
+  is drawn by the `default` you register — before, only the built-in view was ever used for them. `input`,
+  `output` and `group` stay the built-ins unless registered. Compared with React Flow's own rendering.
 - **React Flow's type names**, for the types flowinger already has: `OnNodesChange`, `OnEdgesChange`,
   `OnConnect`, `OnConnectStart`, `OnConnectEnd`, `OnInit`, `OnMove*`, `OnNodeDrag`, `OnDelete`,
   `OnBeforeDelete`, `OnSelectionChangeFunc`, `NodeMouseHandler`, `EdgeMouseHandler`, `IsValidConnection`,

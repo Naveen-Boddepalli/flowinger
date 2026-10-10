@@ -515,6 +515,23 @@ came from looking at the **published artifact and the repository's public face**
   each and one for the second wheel tick building on the owner's view. Two other survivors were a missing
   assertion (the server-rendered first paint) and an *equivalent* mutant (the `defaultViewport` guard: that
   effect runs before the callbacks and listeners exist, so the transient move it avoids cannot be seen).
+- **Pass-through attributes — and a node-type rule found by testing them.** `Panel`, `NodeToolbar`, `MiniMap`,
+  `Handle` and `BaseEdge` take their element's non-handler attributes (a shared types-only
+  `PassThroughHtml` / `PassThroughSvg`, `attributes.ts`): the useful part of what React Flow lets through,
+  minus the handlers that would silently replace the canvas's own. A handle's `id` stays the handle id; on
+  `BaseEdge` they land on the path and the engine's `d`, `fill`, markers and classes win (a test passes them
+  by cast to pin that). The tests used `nodeTypes={{ default: … }}` to put a component in a typeless node,
+  and it was *not used* — React Flow resolves `node.type || 'default'`, and sends an unregistered type to
+  `nodeTypes.default` too. Fixed, and the oracle caught my first fix: React Flow still draws its built-in
+  `input`/`output`/`group` when `default` is overridden, which mine had sent to the override. Eleven
+  mutants, two survivors that became tests (a typeless `group`; the engine winning over a cast-in `d`).
+- **Where the bytes went, and the budget raise.** The whole canvas went 25.4 → 26.0 kB gzip over this round and the
+  lean core 16.5 → 16.9 (16.3 → 16.8 from `dist`): ~0.1 each for the flick fix, the test ids, the built-in node
+  handles and the pass-through attributes, and 0.2–0.3 for the controlled viewport (measured at each commit, from
+  a clean checkout). All were compatibility features chosen deliberately, so the full-canvas budget moved
+  26 → 27, in CI, the release workflow and CONTRIBUTING; **the lean budget stays 17** and has 0.1 kB of room,
+  so the next change that touches the core has to earn its bytes (or be a feature). `release.yml` also now
+  runs the examples and the browser suite — it said "the same gate as CI" and was not.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the
