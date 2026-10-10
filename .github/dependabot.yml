@@ -23,6 +23,9 @@ updates:
       # Pinned on purpose: the oracle the tests diff against, and the version the audit script reads.
       # Moved by hand, with scripts/audit-react-flow.mjs re-run and the README's counts updated.
       - dependency-name: '@xyflow/react'
+      # The audit script needs TypeScript's in-process API, which 7 does not have; the alias stays on 6.x.
+      - dependency-name: typescript-js-api
+        update-types: ['version-update:semver-major']
 
   # The examples are copied out by people, so their dependencies should be current. `flowinger` itself is
   # left alone: it is bumped by hand when a release has the API an example uses.
@@ -37,4 +40,13 @@ updates:
         patterns: ['*']
     ignore:
       - dependency-name: flowinger
+      # The toolchain is pinned to a line with a long record in StackBlitz's in-browser runtime — the reason
+      # these examples use Vite 6 and not the repository's own (examples/README.md). Minor and patch
+      # updates still come; a major is a decision, taken by hand.
+      - dependency-name: vite
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: ['version-update:semver-major']
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
 
