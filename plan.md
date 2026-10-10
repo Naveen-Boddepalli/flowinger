@@ -434,8 +434,9 @@ came from looking at the **published artifact and the repository's public face**
   the npm page all point at it: private, or not pushed. Everything in this round that depends on it being
   public (the Pages demo, the badges, provenance, the issue forms) is built and waiting — see the launch
   checklist below. I did not check the remote with credentials.
-- **React Flow's type names — 47 aliases** (`src/reactFlowNames.ts`), the single largest migration
-  paper-cut the audit had: 103 of the 112 missing exports were types. The audit went **99 → 146 of 211**
+- **React Flow's type names — 59 aliases** (`src/reactFlowNames.ts`; 47 at first, 12 more once the shapes had
+  been read), the single largest migration
+  paper-cut the audit had: 103 of the 112 missing exports were types. The audit went **99 → 158 of 211**
   exports. Each handler is written against the prop it describes and a test asserts it is *exactly* that
   prop's type, so it cannot drift; where React Flow's own shape is identical (`OnConnect`,
   `CoordinateExtent`, `SnapGrid`, `KeyCode`, `Dimensions`, `Box`, `Transform`, `XYZPosition`) the test
@@ -545,8 +546,8 @@ What is *in the repository* is done; what is left is switches only the owner can
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
 - A lot that React Flow has, though less than before each round above. Measured (not from memory) with
-  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 146 of its 211 exports
-  (56 of the 65 missing are types — 99 of 211 before the seventh round's type names), 83 of 119 `ReactFlow` props, 31 of 32 instance methods, 21 of 22
+  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 158 of its 211 exports
+  (44 of the 53 missing are types — 99 of 211 before the seventh round's type names), 83 of 119 `ReactFlow` props, 31 of 32 instance methods, 21 of 22
   `Node` fields, 13 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
   from React Flow" lists what is missing, by category — mostly key-code and threshold props
   (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, and HTML attributes on `Panel`,

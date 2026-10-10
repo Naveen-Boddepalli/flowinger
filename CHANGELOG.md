@@ -30,9 +30,10 @@ The design notes behind each release — what was measured, what was tried and d
   `OnBeforeDelete`, `OnSelectionChangeFunc`, `NodeMouseHandler`, `EdgeMouseHandler`, `IsValidConnection`,
   `ReactFlowProps`, `ReactFlowInstance`, `ReactFlowJsonObject`, `DefaultEdgeOptions`, `CoordinateExtent`,
   `SnapGrid`, `ControlProps`, `ConnectionLineComponent`, `BezierEdgeProps` and the other built-in edges'
-  props, `GetBezierPathParams` and its two siblings, and a few more — 47 in all. Types only, so nothing
+  props, `GetBezierPathParams` and its two siblings, `HandleConnection`, `DeleteElementsOptions`,
+  `FitBoundsOptions`, `OnResize` and the other resize callbacks, and a few more — 59 in all. Types only, so nothing
   reaches a bundle. `ReactFlowProps` and `ReactFlowInstance` are not generic, on purpose. Of React Flow's
-  211 exports flowinger now has 146 (it had 99).
+  211 exports flowinger now has 158 (it had 99).
 - `useConnection(selector?)` — the connection being dragged right now: `fromNode` / `toNode`,
   `fromHandle` / `toHandle`, `isValid`, `from` / `to`. The target is reported whether or not it would be
   accepted, so a node can mark an incompatible one. `NoConnection` when none is in progress.

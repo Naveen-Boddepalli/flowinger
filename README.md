@@ -382,7 +382,7 @@ Flow code**: it covers the part of the API an app like [QueryLens](https://githu
 uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **146 of its 211
+(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **158 of its 211
 exports**, **83 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 `Node` fields, **13 of 13**
 `NodeProps` fields, and **20 of 20** on both `Edge` and `EdgeProps`. What is missing:
 
@@ -391,9 +391,9 @@ exports**, **83 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 
   only. Two things differ on purpose: `ReactFlowProps` and `ReactFlowInstance` are **not generic** (the canvas
   and the instance are not, so `ReactFlowInstance<MyNode>` is an error here rather than a type argument quietly
   ignored), and `OnConnectEnd`'s second argument is flowinger's `ConnectEndState`, not React Flow's
-  `FinalConnectionState`. Of the 65 exports still missing, 56 are types — mostly for components and props
-  flowinger does not have (`NodeOrigin`, `ColorMode`, the resize-control and MiniMap-node types), plus a few
-  small ones not yet done (`DeleteElementsOptions`, `FitBoundsOptions`, `HandleConnection`…).
+  `FinalConnectionState`. Of the 53 exports still missing, 44 are types — nearly all for components and props
+  flowinger does not have (`NodeOrigin`, `ColorMode`, `PanOnScrollMode`, the resize-control, edge-toolbar and
+  MiniMap-node types), plus `SmoothStepPathOptions` and `BezierPathOptions`, whose shapes differ.
 
 - **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onClickConnectStart` / `End` (connecting
   by click, as opposed to dragging). Mouse events on nodes, edges and the pane (double click, context menu, enter, move,

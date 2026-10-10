@@ -16,10 +16,14 @@
 //
 // Each handler is written out against the prop it describes, and `reactFlowNames.test.ts` asserts that it
 // is *exactly* that prop's type — so these cannot drift from what the canvas accepts.
-import type { ComponentProps, ComponentType } from 'react';
+import type { ButtonHTMLAttributes, ComponentProps, ComponentType } from 'react';
 import type { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './builtinEdges.tsx';
 import type { ControlsProps } from './Controls.tsx';
+import type { NodeConnection } from './connections.ts';
 import type { UseNodeConnectionsOptions } from './dataHooks.ts';
+import type { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
+import type { NodeResizerProps } from './NodeResizer.tsx';
+import type { useOnSelectionChange } from './selectionHooks.ts';
 import type {
   Connection,
   ConnectEndState,
@@ -116,3 +120,26 @@ export type BezierEdgeProps = ComponentProps<typeof BezierEdge>;
 export type StraightEdgeProps = ComponentProps<typeof StraightEdge>;
 export type SmoothStepEdgeProps = ComponentProps<typeof SmoothStepEdge>;
 export type StepEdgeProps = ComponentProps<typeof StepEdge>;
+
+// --- the small ones --------------------------------------------------------------------------------------
+
+/** An edge at a handle, as `useNodeConnections` and `getHandleConnections` return it. */
+export type HandleConnection = NodeConnection;
+/** What a `ControlButton` takes: a button's own attributes. */
+export type ControlButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+export type EdgeLabelRendererProps = ComponentProps<typeof EdgeLabelRenderer>;
+/** What `deleteElements` is given: the ids (and nothing more is read) of what to delete. */
+export type DeleteElementsOptions = Parameters<FlowingerInstance['deleteElements']>[0];
+/** What `fitBounds` takes after the rectangle. */
+export type FitBoundsOptions = NonNullable<Parameters<FlowingerInstance['fitBounds']>[1]>;
+export type UseOnSelectionChangeOptions = Parameters<typeof useOnSelectionChange>[0];
+/** A marker an edge can ask for: `'arrow'`, `'arrowclosed'` or `{ type, color, width, height }`. */
+export type EdgeMarkerType = NonNullable<Edge['markerEnd']>;
+/** `proOptions`: accepted so code written for React Flow compiles; there is no attribution to hide. */
+export type ProOptions = NonNullable<FlowingerProps['proOptions']>;
+
+// What a `NodeResizer` is given and calls — its pointer event is a React one, as React Flow's own is.
+export type OnResizeStart = NonNullable<NodeResizerProps['onResizeStart']>;
+export type OnResize = NonNullable<NodeResizerProps['onResize']>;
+export type OnResizeEnd = NonNullable<NodeResizerProps['onResizeEnd']>;
+export type ShouldResize = NonNullable<NodeResizerProps['shouldResize']>;

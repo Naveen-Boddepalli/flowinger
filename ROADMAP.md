@@ -39,7 +39,7 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 ## Next — close what blocks switching
 
-Ordered by how often it comes up, from the audit (`node scripts/audit-react-flow.mjs`: 146 of 211 exports, 83
+Ordered by how often it comes up, from the audit (`node scripts/audit-react-flow.mjs`: 158 of 211 exports, 83
 of 119 canvas props):
 
 1. **`nodeOrigin`.**
@@ -47,8 +47,6 @@ of 119 canvas props):
    `zoomActivationKeyCode` — and the click and drag distance thresholds.
 3. **`colorMode`**, `connectOnClick`, `connectionRadius`.
 4. **Pass-through HTML attributes** on `Panel`, `MiniMap`, `NodeToolbar`, `Handle` and `BaseEdge`.
-5. **The small types still missing** — `DeleteElementsOptions`, `FitBoundsOptions`, `HandleConnection`,
-   `UseOnSelectionChangeOptions`, `ControlButtonProps`.
 
 Each lands the way the rest did: a test that fails without it, the oracle (`@xyflow/react`) run on the same
 input where behaviour should match, and — if it adds code — in a feature, so a canvas that only shows a graph

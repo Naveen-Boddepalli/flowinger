@@ -61,7 +61,7 @@ An app that only *shows* a graph (a viewer) needs none of it, and was probably a
 ## 3. Types
 
 Flowinger now exports React Flow's names for the types it has (`OnNodesChange`, `OnConnect`,
-`ReactFlowProps`, `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`… — 47 of them), so a type
+`ReactFlowProps`, `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`… — 59 of them), so a type
 import usually needs only the package name changed. Two differences are on purpose:
 
 - **`ReactFlowProps` and `ReactFlowInstance` are not generic.** `ReactFlowInstance<MyNode, MyEdge>` is an

@@ -3,8 +3,10 @@ import { render } from '@testing-library/react';
 import { useState } from 'react';
 import type {
   Box as RFBox,
+  ControlButtonProps as RFControlButtonProps,
   CoordinateExtent as RFCoordinateExtent,
   Dimensions as RFDimensions,
+  HandleConnection as RFHandleConnection,
   KeyCode as RFKeyCode,
   OnConnect as RFOnConnect,
   SnapGrid as RFSnapGrid,
@@ -12,6 +14,7 @@ import type {
   XYZPosition as RFXYZPosition,
 } from '@xyflow/react';
 import {
+  EdgeLabelRenderer,
   FlowingerCanvas,
   FlowingerCore,
   addEdge,
@@ -19,28 +22,36 @@ import {
   getBezierPath,
   getSmoothStepPath,
   getStraightPath,
+  useOnSelectionChange,
   type BezierEdgeProps,
   type Box,
   type ConnectionLineComponent,
   type ConnectionLineComponentProps,
   type ConnectionLineProps,
+  type ControlButtonProps,
   type ControlProps,
   type ControlsProps,
   type CoordinateExtent,
   type DefaultEdgeOptions,
+  type DeleteElementsOptions,
   type Dimensions,
   type Edge,
   type EdgeChange,
+  type EdgeLabelRendererProps,
+  type EdgeMarkerType,
   type EdgeMouseHandler,
   type EdgeProps,
   type FitBounds,
+  type FitBoundsOptions,
   type FitView,
   type FlowingerInstance,
   type FlowingerProps,
   type GetBezierPathParams,
   type GetSmoothStepPathParams,
   type GetStraightPathParams,
+  type HandleConnection,
   type IsValidConnection,
+  type NodeConnection,
   type KeyCode,
   type Node,
   type NodeChange,
@@ -60,14 +71,20 @@ import {
   type OnNodeDrag,
   type OnNodesChange,
   type OnNodesDelete,
+  type NodeResizerProps,
   type OnReconnect,
+  type OnResize,
+  type OnResizeEnd,
+  type OnResizeStart,
   type OnSelectionChangeFunc,
   type OnSelectionChangeParams,
+  type ProOptions,
   type ReactFlowInstance,
   type ReactFlowJsonObject,
   type ReactFlowProps,
   type SetCenter,
   type SetViewport,
+  type ShouldResize,
   type SmoothStepEdgeProps,
   type SnapGrid,
   type StepEdgeProps,
@@ -75,6 +92,7 @@ import {
   type Transform,
   type UseNodeConnectionsOptions,
   type UseNodeConnectionsParams,
+  type UseOnSelectionChangeOptions,
   type Viewport,
   type XYZPosition,
 } from '../index.ts';
@@ -156,6 +174,21 @@ describe('React Flow\'s names for types flowinger has', () => {
     expect(true).toBe(true);
   });
 
+  it('the small ones are what they name', () => {
+    expectTypeOf<HandleConnection>().toEqualTypeOf<NodeConnection>();
+    expectTypeOf<EdgeLabelRendererProps>().toEqualTypeOf<Parameters<typeof EdgeLabelRenderer>[0]>();
+    expectTypeOf<DeleteElementsOptions>().toEqualTypeOf<Parameters<FlowingerInstance['deleteElements']>[0]>();
+    expectTypeOf<FitBoundsOptions>().toEqualTypeOf<NonNullable<Parameters<FlowingerInstance['fitBounds']>[1]>>();
+    expectTypeOf<UseOnSelectionChangeOptions>().toEqualTypeOf<Parameters<typeof useOnSelectionChange>[0]>();
+    expectTypeOf<EdgeMarkerType>().toEqualTypeOf<NonNullable<Edge['markerEnd']>>();
+    expectTypeOf<ProOptions>().toEqualTypeOf<NonNullable<FlowingerProps['proOptions']>>();
+    expectTypeOf<OnResizeStart>().toEqualTypeOf<NonNullable<NodeResizerProps['onResizeStart']>>();
+    expectTypeOf<OnResize>().toEqualTypeOf<NonNullable<NodeResizerProps['onResize']>>();
+    expectTypeOf<OnResizeEnd>().toEqualTypeOf<NonNullable<NodeResizerProps['onResizeEnd']>>();
+    expectTypeOf<ShouldResize>().toEqualTypeOf<NonNullable<NodeResizerProps['shouldResize']>>();
+    expect(true).toBe(true);
+  });
+
   it('where the two libraries share a shape, it is the same shape (the oracle)', () => {
     expectTypeOf<OnConnect>().toEqualTypeOf<RFOnConnect>();
     expectTypeOf<CoordinateExtent>().toEqualTypeOf<RFCoordinateExtent>();
@@ -165,6 +198,10 @@ describe('React Flow\'s names for types flowinger has', () => {
     expectTypeOf<Box>().toEqualTypeOf<RFBox>();
     expectTypeOf<Transform>().toEqualTypeOf<RFTransform>();
     expectTypeOf<XYZPosition>().toEqualTypeOf<RFXYZPosition>();
+    expectTypeOf<ControlButtonProps>().toEqualTypeOf<RFControlButtonProps>();
+    // React Flow builds this one as `Connection & { edgeId }`; the same fields, so each fits the other.
+    expectTypeOf<HandleConnection>().toMatchTypeOf<RFHandleConnection>();
+    expectTypeOf<RFHandleConnection>().toMatchTypeOf<HandleConnection>();
     expect(true).toBe(true);
   });
 
