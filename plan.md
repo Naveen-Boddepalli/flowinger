@@ -532,6 +532,16 @@ came from looking at the **published artifact and the repository's public face**
   26 → 27, in CI, the release workflow and CONTRIBUTING; **the lean budget stays 17** and has 0.1 kB of room,
   so the next change that touches the core has to earn its bytes (or be a feature). `release.yml` also now
   runs the examples and the browser suite — it said "the same gate as CI" and was not.
+- **The README became a landing page.** It had grown to 470 lines of reference. Now it is ~230: hero and
+  screenshot, why, install, quick start (with the interactive opt-in called out, since that is the first
+  surprise), pay-for-what-you-use with the size table, a documentation index, the two examples with
+  screenshots, an honest "is it for you", compatibility, contributing, acknowledgements. The reference moved,
+  verbatim, into `docs/` (`api`, `components`, `features`, `theming`, `server-rendering`,
+  `react-flow-coverage`) with a `docs/README.md` index and a new `getting-started.md`; inbound links were
+  repointed and every link and image in all 20 Markdown files is checked. Screenshots are real (Playwright,
+  installed Chrome, 2×), of the demo's canvas and the two examples; the layouts one is the left-to-right tree,
+  because with the shared-scan toggle on, the example's generic smoothstep edge runs behind two nodes — a
+  fair limit of the example, not something to put in a hero image.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the
@@ -557,6 +567,7 @@ What is *in the repository* is done; what is left is switches only the owner can
 | 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **done**: tagged, each checked against the registry's `gitHead`, and pushed with the branch |
 | 6 | Merge this work; set `CHANGELOG.md`'s Unreleased to `0.4.0`; push a **prerelease** tag first (`v0.4.0-rc.1` — set the version to match) to prove steps 1–3, then `v0.4.0` | open |
 | 7 | Replace the contact line in `CODE_OF_CONDUCT.md` with a dedicated address if wanted (it points at the GitHub profile) | optional |
+| 8 | After the first release, look at the README on npmjs.com: its three images are relative paths (right on GitHub, including while private). If npm does not rewrite them, change them to `https://raw.githubusercontent.com/Naveen-Boddepalli/flowinger/main/docs/assets/…` | open |
 
 ### Not built
 

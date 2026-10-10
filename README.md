@@ -1,18 +1,63 @@
-# Flowinger
+<h1 align="center">Flowinger</h1>
 
-[![npm](https://img.shields.io/npm/v/flowinger)](https://www.npmjs.com/package/flowinger)
-[![CI](https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg)](https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml)
-[![types](https://img.shields.io/npm/types/flowinger)](https://www.npmjs.com/package/flowinger)
-[![license](https://img.shields.io/npm/l/flowinger)](LICENSE.md)
+<p align="center">
+  <strong>A small, dependency-free node-graph renderer for React.</strong><br />
+  HTML nodes over SVG edges, with pan, zoom, drag and connect — and an API shaped like React Flow's.
+</p>
 
-**[Live demo](https://naveen-boddepalli.github.io/flowinger/)** · [Changelog](CHANGELOG.md) ·
-[Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md)
+<p align="center">
+  <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
+  <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="docs/features.md"><img alt="core size: about 17 kB gzipped" src="https://img.shields.io/badge/core-~17_kB_gzip-blue" /></a>
+  <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
+  <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
+  <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
+</p>
 
-A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom,
-drag, touch pinch, arrowheads, labels, and an API shaped like [React Flow](https://reactflow.dev)'s.
-Pay for what you use: the core is about 17 kB gzipped and each feature adds only its own code — about 26 kB with
-all of them (see [Pay for what you use](#pay-for-what-you-use)). The only peer dependencies are `react` and
-`react-dom` (18 or 19).
+<p align="center">
+  <a href="https://naveen-boddepalli.github.io/flowinger/"><strong>Live demo</strong></a> ·
+  <a href="docs/README.md">Documentation</a> ·
+  <a href="examples">Examples</a> ·
+  <a href="docs/migrating-from-react-flow.md">Migrating from React Flow</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="ROADMAP.md">Roadmap</a>
+</p>
+
+<p align="center">
+  <img src="docs/assets/demo.png" alt="Flowinger's demo: plan operators as HTML nodes joined by labelled SVG edges, a sub-flow group, a minimap and zoom controls" width="780" />
+</p>
+
+> **Status:** `0.x`. It is what [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) draws its diagrams
+> with, and its API follows React Flow's — but a minor release can still change it, and the
+> [changelog](CHANGELOG.md) says when it does. These docs describe `main`; what is newer than the latest npm
+> release is listed under *Unreleased* there.
+
+## Why Flowinger
+
+- **Small, and only what you use.** The core is about 17 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 26 kB. In QueryLens, swapping
+  React Flow for it took the diagram chunk from **60.5 kB to 19.0 kB** gzipped.
+- **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
+- **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
+  they are really drawn, so an edge follows a handle you moved with CSS.
+- **An API you already know.** React Flow's names for components, hooks, props, class names, `data-testid`s and
+  types — [158 of its 211 exports](docs/react-flow-coverage.md), measured from its own type declarations — and
+  a [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ.
+- **Server rendering that works.** Renders and hydrates on React 18 and 19, with the first paint already framed.
+- **Accessible when you ask.** Keyboard navigation, focusable nodes and edges, ARIA fields — opt-in, so a page
+  that only shows a diagram does not gain tab stops it did not want.
+- **Tested against the real thing.** More than 850 unit tests (React Flow itself is the oracle for geometry and
+  behaviour), mutation-tested guards, a real-browser suite, and CI that installs the *packed* package.
+
+## Install
+
+```bash
+npm install flowinger      # or: pnpm add flowinger · yarn add flowinger
+```
+
+React 18 or 19 is a peer dependency. The package ships ESM, CommonJS and TypeScript declarations for both.
+
+## Quick start
 
 ```tsx
 import {
@@ -55,277 +100,8 @@ export function Diagram() {
 }
 ```
 
-## Is it for you?
-
-**Reach for it when** your app *draws a graph* — a query plan, a syntax tree, a dependency map, a workflow —
-and what it costs matters. Nodes are plain React components, so whatever you can render in a `div` is a node.
-In QueryLens, replacing React Flow with it took the diagram chunk from **60.5 kB to 19.0 kB gzipped**
-(`d3-hierarchy` included in both), with the same geometry to within 0.2 units and its whole end-to-end suite
-passing. It renders on the server, on React 18 and 19, and has no dependencies beyond them.
-
-**Reach for [React Flow](https://reactflow.dev) instead when** you need something on the
-[missing list](#coming-from-react-flow) and cannot wait for it, or want its larger ecosystem of examples,
-templates and answers. Flowinger follows React Flow's API for the part that apps like the one above use; it
-is not a drop-in for all of it, and it is `0.x` — a minor release can change the API (the
-[changelog](CHANGELOG.md) says when it does).
-
-**Positions are yours.** Neither library lays a graph out for you: feed `x` / `y` from
-[`d3-hierarchy`](https://d3js.org/d3-hierarchy), [`dagre`](https://github.com/dagrejs/dagre) or
-[`elkjs`](https://github.com/kieler/elkjs) — [`examples/layouts`](examples/layouts) does all three, with the
-same signature, in about a hundred lines. [`examples/editor`](examples/editor) is a controlled editor with a
-custom node and edge.
-
-## Install
-
-```bash
-pnpm add flowinger      # or: npm install flowinger
-```
-
-React 18 or 19 is a peer dependency. The package ships its built `dist/`.
-
-To try a commit that is not released, install from GitHub instead. A git dependency has no `dist/`, so it is
-built on install, which package managers gate behind an explicit opt-in:
-
-```bash
-# pnpm 11 — allow the build first, in pnpm-workspace.yaml:
-#   allowBuilds:
-#     flowinger: true
-pnpm add github:Naveen-Boddepalli/flowinger
-
-# npm 12 — git dependencies are off by default
-npm install --allow-git=all github:Naveen-Boddepalli/flowinger
-```
-
-## What is in the box
-
-| | |
-|---|---|
-| `FlowingerCanvas` | The whole canvas, every feature: pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. Also `ReactFlow`. |
-| `FlowingerCore` | The same canvas with only the [features](#pay-for-what-you-use) you name — pan, zoom, nodes and edges are always there. Takes `id` and a `domAttributes` escape hatch for its own element (never an event handler, or `id`/`style`/`className`/`children`/`role`/`tabIndex`, which are the engine's own). |
-| `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
-| `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
-| `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
-| `ViewportPortal` | Draws your own elements in graph space — they pan and zoom with the diagram and sit above its nodes and edge labels. Renders nothing on the server. |
-| `EdgeLabelRenderer` | Inside a custom edge: draws HTML (a button, an input) at a point of the edge, in a layer above the edges that pans and zooms with the graph. Position it with a `translate(x, y)` from the edge's own label coordinates; give it `pointerEvents: 'all'` and a `nopan` class to make it clickable. |
-| `NodeToolbar` | Inside a node: buttons attached to a side of it (`position`, `align`, `offset`), shown while it is the only thing selected (`isVisible` overrides). It rides on the node, so it follows drags and zoom and never changes the node's size. |
-| `NodeResizer` | Inside a node: eight drag handles (sides and corners) that resize it — `minWidth`, `minHeight`, `maxWidth`, `maxHeight`, `keepAspectRatio`, `isVisible`, `color`, `shouldResize`, `onResizeStart` / `onResize` / `onResizeEnd`. Reported as `dimensions` (written to `width`/`height`) and `position` changes, so it needs a [controlled flow](#controlled-flows) or `defaultNodes`. |
-| `Panel` | A box of your own UI pinned to the canvas — `position` is `top-left` (default), `top-center`, `top-right`, `center-left`, `center-right`, `bottom-left`, `bottom-center` or `bottom-right`. A press on it does not pan, and a click on it is not a pane click. |
-| `Background`, `Controls` | A dot/line/cross backdrop (`size` is a dot's diameter or a cross's arm length, `lineWidth` a stroke's, `bgColor` behind the pattern — as in React Flow); zoom and fit buttons (`showZoom`, `showFit`/`showFitView`, `fitViewOptions`, `onZoomIn`/`onZoomOut`/`onFitView`, your own `ControlButton`s as children). Both go inside the provider; a `position` pins either to the canvas, as `Panel` does. |
-| `MiniMap` | An overview of the whole graph with the visible region cut out of a dimming mask. Click or drag on it to move the view; it holds still during a drag. Props: `width`, `height`, `nodeColor`/`nodeStrokeColor`/`nodeClassName` (a value or a function of the node), `nodeStrokeWidth`, `nodeBorderRadius`, `maskColor`, `maskStrokeColor`/`maskStrokeWidth`, `bgColor`, `pannable`, `position`, `ariaLabel`. Goes inside the provider, next to the canvas or inside it. |
-| `useFlowinger()`, `useViewport()`, `useOnViewportChange()`, `useUpdateNodeInternals()` | The instance (below); the current viewport; hearing the view move from anywhere in the tree; having the canvas re-read a node's size and handles after it changes what it is made of without telling the canvas. |
-| `useInternalNode(id)`, `useStoreApi()` | A node plus `internals.positionAbsolute` and `internals.z` — narrower than React Flow's own `InternalNode` (no `handleBounds`, no `userNode`); `getState()` without subscribing, and `subscribe()` — no generic `setState`. |
-| `useConnection(selector?)` | The connection being dragged right now — `fromNode`/`toNode` (flowinger's `InternalNode`), `fromHandle`/`toHandle` (just what names one: `{ nodeId, id, type }`, not a measured position), `isValid`, `from`/`to`. `NoConnection` (`inProgress: false`) when none is. |
-| `useHandleConnections(options)` | `useNodeConnections` narrowed to one handle, under React Flow's older name for it. |
-| `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge` | The built-in edges, as components — for an `edgeTypes` entry that renders one and adds to it, or is one under another name. |
-| `getBezierPath`, `getStraightPath`, `getSmoothStepPath` | The path maths, each returning `[path, labelX, labelY, offsetX, offsetY]`. |
-| `getEdgeCenter`, `getBezierEdgeCenter`, `getViewportForBounds`, `isNode`, `isEdge` | Smaller helpers React Flow also has: the straight-line and on-curve midpoints a label sits at; a `viewportForBounds` that matches React Flow's own fit to the pixel; and the type guards. |
-
-## Pay for what you use
-
-`FlowingerCanvas` (alias `ReactFlow`) does everything on this page, and is what most apps want. An app that only
-*shows* a graph — pan, zoom, nodes, edges, handles, `fitView` — needs far less, so the canvas is a small core
-plus **features**, and you import the ones you use:
-
-```tsx
-import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
-
-<FlowingerCore
-  nodes={nodes} edges={edges}
-  features={[dragFeature, connectFeature]}   // read once, when the canvas mounts
-  nodesDraggable nodesConnectable
-/>
-```
-
-With no features `FlowingerCore` costs about 17 kB gzipped (26 for the whole canvas); each feature you name adds
-only its own code. The props, the nodes and the instance are the same either way.
-
-| Feature | What it adds | Props that need it |
-|---|---|---|
-| `selectionFeature` | Selecting by click (Shift, Ctrl or ⌘ adds), Enter and Space, a click on the empty canvas or Escape clearing it; nodes and edges become tab stops | `elementsSelectable`, `edgesFocusable` |
-| `dragFeature` | Dragging nodes and selections, snapping, extents, `expandParent`, the arrow keys, auto-pan (brings `selectionFeature`) | `nodesDraggable`, `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, `snapToGrid`, `snapGrid`, `nodeExtent`, `autoPanOnNodeDrag`, `autoPanSpeed` |
-| `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `autoPanOnConnect`; a `<Handle>`'s own `isConnectableStart` / `isConnectableEnd`, `isValidConnection`, `onConnect` |
-| `reconnectFeature` | Dragging an end of a selected edge to another handle (brings `connectFeature`) | `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` |
-| `boxSelectFeature` | Selecting with a box (brings `selectionFeature`) | `selectionOnDrag`, `selectionMode`, `onSelectionStart`, `onSelectionEnd` |
-| `deleteFeature` | The delete key, and `deleteElements` | `deleteKeyCode`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` |
-| `cullingFeature` | Drawing only what is in view | `onlyRenderVisibleElements` |
-| `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `updateEdgeData`, `getNodeConnections`, `getHandleConnections`, `getIntersectingNodes`, `isNodeIntersecting` | |
-| `eventsFeature` | A double click, a right click, and the pointer entering, moving over and leaving a node, an edge or the pane; the wheel over the pane. Giving any edge event (or `onEdgeClick`) makes every edge take the pointer, selectable or not | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for edges and the pane, `onPaneScroll` |
-| `edgeLabelsFeature` | The box behind an edge's label (`labelShowBg`), sized to the text once a browser has laid it out | `labelShowBg` on an edge |
-
-Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
-labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the
-hooks — and *reporting* the selection: a controlled node's `selected` is drawn, and `onSelectionChange`,
-`useOnSelectionChange`, `onNodeClick`, `onEdgeClick` and `onPaneClick` work on any canvas. What `selectionFeature`
-adds is *changing* it from the pointer and keyboard. `allFeatures` is the list the whole canvas has.
-
-- **A prop for a feature the canvas lacks does nothing**, and in development the console says so, once, with the
-  feature to pass. (Switched off — `nodesDraggable={false}` — is not "given".)
-- **An instance method a feature supplies** is on the instance from the start, so `const { setNodes } =
-  useReactFlow()` works wherever it is taken; without the feature, calling it throws and names the feature.
-- `defaultNodes` / `defaultEdges` need `FlowingerCanvas`, which can own the graph; `FlowingerCore` shows the
-  `nodes` it is given and reports changes.
-- `NodeResizer`, `MiniMap`, `Controls` and the hooks cost something only when imported; the resizer installs
-  what it needs itself.
-- Your own feature is a plain object — `install(ctx)` to add to the store, `useCanvas` / `useNode` to add to the
-  canvas's and each node's handlers, `Layer`, `EdgesLayer` and `EdgeAdornment` to draw, and `needs` for the
-  features it builds on. The type and its slots are documented in [`src/features.ts`](src/features.ts).
-- The development warnings read `process.env.NODE_ENV`, which a bundler replaces (as it does for React); a
-  production build drops them.
-
-### `FlowingerCanvas` props
-
-| Prop | Default | |
-|---|---|---|
-| `nodes`, `edges`, `nodeTypes` | | The graph. `nodeTypes` maps `node.type` to your component. Give `onNodesChange` / `onEdgesChange` and the flow is [controlled](#controlled-flows). |
-| `defaultNodes`, `defaultEdges` | | Start from these and let the canvas own the list (no `nodes` prop). |
-| `edgeTypes` | | Custom edge components by `edge.type`, receiving `EdgeProps` (where each end attaches, which way it leaves, `data`, `label`, marker references). A key overrides a built-in of the same name; an unknown `type` draws a bezier. |
-| `minZoom`, `maxZoom` | `0.05`, `2` | |
-| `nodesDraggable` | `false` | A node's own `draggable` overrides it, either way. |
-| `panOnDrag` | `true` | `false`, or a list of mouse buttons, e.g. `[1]` for middle only. |
-| `zoomOnScroll`, `zoomOnPinch` | `true` | |
-| `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `true`, `true`, `15` | Hold a dragged node — or the end of a connection you are dragging — near the pane's edge and the view pans that way, faster the nearer the edge (`autoPanSpeed` px per frame at the edge itself). Drags are measured in graph space, so the node stays under the pointer as the view moves. |
-| `zoomOnDoubleClick` | `true` | A double click on the empty canvas zooms in about the pointer (out with Shift). |
-| `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). A `nowheel` class lets the wheel through to something inside that scrolls for itself — a code block, a list. |
-| `defaultViewport` | | Where the view starts, once. Inside a `FlowingerProvider`, the canvas moves the provider's view there when it mounts. Ignored when `viewport` is given. |
-| `viewport`, `onViewportChange` | | **Controlled view.** Given `viewport`, the canvas draws exactly that and moves nowhere on its own: a pan, a wheel zoom, a zoom button, `fitView` — each *asks* through `onViewportChange(viewport)` where it would go, and the view changes when `viewport` does (`const [viewport, setViewport] = useState(…)` and `onViewportChange={setViewport}` is the whole of it). An animation is followed frame by frame, and cut short if you move the view yourself. Without `viewport`, `onViewportChange` is a report: each move, after it is made. |
-| `onMoveStart`, `onMove`, `onMoveEnd` | | The view is moving: `(event, viewport)`, `event` the pointer or wheel that moved it, or `null` for a call such as `fitView`. A run of wheel ticks is one move, ended once the wheel has been still for 150 ms; `useOnViewportChange` hears the same moves from anywhere inside a canvas. |
-| `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` | | And the same for edges (`onEdgeDoubleClick`…) and the pane (`onPaneContextMenu`, `onPaneMouseEnter`…), plus `onPaneScroll`. Needs `eventsFeature`; giving any edge event makes every edge take the pointer. |
-| `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
-| `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
-| `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
-| `snapToGrid`, `snapGrid` | `false`, `[15, 15]` | A dragged node lands on the grid; a selection keeps its shape, snapping by the node you hold. |
-| `onlyRenderVisibleElements` | `false` | Draw only the nodes and edges in view (plus a margin of a quarter of the view), so a huge diagram costs what is on screen. Selected and dragged nodes are always drawn; an edge is drawn if either end is, or it crosses the view. |
-| `fitView`, `fitViewOptions` | `false` | Frame the nodes once, as soon as every one has been measured. |
-| `defaultEdgeOptions` | | Defaults for every edge (`animated`, `markerEnd`, `style`…); an edge's own fields win. Compared by value, so writing it inline is fine. |
-| `keyboardNavigation` | `false` | Makes the canvas a tab stop: arrows pan (Shift for more), `+` `-` zoom, `0` fits. Name it with `ariaLabel`. |
-| `elementsSelectable` | `false` | A click selects a node *or an edge* (Shift/Ctrl/⌘ adds or removes), a click on the canvas clears, and nodes and edges become focusable: Enter or Space selects, Escape clears (with `keyboardNavigation`), and the arrow keys nudge a selected node (Shift for four times as far). A node's or edge's own `selectable: false` opts it out; `edgesFocusable={false}` takes edges out of the tab order. |
-| `nodesConnectable` | `false` | Handles become drag handles and drop targets: drag from one to another to make a connection. A handle's own `isConnectable={false}` opts it out, and so does a node's `connectable: false`. |
-| `connectionLineType`, `connectionLineStyle`, `connectionLineComponent` | `'bezier'` | The line dragged out of a handle: `'bezier'`, `'straight'`, `'step'` or `'smoothstep'`; a style for it (it never takes pointer events, whatever the style says); or your own component, given `fromX/Y`, `toX/Y`, which way each end faces, and `isValid` (`true` over a handle that would be accepted, `false` over one that would not, `null` over neither). |
-| `connectionMode` | `'strict'` | `'strict'` joins a source handle to a target handle; `'loose'` joins any handle to any other (never itself), the end you dragged from becoming the source. |
-| `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` | `true` | Select an edge and drag either end (a ring appears on it) onto another handle: `onReconnect(oldEdge, newConnection)` says what it would now join, source → target. Nothing is edited for you — `setEdges((es) => reconnectEdge(old, next, es))`. Needs `nodesConnectable`, as handles are the drop targets, and an `onReconnect` to switch the rings on; an edge's own `reconnectable` is `false`, `'source'` or `'target'`. Dropped back on its own handle is not a change; the edge is not drawn while its end is dragged. `onReconnectStart(event, edge, handleType)` / `onReconnectEnd(event, edge, handleType, { connection, isValid })` bracket the drag. |
-| `onConnectStart`, `onConnectEnd` | | `onConnectStart(event, { nodeId, handleId, handleType })`; `onConnectEnd(event, { connection, isValid })` when the pointer is released — `isValid` is `true` (made), `false` (refused) or `null` (no handle there). |
-| `onConnect`, `isValidConnection` | | `onConnect({ source, target, sourceHandle, targetHandle })` — always source → target, whichever end the drag began at. `isValidConnection` can veto, and decides whether the line snaps to a handle. |
-| `deleteKeyCode` | `'Backspace'` | The key (or list of keys; `null` for none) that deletes the selection while focus is on the canvas, a node or an edge — never in a field. Deleting is *reported*: see below. |
-| `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` | | `onBeforeDelete({ nodes, edges })` may return `false`, a smaller `{ nodes, edges }`, or a promise of either; then the removals are reported and these are called with what went. |
-| `onSelectionChange`, `onNodeClick`, `onEdgeClick`, `onPaneClick` | | `onSelectionChange({ nodes, edges })` tells you when the selection changes. A pan's closing click is not a pane click, and neither is a drag's a node click. |
-| `onNodeDragStart`, `onNodeDrag`, `onNodeDragStop`, `onInit` | | The drag callbacks get `(event, node, nodes)`: `nodes` is everything being dragged. |
-
-Without `onNodesChange`, `nodes` is never mutated: a dragged position is kept internally, and a fresh
-layout from you wins over it. Dragging a selected node drags the whole selection; a node with a
-`dragHandle` (a CSS selector) drags only by that element. **Edges**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`
-(`'bezier'` \| `'straight'` \| `'step'` \| `'smoothstep'` — `step` has square corners, `smoothstep` rounds them), `label`, `markerStart`, `markerEnd`
-(`'arrow'`, `'arrowclosed'`, or `{ type, color, width, height }`), `className`, `style`. Give a node
-`width` and `height` to fix its size — as in React Flow they are applied to the node, and are what server
-rendering and `fitView` use before it has been measured. Leave them out and the content decides; the engine
-measures the rendered size either way, and reports it (`node.measured`) to a controlled flow.
-
-A node or an edge also takes `ariaLabel`, `ariaRole` (default `'group'` on a node once it is a tab stop; on
-an edge, a `'button'` once it is selectable and focusable) and `domAttributes` — an escape hatch for an
-attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom `data-*` attribute without a
-cast, since `HTMLAttributes` does not declare it by name. `domAttributes` can never be an
-event handler, or `id` / `style` / `className` / `role`, which are the engine's own to set; it wins over
-anything else it is allowed to touch.
-
-### Nodes with no component of your own
-
-A node whose `type` is missing, or names nothing in `nodeTypes`, is drawn as React Flow's built-ins are: its
-`id`, its `data.label`, and handles — a **target** on `targetPosition` (default `'top'`) and a **source** on
-`sourcePosition` (default `'bottom'`). `type: 'input'` is a start and has only the source, `type: 'output'` is
-an end and has only the target, and `type: 'group'` is a container with none. A horizontal layout sets
-`sourcePosition: 'right'` and `targetPosition: 'left'` on its nodes. A component of your own under any of those
-names in `nodeTypes` replaces it (and is handed both fields, to use or not). As in React Flow, a
-`nodeTypes.default` of your own is also what a node with no `type` is, and what a `type` nobody registered
-falls back to — `input`, `output` and `group` stay the built-ins unless you register them.
-
-### Handles
-
-An edge names a handle by `id`; its end decides the type (`sourceHandle` finds a `source` handle). Name
-none and it takes the first handle of that type. A handle moved with `style` (say `left: '30%'`) still
-gets its edge, because the engine measures where each one is actually drawn. An edge attaches at the
-handle's *outer* edge (the side facing away from the node), as React Flow's do, so it stops at the dot
-rather than running into it.
-
-With `nodesConnectable`, a drag from one handle to a compatible one calls `onConnect`. The engine never
-edits `edges` itself (they are your prop), so you add it:
-
-```tsx
-<FlowingerCanvas
-  nodesConnectable
-  onConnect={(c) => setEdges((edges) => [...edges, { id: `${c.source}-${c.target}`, ...c }])}
-  /* … */
-/>
-```
-
-The dashed line follows the pointer, snaps to a handle that would make a valid connection, and Escape
-cancels. The gesture is tracked on `window`, so it survives leaving the node and the canvas.
-
-### Nodes inside nodes
-
-Give a node a `parentId` and it becomes a child: its `position` is *relative to its parent's*, it moves with
-it, it is drawn above it (a deeper node above a shallower; `zIndex` overrides), and it is hidden and deleted
-with it. That nests as deep as you like.
-
-```tsx
-const nodes = [
-  { id: 'group', position: { x: 100, y: 50 }, width: 300, height: 200, data: {} },
-  { id: 'inside', parentId: 'group', extent: 'parent', position: { x: 20, y: 30 }, data: {} },
-];
-```
-
-`extent: 'parent'` keeps a child inside its parent's box while it is dragged. Everything that draws or
-hit-tests — edges, the minimap, `fitView`, box selection, `getIntersectingNodes`, `nodeExtent`, `snapToGrid`
-(to the canvas' grid, not the parent's) — works from the node's place on the canvas, which a custom node gets
-as `positionAbsoluteX` / `positionAbsoluteY`; the `position` in your data stays relative, in a `position`
-change too. Drag or nudge a parent together with its own children and they move once, not twice.
-
-An edge is stacked with the nodes it joins — the higher of the two — so one running into a child is drawn
-*above* its group (and can be clicked there) and below the child it ends at; `edge.zIndex` overrides. With no
-nesting every edge stays in the one layer under every node. Edges of different levels are separate `<svg>`s;
-arrowheads are shared through the lowest.
-
-Give a child `expandParent: true` and dragging it past its parent's edge makes the parent *grow* to hold it
-(instead of `extent: 'parent'`, which would stop it): a `dimensions` change for the parent's size, and past the
-top or left edge a `position` change too — the parent's corner moves out, and its other children are re-based
-so that nothing but the parent's edge moves on the canvas. It never shrinks during a drag, needs a
-[controlled flow](#controlled-flows) (the size is yours to keep), and looks one level up only.
-
-### The instance
-
-`useReactFlow()` (alias `useFlowinger()`) returns one object for the life of the provider, so it is safe in an
-effect's dependencies; `onInit` hands you the same one.
-
-- **View**, each returning a `Promise<boolean>` — `true` when the move lands, `false` if another one cut it
-  short: `setViewport`, `zoomIn`, `zoomOut`, `zoomTo(zoom)`, `setCenter(x, y, { zoom })`,
-  `fitView({ padding, nodes, includeHiddenNodes, minZoom, maxZoom, duration })`, `fitBounds(rect, options)`;
-  and `getViewport()`, `getZoom()`. `padding` is a ratio, as in React Flow (`0.1` = a tenth of the diagram's
-  size on each side); left out, `fitView` keeps a 40 px margin.
-- **Coordinates**: `screenToFlowPosition({ x, y }, { snapToGrid })` takes a pointer position (`clientX`,
-  `clientY`) to graph units — for dropping a node where the pointer is — and `flowToScreenPosition` goes back.
-- **Read**: `getNodes()`, `getNode(id)`, `getEdges()`, `getEdge(id)`, `getNodesBounds(nodesOrIds)`,
-  `getIntersectingNodes(nodeOrRect, partially?, nodes?)`, `isNodeIntersecting(nodeOrRect, rect, partially?)`,
-  `toObject()`. They report the nodes as they stand: a dragged position, a measured size and the selection
-  included.
-- **Edit**: `setNodes`, `setEdges` (a list or an updater), `addNodes`, `addEdges`, `updateNode`,
-  `updateNodeData`, `updateEdge`, and `deleteElements({ nodes, edges })`. They are reported as changes, so they
-  need a [controlled flow](#controlled-flows) or `defaultNodes`; on nodes you merely pass in, there is nobody to
-  apply them and they do nothing. On a `FlowingerCore` they need `editingFeature` (and `deleteFeature` for
-  `deleteElements`).
-
-**Hooks**: `useKeyPress('Meta+s')` (a key, a combination, or a list; ignores typing in fields unless modified),
-`useOnSelectionChange({ onChange })`, `useNodesData(id | ids)` (re-renders only when that `data` changes),
-`useNodeConnections({ id, handleType, handleId, onConnect, onDisconnect })`, `useNodes()`, `useEdges()`,
-`useNodesInitialized()` and `useNodeId()`.
-
-`useStore(selector, equalityFn?)` reads `panZoom`, `isReady`, `nodes`, `edges`, `transform` (`[x, y, zoom]`),
-`width`, `height`, `minZoom`, `maxZoom` and `nodesInitialized`. The selector must return a stable value, or you
-pass an equality function.
-
-A node with `hidden: true` is neither drawn nor listed on the minimap, and nor are its edges.
-
-### Controlled flows
-
-Give the canvas `onNodesChange` and it stops keeping state for you: dragging, selecting and measuring
-are *reported* as a list of changes, and you apply them.
+That draws a diagram you can pan and zoom. **Nothing is draggable, connectable or selectable until you say
+so** — React Flow turns those on by default, Flowinger leaves them off — so an editor opts in:
 
 ```tsx
 const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -336,134 +112,120 @@ const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   edges={edges}
   onNodesChange={onNodesChange}
   onEdgesChange={onEdgesChange}
-  onConnect={(c) => setEdges((es) => addEdge(c, es))}
+  onConnect={(connection) => setEdges((current) => addEdge(connection, current))}
   nodesDraggable
+  nodesConnectable
   elementsSelectable
 />
 ```
 
-`useNodesState` is `useState` plus `onNodesChange = (changes) => setNodes((ns) => applyNodeChanges(changes, ns))`;
-write that yourself if you keep nodes in a store. A change is one of `position` (with `dragging`),
-`dimensions` (the measured size, which `applyNodeChanges` writes to `node.measured`), `select`, `remove`,
-`add` and `replace`. Selection then lives on `node.selected`, and the canvas draws it from there.
-`applyNodeChanges` returns the same object for every node a change did not touch, so memoised views skip
-them. `useNodesInitialized()` is true once every node has been measured, and re-renders only when that flips.
+More in [Getting started](docs/getting-started.md), or run the [examples](examples).
 
-Also exported: `addEdge`, `reconnectEdge`, `getConnectedEdges`, `getIncomers`, `getOutgoers`.
+## Pay for what you use
 
-**Deleting** works the same way: a delete key (or `instance.deleteElements({ nodes, edges })`) removes the
-selected nodes, the selected edges and every edge touching a removed node, as `remove` changes, after
-`onBeforeDelete` has had its say. A node or edge with `deletable: false` stays (but a node's edges go if the
-node does). Where the nodes are only passed in, so nothing applies the changes, the delete callbacks
-still fire and removing them is up to you.
+`FlowingerCanvas` (also exported as `ReactFlow`) has every feature and is what most apps want. An app that only
+*shows* a graph needs far less, so the canvas is a small core plus **features**, and you import the ones you use:
 
-An edge with `animated: true` draws marching dashes (its own `<style>` in the SVG; switched off under
-`prefers-reduced-motion`). A selected edge is drawn in `--flowinger-selected`, its `<g>` gets the `selected`
-class, and a custom edge receives `selected` in its props; `BaseEdge` adds an invisible 20-unit strip
-along the path so a thin edge is easy to click (`interactionWidth` changes it).
+```tsx
+import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
-## Theming
+<FlowingerCore
+  nodes={nodes} edges={edges}
+  features={[dragFeature, connectFeature]}
+  nodesDraggable nodesConnectable
+/>
+```
 
-The default node, `Controls` and edges are styled inline from CSS variables, each with a fallback, so
-they need no stylesheet and no utility framework. Set any of these on an ancestor:
+| Build | Gzipped |
+|---|---|
+| `FlowingerCore`, no features | about 17 kB |
+| …plus each feature you name | only its own code |
+| `FlowingerCanvas`, every feature | about 26 kB |
 
-`--flowinger-surface` · `--flowinger-surface-raised` · `--flowinger-border` · `--flowinger-text` ·
-`--flowinger-text-dim` · `--flowinger-edge` · `--flowinger-selected` (a selected node, and the line you drag) ·
-`--flowinger-radius`
+Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
+lacks does nothing — and in development the console says so. See [Features](docs/features.md).
 
-Nodes you supply are yours to style. The elements carry `react-flow__*` class names as well as
-`flowinger-*` ones, so existing stylesheets and tests that select on React Flow's keep working.
+## Documentation
 
-## Coming from React Flow
+| | |
+|---|---|
+| [Getting started](docs/getting-started.md) | Install, a first diagram, making it interactive, and the first things that trip people |
+| [API reference](docs/api.md) | Canvas props, nodes and edges, handles, sub-flows, the instance, controlled flows |
+| [Components and hooks](docs/components.md) | `Handle`, `Background`, `Controls`, `MiniMap`, `NodeToolbar`, `NodeResizer`, `useReactFlow`… |
+| [Features](docs/features.md) | What each feature adds, what needs it, and how to write your own |
+| [Theming](docs/theming.md) | The `--flowinger-*` CSS variables |
+| [Server rendering](docs/server-rendering.md) | What renders on the server and what waits for the client |
+| [Migrating from React Flow](docs/migrating-from-react-flow.md) | Defaults, types, what is missing and what to do instead |
+| [React Flow coverage](docs/react-flow-coverage.md) | How much of its API this covers, measured |
 
-It keeps React Flow's shape and names for the core — `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`,
-`Handle`, `Position`, `Background`, `BackgroundVariant`, `MarkerType`, `useNodesState`, `useEdgesState`,
-`applyNodeChanges`, `applyEdgeChanges`, `addEdge`, `useNodesInitialized`, and the `Node` / `Edge` / `NodeProps`
-types — and the `react-flow__*` class names on the elements it draws. **It is not a drop-in for arbitrary React
-Flow code**: it covers the part of the API an app like [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)
-uses (which it replaced, with identical geometry and its whole end-to-end suite passing), not all of it.
+## Examples
 
-Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **158 of its 211
-exports**, **83 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 `Node` fields, **13 of 13**
-`NodeProps` fields, and **20 of 20** on both `Edge` and `EdgeProps`. What is missing:
+<table>
+  <tr>
+    <td width="50%">
+      <a href="examples/layouts"><img src="docs/assets/layouts.png" alt="The layouts example: a query plan laid out left to right by ELK" /></a>
+    </td>
+    <td width="50%">
+      <a href="examples/editor"><img src="docs/assets/editor.png" alt="The editor example: four task nodes with connections, a minimap and an add-task button" /></a>
+    </td>
+  </tr>
+  <tr>
+    <td><a href="examples/layouts"><strong>Layouts</strong></a> — one query plan laid out by <code>d3-hierarchy</code>, <code>dagre</code> and <code>elkjs</code> behind a single signature. Positions are yours; this is how you get them.</td>
+    <td><a href="examples/editor"><strong>Editor</strong></a> — a controlled editor: drag, connect, select, delete, snap to a grid, a custom node and a custom edge.</td>
+  </tr>
+</table>
 
-- **Type names:** the ones an app imports by name — `OnNodesChange`, `OnConnect`, `ReactFlowProps`,
-  `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`… — are exported under React Flow's names, types
-  only. Two things differ on purpose: `ReactFlowProps` and `ReactFlowInstance` are **not generic** (the canvas
-  and the instance are not, so `ReactFlowInstance<MyNode>` is an error here rather than a type argument quietly
-  ignored), and `OnConnectEnd`'s second argument is flowinger's `ConnectEndState`, not React Flow's
-  `FinalConnectionState`. Of the 53 exports still missing, 44 are types — nearly all for components and props
-  flowinger does not have (`NodeOrigin`, `ColorMode`, `PanOnScrollMode`, the resize-control, edge-toolbar and
-  MiniMap-node types), plus `SmoothStepPathOptions` and `BezierPathOptions`, whose shapes differ.
+Each is a complete Vite + React + TypeScript project you can copy out and run, and CI builds each one against
+the packed library on every pull request.
 
-- **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onClickConnectStart` / `End` (connecting
-  by click, as opposed to dragging). Mouse events on nodes, edges and the pane (double click, context menu, enter, move,
-  leave) and the pane's scroll are covered, as `eventsFeature`.
-- **Viewport and gestures:** (a controlled `viewport` and `onViewportChange` are there now);
-  `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
-  `zoomActivationKeyCode`, `panOnScrollMode`, `selectNodesOnDrag`, `nodesFocusable`, `disableKeyboardA11y`,
-  `connectOnClick`, `connectionRadius`, `reconnectRadius`, the drag and click distance thresholds,
-  `preventScrolling`, `noDragClassName` / `noPanClassName` (`nodrag`, `nopan` and now `nowheel` are honoured).
-- **Layout and look:** `nodeOrigin`, `elevateNodesOnSelect` / `elevateEdgesOnSelect`, `zIndexMode`, `colorMode`,
-  `debug`, `ariaLabelConfig`, `defaultMarkerColor`, `connectionLineContainerStyle` (`proOptions` and
-  `attributionPosition` are accepted and do nothing — there is no attribution to hide). The canvas now takes
-  `id` and a `domAttributes` escape hatch (never an event handler, or what it already owns). `Panel`,
-  `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` take the attributes of their own element — `id`, `title`,
-  `role`, `aria-*`, `tabIndex`, `data-*` — but not its event handlers (`onClick`, `onPointerDown`…), which the
-  canvas's own pointer and keyboard handling would lose to; a handle's `id` stays its handle id, and on
-  `BaseEdge` they land on the path. The engine's own classes, positioning and handlers win over yours.
-- **Hooks and instance:** `useUpdateNodeInternals`, `useOnViewportChange`, `useConnection`,
-  `useHandleConnections`, `useStoreApi` (`getState()` and `subscribe()`, no generic `setState`),
-  `getNodeConnections` and `getHandleConnections` are all there now. `viewportInitialized`: on purpose —
-  React Flow's own instance is rebuilt when it flips, and flowinger's is created once and never replaced
-  (deliberately, see `plan.md`), so a boolean *field* here would either go stale or be a silently wrong
-  shape; there is no honest way to add it without one of those.
-- **Components:** `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`, `MiniMapNode` (there are
-  now `BezierEdge`, `StraightEdge`, `SmoothStepEdge`, `StepEdge`, `isNode`, `isEdge`, `getEdgeCenter`,
-  `getBezierEdgeCenter`, `getViewportForBounds` and `ControlButton`). `MiniMap`'s `zoomable`, `nodeComponent`,
-  `offsetScale`, `onNodeClick`, `inversePan`; `Controls`' `showInteractive`, `onInteractiveChange`;
-  `NodeResizer`'s `autoScale`.
-- **Fields:** a node's `handles` (there is now `sourcePosition`, `targetPosition`, `initialWidth` /
-  `initialHeight`, `ariaLabel`, `ariaRole` and `domAttributes` — an escape hatch, never an event handler or
-  `id` / `style` / `className` / `role`, on both a node and an edge). A custom node is given
-  `sourcePosition` and `targetPosition`, `selectable`, `draggable`, `deletable`, `dragging`, `dragHandle`,
-  `parentId`, `zIndex`, `width` and `height`, alongside `id`, `data`, `type`, `selected`, `isConnectable` and
-  its absolute position. `fitView` has no `ease` / `interpolate`.
+## Is it for you?
 
-Counts are not weights — most of the list is niche — but it is a list to check your own code against before
-swapping. **Defaults differ, and that is the part a compiler will not find:** nodes are not draggable, connectable
-or selectable until you say so (`nodesDraggable`, `nodesConnectable`, `elementsSelectable` — React Flow's are on),
-`minZoom` is `0.05` (React Flow's `0.5`), and `fitView` keeps a 40 px margin unless you pass a `padding` ratio
-(React Flow's is `0.1`). Nodes and edges do not get React Flow's `role`, `aria-roledescription` or live region.
-[**docs/migrating-from-react-flow.md**](docs/migrating-from-react-flow.md) is the checklist, with each default
-read from React Flow's source.
+**Reach for Flowinger when** your app *draws a graph* — a query plan, a syntax tree, a dependency map, a
+workflow — and what it costs matters: the bundle, the dependencies, the markup.
 
-## Server rendering
+**Reach for [React Flow](https://reactflow.dev) instead when** you need something on the
+[missing list](docs/react-flow-coverage.md) and cannot wait for it, or you want its larger ecosystem of
+examples, templates and answers. Flowinger is not a drop-in for all of React Flow, and does not try to be: it
+covers the part of the API that apps like the one above use, and says plainly where it stops.
 
-Works on React 18 and 19, including hydration. Nothing measures until the client mounts, so edges are
-first drawn from each node's declared `width`/`height` and settle once measured.
+**Neither library lays a graph out for you.** Feed `x` / `y` from [`d3-hierarchy`](https://d3js.org/d3-hierarchy),
+[`dagre`](https://github.com/dagrejs/dagre) or [`elkjs`](https://github.com/kieler/elkjs) — the
+[layouts example](examples/layouts) does all three.
 
-## Development
+## Compatibility
+
+| | |
+|---|---|
+| **React** | 18 and 19, both tested in CI |
+| **Modules** | ESM and CommonJS, with TypeScript declarations for each (checked with publint and Are the Types Wrong) |
+| **Rendering** | Client, server and hydration (`react-dom/server`) |
+| **Browsers** | Current evergreen browsers — pointer events, `ResizeObserver`. The browser suite runs in Chromium; two-finger touch pinch is unit-tested but not yet seen on a physical device ([roadmap](ROADMAP.md)) |
+
+## Contributing
+
+Bug reports, a repro of something React Flow does differently, layout recipes and examples are all welcome.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) — it says what fits, what "done" means here, and how to run
+everything:
 
 ```bash
 pnpm install
-pnpm dev         # the demo, in demo/
-pnpm typecheck
-pnpm test
-pnpm build       # dist/: ESM, CJS and type declarations for both
-pnpm size        # what a small consumer pays: the gzip size of the subset it imports, whole canvas and core
-node scripts/size-dist.mjs   # the same, from the built package (after pnpm build), which is what an app really bundles
-pnpm check:package           # publint and Are the Types Wrong, on the packed tarball (after pnpm build)
-pnpm demo:build              # the demo as a static site, in demo-dist/ — what is published to GitHub Pages
-node scripts/audit-react-flow.mjs <path>   # how much of React Flow's API this has, from its own type declarations
+pnpm dev                 # the demo
+pnpm test                # unit tests
+pnpm e2e                 # the real-browser suite (Playwright)
+pnpm check:package       # publint + Are the Types Wrong on the packed tarball
 ```
 
-[`plan.md`](plan.md) has the design, the places it deliberately departs from it, and what is left;
-[`ROADMAP.md`](ROADMAP.md) is where it is going, and where help is wanted most. To contribute, start with
-[`CONTRIBUTING.md`](CONTRIBUTING.md); security problems go to [`SECURITY.md`](SECURITY.md).
+By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues go to
+[SECURITY.md](SECURITY.md), not a public issue. [`plan.md`](plan.md) is the design record: what was built, what
+was measured, and what was tried and dropped.
+
+## Acknowledgements
+
+Flowinger's API follows [React Flow](https://reactflow.dev) by [xyflow](https://xyflow.com), and was built to match
+its *behaviour* — by running it, reading its published types, and using it as a test oracle. A few formulas
+(the bezier control points and where a label sits on the curve) are adapted from it under its MIT licence and
+credited in [NOTICE.md](NOTICE.md).
 
 ## License
 
-MIT, see [LICENSE.md](LICENSE.md). A few lines of `src/paths.ts` — the bezier control-point formula, and
-where its label sits on the curve — are adapted from React Flow, credited in [NOTICE.md](NOTICE.md).
+[MIT](LICENSE.md) © Naveen Boddepalli
