@@ -551,6 +551,20 @@ came from looking at the **published artifact and the repository's public face**
   lean budget is 17.5 (full stays 27, 0.9 clear), the scripts print two decimals so a difference like this is
   visible, and the rule is written down — a budget sits about half a kilobyte above what CI measures. Not
   done: trimming 0.1 kB to chase a decimal, which would have been a worse fix and would have failed again.
+- **After the merge: what the first CI runs and Dependabot found.** `demo`, `examples`, `e2e` and `check`
+  passed on `main`; the Pages `deploy` 404s until Pages is switched on (checklist 2). Dependabot opened its
+  first grouped PRs at once and one was merged: **TypeScript 6 → 7** and `@types/node` 24 → 26. CI passed
+  it — typecheck, 867 tests, build, package, examples, browser all fine on TS 7 — but **it broke
+  `scripts/audit-react-flow.mjs`**, which CI never ran: TypeScript 7's `require('typescript')` is only
+  `{ version }` (the compiler is a native binary behind an unstable interface). Fixed with an alias,
+  `typescript-js-api` → `typescript@^6`, used only by that script; and the script is now a CI step, so a
+  tool that backs the published coverage numbers cannot go quiet again. Dependabot's *examples* PR (Vite
+  6 → 8, plugin-react 4 → 6, TypeScript 5.9 → 7) failed the `examples` job — the gate working — on a latent
+  bug of mine: the examples never declared Vite's client types (`vite-env.d.ts`), which TS 7 now insists on
+  for `import './styles.css'`. Fixed; with it the examples build on the bumped toolchain too. They stay
+  pinned to Vite 6 on purpose (StackBlitz), so Dependabot is told to leave their toolchain majors alone.
+  Also: `runs-on` is `ubuntu-24.04`, not `ubuntu-latest`, ahead of GitHub's 2026-10-19 move to Ubuntu 26 — the
+  browser job installs system packages through Playwright, the part a new distro breaks first.
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the
@@ -569,8 +583,8 @@ What is *in the repository* is done; what is left is switches only the owner can
 
 | # | Step | State |
 |---|---|---|
-| 1 | Make the GitHub repository public. It exists (the branch and tags are pushed) but still answers 404 to anonymous requests, so it is private; Pages, provenance and the badges all need it public | open |
-| 2 | Settings → Pages → Source: **GitHub Actions** (then `pages.yml` publishes the demo) | open |
+| 1 | Make the GitHub repository public. | **done** (it is public; PR #1 is merged) |
+| 2 | Settings → Pages → Source: **GitHub Actions** (then `pages.yml` publishes the demo). Until it is, `deploy` fails with `HttpError: Not Found` / 404 — seen on the first two runs, with `build` green, so the artifact and its `/flowinger/` base are fine. The `github-pages` environment only deploys from `main`, so re-run it there | open |
 | 3 | npmjs.com → `flowinger` → Settings → **Trusted Publisher** → GitHub Actions: owner `Naveen-Boddepalli`, repo `flowinger`, workflow `release.yml`; then *Publishing access* → require 2FA and disallow tokens | open |
 | 4 | Settings → Security → enable **private vulnerability reporting**; Settings → enable **Discussions**; set the description, homepage (the demo) and topics | open |
 | 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **done**: tagged, each checked against the registry's `gitHead`, and pushed with the branch |

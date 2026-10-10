@@ -14,7 +14,10 @@ import { createRequire } from 'node:module';
 import { dirname, join, normalize, resolve } from 'node:path';
 
 const require = createRequire(import.meta.url);
-const ts = require('typescript');
+// TypeScript's in-process compiler API, which TypeScript 7 no longer has (`require('typescript')` there is only
+// `{ version }`; the compiler is a native binary behind an unstable interface). The repository builds and
+// type-checks with 7; this script reads declarations with the 6.x line, kept as an alias in package.json.
+const ts = require('typescript-js-api');
 
 const rfEntry = process.argv[2];
 if (!rfEntry || rfEntry.startsWith('--') || !existsSync(rfEntry)) {
