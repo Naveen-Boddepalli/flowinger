@@ -186,7 +186,8 @@ adds is *changing* it from the pointer and keyboard. `allFeatures` is the list t
 | `autoPanOnNodeDrag`, `autoPanOnConnect`, `autoPanSpeed` | `true`, `true`, `15` | Hold a dragged node — or the end of a connection you are dragging — near the pane's edge and the view pans that way, faster the nearer the edge (`autoPanSpeed` px per frame at the edge itself). Drags are measured in graph space, so the node stays under the pointer as the view moves. |
 | `zoomOnDoubleClick` | `true` | A double click on the empty canvas zooms in about the pointer (out with Shift). |
 | `panOnScroll`, `panOnScrollSpeed` | `false`, `0.5` | The wheel pans instead of zooming (Ctrl/⌘ or a trackpad pinch still zoom). A `nowheel` class lets the wheel through to something inside that scrolls for itself — a code block, a list. |
-| `defaultViewport` | | Where the view starts, once — a controlled `viewport` is not taken. Inside a `FlowingerProvider`, the canvas moves the provider's view there when it mounts. |
+| `defaultViewport` | | Where the view starts, once. Inside a `FlowingerProvider`, the canvas moves the provider's view there when it mounts. Ignored when `viewport` is given. |
+| `viewport`, `onViewportChange` | | **Controlled view.** Given `viewport`, the canvas draws exactly that and moves nowhere on its own: a pan, a wheel zoom, a zoom button, `fitView` — each *asks* through `onViewportChange(viewport)` where it would go, and the view changes when `viewport` does (`const [viewport, setViewport] = useState(…)` and `onViewportChange={setViewport}` is the whole of it). An animation is followed frame by frame, and cut short if you move the view yourself. Without `viewport`, `onViewportChange` is a report: each move, after it is made. |
 | `onMoveStart`, `onMove`, `onMoveEnd` | | The view is moving: `(event, viewport)`, `event` the pointer or wheel that moved it, or `null` for a call such as `fitView`. A run of wheel ticks is one move, ended once the wheel has been still for 150 ms; `useOnViewportChange` hears the same moves from anywhere inside a canvas. |
 | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` | | And the same for edges (`onEdgeDoubleClick`…) and the pane (`onPaneContextMenu`, `onPaneMouseEnter`…), plus `onPaneScroll`. Needs `eventsFeature`; giving any edge event makes every edge take the pointer. |
 | `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
@@ -382,7 +383,7 @@ uses (which it replaced, with identical geometry and its whole end-to-end suite 
 
 Measured against `@xyflow/react` 12.11.6's own type declarations
 (`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`): **146 of its 211
-exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 `Node` fields, **13 of 13**
+exports**, **83 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 `Node` fields, **13 of 13**
 `NodeProps` fields, and **20 of 20** on both `Edge` and `EdgeProps`. What is missing:
 
 - **Type names:** the ones an app imports by name — `OnNodesChange`, `OnConnect`, `ReactFlowProps`,
@@ -394,12 +395,11 @@ exports**, **81 of 119** `ReactFlow` props, 31 of 32 instance methods, 21 of 22 
   flowinger does not have (`NodeOrigin`, `ColorMode`, the resize-control and MiniMap-node types), plus a few
   small ones not yet done (`DeleteElementsOptions`, `FitBoundsOptions`, `HandleConnection`…).
 
-- **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onViewportChange` (there is `onMove` /
-  `onMoveStart` / `onMoveEnd`, and `useOnViewportChange`); `onClickConnectStart` / `End` (connecting by click,
-  as opposed to dragging). Mouse events on nodes, edges and the pane (double click, context menu, enter, move,
+- **Canvas events:** `onSelectionContextMenu`, `onSelectionDrag*`; `onClickConnectStart` / `End` (connecting
+  by click, as opposed to dragging). Mouse events on nodes, edges and the pane (double click, context menu, enter, move,
   leave) and the pane's scroll are covered, as `eventsFeature`.
-- **Viewport and gestures:** a controlled `viewport` (there is `defaultViewport`, and the provider's
-  `initialViewport`); `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
+- **Viewport and gestures:** (a controlled `viewport` and `onViewportChange` are there now);
+  `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
   `zoomActivationKeyCode`, `panOnScrollMode`, `selectNodesOnDrag`, `nodesFocusable`, `disableKeyboardA11y`,
   `connectOnClick`, `connectionRadius`, `reconnectRadius`, the drag and click distance thresholds,
   `preventScrolling`, `noDragClassName` / `noPanClassName` (`nodrag`, `nopan` and now `nowheel` are honoured).

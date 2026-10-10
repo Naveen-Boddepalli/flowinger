@@ -79,7 +79,6 @@ React Flow's own type declarations. The ones most likely to matter, with what to
 
 | Missing | Instead |
 |---|---|
-| controlled `viewport` / `onViewportChange` | `defaultViewport`, `onMove`/`onMoveEnd`, `useOnViewportChange`, and `setViewport` on the instance |
 | `nodeOrigin` | compute the top-left yourself: `position - size / 2` |
 | `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode` | Shift (and Ctrl/⌘ to add to a selection) are fixed; there is no Space-to-pan |
 | `connectOnClick`, `connectionRadius` | drag from a handle to a handle |
@@ -92,6 +91,11 @@ If something *you* use is on the list, [open an issue](https://github.com/Naveen
 saying what you were building — that is how the list is ordered.
 
 ## 5. Things that look the same and are not
+
+- **A controlled `viewport` is asked, not told.** As in React Flow, give `viewport` and `onViewportChange`
+  and the view is yours: a gesture or an instance call *asks* for where it would go and nothing moves until
+  `viewport` changes. If you never apply what it asks, the canvas simply cannot be moved (in development it
+  says so, once).
 
 - **A node with no component of your own** is React Flow's `default`, `input` or `output`: `id` and
   `data.label`, with handles on `targetPosition` / `sourcePosition`. It also shows its `id` in bold above the

@@ -648,6 +648,18 @@ export interface FlowingerProps {
    */
   defaultViewport?: Viewport;
   /**
+   * The view, owned by the caller. Given, the canvas draws exactly this and moves nowhere on its own: a
+   * pan, a zoom, `fitView`, a zoom button — each asks through `onViewportChange` with where it would go, and
+   * the view changes when `viewport` does. Without `onViewportChange` the view cannot be moved at all.
+   * `defaultViewport` is ignored.
+   */
+  viewport?: Viewport;
+  /**
+   * Hears every change of the view, where it is going. With `viewport` it is the request to move; without,
+   * a report that it has — after the move, and not for one `viewport` itself made.
+   */
+  onViewportChange?: (viewport: Viewport) => void;
+  /**
    * The view is moving — from its first change to its last. `event` is what moves it (the pointer, the
    * wheel) or null for a call such as `fitView`; a run of wheel ticks is one move, ended when the wheel has
    * been still for 150 ms.

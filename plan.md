@@ -502,6 +502,18 @@ came from looking at the **published artifact and the repository's public face**
   is untouched: it still answers only for a handle *id* that no registered handle carries, and the built-in
   handles carry none. Checked against React Flow's own DOM for seven node configurations; ten mutants, all
   killed. One difference kept: flowinger's default node also shows its `id`.
+- **A controlled `viewport`, and a design flaw the mutants found in it.** Everything that moves the view —
+  gestures, tweens, `fitView`, the zoom buttons — already went through one function (`commitViewport`, three
+  call sites, all in `setViewport`), so controlled mode is a flag at that seam: a request goes to
+  `onViewportChange` and the view stays put; `syncViewport` (the prop changing) applies a view without
+  reporting it. The first version cancelled the running tween whenever the prop changed — but an owner
+  applying each frame it is asked for changes the prop *because of* that tween, so every animated move in
+  controlled mode would have stopped after one frame. The mutant that removed the cancel *survived*, which
+  is what showed the behaviour was untested, and then wrong. Now the sync recognises an echo of the last
+  request (leave the tween and its destination alone) from an owner's own jump (cancel it), with a test for
+  each and one for the second wheel tick building on the owner's view. Two other survivors were a missing
+  assertion (the server-rendered first paint) and an *equivalent* mutant (the `defaultViewport` guard: that
+  effect runs before the callbacks and listeners exist, so the transient move it avoids cannot be seen).
 - **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
   `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
   behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the
@@ -534,7 +546,7 @@ What is *in the repository* is done; what is left is switches only the owner can
   as far as I know.
 - A lot that React Flow has, though less than before each round above. Measured (not from memory) with
   `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 146 of its 211 exports
-  (56 of the 65 missing are types — 99 of 211 before the seventh round's type names), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 21 of 22
+  (56 of the 65 missing are types — 99 of 211 before the seventh round's type names), 83 of 119 `ReactFlow` props, 31 of 32 instance methods, 21 of 22
   `Node` fields, 13 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
   from React Flow" lists what is missing, by category — mostly key-code and threshold props
   (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, and HTML attributes on `Panel`,

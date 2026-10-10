@@ -13,6 +13,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **A controlled view: `viewport` and `onViewportChange`.** Given `viewport`, the canvas draws exactly it and
+  moves nowhere on its own; a pan, a wheel zoom, a zoom button or `fitView` asks through
+  `onViewportChange` where it would go, and the view changes when `viewport` does. An animated move is
+  followed frame by frame by an owner that applies each, and cut short if the owner moves the view itself.
+  Without `viewport`, `onViewportChange` reports each move after it is made. `defaultViewport` is ignored
+  when `viewport` is given; in development, a `viewport` with no `onViewportChange` says it cannot move.
 - **`sourcePosition` and `targetPosition` on a node, and React Flow's built-in node types behind them.** A
   node with no component of its own — no `type`, or one `nodeTypes` does not name — now has handles, as
   React Flow's `default`, `input` and `output` do: a target on `targetPosition` (default top), a source on
