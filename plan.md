@@ -7,7 +7,7 @@
 edges, selection, connecting, the minimap, `translateExtent`, and the render-loop regression),
 `flowingerStore.test.ts` (the pure store), `pointer.test.ts` (pinch maths), `ssr.test.tsx` (a server render
 in vitest's `node` environment, where there really is no `document`) and `hydration.test.tsx`.
-`pnpm typecheck`, `pnpm test` (599 tests, in 25 files) and `pnpm build` pass on React 19 **and** React 18, and the
+`pnpm typecheck`, `pnpm test` (867 tests, in 39 files, plus 8 in a real browser) and `pnpm build` pass on React 19 **and** React 18, and the
 installed tarball renders, hydrates and type-checks (TypeScript 7, `skipLibCheck` off) on both.
 
 Flowinger is its own repository. Its first consumer, QueryLens, will import it as a dependency once
@@ -352,7 +352,8 @@ matching React Flow's own `Omit` exactly so it cannot silently break a handler).
 - **Not done:** `useConnection`, `useHandleConnections` (the connect feature does not currently track handle
   or node objects during a drag, only points and positions — adding them is more than this round's size);
   `sourcePosition` / `targetPosition` as `Node` fields (a fallback for the default-node case, which needs a
-  design decision about how it interacts with the existing legacy id-to-side table, not made here).
+  design decision about how it interacts with the existing legacy id-to-side table, not made here — made in the
+  seventh round, below).
 
 ### Sixth round: connections and the canvas's own attributes
 
@@ -398,14 +399,193 @@ put the ids they need, plus what the canvas's own element was still missing.
   viewport-emulation scaling made screen coordinates unreliable enough that the attempt was abandoned in
   favour of the already-thorough unit and mutation coverage).
 
+### Seventh round: open-source readiness
+
+Not engine work. The question was *what stands between this and someone else using it*, and the answers
+came from looking at the **published artifact and the repository's public face**, not the source:
+
+- **The `require` types were wrong, in every release.** `exports` pointed `require` at a CJS file and its
+  `types` at the one `dist/index.d.ts`, which — the package being `"type": "module"` — TypeScript reads as
+  ESM. Are the Types Wrong: *Masquerading as ESM* under `node16` from CJS; publint warned the same. Nothing
+  here had caught it because every check ran from ESM or a bundler. **Fixed** by giving `require` its own
+  declarations: `scripts/cjs-types.mjs` copies the emitted `.d.ts` files into `dist/cjs/`, whose
+  `package.json` says `"type": "commonjs"`. (A `.d.cts` beside each file would not do — the declarations
+  import one another, and a CJS declaration may not import an ESM one.) **Verified on the packed tarball:**
+  attw green on node10 / node16-from-CJS / node16-from-ESM / bundler; `publint --strict`; a throwaway
+  consumer that `require`s and `import`s it and server-renders from each; a strict TypeScript consumer on
+  `nodenext` as `.cts` and `.mts` with `skipLibCheck` off. `pnpm check:package` runs the first two in CI.
+  Cost: the tarball is 108.6 → 121.1 kB. Rejected: going ESM-only (breaks CJS-based test runners and
+  toolchains, for nothing at this size) and bundling declarations with a plugin (a second bundler in the
+  build for the same result).
+- **A token-based publish path was the only one, and its tokens are gone.** npm revoked classic tokens in
+  December 2025 and caps granular write tokens at 90 days (GitHub's changelog, 2025-11-05 and 2025-12-09);
+  trusted publishing — OIDC from the workflow, no stored secret — is the supported route, and it attaches a
+  provenance attestation by itself (`0.3.0` has none). `release.yml` does that: a `vX.Y.Z` tag runs the same
+  gate as CI and publishes. What npm requires, from its own page: CLI ≥ 11.5.1, Node ≥ 22.14,
+  `id-token: write`, a GitHub-hosted runner, a **public** repository for provenance, `repository.url`
+  matching exactly, and a first successful publish within two days of saving the configuration — which it
+  does not validate on save, so the first real tag is the test (make it a prerelease; a hyphenated tag goes
+  to the `next` dist-tag).
+- **Release tooling: a tag and a hand-kept `CHANGELOG.md`.** Not Changesets (monorepo-shaped, a file per
+  pull request for one maintainer); not release-please or semantic-release (they read conventional commits,
+  and this history is prose). Revisit when there are outside contributors.
+- **The repository was not reachable.** `api.github.com/repos/Naveen-Boddepalli/flowinger` answered 404 to
+  an anonymous request, while `package.json`'s `repository`, `homepage` and `bugs`, the README's links and
+  the npm page all point at it: private, or not pushed. Everything in this round that depends on it being
+  public (the Pages demo, the badges, provenance, the issue forms) is built and waiting — see the launch
+  checklist below. I did not check the remote with credentials.
+- **React Flow's type names — 59 aliases** (`src/reactFlowNames.ts`; 47 at first, 12 more once the shapes had
+  been read), the single largest migration
+  paper-cut the audit had: 103 of the 112 missing exports were types. The audit went **99 → 158 of 211**
+  exports. Each handler is written against the prop it describes and a test asserts it is *exactly* that
+  prop's type, so it cannot drift; where React Flow's own shape is identical (`OnConnect`,
+  `CoordinateExtent`, `SnapGrid`, `KeyCode`, `Dimensions`, `Box`, `Transform`, `XYZPosition`) the test
+  compares against `@xyflow/react`'s. The type tests are enforced by `pnpm typecheck`, since `expectTypeOf`
+  is a no-op at runtime — so they were **negative-controlled**: a handler changed to take an extra argument
+  and `Transform` shortened to a pair each failed at the assertion, and were restored. **Left out on
+  purpose:** names for things flowinger lacks (`NodeOrigin`, `ColorMode`…), a name whose shape differs
+  (`FinalConnectionState`), and the generics — `ReactFlowInstance<MyNode>` is an error rather than a type
+  argument silently ignored (the same reasoning as `viewportInitialized`, fifth round). A `GetBezierPathParams`
+  family was already declared in `paths.ts`, only not exported.
+- **A demo that can be linked to.** `vite.demo.config.ts` builds the root `index.html` for GitHub Pages
+  (`pnpm demo:build`, `pages.yml`); CI builds it on every pull request so a broken demo fails the PR, not
+  the deploy. Its version label now reads `package.json` instead of being bumped by hand each release.
+  *Known wart:* the demo loads Tailwind from its CDN script, which Tailwind says is not for production —
+  fine for a demo, but it is a third-party script on a public page; replacing it with the build-time plugin
+  is a small job on `ROADMAP.md`'s list.
+- **Examples, and a bug they found.** `examples/layouts` (a read-only viewer on `FlowingerCore`: one plan
+  laid out by `d3-hierarchy`, `dagre` and `elkjs` behind one signature, top-down or left-to-right, tree or
+  DAG) and `examples/editor` (a controlled editor with a custom node and edge). `scripts/check-examples.mjs`
+  builds each against the *packed* library in a throwaway directory and is a CI job. Every layout × direction
+  × shape combination was walked in a real browser and checked from geometry: no overlaps, children on the
+  right side of parents, every node inside the pane, handles facing the layout. Two things came out of it:
+  (1) **the example's own bug** — it remounted the canvas the moment a button was pressed, while the new
+  positions arrived a moment later, so `fitView` framed the *old* layout; the numbers gave it away (a
+  top-down layout with the scale of a left-to-right one), a screenshot would not have. It now keys the canvas
+  on the finished layout. (2) **a library bug** — the first page load, in a browser pane that had just been
+  opened, stayed unframed: the `fitView` prop set its "done" flag when the nodes were measured even though
+  the pane had no size, where framing is a no-op, and so never framed once shown. That is any canvas mounted
+  in a closed tab, modal or accordion. Fixed (`paneHasSize`), with a red-green test and a mutant for the
+  effect's dependency; the suite also had no StrictMode test, so two were added (they pass). The examples ask
+  the registry for the released package and use only API it has; Vite 6 rather than the repository's 8,
+  because they are meant for StackBlitz — not tested there from here.
+- **A real browser in CI, and what it found at once.** `e2e/smoke.spec.ts` (Playwright, against the demo as
+  Pages serves it; `E2E_CHANNEL=chrome` uses the installed Chrome): framing and no console errors, an edge's
+  ends against the *measured* handle, wheel zoom about the pointer, pan, node drag with its edges, a flick, a
+  connection, delete. Written to the behaviours plan.md says only a browser showed. **Three things it found:**
+  (1) *a flick lost the drag* — one far move then the release left the node put. The move that crosses the
+  threshold goes to whatever is under the pointer (the capture it triggers starts with the *next* event), so
+  the node never saw the pointer travel; the unit tests always sent a second move. Fixed at the release,
+  with seven mutants of the new branch killed (two needed new assertions: that the release does not bubble,
+  and that the pointer is let go). (2) *my test's "empty" spot was the minimap*, which is pannable the other
+  way — it read as a pan bug until the number (-220 for a +90 drag) gave it away. (3) *port 4173 already had
+  another project's preview on it* (QueryLens), which Playwright's `reuseExistingServer` quietly adopted: the
+  suite "ran" against the wrong app. The config now uses an unusual port and never reuses a server.
+- **A migration guide, and what writing it corrected.** `docs/migrating-from-react-flow.md`, with every
+  default read from `@xyflow/react`'s source rather than recalled. That found two things wrong in this
+  project's own docs: (1) the README listed `deleteKeyCode` being `'Backspace'` alone as a *difference* — it
+  is React Flow's default too — and (2) nobody had listed `minZoom` (`0.5` there, `0.05` here) or the one
+  that matters most, that React Flow's `nodesDraggable`, `nodesConnectable` and `elementsSelectable` default
+  to **on** and flowinger's to off. **Test ids:** React Flow stamps `rf__wrapper`, `rf__node-<id>`,
+  `rf__edge-<id>`, `rf__controls`, `rf__minimap` and `rf__background`; flowinger had only `edge-<id>`, so a
+  migrated app's tests would break the way its stylesheet would have. Aligned (a 0.x breaking change to the
+  one id, flagged in the changelog; QueryLens selects on none of them) and compared against the real
+  library's output — which first failed because React Flow itself draws no edge in jsdom until it is told
+  where the handles are (its server-rendering inputs: `width`, `height`, `handles`). Six producers, six
+  mutants, all killed.
+- **`sourcePosition` / `targetPosition`, which were really "built-in node types".** The fifth round deferred
+  them as needing a design decision about the legacy id-to-side table. Looking at what React Flow does with
+  them settled it: they only mean something to its built-in `default`, `input` and `output` nodes, which
+  render handles — and flowinger's default view drew *none*, so a migrated app's plain nodes lost their
+  handles and edges attached by direction. The default view now registers real handles (a target on
+  `targetPosition`, default top; a source on `sourcePosition`, default bottom; `input` only the source,
+  `output` only the target, `group` neither), and a custom component is handed both fields. The legacy table
+  is untouched: it still answers only for a handle *id* that no registered handle carries, and the built-in
+  handles carry none. Checked against React Flow's own DOM for seven node configurations; ten mutants, all
+  killed. One difference kept: flowinger's default node also shows its `id`.
+- **A controlled `viewport`, and a design flaw the mutants found in it.** Everything that moves the view —
+  gestures, tweens, `fitView`, the zoom buttons — already went through one function (`commitViewport`, three
+  call sites, all in `setViewport`), so controlled mode is a flag at that seam: a request goes to
+  `onViewportChange` and the view stays put; `syncViewport` (the prop changing) applies a view without
+  reporting it. The first version cancelled the running tween whenever the prop changed — but an owner
+  applying each frame it is asked for changes the prop *because of* that tween, so every animated move in
+  controlled mode would have stopped after one frame. The mutant that removed the cancel *survived*, which
+  is what showed the behaviour was untested, and then wrong. Now the sync recognises an echo of the last
+  request (leave the tween and its destination alone) from an owner's own jump (cancel it), with a test for
+  each and one for the second wheel tick building on the owner's view. Two other survivors were a missing
+  assertion (the server-rendered first paint) and an *equivalent* mutant (the `defaultViewport` guard: that
+  effect runs before the callbacks and listeners exist, so the transient move it avoids cannot be seen).
+- **Pass-through attributes — and a node-type rule found by testing them.** `Panel`, `NodeToolbar`, `MiniMap`,
+  `Handle` and `BaseEdge` take their element's non-handler attributes (a shared types-only
+  `PassThroughHtml` / `PassThroughSvg`, `attributes.ts`): the useful part of what React Flow lets through,
+  minus the handlers that would silently replace the canvas's own. A handle's `id` stays the handle id; on
+  `BaseEdge` they land on the path and the engine's `d`, `fill`, markers and classes win (a test passes them
+  by cast to pin that). The tests used `nodeTypes={{ default: … }}` to put a component in a typeless node,
+  and it was *not used* — React Flow resolves `node.type || 'default'`, and sends an unregistered type to
+  `nodeTypes.default` too. Fixed, and the oracle caught my first fix: React Flow still draws its built-in
+  `input`/`output`/`group` when `default` is overridden, which mine had sent to the override. Eleven
+  mutants, two survivors that became tests (a typeless `group`; the engine winning over a cast-in `d`).
+- **Where the bytes went, and the budget raise.** The whole canvas went 25.4 → 26.0 kB gzip over this round and the
+  lean core 16.5 → 16.9 (16.3 → 16.8 from `dist`): ~0.1 each for the flick fix, the test ids, the built-in node
+  handles and the pass-through attributes, and 0.2–0.3 for the controlled viewport (measured at each commit, from
+  a clean checkout). All were compatibility features chosen deliberately, so the full-canvas budget moved
+  26 → 27, in CI, the release workflow and CONTRIBUTING; **the lean budget stayed 17**, with 0.1 kB of room — too little, as the first CI run
+  showed (next entry); it is 17.5 now. The next change that touches the core still has to earn its bytes (or
+  be a feature). `release.yml` also now
+  runs the examples and the browser suite — it said "the same gate as CI" and was not.
+- **The README became a landing page.** It had grown to 470 lines of reference. Now it is ~230: hero and
+  screenshot, why, install, quick start (with the interactive opt-in called out, since that is the first
+  surprise), pay-for-what-you-use with the size table, a documentation index, the two examples with
+  screenshots, an honest "is it for you", compatibility, contributing, acknowledgements. The reference moved,
+  verbatim, into `docs/` (`api`, `components`, `features`, `theming`, `server-rendering`,
+  `react-flow-coverage`) with a `docs/README.md` index and a new `getting-started.md`; inbound links were
+  repointed and every link and image in all 20 Markdown files is checked. Screenshots are real (Playwright,
+  installed Chrome, 2×), of the demo's canvas and the two examples; the layouts one is the left-to-right tree,
+  because with the shared-scan toggle on, the example's generic smoothstep edge runs behind two nodes — a
+  fair limit of the example, not something to put in a hero image.
+- **The first CI run, and a margin that was inside the noise.** `demo`, `examples` and `e2e` passed first time —
+  which is the first real evidence the workflows and the action versions I took from release pages are
+  sound — and `check` failed the lean gate: **17.0 kB in CI against 16.95 here**, the same 56.5 kB minified
+  bundle. gzip's output differs by ~0.07 kB between Node/zlib builds, so the "0.1 kB of room" I had recorded
+  and said would be tight was within environmental noise, not headroom. Fixed as a gate, not as code: the
+  lean budget is 17.5 (full stays 27, 0.9 clear), the scripts print two decimals so a difference like this is
+  visible, and the rule is written down — a budget sits about half a kilobyte above what CI measures. Not
+  done: trimming 0.1 kB to chase a decimal, which would have been a worse fix and would have failed again.
+- **Also:** `CONTRIBUTING.md` (including the release procedure and the one-time npm setup),
+  `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md`, issue forms that ask whether React Flow
+  behaves differently (a compat library's best bug report), a pull-request template, Dependabot (the
+  `@xyflow/react` oracle is pinned and excluded), `CHANGELOG.md` rebuilt from the registry's `gitHead` for
+  each release (`0.1.0` → `68bbe79`, `0.2.0` → `574437d`, `0.3.0` → `a0e9c00`), `ROADMAP.md`, README badges
+  and an "Is it for you?" section using this file's own measurements.
+- **Checked while writing:** the README's first draft said the demo lays out a tree; it does not (positions
+  are hand-written) — corrected before it shipped. The release-notes extraction in `release.yml` swallowed
+  the changelog's link references for the oldest entry — caught by running it against the real file.
+- **Not done:** actually releasing (no `0.4.0` on npm yet; nothing here was published, pushed or tagged);
+  the Playwright smoke test, layout recipes and `examples/` (see `ROADMAP.md`); a docs site.
+
+### Launch checklist
+
+What is *in the repository* is done; what is left is switches only the owner can flip.
+
+| # | Step | State |
+|---|---|---|
+| 1 | Make the GitHub repository public. It exists (the branch and tags are pushed) but still answers 404 to anonymous requests, so it is private; Pages, provenance and the badges all need it public | open |
+| 2 | Settings → Pages → Source: **GitHub Actions** (then `pages.yml` publishes the demo) | open |
+| 3 | npmjs.com → `flowinger` → Settings → **Trusted Publisher** → GitHub Actions: owner `Naveen-Boddepalli`, repo `flowinger`, workflow `release.yml`; then *Publishing access* → require 2FA and disallow tokens | open |
+| 4 | Settings → Security → enable **private vulnerability reporting**; Settings → enable **Discussions**; set the description, homepage (the demo) and topics | open |
+| 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **done**: tagged, each checked against the registry's `gitHead`, and pushed with the branch |
+| 6 | Merge this work; set `CHANGELOG.md`'s Unreleased to `0.4.0`; push a **prerelease** tag first (`v0.4.0-rc.1` — set the version to match) to prove steps 1–3, then `v0.4.0` | open |
+| 7 | Replace the contact line in `CODE_OF_CONDUCT.md` with a dedicated address if wanted (it points at the GitHub profile) | optional |
+| 8 | After the first release, look at the README on npmjs.com: its three images are relative paths (right on GitHub, including while private). If npm does not rewrite them, change them to `https://raw.githubusercontent.com/Naveen-Boddepalli/flowinger/main/docs/assets/…` | open |
+
 ### Not built
 
 - Connecting by *keyboard* (a drag is the only way to make a connection). React Flow does not offer it either,
   as far as I know.
 - A lot that React Flow has, though less than before each round above. Measured (not from memory) with
-  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 99 of its 211 exports
-  (103 of the 112 missing are types), 81 of 119 `ReactFlow` props, 31 of 32 instance methods, 19 of 22
-  `Node` fields, 11 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
+  `scripts/audit-react-flow.mjs` against `@xyflow/react` 12.11.6's type declarations: 158 of its 211 exports
+  (44 of the 53 missing are types — 99 of 211 before the seventh round's type names), 83 of 119 `ReactFlow` props, 31 of 32 instance methods, 21 of 22
+  `Node` fields, 13 of 13 `NodeProps` fields, 20 of 20 on both `Edge` and `EdgeProps`. The README's "Coming
   from React Flow" lists what is missing, by category — mostly key-code and threshold props
   (`selectionKeyCode`, `nodeDragThreshold`…), `nodeOrigin`, `colorMode`, and HTML attributes on `Panel`,
   `NodeToolbar`, `MiniMap`, `Handle` and `BaseEdge` (the canvas itself now takes `id` and `domAttributes`).
@@ -595,5 +775,6 @@ commit, and takes `FlowTree` across by changing its imports alone.
 ### Before publishing or announcing
 
 - Done: `LICENSE.md` (MIT), and published to npm as `flowinger@0.1.0` (2026-09-21).
-- Still open — attribute React Flow: `src/paths.ts` uses React Flow's (MIT) bezier control-point formula, so keep a
-  `NOTICE`/attribution unless that has been decided otherwise.
+- Done: attribute React Flow — `NOTICE.md` credits the bezier control-point formula and the edge-centre maths in
+  `src/paths.ts` (0.2.0).
+- Everything else is the seventh round's **Launch checklist**, above.

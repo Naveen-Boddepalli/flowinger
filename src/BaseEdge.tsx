@@ -1,4 +1,5 @@
 import { useContext, useRef, type CSSProperties } from 'react';
+import type { PassThroughSvg } from './attributes.ts';
 import { EdgeContext } from './edgeContext.ts';
 
 /** Read from `--flowinger-edge` so a consumer can theme every edge at once. */
@@ -26,7 +27,10 @@ const labelHaloStyle: CSSProperties = {
 
 const DEFAULT_LABEL_PADDING: [number, number] = [2, 4];
 
-export interface BaseEdgeProps {
+/** Attributes the edge's path sets itself, so a caller's cannot replace them. */
+type OwnedByPath = 'd' | 'fill' | 'stroke' | 'strokeWidth' | 'markerStart' | 'markerEnd' | 'path';
+
+export interface BaseEdgeProps extends PassThroughSvg<SVGPathElement, OwnedByPath> {
   /** The SVG path data — from `getBezierPath` and friends, or your own. */
   path: string;
   label?: string | undefined;
@@ -68,6 +72,7 @@ export function BaseEdge({
   labelBgStyle,
   labelBgPadding = DEFAULT_LABEL_PADDING,
   labelBgBorderRadius = 2,
+  ...rest
 }: BaseEdgeProps) {
   const { selected, selectable, interactive, LabelBox } = useContext(EdgeContext);
   const textRef = useRef<SVGTextElement | null>(null);
@@ -91,6 +96,7 @@ export function BaseEdge({
     <>
       {/* Presentation attributes, so an edge's own `style` or a stylesheet rule wins. */}
       <path
+        {...rest}
         className="flowinger-edge-path react-flow__edge-path"
         d={path}
         fill="none"

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or "how do I…?"
+    url: https://github.com/Naveen-Boddepalli/flowinger/discussions
+    about: Usage questions and ideas are better as a discussion, where the answer stays findable.
+  - name: Report a security problem
+    url: https://github.com/Naveen-Boddepalli/flowinger/security/advisories/new
+    about: Privately, please — see SECURITY.md.

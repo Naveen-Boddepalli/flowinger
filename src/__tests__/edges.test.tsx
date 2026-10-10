@@ -31,7 +31,7 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
   if (!el) throw new Error(`nothing matches ${selector}`);
   return el;
 }
-const edgeEl = (c: ParentNode, id: string) => must<SVGGElement>(c, `[data-testid="edge-${id}"]`);
+const edgeEl = (c: ParentNode, id: string) => must<SVGGElement>(c, `[data-testid="rf__edge-${id}"]`);
 const nums = (d: string) => (d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number);
 
 const nodes: Node[] = [
@@ -215,7 +215,7 @@ describe('the built-in edges as components', () => {
 
   it('can be an edgeTypes entry, so a canvas draws an edge with one', () => {
     const { container } = withEdge({ type: 'mine', pathOptions: { curvature: 1 } }, { edgeTypes: { mine: StepEdge } });
-    expect(must(container, '[data-testid="edge-e"] .react-flow__edge-path').getAttribute('d')).not.toContain('C');
+    expect(must(container, '[data-testid="rf__edge-e"] .react-flow__edge-path').getAttribute('d')).not.toContain('C');
   });
 });
 

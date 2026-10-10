@@ -18,7 +18,7 @@ const layers = (c: ParentNode) => [...c.querySelectorAll<SVGSVGElement>('svg.flo
 const z = (el: Element) => (el as HTMLElement | SVGElement).style.zIndex;
 const node = (c: ParentNode, id: string) => must<HTMLElement>(c, `[data-id="${id}"]`);
 const idsIn = (svg: Element) =>
-  [...svg.querySelectorAll('[data-testid^="edge-"]')].map((g) => g.getAttribute('data-testid')?.replace('edge-', ''));
+  [...svg.querySelectorAll('[data-testid^="rf__edge-"]')].map((g) => g.getAttribute('data-testid')?.replace('rf__edge-', ''));
 
 const n = (id: string, x: number, y: number, extra: Partial<Node> = {}): Node => ({
   id,

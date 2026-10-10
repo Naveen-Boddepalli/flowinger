@@ -68,6 +68,12 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
         `feature — pass ${feature}Feature in \`features\`, or use <FlowingerCanvas>, which has them all.`,
     );
   }
+  if (props.viewport !== undefined && props.onViewportChange === undefined) {
+    console.warn(
+      'flowinger: `viewport` is given without `onViewportChange`, so the view is yours to move and nothing ' +
+        'will pan or zoom it — set `viewport` from what `onViewportChange` reports, or use `defaultViewport`.',
+    );
+  }
   if (
     (props.nodes === undefined && props.defaultNodes !== undefined) ||
     (props.edges === undefined && props.defaultEdges !== undefined)

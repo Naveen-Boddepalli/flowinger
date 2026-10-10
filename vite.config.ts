@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/__tests__/setup.ts'],
+    // The browser tests under e2e/ are Playwright's (`pnpm e2e`), and the examples are apps.
+    exclude: [...configDefaults.exclude, 'e2e/**', 'examples/**'],
   },
   build: {
     lib: {

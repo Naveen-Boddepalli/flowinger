@@ -12,7 +12,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { FlowingerContext, useFlowingerStore, useNodesInitialized } from './context.ts';
+import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
 import { warnAboutIgnoredProps } from './devWarnings.ts';
 import { resolveFeatures, type Feature } from './features.ts';
@@ -20,6 +20,7 @@ import { ViewportPortalHost } from './ViewportPortal.tsx';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
+import { Handle } from './Handle.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
@@ -33,14 +34,7 @@ import {
   releasePointer,
   type PinchStart,
 } from './pointer.ts';
-import type {
-  Edge,
-  FlowingerProps,
-  Node,
-  NodeProps,
-  Viewport,
-  XYPosition,
-} from './types.ts';
+import { Position, type Edge, type FlowingerProps, type Node, type NodeProps, type Viewport, type XYPosition } from './types.ts';
 
 const NO_FEATURES: readonly Feature[] = [];
 const NO_NODES: Node[] = [];
@@ -57,7 +51,13 @@ const defaultNodeStyle: CSSProperties = {
   color: 'var(--flowinger-text, #e2e8f0)',
 };
 
-function DefaultNodeView({ id, data, selected }: NodeProps) {
+/**
+ * What a node with no component of its own is: React Flow's `default`, `input` and `output` types, which
+ * differ in which handles they have — `input` is only a start (a source), `output` only an end (a target) —
+ * placed where the node's `targetPosition` and `sourcePosition` say (top and bottom unless it does).
+ * `group` is a container, and has none.
+ */
+function DefaultNodeView({ id, data, selected, type, sourcePosition, targetPosition }: NodeProps) {
   return (
     <div
       style={
@@ -66,15 +66,20 @@ function DefaultNodeView({ id, data, selected }: NodeProps) {
           : defaultNodeStyle
       }
     >
+      {type !== 'input' && type !== 'group' && <Handle type="target" position={targetPosition ?? Position.Top} />}
       <div style={{ fontWeight: 600 }}>{id}</div>
       {'label' in data && (
         <div style={{ fontSize: '0.875em', color: 'var(--flowinger-text-dim, #94a3b8)' }}>
           {String(data.label)}
         </div>
       )}
+      {type !== 'output' && type !== 'group' && <Handle type="source" position={sourcePosition ?? Position.Bottom} />}
     </div>
   );
 }
+
+/** The node types React Flow has built in, besides `default`: drawn by `DefaultNodeView`, whatever `nodeTypes.default` is. */
+const BUILTIN_TYPES: ReadonlySet<string> = new Set(['input', 'output', 'group']);
 
 /** How long a double-click zoom takes. */
 const DOUBLE_CLICK_ZOOM_MS = 200;
@@ -168,6 +173,8 @@ function InnerCanvas(props: FlowingerProps) {
     isValidConnection,
     onInit,
     defaultViewport,
+    viewport: controlledViewport,
+    onViewportChange,
     onMove,
     onMoveStart,
     onMoveEnd,
@@ -245,12 +252,32 @@ function InnerCanvas(props: FlowingerProps) {
   // A canvas that made its own store started there already; one inside a caller's provider is moved to it.
   useIsomorphicLayoutEffect(() => {
     const at = store.getViewport();
-    if (defaultViewport && (at.x !== defaultViewport.x || at.y !== defaultViewport.y || at.zoom !== defaultViewport.zoom)) {
+    if (
+      defaultViewport &&
+      controlledViewport === undefined &&
+      (at.x !== defaultViewport.x || at.y !== defaultViewport.y || at.zoom !== defaultViewport.zoom)
+    ) {
       void store.instance.setViewport(defaultViewport);
     }
     // Once: it is where the canvas starts, not where it is kept.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store]);
+
+  // A `viewport` is the owner holding the view: the store then only asks (`onViewportChange`) and shows
+  // what it is given. Declared before the view is synced, so the sync is not itself taken for a request.
+  const viewportControlled = controlledViewport !== undefined;
+  useIsomorphicLayoutEffect(() => {
+    store.setViewportControlled(viewportControlled);
+    return () => {
+      store.setViewportControlled(false);
+    };
+  }, [store, viewportControlled]);
+  const [viewX, viewY, viewZoom] = [controlledViewport?.x, controlledViewport?.y, controlledViewport?.zoom];
+  useIsomorphicLayoutEffect(() => {
+    if (viewX !== undefined && viewY !== undefined && viewZoom !== undefined) {
+      store.syncViewport({ x: viewX, y: viewY, zoom: viewZoom });
+    }
+  }, [store, viewX, viewY, viewZoom]);
 
   // Callbacks and options first: whether the flow is controlled is decided by
   // them, and the nodes below are read in that light.
@@ -313,6 +340,7 @@ function InnerCanvas(props: FlowingerProps) {
       onMove,
       onMoveStart,
       onMoveEnd,
+      onViewportChange,
     });
   }, [
     store,
@@ -338,6 +366,7 @@ function InnerCanvas(props: FlowingerProps) {
     onMove,
     onMoveStart,
     onMoveEnd,
+    onViewportChange,
   ]);
 
   useIsomorphicLayoutEffect(() => {
@@ -349,14 +378,17 @@ function InnerCanvas(props: FlowingerProps) {
   }, [store, edges]);
 
   // Once, when every node has a size: before that there is nothing to frame. After
-  // `setNodes` above, so it frames the nodes it is given, not the ones before them.
+  // `setNodes` above, so it frames the nodes it is given, not the ones before them. And once the pane has
+  // a size too — a canvas mounted inside a hidden tab or a closed modal is 0 × 0, where framing does
+  // nothing, and must not count as done: it frames when the pane is shown.
   const nodesInitialized = useNodesInitialized();
+  const paneHasSize = useStore((s) => s.width > 0 && s.height > 0);
   const fitted = useRef(false);
   useIsomorphicLayoutEffect(() => {
-    if (!fitView || !nodesInitialized || fitted.current) return;
+    if (!fitView || !nodesInitialized || !paneHasSize || fitted.current) return;
     fitted.current = true;
     void store.fitView(fitViewOptions);
-  }, [store, fitView, fitViewOptions, nodesInitialized]);
+  }, [store, fitView, fitViewOptions, nodesInitialized, paneHasSize]);
 
   const onInitRef = useRef(onInit);
   useEffect(() => {
@@ -581,6 +613,7 @@ function InnerCanvas(props: FlowingerProps) {
         {...Object.assign({}, ...bits.map((b) => b.props))}
         ref={containerRef}
         id={id}
+        data-testid="rf__wrapper"
         className={`flowinger react-flow ${className}`}
         style={containerStyle}
         onPointerDown={onPointerDown}
@@ -681,7 +714,14 @@ function InnerCanvas(props: FlowingerProps) {
                 node={node}
                 // A component is chosen by string at runtime, so its `data` type
                 // cannot be checked here; `NodeTypes` accepts any.
-                View={((node.type && nodeTypes[node.type]) ?? DefaultNodeView) as ComponentType<NodeProps>}
+                // As React Flow resolves it: a registered type; else the built-in of that name (`input`,
+                // `output`, `group`); else — no type, or one nobody registered — `nodeTypes.default`, or
+                // the built-in default.
+                View={
+                  ((node.type && nodeTypes[node.type]) ||
+                    (node.type && BUILTIN_TYPES.has(node.type) ? DefaultNodeView : nodeTypes.default) ||
+                    DefaultNodeView) as ComponentType<NodeProps>
+                }
                 draggable={node.draggable ?? nodesDraggable}
                 selectable={canSelect && (node.selectable ?? elementsSelectable)}
                 connectable={node.connectable ?? nodesConnectable}
@@ -708,7 +748,11 @@ export function FlowingerCore(props: FlowingerProps) {
   // in the tree can then drive the viewport); otherwise make one.
   if (useContext(FlowingerContext)) return <InnerCanvas {...props} />;
   return (
-    <FlowingerProvider initialViewport={props.defaultViewport} minZoom={props.minZoom} maxZoom={props.maxZoom}>
+    <FlowingerProvider
+      initialViewport={props.viewport ?? props.defaultViewport}
+      minZoom={props.minZoom}
+      maxZoom={props.maxZoom}
+    >
       <InnerCanvas {...props} />
     </FlowingerProvider>
   );

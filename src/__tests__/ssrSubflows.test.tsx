@@ -53,7 +53,7 @@ describe('server rendering nested nodes and a culled diagram', () => {
         onReconnect={() => {}}
       />,
     );
-    expect(html).toContain('data-testid="edge-e"');
+    expect(html).toContain('data-testid="rf__edge-e"');
     expect(html).not.toContain('flowinger-reconnect-anchor');
   });
 });

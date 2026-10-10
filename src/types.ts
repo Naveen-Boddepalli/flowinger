@@ -7,6 +7,7 @@ import type {
   ReactNode,
   SVGAttributes,
 } from 'react';
+import type { PassThroughHtml } from './attributes.ts';
 import type { NodeConnection } from './connections.ts';
 import type { Feature } from './features.ts';
 
@@ -97,6 +98,14 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   /** A CSS selector: when set, the node can only be dragged by an element that matches it. */
   dragHandle?: string;
   /**
+   * Which side the built-in node types (`default`, `input`, `output`) put their handles on — a source
+   * handle at `sourcePosition` (default bottom) and a target handle at `targetPosition` (default top). A
+   * horizontal layout sets them to `'right'` and `'left'`. Handed to a node component of your own too,
+   * which is free to use them or not.
+   */
+  sourcePosition?: Position;
+  targetPosition?: Position;
+  /**
    * Keeps the node inside a region while it is dragged or nudged: a region of
    * graph space, or `'parent'` for the box of its parent node.
    */
@@ -163,6 +172,9 @@ export interface NodeProps<N extends Node = Node> {
   /** The size the node declares (`width`, `height`); the content decides where it does not. */
   width?: number | undefined;
   height?: number | undefined;
+  /** Where the node's own `sourcePosition` / `targetPosition` put its handles; undefined unless it set them. */
+  sourcePosition?: Position | undefined;
+  targetPosition?: Position | undefined;
 }
 
 export const MarkerType = {
@@ -383,7 +395,8 @@ export interface BackgroundProps {
   style?: CSSProperties;
 }
 
-export interface HandleProps {
+export interface HandleProps extends PassThroughHtml<'id'> {
+  /** The handle's own name, which an edge's `sourceHandle` / `targetHandle` refers to — not a DOM `id`. */
   id?: string;
   type: HandleType;
   position: Position;
@@ -636,6 +649,18 @@ export interface FlowingerProps {
    * `FlowingerProvider`, the canvas moves the provider's view there.
    */
   defaultViewport?: Viewport;
+  /**
+   * The view, owned by the caller. Given, the canvas draws exactly this and moves nowhere on its own: a
+   * pan, a zoom, `fitView`, a zoom button — each asks through `onViewportChange` with where it would go, and
+   * the view changes when `viewport` does. Without `onViewportChange` the view cannot be moved at all.
+   * `defaultViewport` is ignored.
+   */
+  viewport?: Viewport;
+  /**
+   * Hears every change of the view, where it is going. With `viewport` it is the request to move; without,
+   * a report that it has — after the move, and not for one `viewport` itself made.
+   */
+  onViewportChange?: (viewport: Viewport) => void;
   /**
    * The view is moving — from its first change to its last. `event` is what moves it (the pointer, the
    * wheel) or null for a call such as `fitView`; a run of wheel ticks is one move, ended when the wheel has

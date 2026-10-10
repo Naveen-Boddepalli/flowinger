@@ -1,0 +1,40 @@
+version: 2
+updates:
+  # The workflows pin actions by major version; this keeps those moving.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+
+  # Everything in package.json is a dev dependency or a peer range, so nothing here reaches a consumer.
+  # Grouped, so a month's updates arrive as one pull request that CI judges as a whole.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        patterns: ['*']
+    ignore:
+      # Pinned on purpose: the oracle the tests diff against, and the version the audit script reads.
+      # Moved by hand, with scripts/audit-react-flow.mjs re-run and the README's counts updated.
+      - dependency-name: '@xyflow/react'
+
+  # The examples are copied out by people, so their dependencies should be current. `flowinger` itself is
+  # left alone: it is bumped by hand when a release has the API an example uses.
+  - package-ecosystem: npm
+    directories:
+      - /examples/layouts
+      - /examples/editor
+    schedule:
+      interval: monthly
+    groups:
+      example-dependencies:
+        patterns: ['*']
+    ignore:
+      - dependency-name: flowinger
+

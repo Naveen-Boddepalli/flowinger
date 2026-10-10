@@ -1,8 +1,9 @@
 import { useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
 import { Position } from './types.ts';
+import type { PassThroughHtml } from './attributes.ts';
 
-export interface NodeToolbarProps {
+export interface NodeToolbarProps extends PassThroughHtml {
   /** Which side of the node it sits on. Default top. */
   position?: Position;
   /** Along that side: `center` (default), `start` or `end`. */
@@ -61,6 +62,7 @@ export function NodeToolbar({
   className = '',
   style,
   children,
+  ...rest
 }: NodeToolbarProps) {
   const store = useFlowingerStore();
   const id = useNodeId();
@@ -72,6 +74,7 @@ export function NodeToolbar({
   if (!(isVisible ?? alone)) return null;
   return (
     <div
+      {...rest}
       className={`flowinger-node-toolbar react-flow__node-toolbar nodrag nopan ${className}`.trim()}
       style={{ ...placement(position, align, offset), zIndex: 10, cursor: 'default', ...style }}
     >

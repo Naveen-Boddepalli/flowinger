@@ -87,6 +87,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
 
   const controls = (
     <div
+      data-testid="rf__controls"
       className={`flowinger-controls react-flow__controls ${className}`.trim()}
       style={{ ...containerStyle, ...style }}
     >

@@ -3,3 +3,6 @@ dist
 *.tsbuildinfo
 .DS_Store
 .claude/
+demo-dist
+test-results
+playwright-report

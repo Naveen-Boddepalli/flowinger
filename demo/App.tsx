@@ -39,6 +39,8 @@ import {
   type Node,
   type NodeProps,
 } from '../src/index.ts';
+// The label follows package.json, so a release does not leave a stale one behind.
+import { version } from '../package.json';
 
 type PlanData = { label: string; kind: string; detail?: string; highlighted?: boolean };
 
@@ -251,8 +253,14 @@ export function App() {
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 backdrop-blur">
         <div className="flex items-center gap-2">
           <span className="font-bold text-emerald-400">Flowinger</span>
-          <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">v0.4.0</span>
+          <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">v{version}</span>
           <span className="hidden whitespace-nowrap text-xs text-slate-500 sm:inline">· Pure React & SVG Node Graph Renderer</span>
+          <a
+            href="https://github.com/Naveen-Boddepalli/flowinger"
+            className="whitespace-nowrap text-xs text-slate-400 underline hover:text-slate-200"
+          >
+            GitHub
+          </a>
         </div>
         <div className="hidden text-xs text-slate-400 md:block">
           Scroll or double-click to zoom · Drag to pan · Shift-drag to box-select · Select an edge to move its ends · Backspace deletes

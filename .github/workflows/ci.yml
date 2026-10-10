@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR makes an older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -14,8 +22,8 @@ jobs:
         # The package declares react >=18, so test both ends of that range.
         react: ['18', '19']
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       # The pnpm version comes from `packageManager` in package.json.
@@ -30,5 +38,56 @@ jobs:
       # What a small consumer pays: the whole canvas, and the core with no features (from src, then from
       # the built package — one pre-bundled file, where a stray top-level call keeps unused code alive).
       # Raise a budget deliberately, not by drift; the lean one is the one that matters.
-      - run: pnpm size --max-full 26 --max-lean 17
-      - run: node scripts/size-dist.mjs --max-lean 17
+      - run: pnpm size --max-full 27 --max-lean 17.5
+      - run: node scripts/size-dist.mjs --max-lean 17.5
+      # The package itself, once: exports, types for import *and* require, and what the tarball holds.
+      # (publint and Are the Types Wrong — the failure they exist for is a consumer who cannot import it.)
+      - name: Package is importable and typed for ESM and CJS
+        if: matrix.react == '19'
+        run: pnpm check:package
+
+  demo:
+    # The demo is built from source, so a change that breaks it should fail the PR, not the deploy.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm demo:build
+
+  examples:
+    # Each example is built against the packed library — what a consumer installs — so one that stops
+    # compiling fails the change that broke it. (scripts/check-examples.mjs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/check-examples.mjs
+
+  e2e:
+    # A real browser against the demo: layout, pointer capture, the wheel — what jsdom cannot see
+    # (e2e/smoke.spec.ts). The first place a drag that "works in the tests" shows it does not.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results
+

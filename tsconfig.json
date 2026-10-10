@@ -17,5 +17,5 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["node"]
   },
-  "include": ["src", "demo"]
+  "include": ["src", "demo", "e2e", "playwright.config.ts"]
 }

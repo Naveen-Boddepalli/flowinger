@@ -26,7 +26,7 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
   return el;
 }
 const node = (c: ParentNode, id: string) => must<HTMLElement>(c, `[data-id="${id}"]`);
-const edgeG = (c: ParentNode, id: string) => must<SVGGElement>(c, `[data-testid="edge-${id}"]`);
+const edgeG = (c: ParentNode, id: string) => must<SVGGElement>(c, `[data-testid="rf__edge-${id}"]`);
 const at = (c: ParentNode, id: string) => node(c, id).style.transform;
 
 const box = (id: string, x: number, y: number, extra: Partial<Node> = {}): Node => ({
@@ -285,8 +285,8 @@ describe('deleting', () => {
     // Deleting is async (onBeforeDelete may be); let it settle.
     await act(async () => {});
     expect(has(container, '[data-id="b"]')).toBe(false);
-    expect(has(container, '[data-testid="edge-ab"]')).toBe(false);
-    expect(has(container, '[data-testid="edge-bc"]')).toBe(false);
+    expect(has(container, '[data-testid="rf__edge-ab"]')).toBe(false);
+    expect(has(container, '[data-testid="rf__edge-bc"]')).toBe(false);
     expect(has(container, '[data-id="a"]')).toBe(true);
     expect(onNodeChanges).toHaveBeenCalledWith([{ type: 'remove', id: 'b' }]);
     expect(onEdgeChanges).toHaveBeenCalledWith([
@@ -305,8 +305,8 @@ describe('deleting', () => {
     fireEvent.click(must(edgeG(container, 'ab'), '.flowinger-edge-interaction'));
     fireEvent.keyDown(edgeG(container, 'ab'), { key: 'Backspace' });
     await act(async () => {});
-    expect(has(container, '[data-testid="edge-ab"]')).toBe(false);
-    expect(has(container, '[data-testid="edge-bc"]')).toBe(true);
+    expect(has(container, '[data-testid="rf__edge-ab"]')).toBe(false);
+    expect(has(container, '[data-testid="rf__edge-bc"]')).toBe(true);
     expect(has(container, '[data-id="a"]')).toBe(true);
     expect(onNodesDelete).not.toHaveBeenCalled(); // no node went
   });
@@ -394,14 +394,14 @@ describe('deleting', () => {
     await act(async () => {});
     expect(has(container, '[data-id="a"]')).toBe(true);
     expect(has(container, '[data-id="b"]')).toBe(false);
-    expect(has(container, '[data-testid="edge-ab"]')).toBe(false);
-    expect(has(container, '[data-testid="edge-bc"]')).toBe(false);
-    expect(has(container, '[data-testid="edge-ac"]')).toBe(true);
+    expect(has(container, '[data-testid="rf__edge-ab"]')).toBe(false);
+    expect(has(container, '[data-testid="rf__edge-bc"]')).toBe(false);
+    expect(has(container, '[data-testid="rf__edge-ac"]')).toBe(true);
     // A non-deletable edge, selected on its own, stays.
     fireEvent.click(must(edgeG(container, 'ac'), '.flowinger-edge-interaction'));
     fireEvent.keyDown(edgeG(container, 'ac'), { key: 'Backspace' });
     await act(async () => {});
-    expect(has(container, '[data-testid="edge-ac"]')).toBe(true);
+    expect(has(container, '[data-testid="rf__edge-ac"]')).toBe(true);
   });
 
   it('asks onBeforeDelete first: false cancels, a smaller set narrows, a promise is waited for', async () => {

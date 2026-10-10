@@ -162,7 +162,7 @@ describe('selection box', () => {
     ];
     const { container } = render(<FlowingerCanvas nodes={row()} edges={edges} elementsSelectable selectionOnDrag />);
     sweep(container, [320, 60], [-10, -10]);
-    const g = (id: string) => must(container, `[data-testid="edge-${id}"]`);
+    const g = (id: string) => must(container, `[data-testid="rf__edge-${id}"]`);
     expect(g('ab').classList.contains('selected')).toBe(true);
     expect(g('bc').classList.contains('selected')).toBe(false);
   });

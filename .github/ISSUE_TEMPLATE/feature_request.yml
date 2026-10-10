@@ -1,0 +1,48 @@
+name: Feature request
+description: Something React Flow has that you need, or something you think the package should do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Flowinger keeps its core small, so the useful question is *what were you building?* — that is how the
+        "Coming from React Flow" list gets ordered. Read [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#what-fits-and-what-does-not) first if you can.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The thing you are building, and where the package stops you.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to be able to write?
+      description: A prop, a hook, a field. The shape React Flow gives it, if it has one.
+      render: tsx
+  - type: dropdown
+    id: reactflow
+    attributes:
+      label: Does React Flow have this?
+      options:
+        - "Yes — same name and shape"
+        - "Yes — differently"
+        - "No"
+        - "Don't know"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it belong?
+      description: "A canvas that only *shows* a graph should not pay for it."
+      options:
+        - In the core (every canvas needs it)
+        - As an opt-in feature
+        - Not sure
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Would you take it on?
+      options:
+        - label: I would be willing to send a pull request

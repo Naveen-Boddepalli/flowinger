@@ -127,6 +127,8 @@ export interface NodeCallbacks {
   onMoveStart?: OnMove | undefined;
   onMove?: OnMove | undefined;
   onMoveEnd?: OnMove | undefined;
+  /** Where the view is going: a report, or — with a controlled `viewport` — a request. */
+  onViewportChange?: ((viewport: Viewport) => void) | undefined;
   onBeforeDelete?:
     | ((elements: { nodes: Node[]; edges: Edge[] }) => boolean | { nodes: Node[]; edges: Edge[] } | Promise<boolean | { nodes: Node[]; edges: Edge[] }>)
     | undefined;
@@ -411,7 +413,25 @@ export function createFlowingerStore(
 
   // --- viewport -------------------------------------------------------------
 
+  /**
+   * Whether the owner holds the view (a `viewport` prop). Then nothing moves it here: every change is asked
+   * of `onViewportChange`, and the view is whatever `syncViewport` is last given.
+   */
+  let viewportControlled = false;
+  /** True while `syncViewport` is the one moving the view — its own change is not a request. */
+  let syncing = false;
+  /** What a controlled view last asked its owner for: the owner applying that is an echo, not a jump. */
+  let asked: Viewport | null = null;
+
   const commitViewport = (next: Viewport) => {
+    if (viewportControlled && !syncing) {
+      // Ask, and stay put: what is asked for is not what is held, or a gesture would run ahead of an
+      // owner that declined it.
+      target = viewport;
+      asked = next;
+      callbacks.onViewportChange?.(next);
+      return;
+    }
     if (!moving) {
       moving = true;
       fireMove('onMoveStart', viewport);
@@ -423,6 +443,32 @@ export function createFlowingerStore(
     run('change');
     fireMove('onMove', next);
     if (!gesture && !tween) endMove();
+    if (!syncing) callbacks.onViewportChange?.(next);
+  };
+
+  /**
+   * Puts the view where a controlled `viewport` says. If that is what was just asked for, it is the owner
+   * following an animation or a gesture frame by frame, and must not stop it; if it is anything else, the
+   * owner has moved the view itself, and whatever was animating it is over.
+   */
+  const syncViewport = (vp: Viewport) => {
+    if (vp.x === viewport.x && vp.y === viewport.y && vp.zoom === viewport.zoom) {
+      if (!tween) target = vp;
+      return;
+    }
+    const echo = asked !== null && asked.x === vp.x && asked.y === vp.y && asked.zoom === vp.zoom;
+    if (!echo) {
+      cancelTween();
+      target = vp;
+    } else if (!tween) {
+      target = vp;
+    }
+    syncing = true;
+    try {
+      commitViewport(vp);
+    } finally {
+      syncing = false;
+    }
   };
 
   /** Stops a tween. Whoever awaited it hears `finished` — false when something interrupted it. */
@@ -1134,6 +1180,10 @@ export function createFlowingerStore(
         moveListeners.delete(listener);
       };
     },
+    setViewportControlled: (controlled: boolean) => {
+      viewportControlled = controlled;
+    },
+    syncViewport,
     setBounds: (min: number, max: number, nextExtent: TranslateExtent | null = null) => {
       minZoom = min;
       maxZoom = max;
