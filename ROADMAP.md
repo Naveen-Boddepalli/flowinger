@@ -39,19 +39,39 @@ it.** A library nobody can find the answer to a question about is not helped by 
   connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
   (`nodrag`, `nopan`, `nowheel`) from a real press.
 
-## Next — close what blocks switching
+## Next — 100% Free React Flow Parity & Pro Feature Equivalence
 
 Ordered by how often it comes up, from the audit (`node scripts/audit-react-flow.mjs`: 158 of 211 exports, 83
 of 119 canvas props):
 
-1. **`nodeOrigin`.**
-2. **Key-code props** — `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
-   `zoomActivationKeyCode` — and the click and drag distance thresholds.
-3. **`colorMode`**, `connectOnClick`, `connectionRadius`.
-
-Each lands the way the rest did: a test that fails without it, the oracle (`@xyflow/react`) run on the same
-input where behaviour should match, and — if it adds code — in a feature, so a canvas that only shows a graph
-does not pay for it.
+1. **Phase 1: High-Frequency Core Parity**
+   - **`nodeOrigin`** and `node.origin` — origin-aware bounding boxes, node rendering transform, handle anchors, subflows.
+   - **Key-code props** — `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode`, `panOnScrollMode`.
+   - **Thresholds & Radii** — `nodeDragThreshold`, `connectionDragThreshold`, `nodeClickDistance`, `paneClickDistance`, `connectionRadius`, `reconnectRadius`.
+   - **Components & Paths** — `SimpleBezierEdge`, `getSimpleBezierPath`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`.
+   - **Instance & Types** — `viewportInitialized` getter on the stable instance; export the remaining 44 types.
+2. **Phase 2: Complete Free Parity & Middleware**
+   - **Click-to-connect** — `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd`.
+   - **Selection drag events** — `onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu`, `selectNodesOnDrag`.
+   - **`colorMode`** (`light` | `dark` | `system`), `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode`.
+   - **Change Middlewares** — `experimental_useOnNodesChangeMiddleware`, `experimental_useOnEdgesChangeMiddleware`.
+   - **Audit target** — 211 of 211 exports, 0 missing props.
+3. **Phase 3: Zero-Cost "Pro" Utility Modules**
+   - Packaged as tree-shakeable headless hooks and subpath exports without adding a byte to the core canvas:
+   - `flowinger/history` (`useUndoRedo`) — temporal state management with keyboard shortcuts.
+   - `flowinger/clipboard` (`useClipboard`) — copy, cut, paste, duplicate with ID remapping.
+   - `flowinger/snaplines` (`useSnapLines`) — magnetic alignment guides and snap lines.
+   - `flowinger/export` (`exportCanvasToSvg`, `exportCanvasToPng`) — high-DPI full diagram export.
+4. **Phase 4: Pro Edges, Shapes & Tree Controls**
+   - `flowinger/smart-edges` — collision-avoiding A* orthogonal routing.
+   - `flowinger/editable-edge` — draggable waypoints.
+   - `flowinger/shapes` — SVG flowchart nodes (Decision, Cylinder, Hexagon, Circle).
+   - `flowinger/tree` (`useCollapsibleTree`) — collapsible hierarchy branches.
+5. **Phase 5: Production-Ready Pro Recipes & Examples**
+   - Dynamic layouts with animated transitions (`d3-hierarchy`, `dagre`, `elkjs`, `d3-force`).
+   - Dynamic grouping, drag-to-group, auto-resizing parent containers and swimlanes.
+   - Real-time multiplayer canvas with live cursors and Yjs state synchronization.
+   - Workflow simulation pipeline stepper with animated pulse state.
 
 ## Later
 
@@ -67,15 +87,11 @@ does not pay for it.
 - **Mutation testing in CI.** Every guard in the project has been broken by hand and watched to fail; that
   is a job for a tool.
 
-## Deliberately not planned
+## Architecture Boundaries (Keeping Core Lean)
 
-- **A layout engine in the package.** It would be the largest thing in it and the thing most people already
-  have a preference about.
-- **Editor chrome** — a node palette, undo/redo, a properties panel. Flowinger is the canvas under those.
-- **Keyboard connecting.** React Flow does not offer it either; if there is a good design, it is welcome as
-  a proposal.
+- **Layout engines and heavy dependencies are NOT bundled into the core package.** They live in `examples/` recipes or standalone subpaths so a lean canvas user pays 0 bytes.
+- **Editor chrome & temporal state are headless opt-ins.** The canvas stays a pure rendering surface.
 - **Other frameworks.** The engine is React-shaped throughout.
-- **Being a drop-in for everything.** The goal is *the part apps use*, measured, and honest about the rest.
 
 ## Where help is most useful
 

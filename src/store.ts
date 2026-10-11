@@ -1119,6 +1119,9 @@ export function createFlowingerStore(
 
   /** Created once. Its identity is the contract: it never changes. */
   const instance: FlowingerInstance = {
+    get viewportInitialized() {
+      return mounted;
+    },
     setViewport,
     getViewport: () => viewport,
     getZoom: () => viewport.zoom,

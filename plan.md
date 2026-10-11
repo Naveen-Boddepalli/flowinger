@@ -811,3 +811,37 @@ commit, and takes `FlowTree` across by changing its imports alone.
 - Done: attribute React Flow — `NOTICE.md` credits the bezier control-point formula and the edge-centre maths in
   `src/paths.ts` (0.2.0).
 - Everything else is the seventh round's **Launch checklist**, above.
+
+### Eighth round: 100% Free React Flow Parity & Zero-Cost Pro Extensions
+
+Closing the remaining 53 missing exports, 36 missing canvas props, and providing all 13 official React Flow Pro
+capabilities cost-free under MIT:
+
+1. **Phase 1: High-Frequency Core Parity**
+   - `nodeOrigin` and `node.origin` — origin-adjusted coordinates (`x - originX * width, y - originY * height`), bounds, handles, fitView.
+   - Key-code activation — `panActivationKeyCode`, `selectionKeyCode`, `multiSelectionKeyCode`, `zoomActivationKeyCode`, `panOnScrollMode`.
+   - Thresholds and snapping radii — `nodeDragThreshold`, `connectionDragThreshold`, `nodeClickDistance`, `paneClickDistance`, `connectionRadius`, `reconnectRadius`.
+   - Components & utils — `SimpleBezierEdge`, `getSimpleBezierPath`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`.
+   - Instance getter — `viewportInitialized` getter on the stable instance; export the remaining 44 missing types.
+2. **Phase 2: Full Free Parity & Middleware**
+   - Click-to-connect interaction (`connectOnClick`, `onClickConnectStart`, `onClickConnectEnd`).
+   - Selection drag events (`onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu`, `selectNodesOnDrag`).
+   - `colorMode` (`light`, `dark`, `system`) with system media query listener and CSS variable synchronization; `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode`.
+   - Middlewares: `experimental_useOnNodesChangeMiddleware`, `experimental_useOnEdgesChangeMiddleware`.
+   - Audit target: 211 / 211 exports and 0 missing props.
+3. **Phase 3: Core Pro Utility Modules (Tree-Shakeable & Decoupled)**
+   - `flowinger/history` (`useUndoRedo`): temporal state manager with keyboard shortcuts.
+   - `flowinger/clipboard` (`useClipboard`): copy, cut, paste, duplicate with ID remapping.
+   - `flowinger/snaplines` (`useSnapLines`): magnetic alignment guides during node drag.
+   - `flowinger/export` (`exportCanvasToSvg`, `exportCanvasToPng`): high-DPI full canvas export.
+4. **Phase 4: Pro Edges, Shapes & Tree Controls**
+   - `flowinger/smart-edges`: orthogonal collision-avoiding A* path router.
+   - `flowinger/editable-edge`: interactive draggable waypoints.
+   - `flowinger/shapes`: SVG flowchart nodes (Decision, Cylinder, Hexagon, Circle).
+   - `flowinger/tree` (`useCollapsibleTree`): hierarchical branch collapse/expand.
+5. **Phase 5: Production-Ready Pro Recipes & Examples**
+   - Dynamic layouts (`d3-hierarchy`, `dagre`, `elkjs`, `d3-force`) with animated transitions.
+   - Dynamic grouping, drag-to-group, auto-resizing parent containers and swimlanes.
+   - Real-time multiplayer presence with shared live cursors and Yjs synchronization.
+   - Workflow simulation pipeline stepper with topological execution and pulse animations.
+

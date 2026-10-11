@@ -10,6 +10,10 @@ export interface ControlsProps {
   /** The fit button. `showFitView` is the same, under React Flow's name; either can turn it off. */
   showFit?: boolean;
   showFitView?: boolean;
+  /** Whether to show the interactive toggle button. Default false. */
+  showInteractive?: boolean;
+  /** Called when the interactive lock button is toggled. */
+  onInteractiveChange?: (interactive: boolean) => void;
   /** Shapes what the fit button does (`padding`, `duration`, …). It takes 300 ms unless this says otherwise. */
   fitViewOptions?: FitViewOptions;
   /** After the button has zoomed or fitted the view. */

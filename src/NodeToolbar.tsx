@@ -4,6 +4,8 @@ import { Position } from './types.ts';
 import type { PassThroughHtml } from './attributes.ts';
 
 export interface NodeToolbarProps extends PassThroughHtml {
+  /** Node id (or list of node ids) to attach this toolbar to. Inferred from context if omitted. */
+  nodeId?: string | string[];
   /** Which side of the node it sits on. Default top. */
   position?: Position;
   /** Along that side: `center` (default), `start` or `end`. */

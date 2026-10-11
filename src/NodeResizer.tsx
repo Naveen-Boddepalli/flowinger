@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useRef, type CSSProperties, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
 import { resizeFeature } from './features/resize.ts';
 import { capturePointer, releasePointer } from './pointer.ts';
@@ -8,6 +8,8 @@ import type { Rect } from './types.ts';
 export type ResizeParams = Rect;
 
 export interface NodeResizerProps {
+  /** The id of the node to resize. Inferred from node context when omitted. */
+  nodeId?: string;
   /** Show the handles. Default true — often `isVisible={selected}`. */
   isVisible?: boolean;
   /** The colour of the lines and handles. Default `--flowinger-selected`. */
@@ -18,6 +20,8 @@ export interface NodeResizerProps {
   maxHeight?: number;
   /** Hold the node's aspect ratio while resizing. */
   keepAspectRatio?: boolean;
+  /** Automatically scale resize controls with zoom level. */
+  autoScale?: boolean;
   handleClassName?: string;
   handleStyle?: CSSProperties;
   lineClassName?: string;
@@ -27,6 +31,48 @@ export interface NodeResizerProps {
   onResizeStart?: (event: ReactPointerEvent, params: ResizeParams) => void;
   onResize?: (event: ReactPointerEvent, params: ResizeParams) => void;
   onResizeEnd?: (event: ReactPointerEvent, params: ResizeParams) => void;
+}
+
+export interface ResizeControlProps {
+  nodeId?: string;
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  variant?: 'line' | 'handle';
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+  color?: string;
+  minWidth?: number;
+  minHeight?: number;
+  maxWidth?: number;
+  maxHeight?: number;
+  keepAspectRatio?: boolean;
+  autoScale?: boolean;
+  shouldResize?: (event: ReactPointerEvent, params: ResizeParams) => boolean;
+  onResizeStart?: (event: ReactPointerEvent, params: ResizeParams) => void;
+  onResize?: (event: ReactPointerEvent, params: ResizeParams) => void;
+  onResizeEnd?: (event: ReactPointerEvent, params: ResizeParams) => void;
+}
+
+export function NodeResizeControl({
+  position = 'bottom-right',
+  variant = 'handle',
+  className = '',
+  style,
+  color,
+  children,
+}: ResizeControlProps) {
+  return (
+    <div
+      className={`react-flow__resize-control nodrag ${variant} ${position} ${className}`.trim()}
+      style={{
+        position: 'absolute',
+        backgroundColor: color,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Which way a control pushes: -1 the near edge, 1 the far edge, 0 neither. */

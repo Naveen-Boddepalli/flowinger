@@ -4,6 +4,8 @@ import {
   useRef,
   useSyncExternalStore,
   type CSSProperties,
+  type ComponentType,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore, useViewport } from './context.ts';
@@ -17,6 +19,56 @@ interface Box {
   y: number;
   w: number;
   h: number;
+}
+
+export interface MiniMapNodeProps {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  borderRadius: number;
+  className: string;
+  color?: string;
+  shapeRendering?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  style?: CSSProperties;
+  onClick?: (event: ReactMouseEvent) => void;
+  selected?: boolean;
+}
+
+export function MiniMapNode({
+  x,
+  y,
+  width,
+  height,
+  borderRadius,
+  className,
+  color,
+  shapeRendering,
+  strokeColor,
+  strokeWidth,
+  style,
+  onClick,
+}: MiniMapNodeProps) {
+  return (
+    <rect
+      className={className}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      rx={borderRadius}
+      ry={borderRadius}
+      fill={color}
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      shapeRendering={shapeRendering}
+      style={style}
+      onClick={onClick}
+    />
+  );
 }
 
 export interface MiniMapProps extends PassThroughHtml<'role', SVGSVGElement> {
@@ -43,6 +95,18 @@ export interface MiniMapProps extends PassThroughHtml<'role', SVGSVGElement> {
   position?: PanelPosition;
   /** Click or drag on the overview to move the view. Default true. */
   pannable?: boolean;
+  /** Invert pan direction when dragging inside the minimap. Default false. */
+  inversePan?: boolean;
+  /** Allow zooming via mouse wheel inside the minimap. Default false. */
+  zoomable?: boolean;
+  /** Zoom step for wheel zoom inside the minimap. */
+  zoomStep?: number;
+  /** Additional scale factor offset for minimap framing. */
+  offsetScale?: number;
+  /** Custom component to render nodes inside the minimap. */
+  nodeComponent?: ComponentType<MiniMapNodeProps>;
+  /** Called when a node in the minimap is clicked. */
+  onNodeClick?: (event: ReactMouseEvent, node: Node) => void;
   ariaLabel?: string;
   className?: string;
   style?: CSSProperties;

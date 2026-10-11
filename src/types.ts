@@ -22,6 +22,44 @@ export type Position = (typeof Position)[keyof typeof Position];
 
 export type HandleType = 'source' | 'target';
 
+export type NodeOrigin = [number, number];
+
+export interface NodeHandle {
+  id?: string | null;
+  type: HandleType;
+  position: Position;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+
+export type ColorMode = 'light' | 'dark' | 'system';
+export type ColorModeClass = 'light' | 'dark';
+export type ZIndexMode = 'auto' | 'manual';
+
+export const PanOnScrollMode = {
+  Free: 'free',
+  Vertical: 'vertical',
+  Horizontal: 'horizontal',
+} as const;
+
+export type PanOnScrollMode = (typeof PanOnScrollMode)[keyof typeof PanOnScrollMode];
+
+export interface AriaLabelConfig {
+  'node.a11yDescription.default'?: string;
+  'node.a11yDescription.keyboardDisabled'?: string;
+  'node.a11yDescription.ariaLiveMessage'?: (args: { direction: string; x: number; y: number }) => string;
+  'edge.a11yDescription.default'?: string;
+  'controls.ariaLabel'?: string;
+  'controls.zoomIn.ariaLabel'?: string;
+  'controls.zoomOut.ariaLabel'?: string;
+  'controls.fitView.ariaLabel'?: string;
+  'controls.interactive.ariaLabel'?: string;
+  'minimap.ariaLabel'?: string;
+  'handle.ariaLabel'?: string;
+}
+
 /**
  * How a connection may be made. `strict` (the default) joins a `source` handle to
  * a `target` handle; `loose` lets any handle join any other, the end the drag
@@ -127,6 +165,13 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   /** The ARIA role on the node's element. Default `'group'` once it is a tab stop, else none. */
   ariaRole?: AriaRole;
   ariaLabel?: string;
+  /**
+   * Origin of the node relative to its position.
+   * e.g. [0.5, 0.5] centers the node, [0, 0] is top-left.
+   */
+  origin?: NodeOrigin;
+  /** Programmatically declared handles on the node. */
+  handles?: NodeHandle[];
   /**
    * Escape hatch for an attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom
    * `data-*` attribute, which needs a cast (`HTMLAttributes` does not declare it by name; nor does React
@@ -339,6 +384,10 @@ export interface Viewport {
 export interface SetViewportOptions {
   /** Milliseconds to take over the move; none (or 0) is instant. */
   duration?: number;
+  /** Custom easing function (t in [0, 1] -> [0, 1]). */
+  ease?: (t: number) => number;
+  /** Interpolation type ('smooth' or 'linear'). */
+  interpolate?: 'smooth' | 'linear';
 }
 
 export interface FitViewOptions extends SetViewportOptions {
@@ -352,6 +401,8 @@ export interface FitViewOptions extends SetViewportOptions {
   includeHiddenNodes?: boolean;
   minZoom?: number;
   maxZoom?: number;
+  ease?: (t: number) => number;
+  interpolate?: 'smooth' | 'linear';
 }
 
 export interface SetCenterOptions extends SetViewportOptions {
@@ -415,6 +466,8 @@ export interface HandleProps extends PassThroughHtml<'id'> {
 }
 
 export interface FlowingerInstance {
+  /** True when the viewport has initialized and framed the pane. */
+  readonly viewportInitialized: boolean;
   /** Resolves `true` when the move lands, `false` if something else moved the view first. */
   setViewport: (viewport: Viewport, options?: SetViewportOptions) => Promise<boolean>;
   getViewport: () => Viewport;
@@ -755,6 +808,73 @@ export interface FlowingerProps {
   /** Round dragged positions to a grid — `snapGrid` (default 15 × 15). */
   snapToGrid?: boolean;
   snapGrid?: [number, number];
+  /** Origin of nodes relative to their positions. Default [0, 0]. */
+  nodeOrigin?: NodeOrigin;
+  /** Key code to activate panning with left click (e.g. 'Space'). */
+  panActivationKeyCode?: string | string[] | null;
+  /** Key code to activate selection box on drag (e.g. 'Shift'). */
+  selectionKeyCode?: string | string[] | null;
+  /** Key code to add/toggle items in selection (e.g. ['Meta', 'Control']). */
+  multiSelectionKeyCode?: string | string[] | null;
+  /** Key code to activate zoom with mouse wheel (e.g. 'Meta'). */
+  zoomActivationKeyCode?: string | string[] | null;
+  /** Constrains panning direction on wheel events. Default 'free'. */
+  panOnScrollMode?: PanOnScrollMode;
+  /** Prevents browser scrolling when zooming over canvas. Default true. */
+  preventScrolling?: boolean;
+  /** Pixels mouse must travel before a press becomes a node drag. */
+  nodeDragThreshold?: number;
+  /** Pixels mouse must travel before starting a connection drag. */
+  connectionDragThreshold?: number;
+  /** Distance threshold in pixels to register a node click. */
+  nodeClickDistance?: number;
+  /** Distance threshold in pixels to register a pane click. */
+  paneClickDistance?: number;
+  /** Proximity radius to snap connection to handles. Default 20. */
+  connectionRadius?: number;
+  /** Proximity radius to snap reconnecting edges to handles. Default 20. */
+  reconnectRadius?: number;
+  /** Whether dragging an unselected node automatically selects it. Default true. */
+  selectNodesOnDrag?: boolean;
+  /** Allow connecting handles by clicking start handle then target handle. Default true. */
+  connectOnClick?: boolean;
+  onClickConnectStart?: (event: React.MouseEvent, params: ConnectStartParams) => void;
+  onClickConnectEnd?: (event: MouseEvent | TouchEvent) => void;
+  /** Emitted when dragging multiple selected nodes together. */
+  onSelectionDragStart?: (event: React.MouseEvent, nodes: Node[]) => void;
+  onSelectionDrag?: (event: React.MouseEvent, nodes: Node[]) => void;
+  onSelectionDragStop?: (event: React.MouseEvent, nodes: Node[]) => void;
+  onSelectionContextMenu?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /** Color mode for the canvas: 'light', 'dark', or 'system'. */
+  colorMode?: ColorMode;
+  /** Automatically elevate z-index of selected nodes. Default true. */
+  elevateNodesOnSelect?: boolean;
+  /** Automatically elevate z-index of selected edges. Default true. */
+  elevateEdgesOnSelect?: boolean;
+  /** How node/edge z-indexes are assigned ('auto' | 'manual'). Default 'auto'. */
+  zIndexMode?: ZIndexMode;
+  /** Default marker color when not specified on the edge marker. */
+  defaultMarkerColor?: string;
+  /** Inline style for the connection line container element. */
+  connectionLineContainerStyle?: CSSProperties;
+  /** Class name to exclude an element inside node from dragging. Default 'nodrag'. */
+  noDragClassName?: string;
+  /** Class name to exclude an element from canvas panning. Default 'nopan'. */
+  noPanClassName?: string;
+  /** Class name to exclude an element from canvas wheel events. Default 'nowheel'. */
+  noWheelClassName?: string;
+  /** Whether nodes are reachable from keyboard focus. Default true. */
+  nodesFocusable?: boolean;
+  /** Disable keyboard navigation and accessibility announcements. Default false. */
+  disableKeyboardA11y?: boolean;
+  /** Granular configuration for accessibility aria labels and descriptions. */
+  ariaLabelConfig?: AriaLabelConfig;
+  /** Auto pan to bring a focused node into view. */
+  autoPanOnNodeFocus?: boolean;
+  /** Auto pan to bring a selected node into view. */
+  autoPanOnSelection?: boolean;
+  /** Enable debug logging for events and state updates. */
+  debug?: boolean;
 }
 
 // --- changes ---------------------------------------------------------------
