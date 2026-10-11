@@ -609,7 +609,8 @@ function InnerCanvas(props: FlowingerProps) {
 
   return (
     <ViewportPortalHost.Provider value={portalHost}>
-      <div
+      <EdgeLabelHost.Provider value={labelHost}>
+        <div
         {...Object.assign({}, ...bits.map((b) => b.props))}
         ref={containerRef}
         id={id}
@@ -735,6 +736,7 @@ function InnerCanvas(props: FlowingerProps) {
           </div>
         </div>
       </div>
+      </EdgeLabelHost.Provider>
     </ViewportPortalHost.Provider>
   );
 }

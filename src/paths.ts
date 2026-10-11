@@ -10,6 +10,15 @@ export interface GetBezierPathParams {
   curvature?: number;
 }
 
+export interface GetSimpleBezierPathParams {
+  sourceX: number;
+  sourceY: number;
+  sourcePosition?: Position;
+  targetX: number;
+  targetY: number;
+  targetPosition?: Position;
+}
+
 export interface GetStraightPathParams {
   sourceX: number;
   sourceY: number;
@@ -165,6 +174,64 @@ export function getBezierPath({
 
   const path = `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${targetX.toFixed(2)} ${targetY.toFixed(2)}`;
 
+  return [path, labelX, labelY, offsetX, offsetY];
+}
+
+function getSimpleControl({
+  pos,
+  x1,
+  y1,
+  x2,
+  y2,
+}: {
+  pos: Position;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}): [number, number] {
+  if (pos === Position.Left || pos === Position.Right) {
+    return [0.5 * (x1 + x2), y1];
+  }
+  return [x1, 0.5 * (y1 + y2)];
+}
+
+/**
+ * Generates an SVG bezier path string between two points using simple control points (no curvature offset).
+ */
+export function getSimpleBezierPath({
+  sourceX,
+  sourceY,
+  sourcePosition = Position.Bottom,
+  targetX,
+  targetY,
+  targetPosition = Position.Top,
+}: GetSimpleBezierPathParams): PathResult {
+  const [sourceControlX, sourceControlY] = getSimpleControl({
+    pos: sourcePosition,
+    x1: sourceX,
+    y1: sourceY,
+    x2: targetX,
+    y2: targetY,
+  });
+  const [targetControlX, targetControlY] = getSimpleControl({
+    pos: targetPosition,
+    x1: targetX,
+    y1: targetY,
+    x2: sourceX,
+    y2: sourceY,
+  });
+  const [labelX, labelY, offsetX, offsetY] = getBezierEdgeCenter({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourceControlX,
+    sourceControlY,
+    targetControlX,
+    targetControlY,
+  });
+  const path = `M ${sourceX.toFixed(2)} ${sourceY.toFixed(2)} C ${sourceControlX.toFixed(2)} ${sourceControlY.toFixed(2)}, ${targetControlX.toFixed(2)} ${targetControlY.toFixed(2)}, ${targetX.toFixed(2)} ${targetY.toFixed(2)}`;
   return [path, labelX, labelY, offsetX, offsetY];
 }
 

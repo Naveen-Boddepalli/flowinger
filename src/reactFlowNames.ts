@@ -196,6 +196,7 @@ export type SmoothStepPathOptions = { offset?: number; borderRadius?: number };
 export type BuiltInNode =
   | Node<{ label: string }, 'input' | 'output' | 'default'>
   | Node<Record<string, never>, 'group'>;
+export type BuiltInEdge = Edge;
 export type CounterNode = Node<{ initialCount?: number }, 'counter'>;
 export type MiniMapNodeProps = MiniMapNodePropsType;
 export type MiniMapNodes = Pick<

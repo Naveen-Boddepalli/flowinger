@@ -24,6 +24,8 @@ export type HandleType = 'source' | 'target';
 
 export type NodeOrigin = [number, number];
 
+export type Align = 'center' | 'start' | 'end';
+
 export interface NodeHandle {
   id?: string | null;
   type: HandleType;

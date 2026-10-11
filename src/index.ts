@@ -80,8 +80,14 @@ export { getNodesBounds, getViewportForBounds, isRectIntersecting, viewportForBo
 // Handles & Ports
 export { Handle } from './Handle.tsx';
 export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
-export { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './builtinEdges.tsx';
+export { BezierEdge, SimpleBezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './builtinEdges.tsx';
+export { EdgeText } from './EdgeText.tsx';
+export { EdgeToolbar } from './EdgeToolbar.tsx';
 export { isEdge, isNode } from './guards.ts';
+export {
+  experimental_useOnNodesChangeMiddleware,
+  experimental_useOnEdgesChangeMiddleware,
+} from './middlewares.ts';
 
 // Background & Controls
 export { Background } from './Background.tsx';
@@ -104,10 +110,12 @@ export { FlowingerEdges, type FlowingerEdgesProps } from './FlowingerEdges.tsx';
 export {
   getBezierEdgeCenter,
   getBezierPath,
+  getSimpleBezierPath,
   getEdgeCenter,
   getStraightPath,
   getSmoothStepPath,
   type GetBezierPathParams,
+  type GetSimpleBezierPathParams,
   type GetSmoothStepPathParams,
   type GetStraightPathParams,
   type PathResult,
@@ -170,6 +178,7 @@ export type {
   BezierPathOptions,
   Box,
   BezierEdgeProps,
+  BuiltInEdge,
   BuiltInNode,
   ColorMode,
   ColorModeClass,

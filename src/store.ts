@@ -74,6 +74,8 @@ export interface FlowingerState {
   maxZoom: number;
   /** Whether every node has been measured. */
   nodesInitialized: boolean;
+  onNodesChangeMiddlewareMap?: Map<symbol, (changes: NodeChange[]) => NodeChange[]>;
+  onEdgesChangeMiddlewareMap?: Map<symbol, (changes: EdgeChange[]) => EdgeChange[]>;
 }
 
 /**
@@ -312,6 +314,8 @@ export function createFlowingerStore(
   let connection: DragConnection | null = null;
   let stopObserving: (() => void) | null = null;
   let geometryVersion = 0;
+  const onNodesChangeMiddlewareMap = new Map<symbol, (changes: NodeChange[]) => NodeChange[]>();
+  const onEdgesChangeMiddlewareMap = new Map<symbol, (changes: EdgeChange[]) => EdgeChange[]>();
 
   const viewportListeners = new Set<Listener>();
   const geometryListeners = new Set<Listener>();
@@ -618,10 +622,20 @@ export function createFlowingerStore(
   const edgesControlled = (): boolean => callbacks.onEdgesChange !== undefined;
 
   const emitNodeChanges = (changes: NodeChange[]) => {
-    if (changes.length > 0) callbacks.onNodesChange?.(changes);
+    if (changes.length === 0) return;
+    let next = changes;
+    for (const middleware of onNodesChangeMiddlewareMap.values()) {
+      next = middleware(next);
+    }
+    if (next.length > 0) callbacks.onNodesChange?.(next);
   };
   const emitEdgeChanges = (changes: EdgeChange[]) => {
-    if (changes.length > 0) callbacks.onEdgesChange?.(changes);
+    if (changes.length === 0) return;
+    let next = changes;
+    for (const middleware of onEdgesChangeMiddlewareMap.values()) {
+      next = middleware(next);
+    }
+    if (next.length > 0) callbacks.onEdgesChange?.(next);
   };
 
   /**
@@ -1004,6 +1018,8 @@ export function createFlowingerStore(
         minZoom,
         maxZoom,
         nodesInitialized: areNodesInitialized(),
+        onNodesChangeMiddlewareMap,
+        onEdgesChangeMiddlewareMap,
       };
     }
     return cachedState;
@@ -1237,6 +1253,10 @@ export function createFlowingerStore(
     subscribeSelection: subscribeTo(selectionChangeListeners),
     getSelection,
     areNodesInitialized,
+    emitNodeChanges,
+    emitEdgeChanges,
+    onNodesChangeMiddlewareMap,
+    onEdgesChangeMiddlewareMap,
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),
