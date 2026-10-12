@@ -884,25 +884,13 @@ export interface FlowingerProps {
   onClickConnectStart?: (event: MouseEvent | TouchEvent, params: ConnectStartParams) => void;
   /** The second click, whether or not it made a connection: `{ connection, isValid }` as `onConnectEnd` is given. */
   onClickConnectEnd?: (event: MouseEvent | TouchEvent, state: ConnectEndState) => void;
-  /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Never called. `onNodeDragStart` is, with `nodes` as everything being dragged.
-   */
+  /** The rectangle round a box selection starts to be dragged (`nodes`: everything it moves). `onNodeDragStart` is called as well. Needs `selectionRectFeature`. */
   onSelectionDragStart?: (event: React.MouseEvent, nodes: Node[]) => void;
-  /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Never called. `onNodeDrag` is, with `nodes` as everything being dragged.
-   */
+  /** The rectangle round a box selection is being dragged. `onNodeDrag` is called as well. Needs `selectionRectFeature`. */
   onSelectionDrag?: (event: React.MouseEvent, nodes: Node[]) => void;
-  /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Never called. `onNodeDragStop` is, with `nodes` as everything being dragged.
-   */
+  /** The rectangle round a box selection was let go. `onNodeDragStop` is called as well. Needs `selectionRectFeature`. */
   onSelectionDragStop?: (event: React.MouseEvent, nodes: Node[]) => void;
-  /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Never called; `onNodeContextMenu` is.
-   */
+  /** A right click on the rectangle round a box selection, with the selected nodes. Needs `selectionRectFeature`. */
   onSelectionContextMenu?: (event: React.MouseEvent, nodes: Node[]) => void;
   /**
    * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.

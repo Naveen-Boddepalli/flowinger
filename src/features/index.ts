@@ -10,6 +10,7 @@ import { eventsFeature } from './events.ts';
 import { panKeyFeature } from './panKey.ts';
 import { reconnectFeature } from './reconnect.tsx';
 import { selectionFeature } from './selection.ts';
+import { selectionRectFeature } from './selectionRect.tsx';
 
 export {
   boxSelectFeature,
@@ -23,6 +24,7 @@ export {
   panKeyFeature,
   reconnectFeature,
   selectionFeature,
+  selectionRectFeature,
 };
 
 /** Every feature: what `<FlowingerCanvas>` (and `ReactFlow`) has. */
@@ -37,5 +39,6 @@ export const allFeatures: readonly Feature[] = [
   connectFeature,
   reconnectFeature,
   boxSelectFeature,
+  selectionRectFeature,
   panKeyFeature,
 ];

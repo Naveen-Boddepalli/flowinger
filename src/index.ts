@@ -14,6 +14,7 @@ export {
   panKeyFeature,
   reconnectFeature,
   selectionFeature,
+  selectionRectFeature,
 } from './features/index.ts';
 export type {
   CanvasArgs,

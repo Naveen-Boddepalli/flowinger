@@ -4,7 +4,7 @@ import type { Feature, NodeBits } from '../features.ts';
 import { clampMove, snapTo } from '../geometry.ts';
 import { descendantsOf } from '../parents.ts';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from '../pointer.ts';
-import type { Node, NodeChange, NodePositionChange, TranslateExtent, XYPosition } from '../types.ts';
+import type { FlowingerProps, Node, NodeChange, NodePositionChange, TranslateExtent, XYPosition } from '../types.ts';
 import { useIsomorphicLayoutEffect } from '../useIsomorphicLayoutEffect.ts';
 import { autoPanFeature } from './autoPan.ts';
 import { selectionFeature } from './selection.ts';
@@ -18,13 +18,20 @@ export interface DragSession {
 
 export interface DragApi {
   /** What the canvas was last given for `selectNodesOnDrag` and `nodeClickDistance`; written by `useCanvas`. */
-  readonly config: { selectOnDrag: boolean; clickDistance: number | undefined };
+  readonly config: {
+    selectOnDrag: boolean;
+    clickDistance: number | undefined;
+    /** `onSelectionDrag*`: heard, as well as `onNodeDrag*`, when the drag is of the selection's rectangle. */
+    onSelectionDragStart: FlowingerProps['onSelectionDragStart'];
+    onSelectionDrag: FlowingerProps['onSelectionDrag'];
+    onSelectionDragStop: FlowingerProps['onSelectionDragStop'];
+  };
   /**
    * Starts dragging `lead`. If it is part of the selection the whole selection
    * goes with it; otherwise it is selected (where selecting is on) and goes
    * alone — which is what a press on an unselected node means.
    */
-  beginNodeDrag: (lead: Node, event: ReactPointerEvent, additive: boolean) => DragSession;
+  beginNodeDrag: (lead: Node, event: ReactPointerEvent, additive: boolean, selection?: boolean) => DragSession;
   /**
    * Moves the selection one step in a direction — what the arrow keys do to a
    * focused node. A step is 5 units, or one cell of the snap grid; `large` is
@@ -63,7 +70,13 @@ export const dragFeature: Feature<DragApi> = {
   needs: [autoPanFeature, selectionFeature],
   install(ctx) {
     const { isSelectable, selectNode, clearSelection } = ctx.api(selectionFeature);
-    const config: DragApi['config'] = { selectOnDrag: true, clickDistance: undefined };
+    const config: DragApi['config'] = {
+      selectOnDrag: true,
+      clickDistance: undefined,
+      onSelectionDragStart: undefined,
+      onSelectionDrag: undefined,
+      onSelectionDragStop: undefined,
+    };
     const isDraggable = (n: Node): boolean => n.draggable ?? ctx.options.nodesDraggable;
 
     /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
@@ -81,7 +94,7 @@ export const dragFeature: Feature<DragApi> = {
       ];
     };
 
-    const beginNodeDrag: DragApi['beginNodeDrag'] = (lead, event, additive) => {
+    const beginNodeDrag: DragApi['beginNodeDrag'] = (lead, event, additive, selection = false) => {
       const before = ctx.selectedNodeIds();
       let group = [lead.id];
       if (before.includes(lead.id)) {
@@ -148,7 +161,9 @@ export const dragFeature: Feature<DragApi> = {
         return { ...n, position: relativeNow.get(n.id) ?? { x: from.x + dx, y: from.y + dy }, dragging };
       };
 
-      ctx.callbacks.onNodeDragStart?.(event, lead, items.map((n) => at(n, 0, 0, false)));
+      const starting = items.map((n) => at(n, 0, 0, false));
+      ctx.callbacks.onNodeDragStart?.(event, lead, starting);
+      if (selection) config.onSelectionDragStart?.(event, starting);
 
       // Where the drag may take these nodes: onto the grid (by the lead, so the
       // others keep their offsets from it), and inside every node's own extent.
@@ -200,6 +215,7 @@ export const dragFeature: Feature<DragApi> = {
           // caller, controlling them, has not applied the change yet.
           const moved = items.map((n) => at(n, dx, dy, true));
           ctx.callbacks.onNodeDrag?.(e, leadOf(moved), moved);
+          if (selection) config.onSelectionDrag?.(e, moved);
         },
         end: (e) => {
           for (const n of items) ctx.draggingIds.delete(n.id);
@@ -209,6 +225,7 @@ export const dragFeature: Feature<DragApi> = {
           }
           const settled = items.map((n) => at(n, last.dx, last.dy, false));
           ctx.callbacks.onNodeDragStop?.(e, leadOf(settled), settled);
+          if (selection) config.onSelectionDragStop?.(e, settled);
         },
       };
     };
@@ -249,6 +266,9 @@ export const dragFeature: Feature<DragApi> = {
     const { config } = store.api(dragFeature);
     config.selectOnDrag = props.selectNodesOnDrag ?? true;
     config.clickDistance = props.nodeClickDistance;
+    config.onSelectionDragStart = props.onSelectionDragStart;
+    config.onSelectionDrag = props.onSelectionDrag;
+    config.onSelectionDragStop = props.onSelectionDragStop;
     return undefined;
   },
 

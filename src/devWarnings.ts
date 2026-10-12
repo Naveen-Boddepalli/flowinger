@@ -17,6 +17,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
+  selectionRect: ['onSelectionDragStart', 'onSelectionDrag', 'onSelectionDragStop', 'onSelectionContextMenu'],
   panKey: ['panActivationKeyCode'],
   connect: [
     'nodesConnectable',
@@ -65,10 +66,6 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
  * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
  */
 export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
-  onSelectionDragStart: [],
-  onSelectionDrag: [],
-  onSelectionDragStop: [],
-  onSelectionContextMenu: [],
   colorMode: ['light'],
   elevateNodesOnSelect: [false],
   elevateEdgesOnSelect: [false],

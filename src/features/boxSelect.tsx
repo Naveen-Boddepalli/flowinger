@@ -20,6 +20,8 @@ export interface BoxSelectApi {
     base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null,
   ) => void;
   endBoxSelect: () => void;
+  /** Runs `fn` each time a box selection ends (a press that began one and was let go). Returns its cleanup. */
+  onBoxEnd: (fn: () => void) => () => void;
   getSelectionRect: () => Rect | null;
   subscribeSelectionRect: (listener: () => void) => () => void;
 }
@@ -102,15 +104,23 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
       emit();
     };
 
+    const ended = new Set<() => void>();
     const endBoxSelect = () => {
       if (selectionRect === null) return;
       selectionRect = null;
       emit();
+      for (const fn of ended) fn();
     };
 
     return {
       boxSelect,
       endBoxSelect,
+      onBoxEnd: (fn) => {
+        ended.add(fn);
+        return () => {
+          ended.delete(fn);
+        };
+      },
       getSelectionRect: () => selectionRect,
       subscribeSelectionRect: (listener) => {
         listeners.add(listener);
