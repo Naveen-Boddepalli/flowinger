@@ -43,7 +43,7 @@ only its own code. The props, the nodes and the instance are the same either way
 
 **What each costs**, gzipped, on its own — so each includes what it needs (`dragFeature` brings selection and
 auto-pan; `reconnectFeature` brings connect; `selectionRectFeature` brings drag and box select). Measured by
-`pnpm size:features` against a bare `FlowingerCore` of about 18.1 kB:
+`pnpm size:features` against a bare `FlowingerCore` of about 18.4 kB:
 
 | | kB | | kB | | kB |
 |---|---|---|---|---|---|
