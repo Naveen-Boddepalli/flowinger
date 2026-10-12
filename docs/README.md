@@ -27,6 +27,7 @@ These pages describe the current `main`. What is newer than the latest release o
 |---|---|
 | [Migrating from React Flow](migrating-from-react-flow.md) | A checklist: the defaults that differ, types, what is missing and what to do instead |
 | [React Flow coverage](react-flow-coverage.md) | How much of its API this covers, measured from its own type declarations |
+| [Benchmarks](benchmarks.md) | Mount, pan, zoom and drag against React Flow at 1,000–10,000 nodes, culled and not — and how to re-run them |
 
 ## About the project
 

@@ -2,6 +2,7 @@
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --flowinger-surface: #ffffff;
+  --flowinger-surface-raised: #f1f5f9;
   --flowinger-border: #cbd5e1;
   --flowinger-text: #0f172a;
   --flowinger-text-dim: #64748b;
@@ -12,6 +13,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --flowinger-surface: #1e293b;
+    --flowinger-surface-raised: #334155;
     --flowinger-border: #475569;
     --flowinger-text: #f1f5f9;
     --flowinger-text-dim: #94a3b8;

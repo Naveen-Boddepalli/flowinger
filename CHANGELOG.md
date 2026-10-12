@@ -17,8 +17,26 @@ The design notes behind each release — what was measured, what was tried and d
   every move. `getEditableEdgePath` is the path as a function. See [the pro modules](docs/pro.md).
 - **`HexagonNode`** in `flowinger/shapes` (`shapeNodeTypes.hexagon`).
 
+- **A collapsible-tree example** ([`examples/tree`](examples/tree)): an org chart whose branches fold with
+  `useCollapsibleTree`, laid out again around what is hidden. Built against the packed library in CI like the
+  others.
+- **[Benchmarks](docs/benchmarks.md)** against React Flow at 1,000, 5,000 and 10,000 nodes, with and without
+  `onlyRenderVisibleElements`: mount, pan, zoom, drag, memory. `pnpm bench` re-runs it in a real browser and
+  rewrites the table; `bench/results.json` has the numbers.
+
 ### Fixed
 
+- **`Controls` were unreadable in a light theme that set `--flowinger-surface` and `--flowinger-text` and
+  nothing else**: the buttons fell back to a dark `--flowinger-surface-raised` under dark text. It now falls
+  back to `--flowinger-surface`. (The `layouts` and `editor` examples had the bug in light mode; both now set
+  it.)
+- **`onlyRenderVisibleElements` cost more than it saved at scale.** With it on, 10,000 nodes mounted in 2.1 s,
+  zoomed at 13.6 ms a frame and dragged at 10 ms a move (React Flow: 0.6 s, 4.8, 4.8). Work proportional to the
+  whole graph was done where it should have been proportional to the view: registering a handle ran the culling
+  pass and woke every `useStore` reader (forcing a layout each time a node unmounted); "is every node
+  measured?" scanned every node after every handle (a quadratic mount); the selection was recomputed from every
+  node and edge when none was selected; and the edge layer rebuilt a map of all nodes whenever the visible set
+  moved. Now 0.5 s, 5.5 ms and 7.7 ms. Found by the benchmark above.
 - **The rectangle round a box selection, a `NodeToolbar` for another node (`nodeId`), and the pan to a node
   that takes keyboard focus (`autoPanOnNodeFocus`) used a child's position *inside its parent* as if it were on
   the canvas.** With a group in the selection the rectangle's corner was wrong, and the toolbar and the pan went

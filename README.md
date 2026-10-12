@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
   <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="docs/features.md"><img alt="core size: about 18.7 kB gzipped" src="https://img.shields.io/badge/core-~18.7_kB_gzip-blue" /></a>
+  <a href="docs/features.md"><img alt="core size: about 18.9 kB gzipped" src="https://img.shields.io/badge/core-~18.9_kB_gzip-blue" /></a>
   <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
   <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
   <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
@@ -34,8 +34,8 @@
 
 ## Why Flowinger
 
-- **Small, and only what you use.** The core is about 18.7 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 33.6 kB. In QueryLens, swapping
+- **Small, and only what you use.** The core is about 18.9 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 33.9 kB. In QueryLens, swapping
   React Flow for it took the diagram chunk from **60.5 kB to 19.0 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
@@ -143,9 +143,9 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
 | Build | Gzipped |
 |---|---|
-| `FlowingerCore`, no features | about 18.7 kB |
+| `FlowingerCore`, no features | about 18.9 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 33.6 kB |
+| `FlowingerCanvas`, every feature | about 33.9 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).
@@ -163,6 +163,7 @@ lacks does nothing — and in development the console says so. See [Features](do
 | [Server rendering](docs/server-rendering.md) | What renders on the server and what waits for the client |
 | [Migrating from React Flow](docs/migrating-from-react-flow.md) | Defaults, types, what is missing and what to do instead |
 | [React Flow coverage](docs/react-flow-coverage.md) | How much of its API this covers, measured |
+| [Benchmarks](docs/benchmarks.md) | Mount, pan, zoom and drag against React Flow at 1,000–10,000 nodes, and how to re-run them |
 
 ## Examples
 
@@ -178,6 +179,12 @@ lacks does nothing — and in development the console says so. See [Features](do
   <tr>
     <td><a href="examples/layouts"><strong>Layouts</strong></a> — one query plan laid out by <code>d3-hierarchy</code>, <code>dagre</code> and <code>elkjs</code> behind a single signature. Positions are yours; this is how you get them.</td>
     <td><a href="examples/editor"><strong>Editor</strong></a> — a controlled editor: drag, connect, select, delete, snap to a grid, a custom node and a custom edge.</td>
+  </tr>
+  <tr>
+    <td>
+      <a href="examples/tree"><img src="docs/assets/tree.png" alt="The tree example: an organisation as a left-to-right tree, each branch with a button that folds it, one folded to show how many people it holds" /></a>
+    </td>
+    <td valign="top"><a href="examples/tree"><strong>Tree</strong></a> — an org chart whose branches fold: <code>useCollapsibleTree</code> from <code>flowinger/tree</code> hides what is under a node, and the layout runs again over what is left so the tree closes up.</td>
   </tr>
 </table>
 

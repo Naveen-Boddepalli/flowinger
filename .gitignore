@@ -4,6 +4,7 @@ dist
 .DS_Store
 .claude/
 demo-dist
+bench-dist
 test-results
 playwright-report
 /history

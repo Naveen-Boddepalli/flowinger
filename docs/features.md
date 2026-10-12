@@ -17,7 +17,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 18.7 kB gzipped (33.6 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 18.9 kB gzipped (33.9 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
@@ -43,7 +43,7 @@ only its own code. The props, the nodes and the instance are the same either way
 
 **What each costs**, gzipped, on its own — so each includes what it needs (`dragFeature` brings selection and
 auto-pan; `reconnectFeature` brings connect; `selectionRectFeature` brings drag and box select). Measured by
-`pnpm size:features` against a bare `FlowingerCore` of about 18.1 kB:
+`pnpm size:features` against a bare `FlowingerCore` of about 18.4 kB:
 
 | | kB | | kB | | kB |
 |---|---|---|---|---|---|

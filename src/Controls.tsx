@@ -56,7 +56,7 @@ const buttonStyle: CSSProperties = {
   padding: 0,
   borderRadius: 6,
   border: '1px solid var(--flowinger-border, #334155)',
-  background: 'var(--flowinger-surface-raised, #0f172a)',
+  background: 'var(--flowinger-surface-raised, var(--flowinger-surface, #0f172a))',
   color: 'var(--flowinger-text, #e2e8f0)',
   font: 'inherit',
   fontSize: 14,

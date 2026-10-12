@@ -322,6 +322,15 @@ export function createFlowingerStore(
   /** A dragged position, remembered with the prop position it was dragged *from*. */
   const overrides = new Map<string, { base: XYPosition; position: XYPosition }>();
   const sizes = new Map<string, Size>();
+  /**
+   * How many of the nodes that are drawn have not been measured. Counted again when the list changes and
+   * taken down as each is measured, so "is everything measured" is a comparison — it is asked after every
+   * handle and every measurement, and a scan of ten thousand nodes each time was most of a mount.
+   */
+  let unmeasured = 0;
+  /** How many of the nodes and edges handed over say they are selected: what a controlled flow's selection is. */
+  let controlledSelectedNodes = 0;
+  let controlledSelectedEdges = 0;
   /** Registered handles by node, in registration (DOM) order. */
   const handles = new Map<string, Set<HandleRecord>>();
   const nodeEls = new Map<string, HTMLElement>();
@@ -597,9 +606,19 @@ export function createFlowingerStore(
 
   // --- geometry -------------------------------------------------------------
 
-  const bumpGeometry = () => {
+  /**
+   * A handle appeared, went, or moved: the edges it anchors must be drawn again. No node's rectangle changed, and
+   * `FlowingerState` holds nothing about handles — so neither what culls by rectangles nor `useStore` need hear
+   * of it. That is most of what a node's mount and unmount does, and a state read after the DOM has been
+   * changed forces a layout: a thousand nodes going at once would force a thousand.
+   */
+  const bumpHandles = () => {
     geometryVersion += 1;
     emit(geometryListeners);
+  };
+
+  const bumpGeometry = () => {
+    bumpHandles();
     touch();
     run('change');
   };
@@ -713,6 +732,10 @@ export function createFlowingerStore(
     const known = sizes.get(id);
     if (known?.width === width && known.height === height) return;
     sizes.set(id, { width, height });
+    if (!known) {
+      const counted = nodeById.get(id);
+      if (counted && counted.hidden !== true) unmeasured -= 1;
+    }
     bumpGeometry();
     // With an origin, where the top-left is depends on the size: tell the node, and what is inside it.
     const measured = nodeById.get(id);
@@ -721,8 +744,7 @@ export function createFlowingerStore(
   };
 
   /** Whether every node that is drawn has been measured — false for an empty diagram. */
-  const areNodesInitialized = (): boolean =>
-    nodes.length > 0 && nodes.every((n) => n.hidden === true || sizes.has(n.id));
+  const areNodesInitialized = (): boolean => nodes.length > 0 && unmeasured === 0;
 
   /** Lets handle measurement find the node a handle belongs to. Returns its cleanup. */
   const registerNodeElement = (id: string, el: HTMLElement): (() => void) => {
@@ -754,7 +776,7 @@ export function createFlowingerStore(
         changed = true;
       }
     }
-    if (changed) bumpGeometry();
+    if (changed) bumpHandles();
   };
 
   const registerHandle = (nodeId: string, registration: HandleRegistration): (() => void) => {
@@ -766,11 +788,11 @@ export function createFlowingerStore(
     }
     records.add(record);
     measureHandles(nodeId);
-    bumpGeometry();
+    bumpHandles();
     return () => {
       records.delete(record);
       if (records.size === 0 && handles.get(nodeId) === records) handles.delete(nodeId);
-      bumpGeometry();
+      bumpHandles();
     };
   };
 
@@ -816,8 +838,16 @@ export function createFlowingerStore(
   const isEdgeSelected = (id: string): boolean =>
     edgesControlled() ? edgeById.get(id)?.selected === true : selectedEdges.has(id);
 
-  const selectedNodeIds = (): string[] => nodes.filter((n) => isSelected(n.id)).map((n) => n.id);
-  const selectedEdgeIds = (): string[] => edges.filter((e) => isEdgeSelected(e.id)).map((e) => e.id);
+  // With nothing selected — most of the time — these answer without a scan of every node and edge. They are
+  // asked after every change and by every subscriber to the selection; at ten thousand nodes that was real.
+  const selectedNodeIds = (): string[] => {
+    if ((nodesControlled() ? controlledSelectedNodes : selected.size) === 0) return [];
+    return nodes.filter((n) => isSelected(n.id)).map((n) => n.id);
+  };
+  const selectedEdgeIds = (): string[] => {
+    if ((edgesControlled() ? controlledSelectedEdges : selectedEdges.size) === 0) return [];
+    return edges.filter((e) => isEdgeSelected(e.id)).map((e) => e.id);
+  };
 
   /** Tells `onSelectionChange` — once per change, and never for a selection that has not changed. */
   const announceIfChanged = () => {
@@ -887,6 +917,12 @@ export function createFlowingerStore(
         pruned = true;
       }
     }
+    unmeasured = 0;
+    controlledSelectedNodes = 0;
+    for (const n of next) {
+      if (n.hidden !== true && !sizes.has(n.id)) unmeasured += 1;
+      if (n.selected === true) controlledSelectedNodes += 1;
+    }
     for (const [id, dragged] of [...overrides]) {
       const node = nodeById.get(id);
       if (!node || !samePoint(node.position, dragged.base)) {
@@ -917,6 +953,8 @@ export function createFlowingerStore(
   const setEdges = (next: readonly Edge[]) => {
     edges = next;
     edgeById = new Map(next.map((e) => [e.id, e]));
+    controlledSelectedEdges = 0;
+    for (const e of next) if (e.selected === true) controlledSelectedEdges += 1;
     for (const id of [...selectedEdges]) if (!edgeById.has(id)) selectedEdges.delete(id);
     touch();
     run('change');

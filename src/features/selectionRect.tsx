@@ -1,4 +1,10 @@
-import { useRef, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  memo,
+  useRef,
+  useSyncExternalStore,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import { DRAG_THRESHOLD, capturePointer, releasePointer } from '../pointer.ts';
@@ -38,7 +44,7 @@ const ARROWS: Record<string, [number, number]> = {
 };
 
 /** The rectangle round the selected nodes, drawn in graph space, which is dragged to move them all. */
-function SelectionRect() {
+const SelectionRect = /*#__PURE__*/ memo(function SelectionRect() {
   const store = useFlowingerStore();
   const rectApi = store.api(selectionRectFeature);
   const { beginNodeDrag, nudgeSelection } = store.api(dragFeature);
@@ -183,7 +189,7 @@ function SelectionRect() {
       />
     </ViewportPortal>
   );
-}
+});
 
 /**
  * The rectangle that stays round what a selection box took — React Flow's `NodesSelection` — and is dragged to

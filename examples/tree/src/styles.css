@@ -1,0 +1,137 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --flowinger-surface: #ffffff;
+  --flowinger-surface-raised: #f1f5f9;
+  --flowinger-border: #cbd5e1;
+  --flowinger-text: #0f172a;
+  --flowinger-text-dim: #64748b;
+  --flowinger-edge: #64748b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --flowinger-surface: #1e293b;
+    --flowinger-surface-raised: #334155;
+    --flowinger-border: #475569;
+    --flowinger-text: #f1f5f9;
+    --flowinger-text-dim: #94a3b8;
+    --flowinger-edge: #94a3b8;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--flowinger-border);
+}
+
+h1 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.group {
+  display: inline-flex;
+}
+
+.group button {
+  padding: 4px 10px;
+  border: 1px solid var(--flowinger-border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.group button + button {
+  margin-left: -1px;
+}
+
+.group button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.count {
+  font-size: 13px;
+  color: var(--flowinger-text-dim);
+}
+
+main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The tree closes up when a branch is folded: let the move be seen. A node's position is its transform. */
+.flowinger-node {
+  transition: transform 220ms ease;
+}
+
+.person {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  background: var(--flowinger-surface);
+  color: var(--flowinger-text);
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.person span {
+  color: var(--flowinger-text-dim);
+  font-size: 12px;
+}
+
+/* The fold button sits on the right edge, over where the edges to the children leave. */
+.fold {
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  transform: translateY(-50%);
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 11px;
+  background: var(--flowinger-surface-raised);
+  color: var(--flowinger-text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.fold:hover {
+  border-color: var(--flowinger-text);
+}

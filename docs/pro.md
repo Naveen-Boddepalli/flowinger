@@ -167,6 +167,10 @@ expanding shows them again — except what sits under a branch that is still col
 the instance, so it needs a controlled flow. It treats the graph as a tree: a node with a second, visible parent
 is hidden with the collapsed one; use `getDescendantIds` to build your own rule.
 
+Collapsing hides; it does not move. The people left over would stay spread round a gap, so lay the tree out
+again over what is shown — the [`tree` example](../examples/tree) does, with a button on each node, one call
+to the hook handed to the nodes by context, and `d3-hierarchy` over the visible subset.
+
 ## What is not here
 
 - Real-browser coverage for the pro modules beyond export and editable edges is the editor example and a

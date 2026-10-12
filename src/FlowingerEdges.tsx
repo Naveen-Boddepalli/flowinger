@@ -458,7 +458,13 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     () => null,
   );
 
-  const byId = new Map(nodes.map((n) => [n.id, n]));
+  // Rebuilt when the lists change, not at every render: with culling the edge layer renders as the view
+  // moves, and a map of every node and edge made each time cost more than drawing what is in view.
+  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  const edgeById = useMemo(
+    () => (visibleEdgeIds ? new Map(edges.map((e) => [e.id, e])) : null),
+    [edges, visibleEdgeIds !== undefined],
+  );
 
   // Identical arrowheads share one <marker>. `useId` keeps ids unique across
   // canvases on a page; its format varies by React version (`:r1:`, `«r1»`,
@@ -496,15 +502,15 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
   const levels = new Map<number, ReactElement[]>();
 
   let anyAnimated = false;
-  edges.forEach((edge) => {
+  const drawEdge = (edge: Edge): void => {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);
-    if (!source || !target || edge.hidden) return null;
+    if (!source || !target || edge.hidden) return;
     if (hiddenNodeIds ? hiddenNodeIds.has(source.id) || hiddenNodeIds.has(target.id) : source.hidden || target.hidden) {
-      return null;
+      return;
     }
-    if (visibleEdgeIds && !visibleEdgeIds.has(edge.id)) return null;
-    if (reconnecting === edge.id) return null;
+    if (visibleEdgeIds && !visibleEdgeIds.has(edge.id)) return;
+    if (reconnecting === edge.id) return;
 
     const lookup = (id: string) => byId.get(id);
     // Top-left corners: each node on a chain gives up its origin's share of its size.
@@ -544,14 +550,13 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
       (l, f) => f.stackEdge?.(store, edge, l, selected) ?? l,
       edge.zIndex ?? levelOf(source, target),
     );
-    const place = (element: ReactElement): null => {
+    const place = (element: ReactElement): void => {
       const at = levels.get(level);
       if (at) at.push(element);
       else levels.set(level, [element]);
-      return null;
     };
     if (View) {
-      return place(
+      place(
         <CustomEdge
           key={edge.id}
           View={View}
@@ -573,10 +578,11 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
           markerEnd={markerEnd}
         />,
       );
+      return;
     }
 
     const path = pathFor(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
-    return place(
+    place(
       <EdgePath
         key={edge.id}
         edge={edge}
@@ -600,7 +606,17 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
         markerEnd={markerEnd}
       />,
     );
-  });
+  };
+  // With culling, the edges to draw are the ones named, in the order they were found — which is the order
+  // of the list — not every edge asked whether it is one of them.
+  if (visibleEdgeIds && edgeById) {
+    for (const id of visibleEdgeIds) {
+      const edge = edgeById.get(id);
+      if (edge) drawEdge(edge);
+    }
+  } else {
+    edges.forEach(drawEdge);
+  }
 
   // One <svg> per level, lowest first. The marker definitions and the animation's
   // stylesheet ride in the lowest — `url(#…)` finds a marker anywhere in the
