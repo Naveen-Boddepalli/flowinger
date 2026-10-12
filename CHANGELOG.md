@@ -9,6 +9,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-13
+
 ### Added
 
 - **`flowinger/editable-edge`** — `EditableEdge`, an edge with waypoints you can move: it runs through
@@ -16,13 +18,17 @@ The design notes behind each release — what was measured, what was tried and d
   place to add one, and a double click removes one. Written through `updateEdgeData`, so a controlled flow hears
   every move. `getEditableEdgePath` is the path as a function. See [the pro modules](docs/pro.md).
 - **`HexagonNode`** in `flowinger/shapes` (`shapeNodeTypes.hexagon`).
-
 - **A collapsible-tree example** ([`examples/tree`](examples/tree)): an org chart whose branches fold with
   `useCollapsibleTree`, laid out again around what is hidden. Built against the packed library in CI like the
   others.
 - **[Benchmarks](docs/benchmarks.md)** against React Flow at 1,000, 5,000 and 10,000 nodes, with and without
   `onlyRenderVisibleElements`: mount, pan, zoom, drag, memory. `pnpm bench` re-runs it in a real browser and
   rewrites the table; `bench/results.json` has the numbers.
+
+### Changed
+
+- **Size.** The core is 18.9 kB gzipped (was 18.7) and the whole canvas 33.9 (was 33.7): the counters and
+  fast paths that made culling scale. The budgets, 19 and 34, are unchanged.
 
 ### Fixed
 
@@ -260,7 +266,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0
 [0.4.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0-rc.1
