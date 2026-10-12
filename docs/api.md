@@ -24,6 +24,19 @@
 | `nodeOrigin` | `[0, 0]` | Where on a node its `position` is: `[0, 0]` its top-left corner, `[0.5, 0.5]` its centre. A node's own `origin` wins. A child's `position` is relative to its parent's *top-left* (as in React Flow), whatever either's origin. Edges, hit testing, the minimap, `fitView`, extents and the resizer all use the drawn box. |
 | `nodeDragThreshold` | `3` | Pixels a press must travel before it becomes a node drag; `0` is none. Needs `dragFeature`. |
 | `panActivationKeyCode` | none | Holding this key turns a drag into a pan, even where `panOnDrag` is off (`'Space'` is React Flow's default; here it is off unless asked for). Needs `panKeyFeature`, which `FlowingerCanvas` has; a `FlowingerCore` says in development that it does nothing without it. |
+| `selectionKeyCode`, `multiSelectionKeyCode` | `'Shift'`; Shift, Ctrl, ⌘ | The key that, held, turns a drag on the empty canvas into a selection box; the key that makes a click or a drag add to the selection. A key, a combination (`'Meta+a'`), a list, or `null` for none. Left out, **Shift also adds** to a selection (React Flow's is Meta/Control only). |
+| `zoomActivationKeyCode` | Ctrl / ⌘ | Held, the wheel zooms — even with `zoomOnScroll` off — and instead of panning under `panOnScroll`; a pinch (Control + wheel) zooms whatever `zoomOnScroll` says once a key is given. Left out, `zoomOnScroll` off still means no zoom. |
+| `panOnScrollMode`, `preventScrolling` | `'free'`, `true` | With `panOnScroll`: `'free'`, `'vertical'` or `'horizontal'` (Shift turns a vertical wheel sideways, except in `'vertical'`). `preventScrolling` off leaves a plain wheel to the page and does not zoom; a pinch still does. |
+| `noWheelClassName`, `noPanClassName`, `noDragClassName` | | Classes of your own that the wheel, a pan or a node drag pass through, as `nowheel`, `nopan` and `nodrag` do — which keep working. |
+| `paneClickDistance`, `nodeClickDistance` | none | How far a press may move and still be a click. Further, and not far enough to be a drag, it is not one. Left out, any press that does not become a pan or a drag is a click. |
+| `selectNodesOnDrag` | `true` | Off, dragging an unselected node moves it alone and drops the selection; a click still selects. |
+| `connectionDragThreshold`, `connectionRadius`, `reconnectRadius` | `1`, `20`, `10` | A press on a handle is a connection once the pointer has travelled that far (px); a drop snaps to the nearest handle within the radius (graph units) of the pointer, and the line is drawn to it. |
+| `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd` | `true` | Click a handle, then another: `onClickConnectStart(event, { nodeId, handleId, handleType })`, then the connection is made if valid and `onClickConnectEnd(event, { connection, isValid })` either way. The first handle gets a `clickconnecting` class. |
+| `onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu` | | A box selection leaves a rectangle round what it took. Dragging it moves everything in it, with `onNodeDrag*` called too; a right click on it is `onSelectionContextMenu(event, nodes)`. It goes with a click on the pane or a node. |
+| `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode` | `true`, `false`, `'basic'` | A selected node (and what is inside it) is raised by 1000; a selected edge, and the edges of a selected node, too when asked. `'auto'` keeps each group's subtree together; `'manual'` leaves stacking to `zIndex` alone. |
+| `colorMode` | none | `'light'`, `'dark'` or `'system'`: a `light` / `dark` class on the canvas, and for light the `--flowinger-*` colours set to a light palette (dark is the default palette). Applies to what is drawn inside the canvas. |
+| `defaultMarkerColor`, `connectionLineContainerStyle` | | The colour of an arrowhead that names none (else its edge's stroke); a style for the element the connection line is drawn in. |
+| `nodesFocusable`, `disableKeyboardA11y`, `ariaLabelConfig`, `autoPanOnNodeFocus`, `autoPanOnSelection`, `debug` | | Which nodes are tab stops (a node's or edge's own `focusable` wins; left out, selectable ones); keyboard handling off; replacement text for descriptions, the live announcement and the control labels; panning to a node that takes keyboard focus out of view (`true`) and a selection box at the pane's edge (`true`); logging the changes a controlled flow is told of. |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
 | `snapToGrid`, `snapGrid` | `false`, `[15, 15]` | A dragged node lands on the grid; a selection keeps its shape, snapping by the node you hold. |
@@ -43,9 +56,9 @@
 | `onSelectionChange`, `onNodeClick`, `onEdgeClick`, `onPaneClick` | | `onSelectionChange({ nodes, edges })` tells you when the selection changes. A pan's closing click is not a pane click, and neither is a drag's a node click. |
 | `onNodeDragStart`, `onNodeDrag`, `onNodeDragStop`, `onInit` | | The drag callbacks get `(event, node, nodes)`: `nodes` is everything being dragged. |
 
-Props that appear in React Flow's API but that nothing here acts on — `colorMode`, `connectOnClick`,
-`selectionKeyCode` and the rest — are accepted so code compiles, tagged `@unimplemented` in the types, and
-warned about once in development: [the list, with what happens instead](react-flow-coverage.md#accepted-not-implemented).
+Every prop of React Flow's `ReactFlow` does something here ([the audit](react-flow-coverage.md)): where a
+prop needs a [feature](features.md) the canvas lacks, the console says which, once. The ones below are the
+interaction details; each is React Flow's, with its defaults, except where the table says.
 
 Without `onNodesChange`, `nodes` is never mutated: a dragged position is kept internally, and a fresh
 layout from you wins over it. Dragging a selected node drags the whole selection; a node with a

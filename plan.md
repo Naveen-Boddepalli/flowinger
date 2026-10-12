@@ -868,9 +868,31 @@ page is the *implemented* number; and a new prop is added with the behaviour or 
 Sizes on the branch: full 27.26 kB / lean 17.56 kB gzip (main: 26.02 / 16.95). Budgets moved 27 / 17.5 → 28 / 18
 under the rule that a budget sits about half a kilobyte above what is measured.
 
-**Not built** (listed so nobody reads the first pass's plan as a record): click-to-connect and its events;
-selection-drag events; `colorMode`; the key-code, click-distance and radius props above; `elevate*OnSelect` and
-`zIndexMode`; `flowinger/editable-edge` (draggable waypoints) — it was in the plan and never existed; a Hexagon
-shape (there are diamond, circle, cylinder, parallelogram and document); and the "production recipes"
-(grouping, multiplayer presence, workflow simulation). Layout recipes (`d3-hierarchy`, `dagre`, `elkjs`) are in
-`examples/layouts`. See `ROADMAP.md`.
+**Third pass: the 39.** The 39 members that were only names were then implemented, one group at a time,
+tests first, with React Flow's source as the oracle (`@xyflow/system`'s `XYPanZoom`, `XYDrag`, `XYHandle`,
+`getElevatedEdgeZIndex`, `Handle`, `NodesSelection`). The decisions worth keeping:
+
+- **Defaults follow React Flow where the prop is about an interaction that is itself opt-in** (a connection
+  radius only matters once `nodesConnectable` is on), and **keep flowinger's own where it was established and
+  tested**: Shift still adds to a selection, `zoomOnScroll` off still means no zoom unless a
+  `zoomActivationKeyCode` is given, animated moves stay linear. Each is listed in the migration guide.
+- **A feature per concern, so the core pays for hooks and not behaviour**: the core gained two stacking calls
+  and a key hook (`stackNode` / `stackEdge` / `keyHeld` / `smoothViewport` are `Feature` slots), the rest is in
+  `a11yFeature`, `stackingFeature`, `colorModeFeature`, `selectionRectFeature`, `smoothFeature`, `zoomKeyFeature`
+  and `debugFeature`. Size: core 17.56 → 18.66, whole 27.26 → 33.64 kB.
+- **Things the survey of React Flow's source turned up**: `selectNodesOnDrag` off *clears* the selection when an
+  unselected node is dragged (not just "does not select it"); `nodeClickDistance` / `paneClickDistance` are
+  about a press that moved too far to be a click but not far enough to be a drag; a child of a selected group
+  is raised with it (`parentZ + 1`); the Shift-to-scroll-sideways swap is skipped on macOS, which does it
+  itself; `onSelectionDrag*` fire *in addition to* `onNodeDrag*`, and only for the rectangle's drag; the
+  message React Flow's live region announces is the position *before* the move.
+- **Bugs this found in the existing code**: a click on a handle began (and ended) a connection; a drop onto
+  "nothing" at a handle's own position connected (the tests assumed a hit-test, not a radius); selection
+  answered `focusable: false` for a node that merely could not be selected, which would have vetoed
+  `nodesFocusable`; the box's corner slipped as the view panned; and the connection line shared an `<svg>` with
+  the edges, so it could not be styled.
+
+**Not built** (listed so nobody reads the first pass's plan as a record): `flowinger/editable-edge` (draggable
+waypoints) — it was in the plan and never existed; a Hexagon shape (there are diamond, circle, cylinder,
+parallelogram and document); and the "production recipes" (grouping, multiplayer presence, workflow
+simulation). Layout recipes (`d3-hierarchy`, `dagre`, `elkjs`) are in `examples/layouts`. See `ROADMAP.md`.

@@ -11,13 +11,39 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
-- **Every one of React Flow's 211 exports and 119 canvas props is named**, with the types for them
-  (`NodeOrigin`, `ColorMode`, `PanOnScrollMode`, `ZIndexMode`, `NodeHandle`, the resize-control, edge-toolbar
-  and MiniMap-node types…). Of the 302 members the audit counts across props, the instance and components,
-  **263 do what they say**; the other 39 are accepted so React Flow code compiles and are tagged
-  `@unimplemented`. **In development a canvas now says so, once, when given one** — a name that compiles and
-  does nothing is worse than a missing one. The full list, with what happens instead, is in
-  [React Flow coverage](docs/react-flow-coverage.md#accepted-not-implemented).
+- **Every one of React Flow's 211 exports and 119 canvas props is named, and does something.** The audit
+  (`scripts/audit-react-flow.mjs`) counts a name that compiles and does nothing apart from one that works —
+  `@unimplemented` in its doc comment, and a development warning when a canvas is given it — and there are
+  none: **302 of the 302** members of the props, the instance and the components do what they say. See
+  [React Flow coverage](docs/react-flow-coverage.md) and, for what differs from React Flow, the
+  [migration guide](docs/migrating-from-react-flow.md#4-what-is-not-there).
+- **Gestures and keys:** `selectionKeyCode`, `multiSelectionKeyCode` and `zoomActivationKeyCode` (a key, a
+  combination, a list, or `null`); `panOnScrollMode` and `preventScrolling`; `noWheelClassName`,
+  `noPanClassName` and `noDragClassName` (yours, beside `nowheel` / `nopan` / `nodrag`); `paneClickDistance`
+  and `nodeClickDistance`; `selectNodesOnDrag`.
+- **Connecting:** `connectionDragThreshold` (default 1 px — a click on a handle is no longer a connection),
+  `connectionRadius` (20) and `reconnectRadius` (10), in graph units; `connectOnClick` (default true) with
+  `onClickConnectStart` / `onClickConnectEnd` — click a handle, then another.
+- **Selection:** a box selection leaves a rectangle round what it took (`selectionRectFeature`), which is
+  dragged to move it all and right-clicked: `onSelectionDragStart` / `onSelectionDrag` / `onSelectionDragStop`
+  (with `onNodeDrag*` called as well) and `onSelectionContextMenu`. `autoPanOnSelection`: a box held at the
+  pane's edge pans the view, its corner staying on the same place in the graph.
+- **Look:** `elevateNodesOnSelect` (default on) and `elevateEdgesOnSelect` (off) and `zIndexMode`
+  (`'basic'`, `'auto'`, `'manual'`) as `stackingFeature` — a selected node, and what is inside it, is raised by
+  1000; `colorMode` (`'light'`, `'dark'`, `'system'`) as `colorModeFeature`; `defaultMarkerColor`;
+  `connectionLineContainerStyle`.
+- **Accessibility and diagnostics:** `nodesFocusable`, `disableKeyboardA11y`, a node's and an edge's own
+  `focusable`, `ariaLabelConfig` (descriptions nodes and edges point at, a live announcement of a keyboard
+  move, labels for the controls, minimap and handles), `autoPanOnNodeFocus` — all `a11yFeature`; `debug`
+  (`debugFeature`).
+- **`Node.handles`** — where a node's handles are, for an edge to meet before they are drawn and measured
+  (server-rendered output, the first measure). **`interpolate: 'smooth'`** (`smoothFeature`, van Wijk and Nuij's
+  path). **`MiniMap`'s `inversePan`.** **`NodeToolbar`'s `nodeId`** for another node, or several, drawn at them in
+  graph space. **`Controls`' `showInteractive` / `onInteractiveChange`** — a lock that switches dragging,
+  connecting and selecting off and on over the canvas's props.
+- New features, all in `allFeatures`: `a11yFeature`, `colorModeFeature`, `debugFeature`,
+  `selectionRectFeature`, `smoothFeature`, `stackingFeature`, `zoomKeyFeature`. A prop for one a `FlowingerCore`
+  lacks says so in development, as the others do.
 - **`nodeOrigin` and `node.origin`.** Where on a node its `position` is: `[0, 0]` top-left (default),
   `[0.5, 0.5]` the centre. A child's `position` is relative to its parent's top-left, as in React Flow. Edges,
   hit testing, the minimap, `fitView`, extents, intersections and the resizer all use the drawn box.
@@ -44,7 +70,15 @@ The design notes behind each release — what was measured, what was tried and d
 - **`FlowingerCanvas`'s node position is a top-left corner everywhere.** `store.absolutePosition` (and
   `InternalNode.internals.positionAbsolute`) is the node's drawn top-left; with the default `nodeOrigin` this
   is what it always was.
-- **Size budgets are 28 kB (whole canvas) and 18 kB (core)**, up from 27 / 17.5. Measured: 27.26 / 17.56.
+- **Size budgets are 34 kB (whole canvas) and 19 kB (core)**, up from 27 / 17.5. Measured: 33.6 / 18.7. Each
+  of the 39 props that were only names costs its own code, in the features that act on it; the core's share is
+  the wheel, the click distances, the two stacking hooks and the lock.
+- **Defaults that move, where React Flow's are followed:** a press on a handle is a connection only once the
+  pointer has travelled 1 px; a drop snaps to a handle within 20 graph units; clicking two handles connects them;
+  a selected node is raised by 1000; a box selection leaves a draggable rectangle round what it took; a node
+  that takes keyboard focus out of view is panned to. Where flowinger's own behaviour was established it is
+  kept when the prop is left out — Shift still adds to a selection, `zoomOnScroll` off is still no zoom, and
+  animated moves stay `'linear'`.
 - `ZIndexMode` is `'auto' | 'basic' | 'manual'`, as in React Flow (it was `'auto' | 'manual'`).
 - `FitViewOptions` no longer repeats `ease` / `interpolate`, which it inherits from `SetViewportOptions`.
 

@@ -39,32 +39,25 @@ it.** A library nobody can find the answer to a question about is not helped by 
   connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
   (`nodrag`, `nopan`, `nowheel`) from a real press.
 
-## Next — make the names true
+## Next
 
-Flowinger *names* every export and prop of React Flow 12.11.6 (211 of 211 exports, 119 of 119 props) and
-*implements* 263 of the 302 members counted (`node scripts/audit-react-flow.mjs`); the other 39 are tagged
-`@unimplemented` and warn in development — [the list](docs/react-flow-coverage.md#accepted-not-implemented). The
-work now is turning those into behaviour, in the order people hit them, each with the test that fails first and
-a measured byte cost (a feature is a `Feature` object a canvas opts into, never core weight):
+Flowinger *names* every export and prop of React Flow 12.11.6 (211 of 211 exports, 119 of 119 props) and **every
+one does something** (302 of 302 members counted by `node scripts/audit-react-flow.mjs`; the audit counts a name
+that compiles and does nothing apart, and there are none). What is left is breadth and proof:
 
-1. **Interaction props people set from habit** — `selectionKeyCode`, `multiSelectionKeyCode`,
-   `zoomActivationKeyCode` and `panOnScrollMode`; the thresholds and radii (`connectionDragThreshold`,
-   `nodeClickDistance`, `paneClickDistance`, `connectionRadius`, `reconnectRadius`); `selectNodesOnDrag`.
-2. **Selection events** — `onSelectionDragStart` / `onSelectionDrag` / `onSelectionDragStop`,
-   `onSelectionContextMenu`.
-3. **Click-to-connect** — `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd`.
-4. **Look** — `colorMode` (`light` | `dark` | `system`), `elevateNodesOnSelect`, `elevateEdgesOnSelect`,
-   `zIndexMode`, `defaultMarkerColor`, `nodesFocusable`, `ariaLabelConfig`.
-5. **Smaller**: `Node.handles` (edges from declared handles before measurement — what makes edges render in
-   server-rendered output), `interpolate: 'smooth'`, `Controls`' lock button, `NodeToolbar`'s `nodeId` for
-   another node.
-
-### The free "pro" modules
-
-[`flowinger/history`, `/clipboard`, `/snaplines`, `/export`, `/smart-edges`, `/shapes`, `/tree`](docs/pro.md)
-exist and are tested against a real canvas. Not built, though earlier plans said so: **`flowinger/editable-edge`**
-(draggable waypoints) and a **Hexagon** shape. Recipes still to write as `examples/`: grouping and swimlanes,
-multiplayer presence (Yjs), a workflow-simulation stepper.
+1. **Real-browser coverage for what jsdom cannot see.** The e2e suite covers load, anchors, wheel, pan, drag, a
+   flick, a connection, delete, export and `nodeOrigin`. Not yet in a browser: click-to-connect, the selection
+   rectangle's drag, a box held at the pane's edge, `zIndexMode`, `colorMode: 'system'`, the lock, and
+   `interpolate: 'smooth'` — each is tested against jsdom's model and, where React Flow is the oracle, its
+   source, but has not been watched.
+2. **The pro modules' gaps.** `flowinger/editable-edge` (draggable waypoints) and a Hexagon shape are not in
+   the package, though earlier plans said so. Recipes still to write as `examples/`: grouping and swimlanes,
+   multiplayer presence (Yjs), a workflow-simulation stepper.
+3. **Size.** The core grew from 17.6 to 18.7 kB and the whole canvas from 27.3 to 33.6 for the 39 props; the
+   features are separable, but a `FlowingerCanvas` pays for all of them. A pass that measures each feature and
+   removes duplication (three places build "is this key held", several build "the box round some nodes") is
+   worth a day.
+4. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
 
 ## Later
 

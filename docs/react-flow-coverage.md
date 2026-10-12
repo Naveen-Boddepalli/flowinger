@@ -18,72 +18,32 @@ Measured against `@xyflow/react` 12.11.6's own type declarations
 | | React Flow has | Flowinger **names** | …and **does** |
 |---|---|---|---|
 | Exports (components, hooks, functions, types) | 211 | **211** | — |
-| `ReactFlow` props | 119 | **119** | **86** |
+| `ReactFlow` props | 119 | **119** | **119** |
 | Instance (`useReactFlow()`) | 32 | **32** | 32 |
-| `Node` fields | 22 | **22** | 21 |
-| `Edge`, `NodeProps`, `EdgeProps` | 20 / 13 / 20 | **all** | all |
+| `Node`, `Edge`, `NodeProps`, `EdgeProps` fields | 22 / 20 / 13 / 20 | **all** | all |
 | `Handle`, `Background`, `BaseEdge` props | 6 / 6 / 9 | **all** | all |
-| `MiniMap` props | 18 | **18** | 17 |
-| `Controls` props | 9 | **9** | 7 |
-| `NodeResizer` props | 16 | **16** | 16 |
-| `NodeToolbar` props | 4 | **4** | 3 |
-| `fitView` options | 8 | **8** | 7 |
-| **All members counted** | 302 | **302** | **263** |
+| `MiniMap`, `Controls`, `NodeResizer`, `NodeToolbar` props | 18 / 9 / 16 / 4 | **all** | all |
+| `fitView` options | 8 | **8** | 8 |
+| **All members counted** | 302 | **302** | **302** |
 
-The 39 that are named and not done are listed below. A name that compiles and does nothing is worse than a
-missing one — it fails silently, in production, in someone else's app — so each of the 39 is tagged
-`@unimplemented` in its doc comment (your editor shows it on hover), and **in development a canvas says so, once,
-when it is given one that asks for something it would not do** (`flowinger: connectOnClick is accepted so React
-Flow code compiles, but does nothing here`). A test keeps the tags and the warnings the same list. The audit
-script prints both counts, so this table cannot drift from the code.
+A name that compiles and does nothing is worse than a missing one — it fails silently, in production, in someone
+else's app — so the audit counts the two apart: a member whose doc comment says `@unimplemented` is *named*, not
+*done*, and a canvas given one says so in development. **None are, now.** The mechanism stays as a ratchet: a
+test keeps the tags and the warning table the same list, so a name added before it works is a visible exception
+and not a quiet one.
 
-"Does" is *a feature behind the name*, not *identical to React Flow*: counts are not weights, and where the
-behaviour differs on purpose it is in [Migrating from React Flow](migrating-from-react-flow.md).
+"Does" is *a feature behind the name*, not *identical to React Flow*: counts are not weights, and the places the
+behaviour differs on purpose are listed below and in [Migrating from React Flow](migrating-from-react-flow.md).
 
 ## Accepted, not implemented
 
-These compile and have no effect. Where the thing they ask for happens anyway, or there is another way to get
-it, the right-hand column says so.
+Nothing is. (`proOptions` and `attributionPosition` are accepted and do nothing *by design*: there is no
+attribution to hide, so the end state they ask for is the one you have.)
 
-### Canvas props
-
-| Prop | What happens instead |
-|---|---|
-| `selectionKeyCode` | Shift draws a selection box; with `selectionOnDrag`, any bare drag does. |
-| `multiSelectionKeyCode` | Shift, Ctrl or ⌘ add to a selection. |
-| `zoomActivationKeyCode` | With `panOnScroll`, Ctrl or ⌘ and the wheel zoom. |
-| `panOnScrollMode` | A wheel pan is free: both axes. |
-| `preventScrolling` | The wheel is the canvas's whenever `zoomOnScroll` or `panOnScroll` is on, and the page does not scroll then; turn both off to give it to the page. |
-| `connectionDragThreshold` | A connection begins the moment a handle is pressed. |
-| `nodeClickDistance`, `paneClickDistance` | A press that moves less than the drag threshold (3 px, or `nodeDragThreshold`) is a click. |
-| `connectionRadius`, `reconnectRadius` | A connection snaps to the handle the pointer is over, not one near it. |
-| `selectNodesOnDrag` | Dragging an unselected node selects it. |
-| `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd` | Connect by dragging from one handle to another. |
-| `onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop` | `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, with `nodes` as everything being dragged. |
-| `onSelectionContextMenu` | `onNodeContextMenu`. |
-| `colorMode` | Theme with the `--flowinger-*` CSS variables on an ancestor ([Theming](theming.md)). |
-| `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode` | Stacking is by nesting depth, then the element's own `zIndex`. |
-| `defaultMarkerColor` | An arrowhead takes its edge's stroke unless the marker names a colour. |
-| `connectionLineContainerStyle` | Style the line with `connectionLineStyle`. |
-| `noDragClassName`, `noPanClassName`, `noWheelClassName` | The classes are `nodrag`, `nopan` and `nowheel`, fixed. |
-| `nodesFocusable` | A node is a tab stop when it can be selected. |
-| `disableKeyboardA11y` | Keyboard navigation is already opt-in: `keyboardNavigation`. |
-| `ariaLabelConfig` | The `ariaLabel` props, in English. |
-| `autoPanOnNodeFocus`, `autoPanOnSelection` | Focusing or selecting a node does not pan to it. |
-| `debug` | There is no debug output. |
-
-`proOptions` and `attributionPosition` are accepted and do nothing *by design*: there is no attribution to hide,
-so the end state they ask for is the one you have.
-
-### Fields, components and options
-
-| Member | What happens instead |
-|---|---|
-| `Node.handles` | Edges attach to the `<Handle>`s a node renders, measured in the browser. Before that — in server-rendered output — an edge is drawn from the node's declared `width` / `height` ([Server rendering](server-rendering.md)); declared `handles` are not used for either. |
-| `MiniMap` `inversePan` | A press or drag puts the view where the pointer is; there is no relative pan to invert. |
-| `Controls` `showInteractive`, `onInteractiveChange` | There is no lock button; set `nodesDraggable`, `nodesConnectable` and `elementsSelectable`. |
-| `NodeToolbar` `nodeId` | The toolbar rides on the node it is rendered inside. Naming that node is fine; another node, or several, is not supported. |
-| `interpolate` (viewport and `fitView` options) | A move is always an eased straight interpolation of x, y and zoom — React Flow's `'linear'`. Its default `'smooth'` (a zoom-aware path) is not available. `ease` is. |
+Most of what did nothing in the first measurement is a *feature* — a prop that needs the feature that acts on it
+says which, once, in development ([Features](features.md)). New ones: `a11yFeature`, `stackingFeature`,
+`colorModeFeature`, `selectionRectFeature`, `zoomKeyFeature`, `smoothFeature` and `debugFeature`, all in
+`FlowingerCanvas`.
 
 ## Differences on purpose
 
@@ -101,6 +61,12 @@ so the end state they ask for is the one you have.
   `title`, `role`, `aria-*`, `tabIndex`, `data-*` — but not its event handlers, which the canvas's own pointer
   and keyboard handling would lose to; a handle's `id` stays its handle id, and on `BaseEdge` they land on the
   path. The engine's own classes, positioning and handlers win over yours.
+- **Where a prop's default is not React Flow's, on purpose:** `multiSelectionKeyCode` left out lets Shift add to a
+  selection as well as Control and ⌘; `zoomActivationKeyCode` left out leaves `zoomOnScroll` off meaning no zoom;
+  `interpolate` is `'linear'` (React Flow's is `'smooth'`; `smoothFeature` has it when asked); `Controls`'
+  `showInteractive` is off (React Flow's is on); `colorMode` left out adds no class and keeps the library's
+  palette, and `colorMode` only reaches what is drawn inside the canvas (a `MiniMap` or `Controls` outside it
+  takes the `--flowinger-*` variables from an ancestor as before).
 - **Defaults differ, and that is the part a compiler will not find:** nodes are not draggable, connectable or
   selectable until you say so (`nodesDraggable`, `nodesConnectable`, `elementsSelectable` — React Flow's are
   on), `minZoom` is `0.05` (React Flow's `0.5`), `fitView` keeps a 40 px margin unless you pass a `padding`
@@ -113,7 +79,7 @@ read from React Flow's source.
 
 ## Beyond React Flow
 
-Flowinger has 45 exports React Flow does not — the [feature objects](features.md) (`dragFeature`,
+Flowinger has 52 exports React Flow does not — the [feature objects](features.md) (`dragFeature`,
 `panKeyFeature`…) and what they need — and the [pro modules](pro.md): undo/redo, copy and paste, snap guides,
 export, smart routing, flowchart shapes and a collapsible tree. Those are in separate entry points
 (`flowinger/history`, `flowinger/clipboard`…) and add **nothing** to the core's size unless imported.

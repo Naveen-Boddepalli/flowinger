@@ -62,7 +62,7 @@ An app that only *shows* a graph (a viewer) needs none of it, and was probably a
 
 Flowinger exports every one of React Flow's 211 names (`OnNodesChange`, `OnConnect`, `ReactFlowProps`,
 `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`…), so a type import needs only the package name
-changed. A name is not behaviour — see [§4](#4-what-is-not-there). Two differences are on purpose:
+changed. Two differences are on purpose:
 
 - **`ReactFlowProps` and `ReactFlowInstance` are not generic.** `ReactFlowInstance<MyNode, MyEdge>` is an
   error here rather than a type argument quietly ignored. Drop the arguments; `useReactFlow()` is not
@@ -74,30 +74,29 @@ changed. A name is not behaviour — see [§4](#4-what-is-not-there). Two differ
 
 ## 4. What is not there
 
-Flowinger **names** all of React Flow's props, so code compiles — but a third of the *new* names do nothing here.
-Each is tagged `@unimplemented` in the types (your editor shows it on hover), and **in development a canvas says
-so, once, when you give it one that asks for something it would not do**. [React Flow coverage](react-flow-coverage.md#accepted-not-implemented)
-lists them all, from a measurement of React Flow's own type declarations. The ones most likely to matter:
+Nothing of React Flow's canvas API: every prop of `ReactFlow` — and every member of the components, the instance and
+the types you write against — is named **and does something** ([React Flow coverage](react-flow-coverage.md),
+measured from React Flow's own type declarations). What is worth knowing is where the behaviour, or the default,
+is not React Flow's:
 
-| Accepted, does nothing | Instead |
-|---|---|
-| `selectionKeyCode`, `multiSelectionKeyCode`, `zoomActivationKeyCode` | Shift draws a selection box; Shift, Ctrl or ⌘ add to a selection; Ctrl/⌘ and the wheel zoom (with `panOnScroll`). Fixed. |
-| `connectOnClick`, `connectionRadius`, `onClickConnect*` | drag from a handle to a handle; it snaps to the handle under the pointer |
-| `colorMode` | set the `--flowinger-*` variables on an ancestor |
-| `nodeClickDistance`, `paneClickDistance`, `connectionDragThreshold` | a press that moves less than the drag threshold is a click (`nodeDragThreshold`, default 3 px) |
-| `onSelectionDrag*`, `onSelectionContextMenu` | `onNodeDrag*` (its `nodes` is everything dragged), `onNodeContextMenu` |
-| `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode` | give a node or an edge a `zIndex` |
-| `Node.handles` | render `<Handle>`s; edges are drawn from `width` / `height` until they are measured |
-| `Controls` `showInteractive` | set `nodesDraggable`, `nodesConnectable`, `elementsSelectable` |
+| | React Flow | Flowinger |
+|---|---|---|
+| `multiSelectionKeyCode` | Meta (macOS) / Control | left out: **Shift, Control and ⌘** all add; given: only that key |
+| `zoomActivationKeyCode` | Meta / Control; holding it zooms even with `zoomOnScroll` off | left out: Ctrl/⌘ only chooses zoom or pan under `panOnScroll`, and `zoomOnScroll` off is no zoom; **given: React Flow's behaviour** |
+| `panActivationKeyCode` | `'Space'` | none unless given; needs `panKeyFeature` (in `FlowingerCanvas`) |
+| `Controls` `showInteractive` | on | **off** |
+| `interpolate` | `'smooth'` | `'linear'`; `'smooth'` is there when asked |
+| `colorMode` | a class, and `--xy-*` colours | a class, and — for `light` — `--flowinger-*` colours, for what is inside the canvas |
+| `ariaLabelConfig` | labels and descriptions | the same keys; the English labels flowinger already had stay when there is no config |
+| `elevateNodesOnSelect` / `connectOnClick` / `autoPanOnNodeFocus`… | on | on — with the interaction itself off until you ask (`nodesDraggable` etc.) |
 
-What *is* here and was missing in earlier versions: `nodeOrigin` (and `node.origin`), `nodeDragThreshold`,
-`panActivationKeyCode` (needs `panKeyFeature`, which `FlowingerCanvas` has; off unless given — React Flow's
-default is `'Space'`), `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`, `MiniMapNode`, `MiniMap`'s
-`nodeComponent` / `onNodeClick` / `zoomable` / `offsetScale`, `NodeResizer`'s `autoScale`, viewport `ease`, and
-the change middlewares.
+A press on a handle is no longer a connection until the pointer has travelled (`connectionDragThreshold`, 1 px),
+so `onConnectStart` and `onConnectEnd` are not called for a click — a click is `onClickConnectStart` — and
+nearby handles are snapped to (`connectionRadius`, 20 units). If your tests press a handle and look for the line
+at once, move the pointer first.
 
-If something *you* use is on the list, [open an issue](https://github.com/Naveen-Boddepalli/flowinger/issues)
-saying what you were building — that is how the list is ordered.
+If something *you* use differs from what you expected, [open an issue](https://github.com/Naveen-Boddepalli/flowinger/issues)
+saying what you were building.
 
 ## 5. Things that look the same and are not
 
