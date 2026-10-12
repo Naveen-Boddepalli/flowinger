@@ -40,7 +40,7 @@ export interface NodeHandle {
 
 export type ColorMode = 'light' | 'dark' | 'system';
 export type ColorModeClass = 'light' | 'dark';
-export type ZIndexMode = 'auto' | 'manual';
+export type ZIndexMode = 'auto' | 'basic' | 'manual';
 
 export const PanOnScrollMode = {
   Free: 'free',
@@ -174,7 +174,11 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
    * e.g. [0.5, 0.5] centers the node, [0, 0] is top-left.
    */
   origin?: NodeOrigin;
-  /** Programmatically declared handles on the node. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in
+   * development says so. Edges attach to the `<Handle>`s a node renders, measured in the browser — a node's
+   * declared handles do not stand in for them before then.
+   */
   handles?: NodeHandle[];
   /**
    * Escape hatch for an attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom
@@ -388,9 +392,12 @@ export interface Viewport {
 export interface SetViewportOptions {
   /** Milliseconds to take over the move; none (or 0) is instant. */
   duration?: number;
-  /** Custom easing function (t in [0, 1] -> [0, 1]). */
+  /** Easing of the move, `t` from 0 to 1 in and 0 to 1 out. Default: ease-out cubic. */
   ease?: (t: number) => number;
-  /** Interpolation type ('smooth' or 'linear'). */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; a move is always a straight, eased
+   * interpolation of x, y and zoom — which is React Flow's `'linear'`. `'smooth'` (its default) is not here.
+   */
   interpolate?: 'smooth' | 'linear';
 }
 
@@ -405,8 +412,6 @@ export interface FitViewOptions extends SetViewportOptions {
   includeHiddenNodes?: boolean;
   minZoom?: number;
   maxZoom?: number;
-  ease?: (t: number) => number;
-  interpolate?: 'smooth' | 'linear';
 }
 
 export interface SetCenterOptions extends SetViewportOptions {
@@ -812,72 +817,185 @@ export interface FlowingerProps {
   /** Round dragged positions to a grid — `snapGrid` (default 15 × 15). */
   snapToGrid?: boolean;
   snapGrid?: [number, number];
-  /** Origin of nodes relative to their positions. Default [0, 0]. */
+  /**
+   * Where on a node its `position` is: `[0, 0]` its top-left corner (the default), `[0.5, 0.5]` its centre. A
+   * node's own `origin` wins. A child's `position` is relative to its parent's top-left corner, as in React Flow.
+   */
   nodeOrigin?: NodeOrigin;
-  /** Key code to activate panning with left click (e.g. 'Space'). */
+  /**
+   * Holding this key turns a drag into a pan, even where `panOnDrag` is off. Needs `panKeyFeature` (which
+   * `FlowingerCanvas` has). Off unless given — React Flow's own default is `'Space'`.
+   */
   panActivationKeyCode?: string | string[] | null;
-  /** Key code to activate selection box on drag (e.g. 'Shift'). */
-  selectionKeyCode?: string | string[] | null;
-  /** Key code to add/toggle items in selection (e.g. ['Meta', 'Control']). */
-  multiSelectionKeyCode?: string | string[] | null;
-  /** Key code to activate zoom with mouse wheel (e.g. 'Meta'). */
-  zoomActivationKeyCode?: string | string[] | null;
-  /** Constrains panning direction on wheel events. Default 'free'. */
-  panOnScrollMode?: PanOnScrollMode;
-  /** Prevents browser scrolling when zooming over canvas. Default true. */
-  preventScrolling?: boolean;
-  /** Pixels mouse must travel before a press becomes a node drag. */
+  /**
+   * Pixels a press must travel before it becomes a node drag. Left out, the engine's own 3; an explicit `0` is
+   * no threshold. Needs `dragFeature`.
+   */
   nodeDragThreshold?: number;
-  /** Pixels mouse must travel before starting a connection drag. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A selection box starts with Shift, whatever this says.
+   */
+  selectionKeyCode?: string | string[] | null;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Shift, Ctrl or ⌘ adds to a selection, whatever this says.
+   */
+  multiSelectionKeyCode?: string | string[] | null;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * With `panOnScroll`, Ctrl or ⌘ and the wheel zoom; the key is fixed.
+   */
+  zoomActivationKeyCode?: string | string[] | null;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A wheel pan is free: both axes.
+   */
+  panOnScrollMode?: PanOnScrollMode;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * The wheel is the canvas's whenever `zoomOnScroll` or `panOnScroll` is on, and the page does not scroll then; turn both off to give it to the page.
+   */
+  preventScrolling?: boolean;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A connection begins the moment a handle is pressed.
+   */
   connectionDragThreshold?: number;
-  /** Distance threshold in pixels to register a node click. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A press that moves less than the drag threshold is a click.
+   */
   nodeClickDistance?: number;
-  /** Distance threshold in pixels to register a pane click. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A press that moves less than the drag threshold is a click.
+   */
   paneClickDistance?: number;
-  /** Proximity radius to snap connection to handles. Default 20. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A connection snaps to a handle the pointer is over, not to one near it.
+   */
   connectionRadius?: number;
-  /** Proximity radius to snap reconnecting edges to handles. Default 20. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * As `connectionRadius`.
+   */
   reconnectRadius?: number;
-  /** Whether dragging an unselected node automatically selects it. Default true. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Dragging an unselected node selects it.
+   */
   selectNodesOnDrag?: boolean;
-  /** Allow connecting handles by clicking start handle then target handle. Default true. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Connections are made by dragging from one handle to another; there is no click-to-connect.
+   */
   connectOnClick?: boolean;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Never called: there is no click-to-connect.
+   */
   onClickConnectStart?: (event: React.MouseEvent, params: ConnectStartParams) => void;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Never called: there is no click-to-connect.
+   */
   onClickConnectEnd?: (event: MouseEvent | TouchEvent) => void;
-  /** Emitted when dragging multiple selected nodes together. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Never called. `onNodeDragStart` is, with `nodes` as everything being dragged.
+   */
   onSelectionDragStart?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Never called. `onNodeDrag` is, with `nodes` as everything being dragged.
+   */
   onSelectionDrag?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Never called. `onNodeDragStop` is, with `nodes` as everything being dragged.
+   */
   onSelectionDragStop?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Never called; `onNodeContextMenu` is.
+   */
   onSelectionContextMenu?: (event: React.MouseEvent, nodes: Node[]) => void;
-  /** Color mode for the canvas: 'light', 'dark', or 'system'. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Theme with the `--flowinger-*` CSS variables on an ancestor.
+   */
   colorMode?: ColorMode;
-  /** Automatically elevate z-index of selected nodes. Default true. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Selecting a node does not raise it; give a node a `zIndex`.
+   */
   elevateNodesOnSelect?: boolean;
-  /** Automatically elevate z-index of selected edges. Default true. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Selecting an edge does not raise it; give an edge a `zIndex`.
+   */
   elevateEdgesOnSelect?: boolean;
-  /** How node/edge z-indexes are assigned ('auto' | 'manual'). Default 'auto'. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Stacking is by nesting depth and a node's or edge's own `zIndex`.
+   */
   zIndexMode?: ZIndexMode;
-  /** Default marker color when not specified on the edge marker. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * An arrowhead takes its edge's stroke unless the marker names a colour.
+   */
   defaultMarkerColor?: string;
-  /** Inline style for the connection line container element. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Style the line itself with `connectionLineStyle`.
+   */
   connectionLineContainerStyle?: CSSProperties;
-  /** Class name to exclude an element inside node from dragging. Default 'nodrag'. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * The class that keeps a press from dragging is `nodrag`, fixed.
+   */
   noDragClassName?: string;
-  /** Class name to exclude an element from canvas panning. Default 'nopan'. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * The class that keeps a press from panning is `nopan`, fixed.
+   */
   noPanClassName?: string;
-  /** Class name to exclude an element from canvas wheel events. Default 'nowheel'. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * The class that lets the wheel through is `nowheel`, fixed.
+   */
   noWheelClassName?: string;
-  /** Whether nodes are reachable from keyboard focus. Default true. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * A node is focusable when it can be selected (`elementsSelectable`); there is no separate switch.
+   */
   nodesFocusable?: boolean;
-  /** Disable keyboard navigation and accessibility announcements. Default false. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Keyboard navigation is already opt-in (`keyboardNavigation`).
+   */
   disableKeyboardA11y?: boolean;
-  /** Granular configuration for accessibility aria labels and descriptions. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Labels are the `ariaLabel` props, and English.
+   */
   ariaLabelConfig?: AriaLabelConfig;
-  /** Auto pan to bring a focused node into view. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Focusing a node does not pan to it.
+   */
   autoPanOnNodeFocus?: boolean;
-  /** Auto pan to bring a selected node into view. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * Selecting a node does not pan to it.
+   */
   autoPanOnSelection?: boolean;
-  /** Enable debug logging for events and state updates. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
+   * There is no debug output.
+   */
   debug?: boolean;
 }
 

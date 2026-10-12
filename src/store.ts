@@ -508,6 +508,7 @@ export function createFlowingerStore(
   const setViewport = (requested: Viewport, options?: SetViewportOptions): Promise<boolean> => {
     const to = constrain({ ...requested, zoom: clampZoom(requested.zoom) });
     const duration = options?.duration ?? 0;
+    const ease = options?.ease ?? easeOutCubic;
     target = to;
     cancelTween();
 
@@ -529,7 +530,7 @@ export function createFlowingerStore(
           land();
           return;
         }
-        const e = easeOutCubic(t);
+        const e = ease(t);
         commitViewport({
           x: from.x + (to.x - from.x) * e,
           y: from.y + (to.y - from.y) * e,

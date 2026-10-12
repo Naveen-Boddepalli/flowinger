@@ -53,6 +53,47 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
 };
 
 /**
+ * Props that are in React Flow's API, so code written for it compiles, but that nothing here reads. Each
+ * is `@unimplemented` in `types.ts` (a test keeps the two lists the same). The values are the ones that ask
+ * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
+ */
+export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
+  selectionKeyCode: ['Shift'],
+  multiSelectionKeyCode: ['Shift', 'Control', 'Meta'],
+  zoomActivationKeyCode: ['Control', 'Meta'],
+  panOnScrollMode: ['free'],
+  preventScrolling: [true],
+  connectionDragThreshold: [0, 1],
+  nodeClickDistance: [0],
+  paneClickDistance: [0],
+  connectionRadius: [],
+  reconnectRadius: [],
+  selectNodesOnDrag: [true],
+  connectOnClick: [false],
+  onClickConnectStart: [],
+  onClickConnectEnd: [],
+  onSelectionDragStart: [],
+  onSelectionDrag: [],
+  onSelectionDragStop: [],
+  onSelectionContextMenu: [],
+  colorMode: ['light'],
+  elevateNodesOnSelect: [false],
+  elevateEdgesOnSelect: [false],
+  zIndexMode: [],
+  defaultMarkerColor: [null],
+  connectionLineContainerStyle: [],
+  noDragClassName: ['nodrag'],
+  noPanClassName: ['nopan'],
+  noWheelClassName: ['nowheel'],
+  nodesFocusable: [true],
+  disableKeyboardA11y: [true],
+  ariaLabelConfig: [],
+  autoPanOnNodeFocus: [false],
+  autoPanOnSelection: [false],
+  debug: [false],
+};
+
+/**
  * Says so, once, when a canvas is given a prop that belongs to a feature it does not have. Development
  * only — see the caller. `features` is the resolved list: what a feature needs counts as given.
  */
@@ -68,6 +109,21 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
     console.warn(
       `flowinger: ${given.join(', ')} ${given.length === 1 ? 'does' : 'do'} nothing without the "${feature}" ` +
         `feature — pass ${feature}Feature in \`features\`, or use <FlowingerCanvas>, which has them all.`,
+    );
+  }
+  const accepted = (Object.keys(NOT_IMPLEMENTED) as (keyof FlowingerProps)[]).filter((name) => {
+    const value = props[name];
+    return value !== undefined && !NOT_IMPLEMENTED[name]?.includes(value);
+  });
+  if ((props.nodes ?? props.defaultNodes)?.some((node) => node.handles !== undefined)) {
+    accepted.push('nodes[].handles' as keyof FlowingerProps);
+  }
+  if (accepted.length > 0) {
+    accepted.sort();
+    console.warn(
+      `flowinger: ${accepted.join(', ')} ${accepted.length === 1 ? 'is' : 'are'} accepted so React Flow code ` +
+        `compiles, but ${accepted.length === 1 ? 'does' : 'do'} nothing here — see "Accepted, not implemented" ` +
+        'in docs/react-flow-coverage.md.',
     );
   }
   if (props.viewport !== undefined && props.onViewportChange === undefined) {
