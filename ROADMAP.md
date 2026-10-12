@@ -29,6 +29,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   provenance attestation — a changelog, and a demo built for GitHub Pages. (Each needs a one-time switch on
   GitHub or npm; [CONTRIBUTING.md](CONTRIBUTING.md#releasing) lists them.)
 - Contribution, conduct and security policies; issue and pull-request templates.
+- [Published benchmarks](docs/benchmarks.md) against React Flow at 1,000, 5,000 and 10,000 nodes, culled and
+  not, reproducible with `pnpm bench` — and the three scaling bugs they found in Flowinger's own culling.
 
 ## Now — be easy to try and to trust
 
@@ -51,19 +53,22 @@ that compiles and does nothing apart, and there are none). What is left is bread
    child's position inside its parent, not on the canvas). Left: touch, which needs a device.
 2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (unreleased). Still to
    write as `examples/`: grouping and swimlanes, multiplayer presence (Yjs), a workflow-simulation stepper.
-3. **Size.** The core grew from 17.6 to 18.7 kB and the whole canvas from 27.3 to 33.6 for the 39 props; the
+3. **Size.** The core grew from 17.6 to 18.9 kB and the whole canvas from 27.3 to 33.9 for the 39 props; the
    features are separable, but a `FlowingerCanvas` pays for all of them. A pass that measures each feature and
    removes duplication (three places build "is this key held", several build "the box round some nodes") is
    worth a day.
-4. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
+4. **Close the culled gap.** With `onlyRenderVisibleElements` on, React Flow is 1.3–1.8× cheaper to drag and
+   up to 1.7× to zoom ([benchmarks](docs/benchmarks.md)): Flowinger draws a quarter-view margin (40% more
+   nodes), finds the visible set by scanning every node, rebuilds parent structure in three places per drag
+   move, and its first render draws every node before culling. Wanted: one shared structure, a visible set
+   found incrementally or from a spatial index, and a first render that does not draw what it will remove.
+5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
 
 ## Later
 
 - **A docs site.** The reference lives in [`docs/`](docs/README.md) as Markdown, which GitHub renders; when
   that stops being findable — search, a sidebar, versions — it becomes a site (a static site generator,
   deployed beside the demo). Not before there is more than one reader's worth of questions.
-- **Published benchmarks** against React Flow at 1k, 5k and 10k nodes, reproducible from the repository —
-  `onlyRenderVisibleElements` exists; the claim that it is enough should be a chart.
 - **An accessibility pass** with a screen reader and the keyboard alone, written up honestly. The canvas is
   opt-in tab stops and ARIA fields today; "good" is not yet measured.
 - **Real touch devices.** Multi-touch pinch is unit-tested in its maths and handling but has not been seen

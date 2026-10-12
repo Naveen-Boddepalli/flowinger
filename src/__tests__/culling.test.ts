@@ -175,3 +175,23 @@ describe('what a node coming and going costs', () => {
     expect(ids(store.getVisible()?.nodes)).toEqual([]);
   });
 });
+
+describe('the order of the visible edges', () => {
+  it('is the list’s, and a new order of the same edges is a new set — they are drawn in it', () => {
+    const edges: Edge[] = [
+      { id: 'one', source: 'a', target: 'b' },
+      { id: 'two', source: 'a', target: 'b' },
+      { id: 'three', source: 'b', target: 'a' },
+    ];
+    const store = culled([box('a', 0, 0), box('b', 200, 0)], edges);
+    expect([...(store.getVisible()?.edges ?? [])]).toEqual(['one', 'two', 'three']);
+    const before = store.getVisible();
+    store.setEdges([...edges].reverse());
+    expect([...(store.getVisible()?.edges ?? [])]).toEqual(['three', 'two', 'one']);
+    expect(store.getVisible()).not.toBe(before);
+    // The same list again changes nothing, and says nothing.
+    const after = store.getVisible();
+    store.setEdges([...edges].reverse());
+    expect(store.getVisible()).toBe(after);
+  });
+});
