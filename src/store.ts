@@ -1316,6 +1316,8 @@ export function createFlowingerStore(
     emitEdgeChanges,
     onNodesChangeMiddlewareMap,
     onEdgesChangeMiddlewareMap,
+    /** Labels for the controls, the minimap and handles, from `ariaLabelConfig` — written by `a11yFeature`. */
+    labels: {} as Record<string, string | undefined>,
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),

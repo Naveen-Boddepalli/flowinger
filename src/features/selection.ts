@@ -130,8 +130,9 @@ export const selectionFeature: Feature<SelectionApi> = {
   useNode({ store, node, selectable }) {
     const { selectNode, isMulti } = store.api(selectionFeature);
     return {
-      // Selectable means reachable from the keyboard too.
-      focusable: selectable,
+      // Selectable means reachable from the keyboard too. (Not selectable is not a refusal: `false` is
+      // for a feature that says so outright.)
+      ...(selectable ? { focusable: true } : {}),
       // A click on a control inside the node is that control's, not a selection.
       onClick: (e) => {
         if (selectable && !isInteractive(e.target, store.getOptions().ignored)) selectNode(node.id, isMulti(e));

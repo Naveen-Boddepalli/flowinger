@@ -95,7 +95,8 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const bits = features.flatMap(
     (f) => f.useNode?.({ store, node, draggable, selectable, selected, justDragged }) ?? [],
   );
-  const focusable = bits.some((b) => b.focusable === true);
+  // A feature may make a node a tab stop, and another may say it is not: a refusal wins.
+  const focusable = bits.some((b) => b.focusable === true) && !bits.some((b) => b.focusable === false);
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
   const clickConnect = bits.find((b) => b.clickConnect)?.clickConnect;
@@ -118,6 +119,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       registerHandle: (registration) => store.registerHandle(node.id, registration),
       startConnection: startConnection ?? NO_START,
       clickConnect: clickConnect ?? NO_START,
+      labels: store.labels,
     }),
     [store, node.id, connectable, startConnection, clickConnect],
   );

@@ -190,6 +190,7 @@ function InnerCanvas(props: FlowingerProps) {
     paneClickDistance,
     connectionLineContainerStyle,
     defaultMarkerColor,
+    disableKeyboardA11y,
   } = props;
   const store = useFlowingerStore();
   // Installed while rendering, so they are there for every effect below and for whoever holds the
@@ -735,7 +736,7 @@ function InnerCanvas(props: FlowingerProps) {
               edgeTypes={edgeTypes}
               elementsSelectable={selectable}
               selectionActs={canSelect}
-              edgesFocusable={edgesFocusable}
+              edgesFocusable={edgesFocusable && !disableKeyboardA11y}
               interactive={onEdgeClick !== undefined || bits.some((b) => b.edgesInteractive === true)}
               controlledSelection={edgesChange !== undefined}
               hiddenNodeIds={tree.hidden}

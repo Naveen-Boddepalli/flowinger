@@ -121,7 +121,9 @@ function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hoo
     ...(selectable || interactive
       ? { style: { pointerEvents: 'stroke', ...(selectable ? { cursor: 'pointer' } : {}) } as CSSProperties }
       : {}),
-    ...(selectable && focusable ? { tabIndex: 0, 'aria-pressed': selected, onKeyDown } : {}),
+    ...(focusable && (selectable || edge.focusable === true)
+      ? { tabIndex: 0, 'aria-pressed': selected, onKeyDown }
+      : {}),
     role: edge.ariaRole ?? (selectable && focusable ? 'button' : undefined),
     'aria-label': edge.ariaLabel ?? (selectable && focusable ? `Edge from ${edge.source} to ${edge.target}` : undefined),
     // An escape hatch, last: never a handler, or `id` / `style` / `className` / `role`, which are the
@@ -540,7 +542,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
           edge={edge}
           selected={selected}
           selectable={selectable}
-          focusable={edgesFocusable}
+          focusable={edge.focusable ?? edgesFocusable}
           interactive={interactive}
           hooks={hooks}
           reconnectable={reconnectable}
@@ -564,7 +566,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
         edge={edge}
         selected={selected}
         selectable={selectable}
-        focusable={edgesFocusable}
+        focusable={edge.focusable ?? edgesFocusable}
         interactive={interactive}
         hooks={hooks}
         reconnectable={reconnectable}

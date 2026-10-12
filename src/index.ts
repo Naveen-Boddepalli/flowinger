@@ -15,6 +15,8 @@ export {
   reconnectFeature,
   selectionFeature,
   selectionRectFeature,
+  a11yFeature,
+  debugFeature,
   stackingFeature,
   colorModeFeature,
 } from './features/index.ts';

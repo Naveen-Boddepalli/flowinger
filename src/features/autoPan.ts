@@ -13,15 +13,27 @@ export interface AutoPanApi {
    * that moved under it. Stops when the returned function is called. Does nothing for a
    * gesture the options have switched off.
    */
-  beginAutoPan: (kind: 'node' | 'connect', getPointer: () => XYPosition | null, onPan: () => void) => () => void;
+  beginAutoPan: (
+    kind: 'node' | 'connect' | 'select',
+    getPointer: () => XYPosition | null,
+    onPan: () => void,
+  ) => () => void;
+  /** What the canvas was last given for `autoPanOnSelection`; written by `boxSelectFeature`. */
+  readonly config: { select: boolean };
 }
 
 /** Panning the view by itself when a drag is held at its edge. Dragging and connecting need it. */
 export const autoPanFeature: Feature<AutoPanApi> = {
   name: 'autoPan',
   install(ctx) {
+    const config: AutoPanApi['config'] = { select: true };
     const beginAutoPan: AutoPanApi['beginAutoPan'] = (kind, getPointer, onPan) => {
-      const on = kind === 'node' ? ctx.options.autoPanOnNodeDrag : ctx.options.autoPanOnConnect;
+      const on =
+        kind === 'node'
+          ? ctx.options.autoPanOnNodeDrag
+          : kind === 'connect'
+            ? ctx.options.autoPanOnConnect
+            : config.select;
       if (!on) return () => {};
       let frame = 0;
       let last = 0;
@@ -55,6 +67,6 @@ export const autoPanFeature: Feature<AutoPanApi> = {
         cancelAnimationFrame(frame);
       };
     };
-    return { beginAutoPan };
+    return { beginAutoPan, config };
   },
 };

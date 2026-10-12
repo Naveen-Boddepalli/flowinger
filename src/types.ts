@@ -139,6 +139,8 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   connectable?: boolean;
   /** A CSS selector: when set, the node can only be dragged by an element that matches it. */
   dragHandle?: string;
+  /** Whether it is a tab stop: wins over the canvas's `nodesFocusable`, and over its being selectable. Needs `a11yFeature`. */
+  focusable?: boolean;
   /**
    * Which side the built-in node types (`default`, `input`, `output`) put their handles on — a source
    * handle at `sourcePosition` (default bottom) and a target handle at `targetPosition` (default top). A
@@ -251,6 +253,8 @@ export interface Edge {
   id: string;
   source: string;
   target: string;
+  /** Whether it is a tab stop: wins over the canvas's `edgesFocusable`. */
+  focusable?: boolean;
   sourceHandle?: string | null;
   targetHandle?: string | null;
   className?: string;
@@ -929,33 +933,27 @@ export interface FlowingerProps {
    */
   noWheelClassName?: string;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A node is focusable when it can be selected (`elementsSelectable`); there is no separate switch.
+   * Whether nodes are tab stops: `true` for every node, selectable or not, `false` for none. Left out, a node is one where it can be selected (`elementsSelectable`), as before. A node's own `focusable` wins. Needs `a11yFeature`.
    */
   nodesFocusable?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Keyboard navigation is already opt-in (`keyboardNavigation`).
+   * Take nodes and edges out of the tab order and silence their keys (Enter and Space to select, the arrows to move). Clicking still works. Needs `a11yFeature`.
    */
   disableKeyboardA11y?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Labels are the `ariaLabel` props, and English.
+   * Replacement text for what the canvas says to assistive technology: the descriptions nodes and edges point at (`aria-describedby`), the live message that announces a move made with the keyboard, and the labels of the controls, the minimap and a handle. A part of it may be given; the rest stays English. Needs `a11yFeature`.
    */
   ariaLabelConfig?: AriaLabelConfig;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Focusing a node does not pan to it.
+   * Pan to a node that takes focus (from the keyboard) when it is out of view, keeping the zoom (default true). Needs `a11yFeature`.
    */
   autoPanOnNodeFocus?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Selecting a node does not pan to it.
+   * Pan the view while a selection box is held at the pane's edge, keeping the box's corner on the same place in the graph (default true). Needs `boxSelectFeature`.
    */
   autoPanOnSelection?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * There is no debug output.
+   * Log every change a controlled flow is told of (`flowinger: node changes`, `flowinger: edge changes`) to the console. Needs `debugFeature`.
    */
   debug?: boolean;
 }

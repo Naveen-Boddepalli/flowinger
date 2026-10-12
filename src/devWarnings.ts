@@ -17,6 +17,8 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
+  a11y: ['nodesFocusable', 'disableKeyboardA11y', 'ariaLabelConfig', 'autoPanOnNodeFocus'],
+  debug: ['debug'],
   stacking: ['elevateNodesOnSelect', 'elevateEdgesOnSelect', 'zIndexMode'],
   colorMode: ['colorMode'],
   selectionRect: ['onSelectionDragStart', 'onSelectionDrag', 'onSelectionDragStop', 'onSelectionContextMenu'],
@@ -40,7 +42,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'connectionLineContainerStyle',
   ],
   reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable', 'reconnectRadius'],
-  boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd', 'selectionKeyCode'],
+  boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd', 'selectionKeyCode', 'autoPanOnSelection'],
   delete: ['deleteKeyCode', 'onBeforeDelete', 'onNodesDelete', 'onEdgesDelete', 'onDelete'],
   culling: ['onlyRenderVisibleElements'],
   selection: ['elementsSelectable', 'edgesFocusable', 'multiSelectionKeyCode'],
@@ -69,12 +71,6 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
  * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
  */
 export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
-  nodesFocusable: [true],
-  disableKeyboardA11y: [true],
-  ariaLabelConfig: [],
-  autoPanOnNodeFocus: [false],
-  autoPanOnSelection: [false],
-  debug: [false],
 };
 
 /**

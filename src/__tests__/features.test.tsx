@@ -106,7 +106,7 @@ describe('resolving features', () => {
   it('brings in what the built-in features build on', () => {
     expect(named(resolveFeatures([reconnectFeature]))).toEqual(['autoPan', 'connect', 'reconnect']);
     expect(named(resolveFeatures([dragFeature]))).toEqual(['autoPan', 'selection', 'drag']);
-    expect(named(resolveFeatures([boxSelectFeature]))).toEqual(['selection', 'boxSelect']);
+    expect(named(resolveFeatures([boxSelectFeature]))).toEqual(['selection', 'autoPan', 'boxSelect']);
     expect(named(resolveFeatures(allFeatures))).toHaveLength(new Set(named(allFeatures)).size + 1); // + autoPan
   });
 });

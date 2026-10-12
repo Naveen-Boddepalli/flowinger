@@ -1,5 +1,5 @@
 import { memo, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
-import { useFlowinger } from './context.ts';
+import { useFlowinger, useFlowingerStore } from './context.ts';
 import { warnAcceptedProps } from './devWarnings.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import type { FitViewOptions } from './types.ts';
@@ -94,6 +94,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   children,
 }: ControlsProps) {
   const { zoomIn, zoomOut, fitView } = useFlowinger();
+  const labels = useFlowingerStore().labels;
   if (process.env.NODE_ENV !== 'production') {
     warnAcceptedProps('Controls', { showInteractive, onInteractiveChange });
   }
@@ -101,6 +102,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   const controls = (
     <div
       data-testid="rf__controls"
+      aria-label={labels['controls.ariaLabel']}
       className={`flowinger-controls react-flow__controls ${className}`.trim()}
       style={{ ...containerStyle, ...style }}
     >
@@ -112,7 +114,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
               void zoomOut({ duration: 200 });
               onZoomOut?.();
             }}
-            aria-label="Zoom out"
+            aria-label={labels['controls.zoomOut.ariaLabel'] ?? 'Zoom out'}
             style={buttonStyle}
           >
             <span aria-hidden>−</span>
@@ -123,7 +125,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
               void zoomIn({ duration: 200 });
               onZoomIn?.();
             }}
-            aria-label="Zoom in"
+            aria-label={labels['controls.zoomIn.ariaLabel'] ?? 'Zoom in'}
             style={buttonStyle}
           >
             <span aria-hidden>+</span>
@@ -137,7 +139,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
             void fitView({ duration: 300, ...fitViewOptions });
             onFitView?.();
           }}
-          aria-label="Fit view"
+          aria-label={labels['controls.fitView.ariaLabel'] ?? 'Fit view'}
           style={fitStyle}
         >
           Fit

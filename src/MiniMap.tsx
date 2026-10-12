@@ -158,7 +158,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   offsetScale,
   nodeComponent: NodeComponent,
   onNodeClick,
-  ariaLabel = 'Minimap',
+  ariaLabel,
   className = '',
   style,
   ...rest
@@ -316,7 +316,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
       {...rest}
       className={`flowinger-minimap react-flow__minimap ${className}`.trim()}
       role="img"
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? store.labels['minimap.ariaLabel'] ?? 'Minimap'}
       width={width}
       height={height}
       viewBox={`${String(box.x)} ${String(box.y)} ${String(box.w)} ${String(box.h)}`}
