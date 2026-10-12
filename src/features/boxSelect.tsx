@@ -2,7 +2,9 @@ import { useRef, useSyncExternalStore } from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import { isRectIntersecting } from '../geometry.ts';
+import { isKeyHeld, useKeyTracking } from '../keys.ts';
 import { DRAG_THRESHOLD, capturePointer, releasePointer } from '../pointer.ts';
+import { autoPanFeature } from './autoPan.ts';
 import { selectionFeature } from './selection.ts';
 import type { Rect, SelectionMode } from '../types.ts';
 
@@ -19,6 +21,8 @@ export interface BoxSelectApi {
     base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null,
   ) => void;
   endBoxSelect: () => void;
+  /** Runs `fn` each time a box selection ends (a press that began one and was let go). Returns its cleanup. */
+  onBoxEnd: (fn: () => void) => () => void;
   getSelectionRect: () => Rect | null;
   subscribeSelectionRect: (listener: () => void) => () => void;
 }
@@ -33,6 +37,10 @@ interface BoxState {
   active: boolean;
   /** What stays selected under it, when Ctrl or ⌘ held the selection at the start. */
   base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null;
+  /** The pointer's latest place, and the view as the box last saw it: held at an edge, the view moves under both. */
+  pointer: { x: number; y: number };
+  view: { x: number; y: number };
+  stopAutoPan: (() => void) | null;
 }
 
 /** The rectangle dragged out to select with: in pane pixels, over the diagram. */
@@ -66,7 +74,7 @@ function SelectionBox() {
  */
 export const boxSelectFeature: Feature<BoxSelectApi> = {
   name: 'boxSelect',
-  needs: [selectionFeature],
+  needs: [selectionFeature, autoPanFeature],
   install(ctx) {
     const { isSelectable, setSelection } = ctx.api(selectionFeature);
     /** The box being dragged, in pane pixels — null when there is none. */
@@ -101,15 +109,23 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
       emit();
     };
 
+    const ended = new Set<() => void>();
     const endBoxSelect = () => {
       if (selectionRect === null) return;
       selectionRect = null;
       emit();
+      for (const fn of ended) fn();
     };
 
     return {
       boxSelect,
       endBoxSelect,
+      onBoxEnd: (fn) => {
+        ended.add(fn);
+        return () => {
+          ended.delete(fn);
+        };
+      },
       getSelectionRect: () => selectionRect,
       subscribeSelectionRect: (listener) => {
         listeners.add(listener);
@@ -122,18 +138,29 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
 
   useCanvas({ store, props, suppressPaneClick }) {
     const { elementsSelectable = false, selectionOnDrag = false, selectionMode = 'full' } = props;
-    const { onSelectionStart, onSelectionEnd } = props;
+    const { onSelectionStart, onSelectionEnd, selectionKeyCode = 'Shift' } = props;
     const { boxSelect, endBoxSelect } = store.api(boxSelectFeature);
+    const { isMulti } = store.api(selectionFeature);
+    const autoPan = store.api(autoPanFeature);
+    autoPan.config.select = props.autoPanOnSelection ?? true;
+    useKeyTracking(selectionKeyCode);
     const box = useRef<BoxState | null>(null);
     return {
       // A bare press on the pane draws a selection box when that is asked for (always with Shift);
       // everything else falls through to panning.
       onPointerDown: (e) => {
-        if (!(elementsSelectable && e.button === 0 && e.target === e.currentTarget && (selectionOnDrag || e.shiftKey))) {
+        if (
+          !(
+            elementsSelectable &&
+            e.button === 0 &&
+            e.target === e.currentTarget &&
+            (selectionOnDrag || isKeyHeld(selectionKeyCode, e))
+          )
+        ) {
           return false;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-        const keep = e.ctrlKey || e.metaKey ? store.getSelection() : null;
+        const keep = isMulti(e, true) ? store.getSelection() : null;
         box.current = {
           pointerId: e.pointerId,
           startX: e.clientX,
@@ -141,6 +168,9 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
           left: rect.left,
           top: rect.top,
           active: false,
+          pointer: { x: e.clientX, y: e.clientY },
+          view: store.getViewport(),
+          stopAutoPan: null,
           base: keep && {
             nodes: new Set(keep.nodes.map((n) => n.id)),
             edges: new Set(keep.edges.map((n) => n.id)),
@@ -151,29 +181,47 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
       onPointerMove: (e) => {
         const b = box.current;
         if (b?.pointerId !== e.pointerId) return false;
+        b.pointer = { x: e.clientX, y: e.clientY };
+        const draw = () => {
+          boxSelect(
+            {
+              x: Math.min(b.startX, b.pointer.x) - b.left,
+              y: Math.min(b.startY, b.pointer.y) - b.top,
+              width: Math.abs(b.pointer.x - b.startX),
+              height: Math.abs(b.pointer.y - b.startY),
+            },
+            selectionMode,
+            b.base,
+          );
+        };
         if (!b.active) {
           if (Math.hypot(e.clientX - b.startX, e.clientY - b.startY) < DRAG_THRESHOLD) return true;
           b.active = true;
           suppressPaneClick(); // the click that ends it is not a click on the pane
           capturePointer(e.currentTarget, e.pointerId);
           onSelectionStart?.(e);
+          // Held at the pane's edge, the view pans — and the box's corner, which is a place in the graph, goes
+          // with it, so it is the box that grows, not the corner that slips.
+          b.stopAutoPan = autoPan.beginAutoPan(
+            'select',
+            () => b.pointer,
+            () => {
+              const view = store.getViewport();
+              b.startX += view.x - b.view.x;
+              b.startY += view.y - b.view.y;
+              b.view = view;
+              draw();
+            },
+          );
         }
-        boxSelect(
-          {
-            x: Math.min(b.startX, e.clientX) - b.left,
-            y: Math.min(b.startY, e.clientY) - b.top,
-            width: Math.abs(e.clientX - b.startX),
-            height: Math.abs(e.clientY - b.startY),
-          },
-          selectionMode,
-          b.base,
-        );
+        draw();
         return true;
       },
       onPointerEnd: (e) => {
         const b = box.current;
         if (b?.pointerId !== e.pointerId) return false;
         box.current = null;
+        b.stopAutoPan?.();
         if (b.active) {
           releasePointer(e.currentTarget, e.pointerId);
           endBoxSelect();

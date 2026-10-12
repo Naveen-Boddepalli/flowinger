@@ -13,7 +13,7 @@ import { useFlowingerStore } from './context.ts';
 import type { Feature } from './features.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
-import type { Node, NodeProps } from './types.ts';
+import type { Node, NodeOrigin, NodeProps } from './types.ts';
 
 const NO_FEATURES: readonly Feature[] = [];
 const NO_START = () => {};
@@ -32,6 +32,7 @@ export interface NodeWrapperProps {
   parentX: number;
   parentY: number;
   depth: number;
+  nodeOrigin?: NodeOrigin;
   /** What the canvas can do with it — dragging, connecting — see `Feature`. Must not change. */
   features?: readonly Feature[];
 }
@@ -53,6 +54,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   parentX,
   parentY,
   depth,
+  nodeOrigin,
   features = NO_FEATURES,
 }: NodeWrapperProps) {
   const store = useFlowingerStore();
@@ -67,10 +69,19 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const readPosition = () => store.absolutePosition(node);
   // No drag has happened on the server, and nothing is registered there: the
   // layout's own position, placed inside its parent, is it.
+  const origin = node.origin ?? nodeOrigin;
+  const laidOutWidth = node.width ?? node.initialWidth;
+  const laidOutHeight = node.height ?? node.initialHeight;
   const asLaidOut = useMemo(
-    () => ({ x: parentX + node.position.x, y: parentY + node.position.y }),
-    [parentX, parentY, node.position.x, node.position.y],
+    () => ({
+      // The server has measured nothing: a declared size is all an origin can be taken from.
+      x: parentX + node.position.x - (origin && laidOutWidth !== undefined ? origin[0] * laidOutWidth : 0),
+      y: parentY + node.position.y - (origin && laidOutHeight !== undefined ? origin[1] * laidOutHeight : 0),
+    }),
+    [parentX, parentY, node.position.x, node.position.y, origin, laidOutWidth, laidOutHeight],
   );
+  // The node's top-left corner. It is re-read when the node moves — and, for a node with an origin, when it is
+  // measured: the store tells it then, so the position is never one made from a size that has since changed.
   const position = useSyncExternalStore(subscribe, readPosition, () => asLaidOut);
 
   // Selection is per node: selecting one re-renders it (and whichever it replaces), not the rest.
@@ -84,11 +95,20 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const bits = features.flatMap(
     (f) => f.useNode?.({ store, node, draggable, selectable, selected, justDragged }) ?? [],
   );
-  const focusable = bits.some((b) => b.focusable === true);
+  // A feature may make a node a tab stop, and another may say it is not: a refusal wins.
+  const focusable = bits.some((b) => b.focusable === true) && !bits.some((b) => b.focusable === false);
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
-  // Above its parent by depth, unless it says otherwise; above all while dragged.
-  const zIndex = dragging ? 1000 : (node.zIndex ?? 1 + depth);
+  const clickConnect = bits.find((b) => b.clickConnect)?.clickConnect;
+  // Above its parent by depth, unless it says otherwise — and as a feature (stacking) lifts or flattens it;
+  // above all while dragged.
+  const baseZ = node.zIndex ?? 1 + depth;
+  const stacked = useSyncExternalStore(
+    subscribe,
+    () => features.reduce((z, f) => f.stackNode?.(store, node, z, store.isSelected(node.id), false) ?? z, baseZ),
+    () => baseZ,
+  );
+  const zIndex = dragging ? Math.max(1000, stacked) : stacked;
 
   // What a `<Handle>` inside this node registers itself with. Without something to start a
   // connection with, its handles only draw.
@@ -98,8 +118,10 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       connectable: connectable && startConnection !== undefined,
       registerHandle: (registration) => store.registerHandle(node.id, registration),
       startConnection: startConnection ?? NO_START,
+      clickConnect: clickConnect ?? NO_START,
+      labels: store.labels,
     }),
-    [store, node.id, connectable, startConnection],
+    [store, node.id, connectable, startConnection, clickConnect],
   );
 
   // The edge layer needs the node's real size, and where its handles sit. The

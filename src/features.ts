@@ -11,6 +11,7 @@ import type {
   SVGAttributes,
 } from 'react';
 import type { FlowingerEdgesProps } from './FlowingerEdges.tsx';
+import type { Modifiers } from './keys.ts';
 import type { Size } from './geometry.ts';
 import type {
   DragConnection,
@@ -25,6 +26,7 @@ import type {
   EdgeChange,
   FlowingerProps,
   HandleType,
+  KeyCode,
   Node,
   NodeChange,
   Rect,
@@ -64,6 +66,20 @@ export interface Feature<Api = unknown> {
   readonly EdgesLayer?: ComponentType<FlowingerEdgesProps>;
   /** Drawn with each edge — the grips on the ends of a selected one. */
   readonly EdgeAdornment?: ComponentType<EdgeAdornmentProps>;
+  /**
+   * Where a node is stacked, given where the engine would put it (`z`). `forEdge` asks for the figure an edge
+   * joined to it is stacked with, which may differ.
+   */
+  readonly stackNode?: (store: FlowingerStore, node: Node, z: number, selected: boolean, forEdge: boolean) => number;
+  /**
+   * The path of an animated viewport move with `interpolate: 'smooth'`: from one view to another, as a function of
+   * the eased fraction. Without a feature that has it, a move is linear.
+   */
+  readonly smoothViewport?: (from: Viewport, to: Viewport, width: number, height: number) => (t: number) => Viewport;
+  /** Whether a key code (a key, a combination, a list) is held, as an event's modifiers and the keys seen say. */
+  readonly keyHeld?: (code: KeyCode | null | undefined, e: Modifiers) => boolean;
+  /** Which layer an edge is drawn in, given the one the engine would pick. */
+  readonly stackEdge?: (store: FlowingerStore, edge: Edge, level: number, selected: boolean) => number;
 }
 
 /** Things the store tells a feature about, besides the calls made on it. */
@@ -171,6 +187,8 @@ export interface CanvasBits {
   style?: CSSProperties;
   /** A click on the canvas should leave focus on it — a key handler hears nothing otherwise. */
   focusable?: boolean;
+  /** A class for the container, with its own. */
+  className?: string;
   /** The bare canvas was clicked (not the end of a pan, or of a gesture that said so). */
   onPaneClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   /**
@@ -215,6 +233,8 @@ export interface NodeBits {
   style?: CSSProperties;
   /** What a `<Handle>` inside the node calls to begin a connection; without it, handles only draw. */
   startConnection?: (handle: HTMLElement, at: PointerEvent) => void;
+  /** What a click on a `<Handle>` calls: the first and the second click of a connection made by clicking. */
+  clickConnect?: (handle: HTMLElement, at: MouseEvent) => void;
   /** More props for the node's element, under the ones the canvas puts there itself. */
   props?: HTMLAttributes<HTMLDivElement>;
 }

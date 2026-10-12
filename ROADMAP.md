@@ -39,19 +39,25 @@ it.** A library nobody can find the answer to a question about is not helped by 
   connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
   (`nodrag`, `nopan`, `nowheel`) from a real press.
 
-## Next — close what blocks switching
+## Next
 
-Ordered by how often it comes up, from the audit (`node scripts/audit-react-flow.mjs`: 158 of 211 exports, 83
-of 119 canvas props):
+Flowinger *names* every export and prop of React Flow 12.11.6 (211 of 211 exports, 119 of 119 props) and **every
+one does something** (302 of 302 members counted by `node scripts/audit-react-flow.mjs`; the audit counts a name
+that compiles and does nothing apart, and there are none). What is left is breadth and proof:
 
-1. **`nodeOrigin`.**
-2. **Key-code props** — `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`,
-   `zoomActivationKeyCode` — and the click and drag distance thresholds.
-3. **`colorMode`**, `connectOnClick`, `connectionRadius`.
-
-Each lands the way the rest did: a test that fails without it, the oracle (`@xyflow/react`) run on the same
-input where behaviour should match, and — if it adds code — in a feature, so a canvas that only shows a graph
-does not pay for it.
+1. **Real-browser coverage for what jsdom cannot see.** The e2e suite covers load, anchors, wheel, pan, drag, a
+   flick, a connection, delete, export and `nodeOrigin`. Not yet in a browser: click-to-connect, the selection
+   rectangle's drag, a box held at the pane's edge, `zIndexMode`, `colorMode: 'system'`, the lock, and
+   `interpolate: 'smooth'` — each is tested against jsdom's model and, where React Flow is the oracle, its
+   source, but has not been watched.
+2. **The pro modules' gaps.** `flowinger/editable-edge` (draggable waypoints) and a Hexagon shape are not in
+   the package, though earlier plans said so. Recipes still to write as `examples/`: grouping and swimlanes,
+   multiplayer presence (Yjs), a workflow-simulation stepper.
+3. **Size.** The core grew from 17.6 to 18.7 kB and the whole canvas from 27.3 to 33.6 for the 39 props; the
+   features are separable, but a `FlowingerCanvas` pays for all of them. A pass that measures each feature and
+   removes duplication (three places build "is this key held", several build "the box round some nodes") is
+   worth a day.
+4. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
 
 ## Later
 
@@ -67,15 +73,11 @@ does not pay for it.
 - **Mutation testing in CI.** Every guard in the project has been broken by hand and watched to fail; that
   is a job for a tool.
 
-## Deliberately not planned
+## Architecture Boundaries (Keeping Core Lean)
 
-- **A layout engine in the package.** It would be the largest thing in it and the thing most people already
-  have a preference about.
-- **Editor chrome** — a node palette, undo/redo, a properties panel. Flowinger is the canvas under those.
-- **Keyboard connecting.** React Flow does not offer it either; if there is a good design, it is welcome as
-  a proposal.
+- **Layout engines and heavy dependencies are NOT bundled into the core package.** They live in `examples/` recipes or standalone subpaths so a lean canvas user pays 0 bytes.
+- **Editor chrome & temporal state are headless opt-ins.** The canvas stays a pure rendering surface.
 - **Other frameworks.** The engine is React-shaped throughout.
-- **Being a drop-in for everything.** The goal is *the part apps use*, measured, and honest about the rest.
 
 ## Where help is most useful
 

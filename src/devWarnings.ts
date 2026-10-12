@@ -5,6 +5,8 @@ import type { FlowingerProps } from './types.ts';
 const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
   drag: [
     'nodesDraggable',
+    'selectNodesOnDrag',
+    'nodeClickDistance',
     'onNodeDragStart',
     'onNodeDrag',
     'onNodeDragStop',
@@ -12,8 +14,16 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeExtent',
     'snapToGrid',
     'snapGrid',
+    'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
+  zoomKey: ['zoomActivationKeyCode'],
+  a11y: ['nodesFocusable', 'disableKeyboardA11y', 'ariaLabelConfig', 'autoPanOnNodeFocus'],
+  debug: ['debug'],
+  stacking: ['elevateNodesOnSelect', 'elevateEdgesOnSelect', 'zIndexMode'],
+  colorMode: ['colorMode'],
+  selectionRect: ['onSelectionDragStart', 'onSelectionDrag', 'onSelectionDragStop', 'onSelectionContextMenu'],
+  panKey: ['panActivationKeyCode'],
   connect: [
     'nodesConnectable',
     'onConnect',
@@ -25,12 +35,18 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'connectionLineStyle',
     'connectionLineComponent',
     'autoPanOnConnect',
+    'connectOnClick',
+    'connectionDragThreshold',
+    'connectionRadius',
+    'onClickConnectStart',
+    'onClickConnectEnd',
+    'connectionLineContainerStyle',
   ],
-  reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable'],
-  boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd'],
+  reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable', 'reconnectRadius'],
+  boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd', 'selectionKeyCode', 'autoPanOnSelection'],
   delete: ['deleteKeyCode', 'onBeforeDelete', 'onNodesDelete', 'onEdgesDelete', 'onDelete'],
   culling: ['onlyRenderVisibleElements'],
-  selection: ['elementsSelectable', 'edgesFocusable'],
+  selection: ['elementsSelectable', 'edgesFocusable', 'multiSelectionKeyCode'],
   events: [
     'onNodeDoubleClick',
     'onNodeContextMenu',
@@ -51,6 +67,17 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
 };
 
 /**
+ * Props that are in React Flow's API, so code written for it compiles, but that nothing here reads. Each
+ * is `@unimplemented` in `types.ts` (a test keeps the two lists the same). The values are the ones that ask
+ * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
+ *
+ * There are none: every prop in React Flow's `ReactFlow` does something here. This is where a name goes that
+ * is added before it works — a name that compiles and does nothing is worse than a missing one.
+ */
+export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
+};
+
+/**
  * Says so, once, when a canvas is given a prop that belongs to a feature it does not have. Development
  * only — see the caller. `features` is the resolved list: what a feature needs counts as given.
  */
@@ -66,6 +93,18 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
     console.warn(
       `flowinger: ${given.join(', ')} ${given.length === 1 ? 'does' : 'do'} nothing without the "${feature}" ` +
         `feature — pass ${feature}Feature in \`features\`, or use <FlowingerCanvas>, which has them all.`,
+    );
+  }
+  const accepted = (Object.keys(NOT_IMPLEMENTED) as (keyof FlowingerProps)[]).filter((name) => {
+    const value = props[name];
+    return value !== undefined && !NOT_IMPLEMENTED[name]?.includes(value);
+  });
+  if (accepted.length > 0) {
+    accepted.sort();
+    console.warn(
+      `flowinger: ${accepted.join(', ')} ${accepted.length === 1 ? 'is' : 'are'} accepted so React Flow code ` +
+        `compiles, but ${accepted.length === 1 ? 'does' : 'do'} nothing here — see "Accepted, not implemented" ` +
+        'in docs/react-flow-coverage.md.',
     );
   }
   if (props.viewport !== undefined && props.onViewportChange === undefined) {

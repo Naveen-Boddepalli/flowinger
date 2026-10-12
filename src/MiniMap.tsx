@@ -1,9 +1,12 @@
 import {
   memo,
+  useEffect,
   useReducer,
   useRef,
   useSyncExternalStore,
   type CSSProperties,
+  type ComponentType,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore, useViewport } from './context.ts';
@@ -17,6 +20,56 @@ interface Box {
   y: number;
   w: number;
   h: number;
+}
+
+export interface MiniMapNodeProps {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  borderRadius: number;
+  className: string;
+  color?: string;
+  shapeRendering?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  style?: CSSProperties;
+  onClick?: (event: ReactMouseEvent) => void;
+  selected?: boolean;
+}
+
+export function MiniMapNode({
+  x,
+  y,
+  width,
+  height,
+  borderRadius,
+  className,
+  color,
+  shapeRendering,
+  strokeColor,
+  strokeWidth,
+  style,
+  onClick,
+}: MiniMapNodeProps) {
+  return (
+    <rect
+      className={className}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      rx={borderRadius}
+      ry={borderRadius}
+      fill={color}
+      stroke={strokeColor}
+      strokeWidth={strokeWidth}
+      shapeRendering={shapeRendering}
+      style={style}
+      onClick={onClick}
+    />
+  );
 }
 
 export interface MiniMapProps extends PassThroughHtml<'role', SVGSVGElement> {
@@ -43,6 +96,24 @@ export interface MiniMapProps extends PassThroughHtml<'role', SVGSVGElement> {
   position?: PanelPosition;
   /** Click or drag on the overview to move the view. Default true. */
   pannable?: boolean;
+  /**
+   * Drag the other way: the view goes where the pointer is *not* — as far from where the press began as the
+   * pointer is, on the other side of it. Default false.
+   */
+  inversePan?: boolean;
+  /** The wheel over the overview zooms the canvas, about its centre. Default false. */
+  zoomable?: boolean;
+  /** How far one wheel tick zooms, as a multiple of the canvas's own wheel. Default 10, as in React Flow. */
+  zoomStep?: number;
+  /**
+   * The margin round what is shown, in pixels of the overview. Left out, a twentieth of the larger side of
+   * what is shown.
+   */
+  offsetScale?: number;
+  /** Draws each node in place of the default rectangle; it is given the box, the colours and the class. */
+  nodeComponent?: ComponentType<MiniMapNodeProps>;
+  /** A press on a node in the overview that does not become a drag. */
+  onNodeClick?: (event: ReactMouseEvent, node: Node) => void;
   ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
@@ -52,6 +123,8 @@ const DEFAULT_NODE_COLOR = 'var(--flowinger-text-dim, #94a3b8)';
 const DEFAULT_MASK = 'var(--flowinger-mask, rgba(15, 23, 42, 0.6))';
 /** How much room to leave around what is shown, as a share of its larger side. */
 const PADDING = 0.05;
+/** How far, in pixels, a press may move and still be a click on a node. */
+const CLICK_DISTANCE = 4;
 
 /**
  * An overview of the whole graph, with the part currently in view cut out of a
@@ -78,7 +151,13 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   bgColor,
   position,
   pannable = true,
-  ariaLabel = 'Minimap',
+  inversePan,
+  zoomable = false,
+  zoomStep = 10,
+  offsetScale,
+  nodeComponent: NodeComponent,
+  onNodeClick,
+  ariaLabel,
   className = '',
   style,
   ...rest
@@ -96,6 +175,11 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
    * the pointer and the drag would swim.
    */
   const frozen = useRef<Box | null>(null);
+  /** Where the press on the overview began, in client pixels: a click is one that has not moved far. */
+  const press = useRef<{ x: number; y: number } | null>(null);
+  const svg = useRef<SVGSVGElement>(null);
+  /** Where in the graph the press began, for `inversePan`. */
+  const anchor = useRef<{ x: number; y: number } | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
 
   const pane = store.getContainerSize();
@@ -130,7 +214,13 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   if (view) grow(view.x, view.y, view.w, view.h);
 
   const empty = !Number.isFinite(minX);
-  const pad = empty ? 0 : Math.max(maxX - minX, maxY - minY) * PADDING;
+  // The margin: a share of the larger side, or `offsetScale` pixels of the overview at the scale that fits
+  // what is shown without one.
+  const pad = empty
+    ? 0
+    : offsetScale === undefined
+      ? Math.max(maxX - minX, maxY - minY) * PADDING
+      : offsetScale * Math.max((maxX - minX) / width, (maxY - minY) / height);
   const live: Box = empty
     ? { x: 0, y: 0, w: width, h: height }
     : { x: minX - pad, y: minY - pad, w: maxX - minX + pad * 2, h: maxY - minY + pad * 2 };
@@ -143,26 +233,39 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   const offsetX = (width - box.w * scale) / 2;
   const offsetY = (height - box.h * scale) / 2;
 
+  /** Where in the graph a pointer over the overview is. */
+  const toGraph = (e: ReactPointerEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - offsetX) / scale + box.x,
+      y: (e.clientY - rect.top - offsetY) / scale + box.y,
+    };
+  };
+
   const centreOn = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (!pane) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const graphX = (e.clientX - rect.left - offsetX) / scale + box.x;
-    const graphY = (e.clientY - rect.top - offsetY) / scale + box.y;
+    let at = toGraph(e);
+    // Inverted, the view goes as far the other side of where the press began as the pointer is on this one.
+    const from = anchor.current;
+    if (inversePan && from) at = { x: 2 * from.x - at.x, y: 2 * from.y - at.y };
     const { zoom } = store.getViewport();
     void store.instance.setViewport({
-      x: pane.width / 2 - graphX * zoom,
-      y: pane.height / 2 - graphY * zoom,
+      x: pane.width / 2 - at.x * zoom,
+      y: pane.height / 2 - at.y * zoom,
       zoom,
     });
   };
 
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (!pannable || e.button !== 0) return;
+    if (e.button !== 0) return;
+    press.current = { x: e.clientX, y: e.clientY };
+    if (!pannable) return;
     // The overview may sit inside the canvas: this press is not a pan, a drag or a pane click.
     e.stopPropagation();
     e.preventDefault();
     dragging.current = true;
     frozen.current = box; // what is on screen now is what the pointer is mapped to
+    anchor.current = toGraph(e);
     capturePointer(e.currentTarget, e.pointerId);
     centreOn(e);
   };
@@ -172,17 +275,52 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   const onPointerEnd = (e: ReactPointerEvent<SVGSVGElement>) => {
     dragging.current = false;
     frozen.current = null;
+    press.current = null;
     releasePointer(e.currentTarget, e.pointerId);
     redraw(); // nothing else changes on release, so ask for the box to be refitted
   };
+  // A click is a press and a release in the same place. It is worked out here, from where the pointer
+  // is, not from the node's own element: the overview holds the pointer's capture, so a `click` goes to it.
+  const onPointerUp = (e: ReactPointerEvent<SVGSVGElement>) => {
+    const down = press.current;
+    if (onNodeClick && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < CLICK_DISTANCE) {
+      const at = toGraph(e);
+      // Last drawn is on top.
+      for (let i = rects.length - 1; i >= 0; i--) {
+        const r = rects[i];
+        if (r && at.x >= r.x && at.x <= r.x + r.w && at.y >= r.y && at.y <= r.y + r.h) {
+          onNodeClick(e, r.node);
+          break;
+        }
+      }
+    }
+    onPointerEnd(e);
+  };
+
+  // The wheel over the overview zooms the canvas — a native listener, because a passive one cannot stop the
+  // page scrolling. About the centre of the view, as React Flow does.
+  useEffect(() => {
+    const el = svg.current;
+    if (!zoomable || !el) return;
+    const onWheel = (e: WheelEvent) => {
+      const size = store.getContainerSize();
+      if (!size) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 0.05 : e.deltaMode ? 1 : 0.002;
+      void store.zoomAt(2 ** (-e.deltaY * unit * zoomStep), size.width / 2, size.height / 2);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [store, zoomable, zoomStep]);
 
   const overview = (
     <svg
+      ref={svg}
       data-testid="rf__minimap"
       {...rest}
       className={`flowinger-minimap react-flow__minimap ${className}`.trim()}
       role="img"
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? store.labels['minimap.ariaLabel'] ?? 'Minimap'}
       width={width}
       height={height}
       viewBox={`${String(box.x)} ${String(box.y)} ${String(box.w)} ${String(box.h)}`}
@@ -199,27 +337,46 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
+      onPointerUp={onPointerUp}
       onPointerCancel={onPointerEnd}
     >
-      {rects.map(({ node, x, y, w, h }) => (
-        <rect
-          key={node.id}
-          className={`flowinger-minimap-node ${(typeof nodeClassName === 'function' ? nodeClassName(node) : nodeClassName) ?? ''}`.trim()}
-          x={x}
-          y={y}
-          width={w}
-          height={h}
-          rx={nodeBorderRadius}
-          fill={typeof nodeColor === 'function' ? nodeColor(node) : nodeColor}
-          {...(nodeStrokeColor === undefined
-            ? {}
-            : {
-                stroke: typeof nodeStrokeColor === 'function' ? nodeStrokeColor(node) : nodeStrokeColor,
-                strokeWidth: nodeStrokeWidth,
-              })}
-        />
-      ))}
+      {rects.map(({ node, x, y, w, h }) => {
+        const className = `flowinger-minimap-node ${(typeof nodeClassName === 'function' ? nodeClassName(node) : nodeClassName) ?? ''}`.trim();
+        const fill = typeof nodeColor === 'function' ? nodeColor(node) : nodeColor;
+        const stroke =
+          typeof nodeStrokeColor === 'function' ? nodeStrokeColor(node) : nodeStrokeColor;
+        if (NodeComponent) {
+          return (
+            <NodeComponent
+              key={node.id}
+              id={node.id}
+              x={x}
+              y={y}
+              width={w}
+              height={h}
+              borderRadius={nodeBorderRadius}
+              className={className}
+              color={fill}
+              {...(stroke === undefined ? {} : { strokeColor: stroke })}
+              strokeWidth={nodeStrokeWidth}
+              selected={node.selected === true}
+            />
+          );
+        }
+        return (
+          <rect
+            key={node.id}
+            className={className}
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            rx={nodeBorderRadius}
+            fill={fill}
+            {...(stroke === undefined ? {} : { stroke, strokeWidth: nodeStrokeWidth })}
+          />
+        );
+      })}
       {view && (
         <>
           {/* Everything outside the view, dimmed: the whole box with the view cut out of it. */}

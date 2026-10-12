@@ -4,7 +4,7 @@ import type { Feature, NodeBits } from '../features.ts';
 import { clampMove, snapTo } from '../geometry.ts';
 import { descendantsOf } from '../parents.ts';
 import { DRAG_THRESHOLD, capturePointer, isInteractive, releasePointer } from '../pointer.ts';
-import type { Node, NodeChange, NodePositionChange, TranslateExtent, XYPosition } from '../types.ts';
+import type { FlowingerProps, Node, NodeChange, NodePositionChange, TranslateExtent, XYPosition } from '../types.ts';
 import { useIsomorphicLayoutEffect } from '../useIsomorphicLayoutEffect.ts';
 import { autoPanFeature } from './autoPan.ts';
 import { selectionFeature } from './selection.ts';
@@ -17,12 +17,21 @@ export interface DragSession {
 }
 
 export interface DragApi {
+  /** What the canvas was last given for `selectNodesOnDrag` and `nodeClickDistance`; written by `useCanvas`. */
+  readonly config: {
+    selectOnDrag: boolean;
+    clickDistance: number | undefined;
+    /** `onSelectionDrag*`: heard, as well as `onNodeDrag*`, when the drag is of the selection's rectangle. */
+    onSelectionDragStart: FlowingerProps['onSelectionDragStart'];
+    onSelectionDrag: FlowingerProps['onSelectionDrag'];
+    onSelectionDragStop: FlowingerProps['onSelectionDragStop'];
+  };
   /**
    * Starts dragging `lead`. If it is part of the selection the whole selection
    * goes with it; otherwise it is selected (where selecting is on) and goes
    * alone — which is what a press on an unselected node means.
    */
-  beginNodeDrag: (lead: Node, event: ReactPointerEvent, additive: boolean) => DragSession;
+  beginNodeDrag: (lead: Node, event: ReactPointerEvent, additive: boolean, selection?: boolean) => DragSession;
   /**
    * Moves the selection one step in a direction — what the arrow keys do to a
    * focused node. A step is 5 units, or one cell of the snap grid; `large` is
@@ -60,7 +69,14 @@ export const dragFeature: Feature<DragApi> = {
   name: 'drag',
   needs: [autoPanFeature, selectionFeature],
   install(ctx) {
-    const { isSelectable, selectNode } = ctx.api(selectionFeature);
+    const { isSelectable, selectNode, clearSelection } = ctx.api(selectionFeature);
+    const config: DragApi['config'] = {
+      selectOnDrag: true,
+      clickDistance: undefined,
+      onSelectionDragStart: undefined,
+      onSelectionDrag: undefined,
+      onSelectionDragStop: undefined,
+    };
     const isDraggable = (n: Node): boolean => n.draggable ?? ctx.options.nodesDraggable;
 
     /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
@@ -78,14 +94,18 @@ export const dragFeature: Feature<DragApi> = {
       ];
     };
 
-    const beginNodeDrag: DragApi['beginNodeDrag'] = (lead, event, additive) => {
+    const beginNodeDrag: DragApi['beginNodeDrag'] = (lead, event, additive, selection = false) => {
       const before = ctx.selectedNodeIds();
       let group = [lead.id];
       if (before.includes(lead.id)) {
         group = before;
-      } else if (isSelectable(lead)) {
+      } else if (config.selectOnDrag && isSelectable(lead)) {
         selectNode(lead.id, additive);
         group = additive ? [...before, lead.id] : [lead.id];
+      } else if (!additive) {
+        // Not selected by the drag (`selectNodesOnDrag` off, or it cannot be selected): the drag is of it
+        // alone, and what was selected is not any more — as in React Flow.
+        clearSelection();
       }
       const movable = group.flatMap((id) => {
         const n = ctx.nodeById.get(id) ?? (id === lead.id ? lead : undefined);
@@ -141,7 +161,9 @@ export const dragFeature: Feature<DragApi> = {
         return { ...n, position: relativeNow.get(n.id) ?? { x: from.x + dx, y: from.y + dy }, dragging };
       };
 
-      ctx.callbacks.onNodeDragStart?.(event, lead, items.map((n) => at(n, 0, 0, false)));
+      const starting = items.map((n) => at(n, 0, 0, false));
+      ctx.callbacks.onNodeDragStart?.(event, lead, starting);
+      if (selection) config.onSelectionDragStart?.(event, starting);
 
       // Where the drag may take these nodes: onto the grid (by the lead, so the
       // others keep their offsets from it), and inside every node's own extent.
@@ -193,6 +215,7 @@ export const dragFeature: Feature<DragApi> = {
           // caller, controlling them, has not applied the change yet.
           const moved = items.map((n) => at(n, dx, dy, true));
           ctx.callbacks.onNodeDrag?.(e, leadOf(moved), moved);
+          if (selection) config.onSelectionDrag?.(e, moved);
         },
         end: (e) => {
           for (const n of items) ctx.draggingIds.delete(n.id);
@@ -202,6 +225,7 @@ export const dragFeature: Feature<DragApi> = {
           }
           const settled = items.map((n) => at(n, last.dx, last.dy, false));
           ctx.callbacks.onNodeDragStop?.(e, leadOf(settled), settled);
+          if (selection) config.onSelectionDragStop?.(e, settled);
         },
       };
     };
@@ -235,16 +259,29 @@ export const dragFeature: Feature<DragApi> = {
       ctx.emitNodeChanges(changes);
     };
 
-    return { beginNodeDrag, nudgeSelection };
+    return { beginNodeDrag, nudgeSelection, config };
+  },
+
+  useCanvas({ store, props }) {
+    const { config } = store.api(dragFeature);
+    config.selectOnDrag = props.selectNodesOnDrag ?? true;
+    config.clickDistance = props.nodeClickDistance;
+    config.onSelectionDragStart = props.onSelectionDragStart;
+    config.onSelectionDrag = props.onSelectionDrag;
+    config.onSelectionDragStop = props.onSelectionDragStop;
+    return undefined;
   },
 
   useNode({ store, node, draggable, selected, justDragged }): NodeBits {
-    const { beginNodeDrag, nudgeSelection } = store.api(dragFeature);
+    const { beginNodeDrag, nudgeSelection, config } = store.api(dragFeature);
     const { beginAutoPan } = store.api(autoPanFeature);
+    const { isMulti } = store.api(selectionFeature);
     const drag = useRef<DragState | null>(null);
     /** Stops watching for a press to become a drag; null when nothing is being watched. */
     const stopClaiming = useRef<(() => void) | null>(null);
     const [dragging, setDragging] = useState(false);
+    /** How far a press travels to become a drag: the canvas's `nodeDragThreshold`, else the engine's own. */
+    const threshold = () => store.getOptions().nodeDragThreshold ?? DRAG_THRESHOLD;
 
     useIsomorphicLayoutEffect(
       () => () => {
@@ -255,7 +292,7 @@ export const dragFeature: Feature<DragApi> = {
     );
 
     const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!draggable || e.button !== 0 || isInteractive(e.target)) return;
+      if (!draggable || e.button !== 0 || isInteractive(e.target, store.getOptions().ignored)) return;
       // With a drag handle, only a press on it drags; elsewhere the canvas pans.
       if (node.dragHandle && !(e.target instanceof Element && e.target.closest(node.dragHandle))) return;
       // Claimed from the first press, so the canvas underneath does not start a
@@ -292,7 +329,7 @@ export const dragFeature: Feature<DragApi> = {
           stop();
           return;
         }
-        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < DRAG_THRESHOLD) return;
+        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < threshold()) return;
         capturePointer(element, pressed.pointerId);
         stop();
       };
@@ -313,8 +350,8 @@ export const dragFeature: Feature<DragApi> = {
       const d = drag.current;
       if (d?.pointerId !== e.pointerId) return;
       if (!d.session) {
-        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_THRESHOLD) return;
-        d.session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
+        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold()) return;
+        d.session = beginNodeDrag(node, e, isMulti(e));
         justDragged.current = true;
         setDragging(true);
         capturePointer(e.currentTarget, e.pointerId);
@@ -342,14 +379,21 @@ export const dragFeature: Feature<DragApi> = {
         // is delivered to whatever is under the pointer — the capture it triggers only takes effect from
         // the next event — so the node never saw the pointer travel, and with no move after it the drag
         // would be lost. The release is the capture's first event: begin the drag, and end it, there.
-        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= DRAG_THRESHOLD) {
-          const session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= threshold()) {
+          const session = beginNodeDrag(node, e, isMulti(e));
           justDragged.current = true;
           const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
           session.move(e, at.x - d.startGraph.x, at.y - d.startGraph.y);
           e.stopPropagation();
           releasePointer(e.currentTarget, e.pointerId);
           session.end(e);
+        } else if (
+          e.type === 'pointerup' &&
+          config.clickDistance !== undefined &&
+          Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > config.clickDistance
+        ) {
+          // Moved too far to be a click, and not far enough to be a drag: the click that follows is not one.
+          justDragged.current = true;
         }
         return;
       }

@@ -10,8 +10,9 @@ export const DRAG_THRESHOLD = 3;
 /** Elements a press on which is theirs, not the canvas's. `nodrag`/`nopan` are React Flow's opt-outs. */
 const INTERACTIVE = 'input, select, textarea, button, a, .nodrag, .nopan';
 
-export const isInteractive = (target: EventTarget): boolean =>
-  target instanceof Element && target.closest(INTERACTIVE) !== null;
+/** `extra` is the canvas's own classes for it (`noPanClassName`, `noDragClassName`), as a selector. */
+export const isInteractive = (target: EventTarget, extra?: string | null): boolean =>
+  target instanceof Element && target.closest(extra ? `${INTERACTIVE}, ${extra}` : INTERACTIVE) !== null;
 
 /** Whether a key pressed on `target` is text being edited, and so not the canvas's to act on. */
 export const isEditable = (target: EventTarget): boolean =>

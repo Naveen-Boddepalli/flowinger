@@ -60,35 +60,43 @@ An app that only *shows* a graph (a viewer) needs none of it, and was probably a
 
 ## 3. Types
 
-Flowinger now exports React Flow's names for the types it has (`OnNodesChange`, `OnConnect`,
-`ReactFlowProps`, `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`… — 59 of them), so a type
-import usually needs only the package name changed. Two differences are on purpose:
+Flowinger exports every one of React Flow's 211 names (`OnNodesChange`, `OnConnect`, `ReactFlowProps`,
+`ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`…), so a type import needs only the package name
+changed. Two differences are on purpose:
 
 - **`ReactFlowProps` and `ReactFlowInstance` are not generic.** `ReactFlowInstance<MyNode, MyEdge>` is an
   error here rather than a type argument quietly ignored. Drop the arguments; `useReactFlow()` is not
   generic either.
 - **`onConnectEnd` is given a `ConnectEndState`** (`{ connection, isValid }`), not React Flow's
-  `FinalConnectionState`.
+  `FinalConnectionState` (the type is exported, but a handler annotated with it is a compile error).
 - `Node<Data, Type>`, `NodeProps<MyNode>`, `Edge`, `NodeChange<MyNode>` and `EdgeChange<MyEdge>` are generic as
   they are in React Flow.
 
 ## 4. What is not there
 
-[React Flow coverage](react-flow-coverage.md) lists it all, from a measurement of
-React Flow's own type declarations. The ones most likely to matter, with what to do:
+Nothing of React Flow's canvas API: every prop of `ReactFlow` — and every member of the components, the instance and
+the types you write against — is named **and does something** ([React Flow coverage](react-flow-coverage.md),
+measured from React Flow's own type declarations). What is worth knowing is where the behaviour, or the default,
+is not React Flow's:
 
-| Missing | Instead |
-|---|---|
-| `nodeOrigin` | compute the top-left yourself: `position - size / 2` |
-| `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode` | Shift (and Ctrl/⌘ to add to a selection) are fixed; there is no Space-to-pan |
-| `connectOnClick`, `connectionRadius` | drag from a handle to a handle |
-| `colorMode` | set the `--flowinger-*` variables on an ancestor |
-| `nodeDragThreshold`, `paneClickDistance`… | the 3 px drag threshold is fixed |
-| `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar` | write the edge with `BaseEdge` and `EdgeLabelRenderer` |
-| `elevateNodesOnSelect`, `zIndexMode` | give a node a `zIndex` |
+| | React Flow | Flowinger |
+|---|---|---|
+| `multiSelectionKeyCode` | Meta (macOS) / Control | left out: **Shift, Control and ⌘** all add; given: only that key |
+| `zoomActivationKeyCode` | Meta / Control; holding it zooms even with `zoomOnScroll` off | left out: Ctrl/⌘ only chooses zoom or pan under `panOnScroll`, and `zoomOnScroll` off is no zoom; **given: React Flow's behaviour** |
+| `panActivationKeyCode` | `'Space'` | none unless given; needs `panKeyFeature` (in `FlowingerCanvas`) |
+| `Controls` `showInteractive` | on | **off** |
+| `interpolate` | `'smooth'` | `'linear'`; `'smooth'` is there when asked |
+| `colorMode` | a class, and `--xy-*` colours | a class, and — for `light` — `--flowinger-*` colours, for what is inside the canvas |
+| `ariaLabelConfig` | labels and descriptions | the same keys; the English labels flowinger already had stay when there is no config |
+| `elevateNodesOnSelect` / `connectOnClick` / `autoPanOnNodeFocus`… | on | on — with the interaction itself off until you ask (`nodesDraggable` etc.) |
 
-If something *you* use is on the list, [open an issue](https://github.com/Naveen-Boddepalli/flowinger/issues)
-saying what you were building — that is how the list is ordered.
+A press on a handle is no longer a connection until the pointer has travelled (`connectionDragThreshold`, 1 px),
+so `onConnectStart` and `onConnectEnd` are not called for a click — a click is `onClickConnectStart` — and
+nearby handles are snapped to (`connectionRadius`, 20 units). If your tests press a handle and look for the line
+at once, move the pointer first.
+
+If something *you* use differs from what you expected, [open an issue](https://github.com/Naveen-Boddepalli/flowinger/issues)
+saying what you were building.
 
 ## 5. Things that look the same and are not
 

@@ -50,6 +50,10 @@ export interface FlowingerEdgesProps {
   connectionLineType?: ConnectionLineType | undefined;
   connectionLineStyle?: CSSProperties | undefined;
   connectionLineComponent?: ComponentType<ConnectionLineProps> | undefined;
+  /** Style for the element the line is drawn in (its stacking, say); the line's own is `connectionLineStyle`. */
+  connectionLineContainerStyle?: CSSProperties | undefined;
+  /** The colour of an arrowhead that names none; left out, it is its edge's stroke. */
+  defaultMarkerColor?: string | null | undefined;
   /** Whether a selected edge shows drag handles on its ends — an `onReconnect` is there to hear of them. */
   reconnectable?: boolean;
   /** How many parents deep each node is, for stacking an edge with the nodes it joins. */
@@ -117,7 +121,9 @@ function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hoo
     ...(selectable || interactive
       ? { style: { pointerEvents: 'stroke', ...(selectable ? { cursor: 'pointer' } : {}) } as CSSProperties }
       : {}),
-    ...(selectable && focusable ? { tabIndex: 0, 'aria-pressed': selected, onKeyDown } : {}),
+    ...(focusable && (selectable || edge.focusable === true)
+      ? { tabIndex: 0, 'aria-pressed': selected, onKeyDown }
+      : {}),
     role: edge.ariaRole ?? (selectable && focusable ? 'button' : undefined),
     'aria-label': edge.ariaLabel ?? (selectable && focusable ? `Edge from ${edge.source} to ${edge.target}` : undefined),
     // An escape hatch, last: never a handler, or `id` / `style` / `className` / `role`, which are the
@@ -168,6 +174,7 @@ function endpoint(
   type: HandleType,
   fallback: Position,
 ): { point: { x: number; y: number }; position: Position } {
+  // `at` is the node's top-left corner (its origin already taken off), which is what an anchor is measured from.
   const handle = store.findHandle(node.id, handleId, type);
   if (handle) {
     return {
@@ -177,9 +184,26 @@ function endpoint(
         : handleCoordinates(at, handle.position, store.getNodeSize(node)),
     };
   }
+  // Not drawn (yet — or on a server): the node may declare where its handles are.
+  const ofType = node.handles?.filter((h) => h.type === type);
+  const declared = handleId ? ofType?.find((h) => h.id === handleId) : ofType?.[0];
+  if (declared) {
+    const { x, y, width = 0, height = 0, position } = declared;
+    // A box, as a measured handle is: the edge meets its outer edge. Without one, the middle of its side.
+    if (x === undefined || y === undefined) {
+      return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
+    }
+    const across = position === Position.Left || position === Position.Right;
+    const point = {
+      x: at.x + x + (across ? (position === Position.Right ? width : 0) : width / 2),
+      y: at.y + y + (across ? height / 2 : position === Position.Bottom ? height : 0),
+    };
+    return { position, point };
+  }
   const position = resolveHandlePosition(handleId, fallback);
   return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
 }
+
 
 const NO_FEATURES: readonly Feature[] = [];
 
@@ -416,6 +440,8 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     reconnectable = false,
     depths,
     features = NO_FEATURES,
+    defaultMarkerColor,
+    connectionLineContainerStyle,
   } = props;
   const store = useFlowingerStore();
   // Stable, so the memoised edges below are not remade by a new array each render.
@@ -444,7 +470,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     edgeStroke: string,
   ): string | undefined => {
     if (!spec) return undefined;
-    const marker = resolveMarker(spec, edgeStroke);
+    const marker = resolveMarker(spec, defaultMarkerColor ?? edgeStroke);
     const key = `${marker.type}|${marker.color}|${String(marker.width)}|${String(marker.height)}`;
     let entry = markers.get(key);
     if (!entry) {
@@ -458,7 +484,11 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
   // running into a node inside a group is drawn above the group, where it can be
   // clicked, and below the node it ends at. With no nesting that is level 0, the
   // one layer under every node.
-  const nodeZ = (n: Node): number => n.zIndex ?? 1 + (depths?.get(n.id) ?? 0);
+  const nodeZ = (n: Node): number =>
+    features.reduce(
+      (z, f) => f.stackNode?.(store, n, z, store.isSelected(n.id), true) ?? z,
+      n.zIndex ?? 1 + (depths?.get(n.id) ?? 0),
+    );
   const levelOf = (source: Node, target: Node): number => {
     const z = Math.max(nodeZ(source), nodeZ(target));
     return z <= 1 ? 0 : z;
@@ -477,8 +507,9 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     if (reconnecting === edge.id) return null;
 
     const lookup = (id: string) => byId.get(id);
-    const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition);
-    const targetAt = absolutePositionOf(target, lookup, store.resolvePosition);
+    // Top-left corners: each node on a chain gives up its origin's share of its size.
+    const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition, store.originOffset);
+    const targetAt = absolutePositionOf(target, lookup, store.resolvePosition, store.originOffset);
 
     // With nothing to go on, leave the source's bottom for the target's top
     // when the target sits below it, else run sideways.
@@ -509,7 +540,10 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
 
     // A key of `edgeTypes` wins, even over a built-in name.
     const View = edge.type ? edgeTypes?.[edge.type] : undefined;
-    const level = edge.zIndex ?? levelOf(source, target);
+    const level = features.reduce(
+      (l, f) => f.stackEdge?.(store, edge, l, selected) ?? l,
+      edge.zIndex ?? levelOf(source, target),
+    );
     const place = (element: ReactElement): null => {
       const at = levels.get(level);
       if (at) at.push(element);
@@ -524,7 +558,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
           edge={edge}
           selected={selected}
           selectable={selectable}
-          focusable={edgesFocusable}
+          focusable={edge.focusable ?? edgesFocusable}
           interactive={interactive}
           hooks={hooks}
           reconnectable={reconnectable}
@@ -548,7 +582,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
         edge={edge}
         selected={selected}
         selectable={selectable}
-        focusable={edgesFocusable}
+        focusable={edge.focusable ?? edgesFocusable}
         interactive={interactive}
         hooks={hooks}
         reconnectable={reconnectable}
@@ -602,10 +636,27 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
             </defs>
           )}
           {levels.get(level)}
-          {level === highest &&
-            features.map((f) => (f.EdgesLayer ? <f.EdgesLayer key={f.name} {...props} /> : null))}
         </svg>
       ))}
+      {features.some((f) => f.EdgesLayer) && (
+        // The line being dragged: its own element, as high as the highest edges unless told otherwise.
+        <svg
+          className="flowinger-connection react-flow__connectionline"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            overflow: 'visible',
+            zIndex: highest,
+            ...connectionLineContainerStyle,
+          }}
+        >
+          {features.map((f) => (f.EdgesLayer ? <f.EdgesLayer key={f.name} {...props} /> : null))}
+        </svg>
+      )}
     </>
   );
 });

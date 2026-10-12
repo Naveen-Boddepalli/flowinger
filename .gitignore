@@ -6,3 +6,11 @@ dist
 demo-dist
 test-results
 playwright-report
+/history
+/clipboard
+/snaplines
+/export
+/smart-edges
+/shapes
+/tree
+/pro

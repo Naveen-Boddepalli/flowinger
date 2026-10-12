@@ -17,21 +17,29 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 17 kB gzipped (26 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 18.7 kB gzipped (33.6 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
 |---|---|---|
-| `selectionFeature` | Selecting by click (Shift, Ctrl or ⌘ adds), Enter and Space, a click on the empty canvas or Escape clearing it; nodes and edges become tab stops | `elementsSelectable`, `edgesFocusable` |
+| `selectionFeature` | Selecting by click (Shift, Ctrl or ⌘ adds — or `multiSelectionKeyCode`), Enter and Space, a click on the empty canvas or Escape clearing it; nodes and edges become tab stops | `elementsSelectable`, `edgesFocusable`, `multiSelectionKeyCode` |
 | `dragFeature` | Dragging nodes and selections, snapping, extents, `expandParent`, the arrow keys, auto-pan (brings `selectionFeature`) | `nodesDraggable`, `onNodeDragStart` / `onNodeDrag` / `onNodeDragStop`, `snapToGrid`, `snapGrid`, `nodeExtent`, `autoPanOnNodeDrag`, `autoPanSpeed` |
-| `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `autoPanOnConnect`; a `<Handle>`'s own `isConnectableStart` / `isConnectableEnd`, `isValidConnection`, `onConnect` |
-| `reconnectFeature` | Dragging an end of a selected edge to another handle (brings `connectFeature`) | `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable` |
-| `boxSelectFeature` | Selecting with a box (brings `selectionFeature`) | `selectionOnDrag`, `selectionMode`, `onSelectionStart`, `onSelectionEnd` |
+| `connectFeature` | Dragging a connection out of a handle, and the line it draws | `nodesConnectable`, `onConnect`, `onConnectStart`, `onConnectEnd`, `isValidConnection`, `connectionMode`, `connectionLine*`, `connectOnClick` (with `onClickConnectStart` / `onClickConnectEnd`), `connectionDragThreshold`, `connectionRadius`, `autoPanOnConnect`; a `<Handle>`'s own `isConnectableStart` / `isConnectableEnd`, `isValidConnection`, `onConnect` |
+| `reconnectFeature` | Dragging an end of a selected edge to another handle (brings `connectFeature`) | `onReconnect`, `onReconnectStart`, `onReconnectEnd`, `edgesReconnectable`, `reconnectRadius` |
+| `boxSelectFeature` | Selecting with a box — Shift, or `selectionKeyCode` — that pans the view when held at the pane's edge (brings `selectionFeature`) | `selectionOnDrag`, `selectionMode`, `selectionKeyCode`, `autoPanOnSelection`, `onSelectionStart`, `onSelectionEnd` |
+| `selectionRectFeature` | The rectangle that stays round what a box selection took: dragged to move it all, right-clicked for a menu (brings `boxSelectFeature` and `dragFeature`) | `onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu` |
 | `deleteFeature` | The delete key, and `deleteElements` | `deleteKeyCode`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` |
 | `cullingFeature` | Drawing only what is in view | `onlyRenderVisibleElements` |
 | `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `updateEdgeData`, `getNodeConnections`, `getHandleConnections`, `getIntersectingNodes`, `isNodeIntersecting` | |
 | `eventsFeature` | A double click, a right click, and the pointer entering, moving over and leaving a node, an edge or the pane; the wheel over the pane. Giving any edge event (or `onEdgeClick`) makes every edge take the pointer, selectable or not | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for edges and the pane, `onPaneScroll` |
 | `edgeLabelsFeature` | The box behind an edge's label (`labelShowBg`), sized to the text once a browser has laid it out | `labelShowBg` on an edge |
+| `a11yFeature` | Which nodes and edges are tab stops (`nodesFocusable`, their own `focusable`, `disableKeyboardA11y`), the descriptions they point at and the live announcement of a keyboard move (`ariaLabelConfig`, which also labels the controls, minimap and handles), and panning to a node that takes focus out of view | `nodesFocusable`, `disableKeyboardA11y`, `ariaLabelConfig`, `autoPanOnNodeFocus` |
+| `stackingFeature` | A selected node is raised by 1000 (and what is inside it), a selected edge optionally too; `zIndexMode` `'auto'` and `'manual'` | `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode` |
+| `colorModeFeature` | A `light` / `dark` class on the canvas, `'system'` following the OS, and a light palette for the `--flowinger-*` colours | `colorMode` |
+| `zoomKeyFeature` | Holding a key makes the wheel zoom — even with `zoomOnScroll` off, and instead of panning | `zoomActivationKeyCode` |
+| `smoothFeature` | `interpolate: 'smooth'` on an animated move: it zooms out and back in over a long one | `interpolate` |
+| `debugFeature` | Logs the changes a controlled flow is told of | `debug` |
+| `panKeyFeature` | A held key turns a drag into a pan, even where `panOnDrag` is off. Off unless `panActivationKeyCode` is given (React Flow's own default is `'Space'`) — it listens for keys, about 0.6 kB a canvas that never wants it should not carry | `panActivationKeyCode` |
 
 Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
 labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the

@@ -821,3 +821,88 @@ commit, and takes `FlowTree` across by changing its imports alone.
 - Done: attribute React Flow — `NOTICE.md` credits the bezier control-point formula and the edge-centre maths in
   `src/paths.ts` (0.2.0).
 - Everything else is the seventh round's **Launch checklist**, above.
+
+### Eighth round: React Flow's names, the free "pro" modules — and making the claims true
+
+The round set out to close the audit (53 missing exports, 36 missing canvas props) and to ship the capabilities
+React Flow sells as "Pro" — undo/redo, copy/paste, snap guides, export, smart edges, shapes, a collapsible tree —
+as MIT, tree-shakeable modules. It landed in two passes, and the second is the more instructive.
+
+**First pass (the branch as written).** Every export and every member the audit lists was *named*: 211 of 211
+exports, 119 of 119 props, 32 of 32 instance members. Seven subpath entry points (`flowinger/history`,
+`/clipboard`, `/snaplines`, `/export`, `/smart-edges`, `/shapes`, `/tree`, and `/pro` for all of them) built from
+one multi-entry Vite library build with shared chunks, so a module costs the core nothing unless imported
+(measured: 0 bytes). `nodeOrigin`, `panActivationKeyCode` and `nodeDragThreshold` were wired in. The audit script
+reported "100%".
+
+**Second pass (checked against the code and a real canvas).** "Named" turned out not to be "done", and the audit
+could not tell the difference: it counts names. What was found, each with a test that failed first:
+
+- **33 of the 119 props, and `Node.handles`, were read by nothing.** Their doc comments described behaviour
+  they did not have (`colorMode: 'system'` "with a media query listener", `connectOnClick` "click-to-connect").
+  A name that compiles and does nothing is worse than a missing one, so each is now tagged `@unimplemented` with
+  what happens instead, and a canvas given one says so in development (a test keeps the tag list, the warning
+  list and "no source file reads it" the same). The audit prints *named* and *implemented* apart: **302
+  members named, 263 implemented, 39 accepted only.** `ZIndexMode` also lacked React Flow's `'basic'`.
+- **`nodeOrigin` was applied to what is drawn and nowhere else.** Nine of fourteen tests written for it failed:
+  a node measured after first render kept the position made from its fallback size, a child was placed
+  relative to its parent's origin point rather than top-left (React Flow: top-left), and edges, hit testing and
+  resizing each disagreed about where a node was. Now there is one definition — `store.absolutePosition` is the
+  node's top-left, each node on a parent chain contributing `position − origin × size` — and edges, the wrapper,
+  the minimap, culling, extents, intersections and `fitView` all read it; the resizer converts a top-left box
+  back to a `position`. Cost: 0.05 kB.
+- **`panActivationKeyCode` defaulted to `'Space'` in the core**: `useKeyPress` in every canvas (0.64 kB) and a
+  silent behaviour change for every page. It is `panKeyFeature` now — in `allFeatures`, off unless the prop is
+  given, with a development warning for a core that has the prop and not the feature.
+- **`nodeDragThreshold: 0` became 3** (`||` for `??`), and the release path of a flick compared against the
+  fixed 3 so a larger threshold was bypassed. One definition, used at all three sites.
+- **`MiniMap`'s `nodeComponent`, `onNodeClick`, `zoomable`, `zoomStep` and `offsetScale` were spread onto the
+  `<svg>` as unknown attributes; `NodeResizeControl` was an inert `<div>`; `NodeResizer` ignored `nodeId`;
+  `NodeToolbar`'s `nodeId` leaked to the DOM.** All implemented or tagged. `ease` on viewport moves was
+  declared and unread; it is read.
+- **The pro modules had only been tested without a canvas** (`renderHook`, no provider), where they fall
+  back to doing nothing. Against one: `exportCanvasToSvg` exported the *visible view* at the *wrong size*
+  (the viewport layer's transformed rect with un-scaled content inside) at every zoom but 1; the clipboard
+  asked for a permission on every paste (`readText` on keydown) and offset a copied child twice and left it in
+  the original parent; snap guides for candidates that had lost the snap stayed on screen, and nodes of
+  different parents were compared as if in one space; expanding a tree branch revealed what sat under a branch
+  still closed; every smart edge ran A* because its own end nodes were obstacles, did not leave a handle the
+  way it faced, and recomputed on every drag frame. All fixed, each with an integration test and a mutant
+  that fails it.
+
+What the second pass changed in the *process*, which is the part to keep: **a count of names is not a claim
+about behaviour**, and an audit that can only count names will say "100%" for a library that does nothing with
+a third of the props. The audit now reads the `@unimplemented` tags; the claim in the README and the coverage
+page is the *implemented* number; and a new prop is added with the behaviour or not at all.
+
+Sizes on the branch: full 27.26 kB / lean 17.56 kB gzip (main: 26.02 / 16.95). Budgets moved 27 / 17.5 → 28 / 18
+under the rule that a budget sits about half a kilobyte above what is measured.
+
+**Third pass: the 39.** The 39 members that were only names were then implemented, one group at a time,
+tests first, with React Flow's source as the oracle (`@xyflow/system`'s `XYPanZoom`, `XYDrag`, `XYHandle`,
+`getElevatedEdgeZIndex`, `Handle`, `NodesSelection`). The decisions worth keeping:
+
+- **Defaults follow React Flow where the prop is about an interaction that is itself opt-in** (a connection
+  radius only matters once `nodesConnectable` is on), and **keep flowinger's own where it was established and
+  tested**: Shift still adds to a selection, `zoomOnScroll` off still means no zoom unless a
+  `zoomActivationKeyCode` is given, animated moves stay linear. Each is listed in the migration guide.
+- **A feature per concern, so the core pays for hooks and not behaviour**: the core gained two stacking calls
+  and a key hook (`stackNode` / `stackEdge` / `keyHeld` / `smoothViewport` are `Feature` slots), the rest is in
+  `a11yFeature`, `stackingFeature`, `colorModeFeature`, `selectionRectFeature`, `smoothFeature`, `zoomKeyFeature`
+  and `debugFeature`. Size: core 17.56 → 18.66, whole 27.26 → 33.64 kB.
+- **Things the survey of React Flow's source turned up**: `selectNodesOnDrag` off *clears* the selection when an
+  unselected node is dragged (not just "does not select it"); `nodeClickDistance` / `paneClickDistance` are
+  about a press that moved too far to be a click but not far enough to be a drag; a child of a selected group
+  is raised with it (`parentZ + 1`); the Shift-to-scroll-sideways swap is skipped on macOS, which does it
+  itself; `onSelectionDrag*` fire *in addition to* `onNodeDrag*`, and only for the rectangle's drag; the
+  message React Flow's live region announces is the position *before* the move.
+- **Bugs this found in the existing code**: a click on a handle began (and ended) a connection; a drop onto
+  "nothing" at a handle's own position connected (the tests assumed a hit-test, not a radius); selection
+  answered `focusable: false` for a node that merely could not be selected, which would have vetoed
+  `nodesFocusable`; the box's corner slipped as the view panned; and the connection line shared an `<svg>` with
+  the edges, so it could not be styled.
+
+**Not built** (listed so nobody reads the first pass's plan as a record): `flowinger/editable-edge` (draggable
+waypoints) — it was in the plan and never existed; a Hexagon shape (there are diamond, circle, cylinder,
+parallelogram and document); and the "production recipes" (grouping, multiplayer presence, workflow
+simulation). Layout recipes (`d3-hierarchy`, `dagre`, `elkjs`) are in `examples/layouts`. See `ROADMAP.md`.

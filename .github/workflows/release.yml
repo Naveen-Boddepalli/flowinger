@@ -56,8 +56,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm size --max-full 27 --max-lean 17.5
-      - run: node scripts/size-dist.mjs --max-lean 17.5
+      - run: pnpm size --max-full 34 --max-lean 19
+      - run: node scripts/size-dist.mjs --max-lean 19
       - run: pnpm check:package
       - run: node scripts/check-examples.mjs
       - run: pnpm exec playwright install --with-deps chromium

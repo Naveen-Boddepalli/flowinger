@@ -9,6 +9,98 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-13
+
+### Added
+
+- **Every one of React Flow's 211 exports and 119 canvas props is named, and does something.** The audit
+  (`scripts/audit-react-flow.mjs`) counts a name that compiles and does nothing apart from one that works —
+  `@unimplemented` in its doc comment, and a development warning when a canvas is given it — and there are
+  none: **302 of the 302** members of the props, the instance and the components do what they say. See
+  [React Flow coverage](docs/react-flow-coverage.md) and, for what differs from React Flow, the
+  [migration guide](docs/migrating-from-react-flow.md#4-what-is-not-there).
+- **Gestures and keys:** `selectionKeyCode`, `multiSelectionKeyCode` and `zoomActivationKeyCode` (a key, a
+  combination, a list, or `null`); `panOnScrollMode` and `preventScrolling`; `noWheelClassName`,
+  `noPanClassName` and `noDragClassName` (yours, beside `nowheel` / `nopan` / `nodrag`); `paneClickDistance`
+  and `nodeClickDistance`; `selectNodesOnDrag`.
+- **Connecting:** `connectionDragThreshold` (default 1 px — a click on a handle is no longer a connection),
+  `connectionRadius` (20) and `reconnectRadius` (10), in graph units; `connectOnClick` (default true) with
+  `onClickConnectStart` / `onClickConnectEnd` — click a handle, then another.
+- **Selection:** a box selection leaves a rectangle round what it took (`selectionRectFeature`), which is
+  dragged to move it all and right-clicked: `onSelectionDragStart` / `onSelectionDrag` / `onSelectionDragStop`
+  (with `onNodeDrag*` called as well) and `onSelectionContextMenu`. `autoPanOnSelection`: a box held at the
+  pane's edge pans the view, its corner staying on the same place in the graph.
+- **Look:** `elevateNodesOnSelect` (default on) and `elevateEdgesOnSelect` (off) and `zIndexMode`
+  (`'basic'`, `'auto'`, `'manual'`) as `stackingFeature` — a selected node, and what is inside it, is raised by
+  1000; `colorMode` (`'light'`, `'dark'`, `'system'`) as `colorModeFeature`; `defaultMarkerColor`;
+  `connectionLineContainerStyle`.
+- **Accessibility and diagnostics:** `nodesFocusable`, `disableKeyboardA11y`, a node's and an edge's own
+  `focusable`, `ariaLabelConfig` (descriptions nodes and edges point at, a live announcement of a keyboard
+  move, labels for the controls, minimap and handles), `autoPanOnNodeFocus` — all `a11yFeature`; `debug`
+  (`debugFeature`).
+- **`Node.handles`** — where a node's handles are, for an edge to meet before they are drawn and measured
+  (server-rendered output, the first measure). **`interpolate: 'smooth'`** (`smoothFeature`, van Wijk and Nuij's
+  path). **`MiniMap`'s `inversePan`.** **`NodeToolbar`'s `nodeId`** for another node, or several, drawn at them in
+  graph space. **`Controls`' `showInteractive` / `onInteractiveChange`** — a lock that switches dragging,
+  connecting and selecting off and on over the canvas's props.
+- New features, all in `allFeatures`: `a11yFeature`, `colorModeFeature`, `debugFeature`,
+  `selectionRectFeature`, `smoothFeature`, `stackingFeature`, `zoomKeyFeature`. A prop for one a `FlowingerCore`
+  lacks says so in development, as the others do.
+- **`nodeOrigin` and `node.origin`.** Where on a node its `position` is: `[0, 0]` top-left (default),
+  `[0.5, 0.5]` the centre. A child's `position` is relative to its parent's top-left, as in React Flow. Edges,
+  hit testing, the minimap, `fitView`, extents, intersections and the resizer all use the drawn box.
+- **`panActivationKeyCode`** — holding the key turns a drag into a pan — as `panKeyFeature` (in `allFeatures`,
+  so `FlowingerCanvas` has it; a `FlowingerCore` is told in development that it does nothing without it). Off
+  unless given: React Flow's own default of `'Space'` is not applied.
+- **`nodeDragThreshold`**, in pixels; `0` is none. Needs `dragFeature`.
+- **`ease`** on viewport moves (`setViewport`, `fitView`, `setCenter`, `zoomTo`…).
+- **`MiniMap`: `nodeComponent`, `onNodeClick`, `zoomable`, `zoomStep`, `offsetScale`**; `MiniMapNode`.
+- **`NodeResizeControl`**, one resize control (a handle or a line, on a side or a corner) with `children`;
+  `NodeResizer` is eight of them. **`NodeResizer`'s `nodeId` and `autoScale`.**
+- `SimpleBezierEdge` and `getSimpleBezierPath`, `EdgeText`, `EdgeToolbar`, `experimental_useOnNodesChangeMiddleware`
+  and `experimental_useOnEdgesChangeMiddleware`, and `viewportInitialized` on the instance (a live getter).
+- **The "pro" modules, free and separate entry points** — [`flowinger/history`](docs/pro.md#undo-and-redo--flowingerhistory)
+  (`useUndoRedo`), `flowinger/clipboard` (`useClipboard`), `flowinger/snaplines` (`useSnapLines`,
+  `SnapLinesOverlay`), `flowinger/export` (`exportCanvasToSvg`, `exportCanvasToPng`, `downloadFile`),
+  `flowinger/smart-edges` (`SmartEdge`, `getSmartEdgePath`), `flowinger/shapes` (flowchart nodes) and
+  `flowinger/tree` (`useCollapsibleTree`), or all of them from `flowinger/pro`. They add nothing to the core
+  unless imported. See [the pro modules](docs/pro.md).
+- `scripts/audit-react-flow.mjs` reports members *named* and *implemented* apart.
+
+### Changed
+
+- **`FlowingerCanvas`'s node position is a top-left corner everywhere.** `store.absolutePosition` (and
+  `InternalNode.internals.positionAbsolute`) is the node's drawn top-left; with the default `nodeOrigin` this
+  is what it always was.
+- **Size budgets are 34 kB (whole canvas) and 19 kB (core)**, up from 27 / 17.5. Measured: 33.6 / 18.7. Each
+  of the 39 props that were only names costs its own code, in the features that act on it; the core's share is
+  the wheel, the click distances, the two stacking hooks and the lock.
+- **Defaults that move, where React Flow's are followed:** a press on a handle is a connection only once the
+  pointer has travelled 1 px; a drop snaps to a handle within 20 graph units; clicking two handles connects them;
+  a selected node is raised by 1000; a box selection leaves a draggable rectangle round what it took; a node
+  that takes keyboard focus out of view is panned to. Where flowinger's own behaviour was established it is
+  kept when the prop is left out — Shift still adds to a selection, `zoomOnScroll` off is still no zoom, and
+  animated moves stay `'linear'`.
+- `ZIndexMode` is `'auto' | 'basic' | 'manual'`, as in React Flow (it was `'auto' | 'manual'`).
+- `FitViewOptions` no longer repeats `ease` / `interpolate`, which it inherits from `SetViewportOptions`.
+
+### Fixed
+
+- **`MiniMap`'s new props were spread onto the `<svg>` as unknown attributes**, so React warned; `NodeToolbar`'s
+  `nodeId` did the same on a `<div>`. `NodeResizer` ignored `nodeId`.
+- **`useClipboard`** asked the browser for clipboard permission on every paste (it read `navigator.clipboard` on
+  a keydown); it uses the `copy` / `cut` / `paste` events. A copied child is placed in the copy of its parent,
+  and is not offset twice.
+- **`exportCanvasToSvg`** exported the visible view at the wrong size at any zoom but 1. It exports the whole
+  diagram.
+- **`useSnapLines`** left guides on screen for alignments it had not snapped to, compared nodes of different
+  parents as one space, and ignored `nodeOrigin`; **`SnapLinesOverlay`** drew in screen space, so its guides were
+  wrong at any pan or zoom; and it only *drew* guides — `snapNodeChanges` applies the snap.
+- **`useCollapsibleTree`** revealed what sat under a branch still collapsed when an ancestor was expanded.
+- **`SmartEdge`** treated its own end nodes as obstacles (so every edge ran the router), did not leave a handle
+  the way it faced, and recomputed on every drag frame.
+- **Shape nodes** ignored the node's `width` / `height`, and `data.color` was declared and unread.
+
 ## [0.4.0] - 2026-10-11
 
 ### Added
@@ -135,7 +227,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0
 [0.4.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0-rc.1
 [0.3.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.2.0...v0.3.0

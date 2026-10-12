@@ -26,7 +26,7 @@ body:
     id: version
     attributes:
       label: flowinger version
-      placeholder: "0.4.0"
+      placeholder: "0.5.0"
     validations:
       required: true
   - type: input

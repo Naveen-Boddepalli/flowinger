@@ -1,5 +1,5 @@
-import { memo, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
-import { useFlowinger } from './context.ts';
+import { memo, useSyncExternalStore, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
+import { useFlowinger, useFlowingerStore } from './context.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import type { FitViewOptions } from './types.ts';
 
@@ -10,6 +10,14 @@ export interface ControlsProps {
   /** The fit button. `showFitView` is the same, under React Flow's name; either can turn it off. */
   showFit?: boolean;
   showFitView?: boolean;
+  /**
+   * A lock button that switches interaction off and on — nodes dragged, connected and selected — over what the
+   * canvas's `nodesDraggable`, `nodesConnectable` and `elementsSelectable` say. Pressed while all three are
+   * off it switches them on, as in React Flow. Default false (React Flow's is true).
+   */
+  showInteractive?: boolean;
+  /** After the lock was pressed: `true` when the canvas is now interactive. */
+  onInteractiveChange?: (interactive: boolean) => void;
   /** Shapes what the fit button does (`padding`, `duration`, …). It takes 300 ms unless this says otherwise. */
   fitViewOptions?: FitViewOptions;
   /** After the button has zoomed or fitted the view. */
@@ -76,6 +84,8 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   showZoom = true,
   showFit = true,
   showFitView = showFit,
+  showInteractive,
+  onInteractiveChange,
   fitViewOptions,
   onZoomIn,
   onZoomOut,
@@ -84,10 +94,22 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   children,
 }: ControlsProps) {
   const { zoomIn, zoomOut, fitView } = useFlowinger();
+  const store = useFlowingerStore();
+  const labels = store.labels;
+  // Whether anything can be done to the nodes right now: the canvas's props, or the lock over them.
+  const interactive = useSyncExternalStore(
+    store.subscribeInteractive,
+    () => {
+      const o = store.getOptions();
+      return store.getInteractive() ?? (o.nodesDraggable || o.nodesConnectable || o.elementsSelectable);
+    },
+    () => false,
+  );
 
   const controls = (
     <div
       data-testid="rf__controls"
+      aria-label={labels['controls.ariaLabel']}
       className={`flowinger-controls react-flow__controls ${className}`.trim()}
       style={{ ...containerStyle, ...style }}
     >
@@ -99,7 +121,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
               void zoomOut({ duration: 200 });
               onZoomOut?.();
             }}
-            aria-label="Zoom out"
+            aria-label={labels['controls.zoomOut.ariaLabel'] ?? 'Zoom out'}
             style={buttonStyle}
           >
             <span aria-hidden>−</span>
@@ -110,7 +132,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
               void zoomIn({ duration: 200 });
               onZoomIn?.();
             }}
-            aria-label="Zoom in"
+            aria-label={labels['controls.zoomIn.ariaLabel'] ?? 'Zoom in'}
             style={buttonStyle}
           >
             <span aria-hidden>+</span>
@@ -124,10 +146,28 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
             void fitView({ duration: 300, ...fitViewOptions });
             onFitView?.();
           }}
-          aria-label="Fit view"
+          aria-label={labels['controls.fitView.ariaLabel'] ?? 'Fit view'}
           style={fitStyle}
         >
           Fit
+        </button>
+      )}
+      {showInteractive && (
+        <button
+          type="button"
+          onClick={() => {
+            store.setInteractive(!interactive);
+            onInteractiveChange?.(!interactive);
+          }}
+          aria-label={labels['controls.interactive.ariaLabel'] ?? 'Toggle interactivity'}
+          aria-pressed={!interactive}
+          style={buttonStyle}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.4">
+            <rect x="2" y="5.5" width="8" height="5.5" rx="1" />
+            {/* Shut when locked, lifted when not. */}
+            <path d={interactive ? 'M4 5.5V3.5a2 2 0 0 1 3.8-0.9' : 'M4 5.5V3.5a2 2 0 0 1 4 0v2'} />
+          </svg>
         </button>
       )}
       {children}

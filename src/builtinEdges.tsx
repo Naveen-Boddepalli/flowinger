@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
-import { getBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
+import { getBezierPath, getSimpleBezierPath, getSmoothStepPath, getStraightPath } from './paths.ts';
 import type { EdgeProps } from './types.ts';
 
 /** What `BaseEdge` takes of a custom edge's props, apart from the path. */
@@ -34,6 +34,12 @@ export const StraightEdge = /*#__PURE__*/ memo(function StraightEdge(props: Edge
   return <BaseEdge path={path} labelX={labelX} labelY={labelY} {...drawing(props)} />;
 });
 
+/** A simple cubic bezier with mid-point control points and no curvature adjustment. */
+export const SimpleBezierEdge = /*#__PURE__*/ memo(function SimpleBezierEdge(props: EdgeProps) {
+  const [path, labelX, labelY] = getSimpleBezierPath({ ...ends(props), ...sides(props) });
+  return <BaseEdge path={path} labelX={labelX} labelY={labelY} {...drawing(props)} />;
+});
+
 /** Right angles with rounded corners; `pathOptions.borderRadius` rounds them (default 5). */
 export const SmoothStepEdge = /*#__PURE__*/ memo(function SmoothStepEdge(props: EdgeProps) {
   const [path, labelX, labelY] = getSmoothStepPath({
@@ -49,3 +55,4 @@ export const StepEdge = /*#__PURE__*/ memo(function StepEdge(props: EdgeProps) {
   const [path, labelX, labelY] = getSmoothStepPath({ ...ends(props), ...sides(props), borderRadius: 0 });
   return <BaseEdge path={path} labelX={labelX} labelY={labelY} {...drawing(props)} />;
 });
+

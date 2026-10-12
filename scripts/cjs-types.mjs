@@ -46,3 +46,30 @@ for (const rel of files) {
 }
 writeFileSync(join(out, 'package.json'), `${JSON.stringify({ type: 'commonjs' }, null, 2)}\n`);
 console.log(`cjs-types: ${files.length} declaration files -> ${out}/`);
+
+const subpaths = [
+  { name: 'history', target: 'pro/history' },
+  { name: 'clipboard', target: 'pro/clipboard' },
+  { name: 'snaplines', target: 'pro/snaplines' },
+  { name: 'export', target: 'pro/export' },
+  { name: 'smart-edges', target: 'pro/smartEdges' },
+  { name: 'shapes', target: 'pro/shapes' },
+  { name: 'tree', target: 'pro/tree' },
+  { name: 'pro', target: 'pro/index' },
+];
+
+for (const { name, target } of subpaths) {
+  mkdirSync(name, { recursive: true });
+  writeFileSync(
+    join(name, 'package.json'),
+    `${JSON.stringify(
+      {
+        main: `../dist/${target}.cjs`,
+        module: `../dist/${target}.js`,
+        types: `../dist/${target}.d.ts`,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}

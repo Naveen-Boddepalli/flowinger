@@ -7,6 +7,7 @@ import {
   viewportForBounds,
   type Size,
 } from './geometry.ts';
+import type { Modifiers } from './keys.ts';
 import { layoutSize } from './measure.ts';
 import type {
   ConnectEndState,
@@ -19,8 +20,10 @@ import type {
   FlowingerInstance,
   HandleType,
   InternalNode,
+  KeyCode,
   Node,
   NodeChange,
+  NodeOrigin,
   Position,
   Rect,
   SetCenterOptions,
@@ -74,6 +77,8 @@ export interface FlowingerState {
   maxZoom: number;
   /** Whether every node has been measured. */
   nodesInitialized: boolean;
+  onNodesChangeMiddlewareMap?: Map<symbol, (changes: NodeChange[]) => NodeChange[]>;
+  onEdgesChangeMiddlewareMap?: Map<symbol, (changes: EdgeChange[]) => EdgeChange[]>;
 }
 
 /**
@@ -144,6 +149,7 @@ export interface NodeCallbacks {
 /** The canvas's settings the store needs to act on a gesture. */
 export interface EngineOptions {
   nodesDraggable: boolean;
+  nodesConnectable: boolean;
   elementsSelectable: boolean;
   /** Round a dragged node's position to a multiple of these. */
   snapGrid: readonly [number, number] | null;
@@ -155,11 +161,18 @@ export interface EngineOptions {
   autoPanOnNodeDrag: boolean;
   autoPanOnConnect: boolean;
   autoPanSpeed: number;
+  /** Where a node's `position` is on it: `[0, 0]` its top-left corner, `[0.5, 0.5]` its centre. */
+  nodeOrigin: NodeOrigin;
+  /** Pixels a press must travel to become a node drag; null leaves it at the engine's own 3. */
+  nodeDragThreshold: number | null;
+  /** A selector for what a press is not the canvas's or a node's on, besides `nodrag` and `nopan`: yours. */
+  ignored: string | null;
 }
 
 /** The options a store starts with, before a canvas has told it otherwise. */
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   nodesDraggable: false,
+  nodesConnectable: false,
   elementsSelectable: false,
   snapGrid: null,
   nodeExtent: null,
@@ -168,7 +181,11 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   autoPanOnNodeDrag: true,
   autoPanOnConnect: true,
   autoPanSpeed: 15,
+  nodeOrigin: [0, 0],
+  nodeDragThreshold: null,
+  ignored: null,
 };
+
 
 /** What is worth drawing right now — null means everything. */
 export interface VisibleSet {
@@ -289,6 +306,12 @@ export function createFlowingerStore(
   let viewportEl: HTMLElement | null = null;
   let containerEl: HTMLElement | null = null;
   let mounted = false;
+  let interactiveOverride: boolean | null = null;
+  /** A feature's path for `interpolate: 'smooth'`, if any. */
+  let smoothFn: Feature['smoothViewport'];
+  /** A feature's way of knowing a key is held (`zoomKeyFeature`); without one, none is. */
+  let keyFn: Feature['keyHeld'];
+  const interactiveListeners = new Set<Listener>();
 
   let nodes: readonly Node[] = [];
   let nodeById = new Map<string, Node>();
@@ -312,6 +335,8 @@ export function createFlowingerStore(
   let connection: DragConnection | null = null;
   let stopObserving: (() => void) | null = null;
   let geometryVersion = 0;
+  const onNodesChangeMiddlewareMap = new Map<symbol, (changes: NodeChange[]) => NodeChange[]>();
+  const onEdgesChangeMiddlewareMap = new Map<symbol, (changes: EdgeChange[]) => EdgeChange[]>();
 
   const viewportListeners = new Set<Listener>();
   const geometryListeners = new Set<Listener>();
@@ -496,6 +521,7 @@ export function createFlowingerStore(
   const setViewport = (requested: Viewport, options?: SetViewportOptions): Promise<boolean> => {
     const to = constrain({ ...requested, zoom: clampZoom(requested.zoom) });
     const duration = options?.duration ?? 0;
+    const ease = options?.ease ?? easeOutCubic;
     target = to;
     cancelTween();
 
@@ -511,18 +537,28 @@ export function createFlowingerStore(
         cancelTween(true);
         commitViewport(to);
       };
+      // `'smooth'` is a path through the zoom — out and back in over a long move — which needs the pane's size.
+      const pane = containerEl ? { width: containerEl.clientWidth, height: containerEl.clientHeight } : null;
+      const smooth =
+        options?.interpolate === 'smooth' && smoothFn && pane && pane.width > 0 && pane.height > 0
+          ? smoothFn(from, to, pane.width, pane.height)
+          : null;
       const tick = (now: number) => {
         const t = Math.min(1, (now - start) / duration);
         if (t >= 1) {
           land();
           return;
         }
-        const e = easeOutCubic(t);
-        commitViewport({
-          x: from.x + (to.x - from.x) * e,
-          y: from.y + (to.y - from.y) * e,
-          zoom: from.zoom + (to.zoom - from.zoom) * e,
-        });
+        const e = ease(t);
+        commitViewport(
+          smooth
+            ? smooth(e)
+            : {
+                x: from.x + (to.x - from.x) * e,
+                y: from.y + (to.y - from.y) * e,
+                zoom: from.zoom + (to.zoom - from.zoom) * e,
+              },
+        );
         if (tween) tween.frame = requestAnimationFrame(tick);
       };
       tween = {
@@ -581,14 +617,32 @@ export function createFlowingerStore(
       height: node.height ?? node.initialHeight ?? FALLBACK_SIZE.height,
     };
 
+  /** Whether the pan-activation key is held — set by `panKeyFeature`, read by the canvas when a press begins. */
+  let panKeyHeld = false;
+  const NO_OFFSET: XYPosition = { x: 0, y: 0 };
+  const NO_ORIGIN: NodeOrigin = [0, 0];
+  /** A node's origin: its own, else the canvas's. `[0, 0]` is `position` being its top-left corner. */
+  const hasOrigin = (n: Node): boolean => {
+    const o = n.origin ?? options.nodeOrigin;
+    return o[0] !== 0 || o[1] !== 0;
+  };
+  /** How far a node's top-left corner is from its `position`: its origin times its size. */
+  const originOffset = (n: Node): XYPosition => {
+    const o = n.origin ?? options.nodeOrigin;
+    if (o[0] === 0 && o[1] === 0) return NO_OFFSET;
+    const size = getNodeSize(n);
+    return { x: o[0] * size.width, y: o[1] * size.height };
+  };
+
   /**
-   * A node's place on the canvas: its own position — a drag included — plus its
-   * ancestors'. For a root that is `resolvePosition` itself; for a child it is
-   * remembered by id so `useSyncExternalStore` gets the same object until it moves.
+   * A node's top-left corner on the canvas: its position — a drag included — less its origin's share of its
+   * size, plus the same for every ancestor (a child's `position` is relative to its parent's top-left). For
+   * a root with no origin that is `resolvePosition` itself; otherwise it is remembered by id so
+   * `useSyncExternalStore` gets the same object until it moves.
    */
   const absolutePosition = (node: Node): XYPosition => {
-    if (node.parentId === undefined) return resolvePosition(node.id, node.position);
-    const at = absolutePositionOf(node, (id) => nodeById.get(id), resolvePosition);
+    if (node.parentId === undefined && !hasOrigin(node)) return resolvePosition(node.id, node.position);
+    const at = absolutePositionOf(node, (id) => nodeById.get(id), resolvePosition, originOffset);
     const known = absCache.get(node.id);
     if (known && samePoint(known, at)) return known;
     absCache.set(node.id, at);
@@ -618,10 +672,20 @@ export function createFlowingerStore(
   const edgesControlled = (): boolean => callbacks.onEdgesChange !== undefined;
 
   const emitNodeChanges = (changes: NodeChange[]) => {
-    if (changes.length > 0) callbacks.onNodesChange?.(changes);
+    if (changes.length === 0) return;
+    let next = changes;
+    for (const middleware of onNodesChangeMiddlewareMap.values()) {
+      next = middleware(next);
+    }
+    if (next.length > 0) callbacks.onNodesChange?.(next);
   };
   const emitEdgeChanges = (changes: EdgeChange[]) => {
-    if (changes.length > 0) callbacks.onEdgesChange?.(changes);
+    if (changes.length === 0) return;
+    let next = changes;
+    for (const middleware of onEdgesChangeMiddlewareMap.values()) {
+      next = middleware(next);
+    }
+    if (next.length > 0) callbacks.onEdgesChange?.(next);
   };
 
   /**
@@ -650,6 +714,9 @@ export function createFlowingerStore(
     if (known?.width === width && known.height === height) return;
     sizes.set(id, { width, height });
     bumpGeometry();
+    // With an origin, where the top-left is depends on the size: tell the node, and what is inside it.
+    const measured = nodeById.get(id);
+    if (measured && hasOrigin(measured)) emitNodeTree(id);
     flushDimensions();
   };
 
@@ -769,7 +836,12 @@ export function createFlowingerStore(
   /** Where a node is and how big, in graph units: the dragged position, the measured size. */
   const getNodeRect = (id: string): Rect | null => {
     const n = nodeById.get(id);
-    return n ? { ...resolvePosition(id, n.position), ...getNodeSize(n) } : null;
+    if (!n) return null;
+    // In the node's own space — relative to its parent's top-left, which is where a position is written —
+    // and its top-left corner, whatever its origin is.
+    const pos = resolvePosition(id, n.position);
+    const offset = originOffset(n);
+    return { x: pos.x - offset.x, y: pos.y - offset.y, ...getNodeSize(n) };
   };
 
   /** The selection as it stands, as elements. */
@@ -877,14 +949,18 @@ export function createFlowingerStore(
     };
   };
 
-  const boundsOfNodes = (list: readonly Node[]): Rect =>
+  const boundsOfNodes = (list: readonly Node[], opts?: { nodeOrigin?: NodeOrigin }): Rect =>
     getNodesBounds(
       list.map((n) => ({
         ...snapshotNode(n),
-        position: absolutePosition(n),
+        // The top-left, already — so no origin to take off again. An origin asked for explicitly is the
+        // origin of the position as given: the canvas's own, and the node's, are set aside.
+        position: opts?.nodeOrigin ? absolutePositionOf(n, (id) => nodeById.get(id), resolvePosition) : absolutePosition(n),
+        origin: opts?.nodeOrigin ?? NO_ORIGIN,
         measured: sizes.get(n.id) ?? n.measured,
       })),
     );
+
 
   const fitBounds = (bounds: Rect, opts?: FitViewOptions): Promise<boolean> => {
     const pane = paneSize();
@@ -1004,6 +1080,8 @@ export function createFlowingerStore(
         minZoom,
         maxZoom,
         nodesInitialized: areNodesInitialized(),
+        onNodesChangeMiddlewareMap,
+        onEdgesChangeMiddlewareMap,
       };
     }
     return cachedState;
@@ -1114,11 +1192,16 @@ export function createFlowingerStore(
   const use = (list: readonly Feature[]) => {
     for (const feature of resolveFeatures(list)) {
       if (!installed.has(feature.name)) installed.set(feature.name, feature.install?.(ctx));
+      if (feature.smoothViewport) smoothFn = feature.smoothViewport;
+      if (feature.keyHeld) keyFn = feature.keyHeld;
     }
   };
 
   /** Created once. Its identity is the contract: it never changes. */
   const instance: FlowingerInstance = {
+    get viewportInitialized() {
+      return mounted;
+    },
     setViewport,
     getViewport: () => viewport,
     getZoom: () => viewport.zoom,
@@ -1157,7 +1240,11 @@ export function createFlowingerStore(
     updateEdgeData: lend('editing', 'updateEdgeData'),
     getIntersectingNodes: lend('editing', 'getIntersectingNodes'),
     isNodeIntersecting: lend('editing', 'isNodeIntersecting'),
-    getNodesBounds: (list) => boundsOfNodes(list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n))),
+    getNodesBounds: (list, opts) =>
+      boundsOfNodes(
+        list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n)),
+        opts,
+      ),
     getNodeConnections: lend('editing', 'getNodeConnections'),
     getHandleConnections: lend('editing', 'getHandleConnections'),
     toObject: () => ({ nodes: getNodesNow(), edges: getEdgesNow(), viewport }),
@@ -1199,17 +1286,30 @@ export function createFlowingerStore(
       callbacks = next;
     },
     setOptions: (next: EngineOptions) => {
+      const moved = next.nodeOrigin[0] !== options.nodeOrigin[0] || next.nodeOrigin[1] !== options.nodeOrigin[1];
       options = next;
+      // The canvas's origin changed: every node without one of its own is somewhere else.
+      if (moved) {
+        absCache.clear();
+        bumpGeometry();
+        for (const listeners of nodeListeners.values()) emit(listeners);
+      }
       run('change');
     },
+    getOptions: () => options,
     getCallbacks: () => callbacks,
 
     getViewport: () => viewport,
     getState,
     getGeometryVersion: () => geometryVersion,
 
+    setPanKeyHeld: (held: boolean) => {
+      panKeyHeld = held;
+    },
+    isPanKeyHeld: () => panKeyHeld,
     resolvePosition,
     absolutePosition,
+    originOffset,
     getNodeSize,
     getVisible: (): VisibleSet | null => visible,
     subscribeVisible: subscribeTo(visibleListeners),
@@ -1234,6 +1334,21 @@ export function createFlowingerStore(
     subscribeSelection: subscribeTo(selectionChangeListeners),
     getSelection,
     areNodesInitialized,
+    emitNodeChanges,
+    emitEdgeChanges,
+    onNodesChangeMiddlewareMap,
+    onEdgesChangeMiddlewareMap,
+    /** Labels for the controls, the minimap and handles, from `ariaLabelConfig` — written by `a11yFeature`. */
+    labels: {} as Record<string, string | undefined>,
+
+    isKeyHeld: (code: KeyCode | null | undefined, e: Modifiers): boolean => keyFn?.(code, e) ?? false,
+    /** The Controls' lock: whether interaction is forced on or off, over what the canvas's props say; null when not. */
+    getInteractive: (): boolean | null => interactiveOverride,
+    setInteractive: (next: boolean | null) => {
+      interactiveOverride = next;
+      for (const fn of interactiveListeners) fn();
+    },
+    subscribeInteractive: subscribeTo(interactiveListeners),
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),

@@ -1672,8 +1672,10 @@ describe('Flowinger connecting', () => {
     pointerOver(null);
     const { container } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} nodesConnectable />);
     press(handle(container, 'a', 'out'), 50, 40);
-    expect(line(container)).not.toBeNull();
+    // Not yet: a press is only a press until the pointer has travelled (`connectionDragThreshold`).
+    expect(line(container)).toBeNull();
     move(300, 120);
+    expect(line(container)).not.toBeNull();
     // a's bottom-middle is (50, 40); the pointer is at (300, 120).
     expect(lineD(container)).toMatch(/^M 50\.00 40\.00 C/);
     expect(lineD(container)).toMatch(/300\.00 120\.00$/);

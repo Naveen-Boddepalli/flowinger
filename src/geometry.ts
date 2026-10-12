@@ -1,4 +1,4 @@
-import type { Node, Rect, TranslateExtent, Viewport, XYPosition } from './types.ts';
+import type { Node, NodeOrigin, Rect, TranslateExtent, Viewport, XYPosition } from './types.ts';
 
 export interface Size {
   width: number;
@@ -18,7 +18,7 @@ export const sizeOfNode = (node: Node): Size => ({
 });
 
 /** The smallest rectangle holding every node. Empty in, an empty rectangle out. */
-export function getNodesBounds(nodes: readonly Node[]): Rect {
+export function getNodesBounds(nodes: readonly Node[], options?: { nodeOrigin?: NodeOrigin }): Rect {
   if (nodes.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
   let minX = Infinity;
   let minY = Infinity;
@@ -26,13 +26,17 @@ export function getNodesBounds(nodes: readonly Node[]): Rect {
   let maxY = -Infinity;
   for (const node of nodes) {
     const { width, height } = sizeOfNode(node);
-    minX = Math.min(minX, node.position.x);
-    minY = Math.min(minY, node.position.y);
-    maxX = Math.max(maxX, node.position.x + width);
-    maxY = Math.max(maxY, node.position.y + height);
+    const origin = node.origin ?? options?.nodeOrigin ?? [0, 0];
+    const x = node.position.x - origin[0] * width;
+    const y = node.position.y - origin[1] * height;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + width);
+    maxY = Math.max(maxY, y + height);
   }
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
+
 
 export function overlappingArea(a: Rect, b: Rect): number {
   const x = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));

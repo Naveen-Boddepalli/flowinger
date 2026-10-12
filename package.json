@@ -1,6 +1,6 @@
 {
   "name": "flowinger",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Bespoke, lightweight, and dependency-free React node graph renderer",
   "keywords": [
     "react",
@@ -45,11 +45,111 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./history": {
+      "import": {
+        "types": "./dist/pro/history.d.ts",
+        "default": "./dist/pro/history.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/history.d.ts",
+        "default": "./dist/pro/history.cjs"
+      }
+    },
+    "./clipboard": {
+      "import": {
+        "types": "./dist/pro/clipboard.d.ts",
+        "default": "./dist/pro/clipboard.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/clipboard.d.ts",
+        "default": "./dist/pro/clipboard.cjs"
+      }
+    },
+    "./snaplines": {
+      "import": {
+        "types": "./dist/pro/snaplines.d.ts",
+        "default": "./dist/pro/snaplines.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/snaplines.d.ts",
+        "default": "./dist/pro/snaplines.cjs"
+      }
+    },
+    "./export": {
+      "import": {
+        "types": "./dist/pro/export.d.ts",
+        "default": "./dist/pro/export.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/export.d.ts",
+        "default": "./dist/pro/export.cjs"
+      }
+    },
+    "./smart-edges": {
+      "import": {
+        "types": "./dist/pro/smartEdges.d.ts",
+        "default": "./dist/pro/smartEdges.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/smartEdges.d.ts",
+        "default": "./dist/pro/smartEdges.cjs"
+      }
+    },
+    "./shapes": {
+      "import": {
+        "types": "./dist/pro/shapes.d.ts",
+        "default": "./dist/pro/shapes.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/shapes.d.ts",
+        "default": "./dist/pro/shapes.cjs"
+      }
+    },
+    "./tree": {
+      "import": {
+        "types": "./dist/pro/tree.d.ts",
+        "default": "./dist/pro/tree.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/tree.d.ts",
+        "default": "./dist/pro/tree.cjs"
+      }
+    },
+    "./pro": {
+      "import": {
+        "types": "./dist/pro/index.d.ts",
+        "default": "./dist/pro/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/index.d.ts",
+        "default": "./dist/pro/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "history": ["dist/pro/history.d.ts"],
+      "clipboard": ["dist/pro/clipboard.d.ts"],
+      "snaplines": ["dist/pro/snaplines.d.ts"],
+      "export": ["dist/pro/export.d.ts"],
+      "smart-edges": ["dist/pro/smartEdges.d.ts"],
+      "shapes": ["dist/pro/shapes.d.ts"],
+      "tree": ["dist/pro/tree.d.ts"],
+      "pro": ["dist/pro/index.d.ts"]
+    }
   },
   "files": [
     "dist",
-    "NOTICE.md"
+    "NOTICE.md",
+    "history",
+    "clipboard",
+    "snaplines",
+    "export",
+    "smart-edges",
+    "shapes",
+    "tree",
+    "pro"
   ],
   "scripts": {
     "dev": "vite",

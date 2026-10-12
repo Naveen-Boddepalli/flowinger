@@ -12,9 +12,19 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: resolve(import.meta.dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(import.meta.dirname, 'src/index.ts'),
+        'pro/history': resolve(import.meta.dirname, 'src/pro/history.ts'),
+        'pro/clipboard': resolve(import.meta.dirname, 'src/pro/clipboard.ts'),
+        'pro/snaplines': resolve(import.meta.dirname, 'src/pro/snaplines.tsx'),
+        'pro/export': resolve(import.meta.dirname, 'src/pro/export.ts'),
+        'pro/smartEdges': resolve(import.meta.dirname, 'src/pro/smartEdges.tsx'),
+        'pro/shapes': resolve(import.meta.dirname, 'src/pro/shapes.tsx'),
+        'pro/tree': resolve(import.meta.dirname, 'src/pro/tree.ts'),
+        'pro/index': resolve(import.meta.dirname, 'src/pro/index.ts'),
+      },
       name: 'Flowinger',
-      fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
+      fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
       formats: ['es', 'cjs'],
     },
     rollupOptions: {

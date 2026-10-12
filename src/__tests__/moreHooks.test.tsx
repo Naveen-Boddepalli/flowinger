@@ -228,6 +228,7 @@ describe('useConnection', () => {
     const { seen, Reader } = watch();
     const { container } = render(canvas(Reader));
     press(handle(container, 'a', 'out'), 50, 40);
+    move(60, 50); // it begins once the pointer has travelled
     const during = seen[seen.length - 1]!;
     expect(during.inProgress).toBe(true);
     if (!during.inProgress) throw new Error('unreachable');
@@ -300,6 +301,7 @@ describe('useConnection', () => {
     const { seen, Reader } = watch();
     const { container, rerender } = render(canvas(Reader));
     press(handle(container, 'a', 'out'), 50, 40);
+    move(55, 45);
     expect(seen[seen.length - 1]!.inProgress).toBe(true);
     act(() => {
       rerender(

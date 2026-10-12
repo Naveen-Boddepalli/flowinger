@@ -11,8 +11,16 @@ export {
   edgeLabelsFeature,
   editingFeature,
   eventsFeature,
+  panKeyFeature,
   reconnectFeature,
   selectionFeature,
+  selectionRectFeature,
+  a11yFeature,
+  debugFeature,
+  stackingFeature,
+  smoothFeature,
+  zoomKeyFeature,
+  colorModeFeature,
 } from './features/index.ts';
 export type {
   CanvasArgs,
@@ -80,28 +88,42 @@ export { getNodesBounds, getViewportForBounds, isRectIntersecting, viewportForBo
 // Handles & Ports
 export { Handle } from './Handle.tsx';
 export { BaseEdge, type BaseEdgeProps } from './BaseEdge.tsx';
-export { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './builtinEdges.tsx';
+export { BezierEdge, SimpleBezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './builtinEdges.tsx';
+export { EdgeText } from './EdgeText.tsx';
+export { EdgeToolbar } from './EdgeToolbar.tsx';
 export { isEdge, isNode } from './guards.ts';
+export {
+  experimental_useOnNodesChangeMiddleware,
+  experimental_useOnEdgesChangeMiddleware,
+} from './middlewares.ts';
 
 // Background & Controls
 export { Background } from './Background.tsx';
-export { MiniMap, type MiniMapProps } from './MiniMap.tsx';
+export { MiniMap, MiniMapNode, type MiniMapProps, type MiniMapNodeProps } from './MiniMap.tsx';
 export { Controls, ControlButton, type ControlsProps } from './Controls.tsx';
 export { Panel, type PanelProps, type PanelPosition } from './Panel.tsx';
 export { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
 export { ViewportPortal } from './ViewportPortal.tsx';
 export { NodeToolbar, type NodeToolbarProps } from './NodeToolbar.tsx';
-export { NodeResizer, type NodeResizerProps, type ResizeParams } from './NodeResizer.tsx';
+export {
+  NodeResizer,
+  NodeResizeControl,
+  type NodeResizerProps,
+  type ResizeControlProps,
+  type ResizeParams,
+} from './NodeResizer.tsx';
 
 // Edges & Path Math
 export { FlowingerEdges, type FlowingerEdgesProps } from './FlowingerEdges.tsx';
 export {
   getBezierEdgeCenter,
   getBezierPath,
+  getSimpleBezierPath,
   getEdgeCenter,
   getStraightPath,
   getSmoothStepPath,
   type GetBezierPathParams,
+  type GetSimpleBezierPathParams,
   type GetSmoothStepPathParams,
   type GetStraightPathParams,
   type PathResult,
@@ -159,26 +181,50 @@ export type { FlowingerState } from './store.ts';
 
 // React Flow's names for types flowinger already has (types only — see the file for what is left out).
 export type {
+  Align,
+  AriaLabelConfig,
+  BezierPathOptions,
   Box,
   BezierEdgeProps,
+  BuiltInEdge,
+  BuiltInNode,
+  ColorMode,
+  ColorModeClass,
   ConnectionLineComponent,
   ConnectionLineComponentProps,
   ControlButtonProps,
+  ControlLinePosition,
+  ControlPosition,
   ControlProps,
   CoordinateExtent,
+  CounterNode,
   DefaultEdgeOptions,
   DeleteElementsOptions,
   Dimensions,
+  EdgeComponentProps,
+  EdgeComponentWithPathOptions,
+  EdgeLabelOptions,
   EdgeLabelRendererProps,
   EdgeMarkerType,
   EdgeMouseHandler,
+  EdgeTextProps,
+  EdgeToolbarProps,
+  EdgeWrapperProps,
+  FinalConnectionState,
   FitBounds,
   FitBoundsOptions,
   FitView,
+  FitViewParams,
+  GeneralHelpers,
+  GetMiniMapNodeAttribute,
   HandleConnection,
   IsValidConnection,
   KeyCode,
+  MiniMapNodes,
+  NodeHandle,
   NodeMouseHandler,
+  NodeOrigin,
+  NodeWrapperProps,
   OnBeforeDelete,
   OnConnect,
   OnConnectEnd,
@@ -187,6 +233,7 @@ export type {
   OnDelete,
   OnEdgesChange,
   OnEdgesDelete,
+  OnError,
   OnInit,
   OnMove,
   OnMoveEnd,
@@ -200,19 +247,37 @@ export type {
   OnResizeStart,
   OnSelectionChangeFunc,
   OnSelectionChangeParams,
+  OnSelectionDrag,
+  PanOnScrollMode,
   ProOptions,
+  ReactFlowActions,
   ReactFlowInstance,
   ReactFlowJsonObject,
   ReactFlowProps,
+  ReactFlowState,
+  ReactFlowStore,
+  ResizeControlLineProps,
+  ResizeControlVariant,
+  ResizeDragEvent,
+  ResizeParamsWithDirection,
+  SelectionDragHandler,
+  SelectionRect,
   SetCenter,
   SetViewport,
   ShouldResize,
+  SimpleBezierEdgeProps,
   SmoothStepEdgeProps,
+  SmoothStepPathOptions,
   SnapGrid,
   StepEdgeProps,
   StraightEdgeProps,
   Transform,
+  UnselectNodesAndEdgesParams,
   UseNodeConnectionsParams,
+  UseNodesInitializedOptions,
   UseOnSelectionChangeOptions,
+  ViewportHelperFunctionOptions,
+  ViewportHelperFunctions,
   XYZPosition,
+  ZIndexMode,
 } from './reactFlowNames.ts';

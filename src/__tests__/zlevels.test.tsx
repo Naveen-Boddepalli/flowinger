@@ -145,9 +145,14 @@ describe('where an edge is stacked', () => {
       );
       Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
       fireEvent.pointerDown(must(container, '[data-handleid="out"]'), { pointerId: 1, button: 0, clientX: 50, clientY: 40 });
-      const [, high] = layers(container);
-      expect(high?.querySelector('[data-testid="line"]')).not.toBeNull();
-      expect(layers(container)[0]?.querySelector('[data-testid="line"]')).toBeNull();
+      fireEvent.pointerMove(window, { pointerId: 1, button: 0, clientX: 80, clientY: 90 });
+      const [low, high] = layers(container);
+      // Its own element, as high as the highest layer of edges — above the ones it passes over.
+      const holder = must<SVGSVGElement>(container, 'svg.flowinger-connection');
+      expect(holder.querySelector('[data-testid="line"]')).not.toBeNull();
+      expect(z(holder)).toBe(z(high as Element));
+      expect(Number(z(holder))).toBeGreaterThan(Number(z(low as Element)));
+      expect(low?.querySelector('[data-testid="line"]')).toBeNull();
     });
   });
 });

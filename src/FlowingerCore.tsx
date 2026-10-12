@@ -119,7 +119,7 @@ function InnerCanvas(props: FlowingerProps) {
     edgeTypes,
     minZoom = 0.05,
     maxZoom = 2,
-    nodesDraggable = false,
+    nodesDraggable: nodesDraggableProp = false,
     panOnDrag = true,
     selectionOnDrag = false,
     panOnScroll = false,
@@ -133,8 +133,8 @@ function InnerCanvas(props: FlowingerProps) {
     connectionLineStyle,
     connectionLineComponent,
     zoomOnPinch = true,
-    elementsSelectable = false,
-    nodesConnectable = false,
+    elementsSelectable: elementsSelectableProp = false,
+    nodesConnectable: nodesConnectableProp = false,
     translateExtent,
     connectionMode = 'strict',
     edgesFocusable = true,
@@ -178,8 +178,25 @@ function InnerCanvas(props: FlowingerProps) {
     onMove,
     onMoveStart,
     onMoveEnd,
+    nodeOrigin,
+    nodeDragThreshold,
+    zoomActivationKeyCode,
+    panOnScrollMode,
+    preventScrolling,
+    noWheelClassName,
+    noPanClassName,
+    noDragClassName,
+    paneClickDistance,
+    connectionLineContainerStyle,
+    defaultMarkerColor,
+    disableKeyboardA11y,
   } = props;
   const store = useFlowingerStore();
+  // The Controls' lock, where there is one, is over what these say: all on, or all off.
+  const locked = useSyncExternalStore(store.subscribeInteractive, store.getInteractive, () => null);
+  const nodesDraggable = locked ?? nodesDraggableProp;
+  const nodesConnectable = locked ?? nodesConnectableProp;
+  const elementsSelectable = locked ?? elementsSelectableProp;
   // Installed while rendering, so they are there for every effect below and for whoever holds the
   // instance; installing is idempotent, so a render that is discarded or repeated does no harm.
   // Read once: a feature is not something a canvas gains or loses.
@@ -222,11 +239,14 @@ function InnerCanvas(props: FlowingerProps) {
   const pinch = useRef<PinchStart | null>(null);
   /** A pan just ended: the click that follows it is not a click on the canvas. */
   const justPanned = useRef(false);
+  /** Where the last press began, for `paneClickDistance`. */
+  const pressedAt = useRef<XYPosition | null>(null);
   // What each feature adds to the canvas's own handlers, in the order they were given.
   const suppressPaneClick = useCallback(() => {
     justPanned.current = true;
   }, []);
-  const bits = feats.flatMap((f) => f.useCanvas?.({ store, props, suppressPaneClick }) ?? []);
+  const featureProps = locked === null ? props : { ...props, nodesDraggable, nodesConnectable, elementsSelectable };
+  const bits = feats.flatMap((f) => f.useCanvas?.({ store, props: featureProps, suppressPaneClick }) ?? []);
   // Selecting needs a feature that acts on it. Given that, a node or edge is selectable where it says so itself,
   // else where the canvas allows it (`elementsSelectable`).
   const canSelect = bits.some((b) => b.selectable === true);
@@ -282,9 +302,17 @@ function InnerCanvas(props: FlowingerProps) {
   // Callbacks and options first: whether the flow is controlled is decided by
   // them, and the nodes below are read in that light.
   const [gridX, gridY] = snapGrid ?? [15, 15];
+  const [originX, originY] = nodeOrigin ?? [0, 0];
+  // Your own classes for what a press passes through (`nodrag` and `nopan` always do).
+  const ignored =
+    [noPanClassName, noDragClassName]
+      .filter(Boolean)
+      .map((c) => `.${String(c)}`)
+      .join(', ') || null;
   useIsomorphicLayoutEffect(() => {
     store.setOptions({
       nodesDraggable,
+      nodesConnectable,
       elementsSelectable,
       snapGrid: snapToGrid ? [gridX, gridY] : null,
       nodeExtent: nodeExtent ?? null,
@@ -293,10 +321,14 @@ function InnerCanvas(props: FlowingerProps) {
       autoPanOnNodeDrag,
       autoPanOnConnect,
       autoPanSpeed,
+      nodeOrigin: [originX, originY],
+      nodeDragThreshold: nodeDragThreshold ?? null,
+      ignored,
     });
   }, [
     store,
     nodesDraggable,
+    nodesConnectable,
     elementsSelectable,
     snapToGrid,
     gridX,
@@ -307,6 +339,10 @@ function InnerCanvas(props: FlowingerProps) {
     autoPanOnNodeDrag,
     autoPanOnConnect,
     autoPanSpeed,
+    originX,
+    originY,
+    nodeDragThreshold,
+    ignored,
   ]);
 
   // Nesting, read from the nodes as given: where each one's parent sits, how deep
@@ -403,14 +439,27 @@ function InnerCanvas(props: FlowingerProps) {
   // scrolling underneath.
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || (!zoomOnScroll && !panOnScroll)) return;
+    if (!container) return;
     const onWheel = (e: WheelEvent) => {
       // Something inside that scrolls, or zooms, for itself: `nowheel` lets the wheel through to it.
-      if (e.target instanceof Element && e.target.closest('.nowheel')) return;
+      if (
+        e.target instanceof Element &&
+        e.target.closest(noWheelClassName ? `.nowheel, .${noWheelClassName}` : '.nowheel')
+      ) {
+        return;
+      }
       const unit = WHEEL_PIXELS_PER_UNIT[e.deltaMode as 0 | 1 | 2];
-      // A trackpad pinch arrives as ctrl+wheel with small deltas.
-      const zooming = panOnScroll ? e.ctrlKey || e.metaKey : true;
-      if (zooming && !zoomOnScroll) return;
+      // The key that makes the wheel zoom, where a key is given: then holding it zooms even where
+      // `zoomOnScroll` is off, and a pinch zooms whatever `zoomOnScroll` says, as in React Flow. Not given, Ctrl
+      // or ⌘ (a trackpad pinch arrives as ctrl+wheel) only chooses between zooming and panning, and
+      // `zoomOnScroll` off means no zoom at all.
+      const keyed = zoomActivationKeyCode !== undefined;
+      const held = keyed && store.isKeyHeld(zoomActivationKeyCode, e);
+      const pinch = keyed && zoomOnPinch && e.ctrlKey;
+      const zooming = panOnScroll ? (keyed ? held || pinch : e.ctrlKey || e.metaKey) : true;
+      if (zooming && !(zoomOnScroll || held || pinch)) return;
+      // Off, a plain wheel is the page's; a pinch is still ours.
+      if (zooming && preventScrolling === false && !e.ctrlKey) return;
       e.preventDefault();
       // A run of ticks is one move; it ends when the wheel goes quiet.
       store.beginGesture(e, WHEEL_QUIET_MS);
@@ -421,9 +470,18 @@ function InnerCanvas(props: FlowingerProps) {
         return;
       }
       const vp = store.getViewport();
+      let dx = e.deltaX;
+      let dy = e.deltaY;
+      if (panOnScrollMode === 'vertical') dx = 0;
+      else if (panOnScrollMode === 'horizontal') dy = 0;
+      // Shift turns a vertical wheel sideways (macOS does it itself, before the page sees it).
+      if (e.shiftKey && panOnScrollMode !== 'vertical' && !navigator.userAgent.includes('Mac')) {
+        dx = e.deltaY;
+        dy = 0;
+      }
       void store.instance.setViewport({
-        x: vp.x - e.deltaX * unit * panOnScrollSpeed,
-        y: vp.y - e.deltaY * unit * panOnScrollSpeed,
+        x: vp.x - dx * unit * panOnScrollSpeed,
+        y: vp.y - dy * unit * panOnScrollSpeed,
         zoom: vp.zoom,
       });
     };
@@ -431,10 +489,22 @@ function InnerCanvas(props: FlowingerProps) {
     return () => {
       container.removeEventListener('wheel', onWheel);
     };
-  }, [store, zoomOnScroll, panOnScroll, panOnScrollSpeed]);
+  }, [
+    store,
+    zoomOnScroll,
+    zoomOnPinch,
+    panOnScroll,
+    panOnScrollSpeed,
+    panOnScrollMode,
+    zoomActivationKeyCode,
+    preventScrolling,
+    noWheelClassName,
+  ]);
 
   const canPan = (button: number): boolean =>
-    Array.isArray(panOnDrag) ? panOnDrag.includes(button) : panOnDrag && (button === 0 || button === 1);
+    // `panKeyFeature`: a held key makes any press a pan.
+    (store.isPanKeyHeld() && (button === 0 || button === 1)) ||
+    (Array.isArray(panOnDrag) ? panOnDrag.includes(button) : Boolean(panOnDrag && (button === 0 || button === 1)));
 
   /** The pointers' midpoint and spread, in container pixels — the pinch's two numbers. */
   const fingers = (container: HTMLElement): { mid: XYPosition; dist: number } | null => {
@@ -448,6 +518,7 @@ function InnerCanvas(props: FlowingerProps) {
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     justPanned.current = false;
+    pressedAt.current = { x: e.clientX, y: e.clientY };
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (zoomOnPinch && pointers.current.size === 2) {
       // A second finger turns whatever the first was doing into a pinch.
@@ -461,8 +532,8 @@ function InnerCanvas(props: FlowingerProps) {
       }
     }
     // A feature may take the press — a selection box — before it becomes a pan.
-    if (bits.some((b) => b.onPointerDown?.(e))) return;
-    if (!canPan(e.button) || isInteractive(e.target)) return;
+    if (!store.isPanKeyHeld() && bits.some((b) => b.onPointerDown?.(e))) return;
+    if (!canPan(e.button) || isInteractive(e.target, ignored)) return;
     pan.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -524,7 +595,7 @@ function InnerCanvas(props: FlowingerProps) {
     pan.current = null;
     if (!p.active) return;
     releasePointer(e.currentTarget, e.pointerId);
-    e.currentTarget.style.cursor = panOnDrag ? 'grab' : '';
+    e.currentTarget.style.cursor = store.isPanKeyHeld() || panOnDrag ? 'grab' : '';
     store.endGesture(e.nativeEvent);
   };
 
@@ -537,6 +608,15 @@ function InnerCanvas(props: FlowingerProps) {
       return;
     }
     if (e.target !== e.currentTarget) return;
+    // A press that moved further than `paneClickDistance` was not a click, however little it moved.
+    const from = pressedAt.current;
+    if (
+      paneClickDistance !== undefined &&
+      from &&
+      Math.hypot(e.clientX - from.x, e.clientY - from.y) > paneClickDistance
+    ) {
+      return;
+    }
     onPaneClick?.(e);
     for (const b of bits) b.onPaneClick?.(e);
   };
@@ -609,12 +689,13 @@ function InnerCanvas(props: FlowingerProps) {
 
   return (
     <ViewportPortalHost.Provider value={portalHost}>
-      <div
+      <EdgeLabelHost.Provider value={labelHost}>
+        <div
         {...Object.assign({}, ...bits.map((b) => b.props))}
         ref={containerRef}
         id={id}
         data-testid="rf__wrapper"
-        className={`flowinger react-flow ${className}`}
+        className={`flowinger react-flow ${bits.map((b) => b.className).filter(Boolean).join(' ')} ${className}`}
         style={containerStyle}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -661,7 +742,7 @@ function InnerCanvas(props: FlowingerProps) {
               edgeTypes={edgeTypes}
               elementsSelectable={selectable}
               selectionActs={canSelect}
-              edgesFocusable={edgesFocusable}
+              edgesFocusable={edgesFocusable && !disableKeyboardA11y}
               interactive={onEdgeClick !== undefined || bits.some((b) => b.edgesInteractive === true)}
               controlledSelection={edgesChange !== undefined}
               hiddenNodeIds={tree.hidden}
@@ -669,6 +750,8 @@ function InnerCanvas(props: FlowingerProps) {
               connectionLineType={connectionLineType}
               connectionLineStyle={connectionLineStyle}
               connectionLineComponent={connectionLineComponent}
+              connectionLineContainerStyle={connectionLineContainerStyle}
+              defaultMarkerColor={defaultMarkerColor}
               reconnectable={edgesReconnectable && onReconnect !== undefined}
               depths={tree.depth}
               features={feats}
@@ -729,12 +812,14 @@ function InnerCanvas(props: FlowingerProps) {
                 parentX={tree.origin.get(node.id)?.x ?? 0}
                 parentY={tree.origin.get(node.id)?.y ?? 0}
                 depth={tree.depth.get(node.id) ?? 0}
+                nodeOrigin={nodeOrigin}
                 features={feats}
               />
             ))}
           </div>
         </div>
       </div>
+      </EdgeLabelHost.Provider>
     </ViewportPortalHost.Provider>
   );
 }

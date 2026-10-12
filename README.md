@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
   <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="docs/features.md"><img alt="core size: about 17 kB gzipped" src="https://img.shields.io/badge/core-~17_kB_gzip-blue" /></a>
+  <a href="docs/features.md"><img alt="core size: about 18.7 kB gzipped" src="https://img.shields.io/badge/core-~18.7_kB_gzip-blue" /></a>
   <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
   <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
   <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
@@ -34,19 +34,24 @@
 
 ## Why Flowinger
 
-- **Small, and only what you use.** The core is about 17 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 26 kB. In QueryLens, swapping
+- **Small, and only what you use.** The core is about 18.7 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 33.6 kB. In QueryLens, swapping
   React Flow for it took the diagram chunk from **60.5 kB to 19.0 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
   they are really drawn, so an edge follows a handle you moved with CSS.
 - **An API you already know.** React Flow's names for components, hooks, props, class names, `data-testid`s and
-  types — [158 of its 211 exports](docs/react-flow-coverage.md), measured from its own type declarations — and
-  a [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ.
+  types — all [211 of its exports](docs/react-flow-coverage.md), and **every one of the 302 members** of the props,
+  instance and components you write against *does something* (the audit counts a name that compiles and does
+  nothing apart, and there are none) — measured from its own type declarations, with a
+  [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ.
+- **The "pro" extras, free.** [Undo/redo, copy and paste, snap guides, export, smart edges, flowchart shapes
+  and a collapsible tree](docs/pro.md), each its own entry point (`flowinger/history`…), so they cost the core
+  nothing unless you import them.
 - **Server rendering that works.** Renders and hydrates on React 18 and 19, with the first paint already framed.
 - **Accessible when you ask.** Keyboard navigation, focusable nodes and edges, ARIA fields — opt-in, so a page
   that only shows a diagram does not gain tab stops it did not want.
-- **Tested against the real thing.** More than 850 unit tests (React Flow itself is the oracle for geometry and
+- **Tested against the real thing.** More than 1,000 unit tests (React Flow itself is the oracle for geometry and
   behaviour), mutation-tested guards, a real-browser suite, and CI that installs the *packed* package.
 
 ## Install
@@ -138,9 +143,9 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
 | Build | Gzipped |
 |---|---|
-| `FlowingerCore`, no features | about 17 kB |
+| `FlowingerCore`, no features | about 18.7 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 26 kB |
+| `FlowingerCanvas`, every feature | about 33.6 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).
@@ -153,6 +158,7 @@ lacks does nothing — and in development the console says so. See [Features](do
 | [API reference](docs/api.md) | Canvas props, nodes and edges, handles, sub-flows, the instance, controlled flows |
 | [Components and hooks](docs/components.md) | `Handle`, `Background`, `Controls`, `MiniMap`, `NodeToolbar`, `NodeResizer`, `useReactFlow`… |
 | [Features](docs/features.md) | What each feature adds, what needs it, and how to write your own |
+| [The "pro" modules](docs/pro.md) | Undo/redo, copy and paste, snap guides, export, smart edges, shapes, a collapsible tree |
 | [Theming](docs/theming.md) | The `--flowinger-*` CSS variables |
 | [Server rendering](docs/server-rendering.md) | What renders on the server and what waits for the client |
 | [Migrating from React Flow](docs/migrating-from-react-flow.md) | Defaults, types, what is missing and what to do instead |

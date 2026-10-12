@@ -281,7 +281,9 @@ describe('dragging one end to another handle', () => {
     const onReconnect = vi.fn();
     const onReconnectEnd = vi.fn();
     const { container } = render(ui({ onReconnect, onReconnectEnd }));
-    dragEnd(container, 'target', handle(container, 'b', 'in'), [50, 200]);
+    dragEnd(container, 'target', handle(container, 'b', 'in'), [150, 150]);
+    // Away, and back to where it was.
+    fireEvent.pointerMove(window, pointer({ clientX: 50, clientY: 200 }));
     release(50, 200);
     expect(onReconnect).not.toHaveBeenCalled();
     expect((onReconnectEnd.mock.calls[0]?.[3] as { isValid: boolean }).isValid).toBe(true);

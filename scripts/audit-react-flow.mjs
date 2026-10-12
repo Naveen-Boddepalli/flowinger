@@ -87,8 +87,15 @@ function membersOf(entry, specs, tag) {
     if (!ts.isTypeAliasDeclaration(node)) return;
     const type = checker.getTypeAtLocation(node.name);
     const set = new Set();
-    for (const t of type.isUnion() ? type.types : [type]) for (const p of checker.getPropertiesOfType(t)) set.add(p.name);
-    out.set(specs[Number(node.name.text.slice(1))][0], [...set].sort());
+    // `@unimplemented` in a member's doc comment: accepted so React Flow code compiles, but nothing reads it.
+    const unimplemented = new Set();
+    for (const t of type.isUnion() ? type.types : [type]) {
+      for (const p of checker.getPropertiesOfType(t)) {
+        set.add(p.name);
+        if (p.getJsDocTags(checker).some((tag) => tag.name === 'unimplemented')) unimplemented.add(p.name);
+      }
+    }
+    out.set(specs[Number(node.name.text.slice(1))][0], { names: [...set].sort(), unimplemented });
   });
   return out;
 }
@@ -115,7 +122,14 @@ const DOM_SPEC = [
   ['dom', 'import("react").HTMLAttributes<HTMLElement> & import("react").SVGAttributes<SVGElement> & import("react").DOMAttributes<Element>'],
   ['aria', 'import("react").AriaAttributes'],
 ];
-const dom = new Set([...[...membersOf(FL, DOM_SPEC, 'dom').values()].flat(), 'children', 'className', 'style', 'key', 'ref']);
+const dom = new Set([
+  ...[...membersOf(FL, DOM_SPEC, 'dom').values()].flatMap((m) => m.names),
+  'children',
+  'className',
+  'style',
+  'key',
+  'ref',
+]);
 
 const rf = membersOf(RF, SPECS.map(([l, a]) => [l, a]), 'rf');
 const fl = membersOf(FL, SPECS.map(([l, , b]) => [l, b]), 'fl');
@@ -125,13 +139,18 @@ const ours = exportedNames(FL);
 const report = {
   exports: { reactFlow: theirs.size, flowinger: ours.size, shared: [...theirs].filter((n) => ours.has(n)).length, missing: [...theirs].filter((n) => !ours.has(n)).sort() },
   types: SPECS.map(([label]) => {
-    const all = rf.get(label) ?? [];
+    const all = rf.get(label)?.names ?? [];
     const own = all.filter((n) => !dom.has(n));
-    const have = new Set(fl.get(label) ?? []);
+    const have = new Set(fl.get(label)?.names ?? []);
+    const idle = fl.get(label)?.unimplemented ?? new Set();
+    const shared = own.filter((n) => have.has(n));
     return {
       type: label,
       reactFlowSpecific: own.length,
-      shared: own.filter((n) => have.has(n)).length,
+      shared: shared.length,
+      // Named, and does something; the rest of `shared` is named only.
+      implemented: shared.filter((n) => !idle.has(n)).length,
+      acceptedOnly: shared.filter((n) => idle.has(n)),
       missing: own.filter((n) => !have.has(n)),
       domAttributesMissing: all.filter((n) => dom.has(n) && !have.has(n)).length,
     };
@@ -142,13 +161,18 @@ if (asJson) {
   console.log(JSON.stringify(report, null, 2));
 } else {
   const e = report.exports;
+  const named = report.types.reduce((n, t) => n + t.shared, 0);
+  const idle = report.types.reduce((n, t) => n + t.acceptedOnly.length, 0);
   console.log(`exports: React Flow ${String(e.reactFlow)}, flowinger ${String(e.flowinger)}, shared ${String(e.shared)}`);
+  console.log(`members named: ${String(named)}, of which ${String(named - idle)} do something and ${String(idle)} are accepted only`);
   const values = e.missing.filter((n) => /^[a-z]/.test(n) || /(Edge|Text|Toolbar|Button|Control|MiniMapNode)$/.test(n));
   console.log(`  React Flow exports flowinger lacks: ${String(e.missing.length)} (${String(e.missing.length - values.length)} are types)`);
   console.log(`  functions, hooks and components: ${values.join(', ')}`);
   for (const t of report.types) {
-    console.log(`\n${t.type}: ${String(t.shared)} of ${String(t.reactFlowSpecific)} React Flow members` +
+    console.log(`\n${t.type}: ${String(t.shared)} of ${String(t.reactFlowSpecific)} React Flow members named` +
+      (t.acceptedOnly.length > 0 ? `, ${String(t.implemented)} implemented` : '') +
       (t.domAttributesMissing > 0 ? ` (+${String(t.domAttributesMissing)} DOM attributes not accepted)` : ''));
+    if (t.acceptedOnly.length > 0) console.log(`  accepted, not implemented: ${t.acceptedOnly.join(', ')}`);
     if (t.missing.length > 0) console.log(`  missing: ${t.missing.join(', ')}`);
   }
 }

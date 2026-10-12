@@ -277,6 +277,7 @@ describe('moving nodes that have children', () => {
       must(container, '[data-id="c"] [data-handleid="out"]'),
       pointer({ clientX: 160, clientY: 110 }),
     );
+    fireEvent.pointerMove(window, pointer({ clientX: 170, clientY: 130 }));
     // c is at (110, 70), 100 × 40: its bottom-middle is (160, 110).
     expect(must(container, '.react-flow__connection-path').getAttribute('d')).toMatch(/^M 160\.00 110\.00 C/);
     fireEvent.pointerUp(window, pointer({ clientX: 0, clientY: 0 }));

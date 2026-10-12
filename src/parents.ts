@@ -13,18 +13,29 @@ export function absolutePositionOf(
   node: Node,
   lookup: NodeLookup,
   resolve: (id: string, fallback: XYPosition) => XYPosition,
+  /**
+   * How far a node's top-left sits from its `position` — its origin times its size. Given, the result is
+   * the node's top-left corner: each node on the chain contributes `position − offset`, which is what a
+   * child's `position` being relative to its parent's *top-left* means (as in React Flow).
+   */
+  offsetOf?: (node: Node) => XYPosition,
 ): XYPosition {
   const own = resolve(node.id, node.position);
-  if (node.parentId === undefined) return own;
-  let x = own.x;
-  let y = own.y;
+  const ownOffset = offsetOf?.(node);
+  if (node.parentId === undefined) {
+    // No offset: the position itself, so an unmoved node keeps a stable object for useSyncExternalStore.
+    return ownOffset && (ownOffset.x !== 0 || ownOffset.y !== 0) ? { x: own.x - ownOffset.x, y: own.y - ownOffset.y } : own;
+  }
+  let x = own.x - (ownOffset?.x ?? 0);
+  let y = own.y - (ownOffset?.y ?? 0);
   const seen = new Set([node.id]);
   let parent = lookup(node.parentId);
   while (parent && !seen.has(parent.id)) {
     seen.add(parent.id);
     const at = resolve(parent.id, parent.position);
-    x += at.x;
-    y += at.y;
+    const offset = offsetOf?.(parent);
+    x += at.x - (offset?.x ?? 0);
+    y += at.y - (offset?.y ?? 0);
     parent = parent.parentId === undefined ? undefined : lookup(parent.parentId);
   }
   return { x, y };

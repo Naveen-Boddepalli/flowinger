@@ -22,6 +22,48 @@ export type Position = (typeof Position)[keyof typeof Position];
 
 export type HandleType = 'source' | 'target';
 
+export type NodeOrigin = [number, number];
+
+export type KeyCode = string | string[];
+
+export type Align = 'center' | 'start' | 'end';
+
+export interface NodeHandle {
+  id?: string | null;
+  type: HandleType;
+  position: Position;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+
+export type ColorMode = 'light' | 'dark' | 'system';
+export type ColorModeClass = 'light' | 'dark';
+export type ZIndexMode = 'auto' | 'basic' | 'manual';
+
+export const PanOnScrollMode = {
+  Free: 'free',
+  Vertical: 'vertical',
+  Horizontal: 'horizontal',
+} as const;
+
+export type PanOnScrollMode = (typeof PanOnScrollMode)[keyof typeof PanOnScrollMode];
+
+export interface AriaLabelConfig {
+  'node.a11yDescription.default'?: string;
+  'node.a11yDescription.keyboardDisabled'?: string;
+  'node.a11yDescription.ariaLiveMessage'?: (args: { direction: string; x: number; y: number }) => string;
+  'edge.a11yDescription.default'?: string;
+  'controls.ariaLabel'?: string;
+  'controls.zoomIn.ariaLabel'?: string;
+  'controls.zoomOut.ariaLabel'?: string;
+  'controls.fitView.ariaLabel'?: string;
+  'controls.interactive.ariaLabel'?: string;
+  'minimap.ariaLabel'?: string;
+  'handle.ariaLabel'?: string;
+}
+
 /**
  * How a connection may be made. `strict` (the default) joins a `source` handle to
  * a `target` handle; `loose` lets any handle join any other, the end the drag
@@ -97,6 +139,8 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   connectable?: boolean;
   /** A CSS selector: when set, the node can only be dragged by an element that matches it. */
   dragHandle?: string;
+  /** Whether it is a tab stop: wins over the canvas's `nodesFocusable`, and over its being selectable. Needs `a11yFeature`. */
+  focusable?: boolean;
   /**
    * Which side the built-in node types (`default`, `input`, `output`) put their handles on — a source
    * handle at `sourcePosition` (default bottom) and a target handle at `targetPosition` (default top). A
@@ -127,6 +171,18 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
   /** The ARIA role on the node's element. Default `'group'` once it is a tab stop, else none. */
   ariaRole?: AriaRole;
   ariaLabel?: string;
+  /**
+   * Origin of the node relative to its position.
+   * e.g. [0.5, 0.5] centers the node, [0, 0] is top-left.
+   */
+  origin?: NodeOrigin;
+  /**
+   * Where the node's handles are, for an edge to meet before they are drawn and measured — in server-rendered
+   * output, or before the first measure. A handle is a box (`x`, `y`, `width`, `height`, from the node's
+   * top-left) on a `position` side, as a measured one is; with no box, the middle of that side. Edges name them
+   * by `sourceHandle` / `targetHandle` as they do a drawn handle; a drawn handle, once measured, wins.
+   */
+  handles?: NodeHandle[];
   /**
    * Escape hatch for an attribute flowinger has no prop for (`title`, another `aria-*`…) — not a custom
    * `data-*` attribute, which needs a cast (`HTMLAttributes` does not declare it by name; nor does React
@@ -198,6 +254,8 @@ export interface Edge {
   id: string;
   source: string;
   target: string;
+  /** Whether it is a tab stop: wins over the canvas's `edgesFocusable`. */
+  focusable?: boolean;
   sourceHandle?: string | null;
   targetHandle?: string | null;
   className?: string;
@@ -339,6 +397,14 @@ export interface Viewport {
 export interface SetViewportOptions {
   /** Milliseconds to take over the move; none (or 0) is instant. */
   duration?: number;
+  /** Easing of the move, `t` from 0 to 1 in and 0 to 1 out. Default: ease-out cubic. */
+  ease?: (t: number) => number;
+  /**
+   * `'linear'` (the default here): x, y and zoom each move by the eased fraction. `'smooth'`: van Wijk and
+   * Nuij's path — over a long move it zooms out and back in so the eye can follow — which is what React Flow
+   * does unless told otherwise.
+   */
+  interpolate?: 'smooth' | 'linear';
 }
 
 export interface FitViewOptions extends SetViewportOptions {
@@ -415,6 +481,8 @@ export interface HandleProps extends PassThroughHtml<'id'> {
 }
 
 export interface FlowingerInstance {
+  /** True when the viewport has initialized and framed the pane. */
+  readonly viewportInitialized: boolean;
   /** Resolves `true` when the move lands, `false` if something else moved the view first. */
   setViewport: (viewport: Viewport, options?: SetViewportOptions) => Promise<boolean>;
   getViewport: () => Viewport;
@@ -498,7 +566,7 @@ export interface FlowingerInstance {
   ) => Node[];
   isNodeIntersecting: (target: Node | Rect | { id: string }, area: Rect, partially?: boolean) => boolean;
   /** The smallest rectangle holding these nodes (or ids). */
-  getNodesBounds: (nodes: (Node | string)[]) => Rect;
+  getNodesBounds: (nodes: (Node | string)[], options?: { nodeOrigin?: NodeOrigin }) => Rect;
   toObject: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
 }
 
@@ -755,6 +823,141 @@ export interface FlowingerProps {
   /** Round dragged positions to a grid — `snapGrid` (default 15 × 15). */
   snapToGrid?: boolean;
   snapGrid?: [number, number];
+  /**
+   * Where on a node its `position` is: `[0, 0]` its top-left corner (the default), `[0.5, 0.5]` its centre. A
+   * node's own `origin` wins. A child's `position` is relative to its parent's top-left corner, as in React Flow.
+   */
+  nodeOrigin?: NodeOrigin;
+  /**
+   * Holding this key turns a drag into a pan, even where `panOnDrag` is off. Needs `panKeyFeature` (which
+   * `FlowingerCanvas` has). Off unless given — React Flow's own default is `'Space'`.
+   */
+  panActivationKeyCode?: string | string[] | null;
+  /**
+   * Pixels a press must travel before it becomes a node drag. Left out, the engine's own 3; an explicit `0` is
+   * no threshold. Needs `dragFeature`.
+   */
+  nodeDragThreshold?: number;
+  /**
+   * The key that, held, turns a drag on the empty canvas into a selection box (with `elementsSelectable`). A key or combination (`'Alt'`, `'Meta+a'`), or a list; `null` for none, so only `selectionOnDrag` draws one. Default `'Shift'`. Needs `boxSelectFeature`.
+   */
+  selectionKeyCode?: string | string[] | null;
+  /**
+   * The key that, held, makes a click or a drag add to the selection instead of replacing it. Left out, Shift, Control and ⌘ all do; given, only this key; `null` for none. Needs `selectionFeature`.
+   */
+  multiSelectionKeyCode?: string | string[] | null;
+  /**
+   * The key that, held, makes the wheel zoom — even where `zoomOnScroll` is off, and instead of panning under `panOnScroll`. A pinch (Control + wheel) zooms whatever `zoomOnScroll` says once a key is given. Left out, Control or ⌘ only chooses between panning and zooming under `panOnScroll`.
+   */
+  zoomActivationKeyCode?: string | string[] | null;
+  /**
+   * With `panOnScroll`, which axes the wheel pans: `'free'` (both, the default), `'vertical'` or `'horizontal'`. Shift turns a vertical wheel sideways, except in `'vertical'` (macOS does that itself).
+   */
+  panOnScrollMode?: PanOnScrollMode;
+  /**
+   * Whether the wheel over the canvas is the canvas's and the page does not scroll (default true). Off, a plain wheel scrolls the page and does not zoom; a pinch (Control + wheel) still zooms, and a wheel that pans (`panOnScroll`) is still the canvas's.
+   */
+  preventScrolling?: boolean;
+  /**
+   * Pixels the pointer must travel from a handle before it becomes a connection (default 1). A press that does not travel is only a click on the handle — see `connectOnClick` — and starts no connection, so `onConnectStart` and `onConnectEnd` are not called for it. `0` starts it at the press. Needs `connectFeature`.
+   */
+  connectionDragThreshold?: number;
+  /**
+   * How far, in pixels, a press on a node may move and still be a click. Further than that, and not far enough to be a drag, it is not a click (no `onNodeClick`, no selection). Left out, any press that does not become a drag is a click. Needs `dragFeature`.
+   */
+  nodeClickDistance?: number;
+  /**
+   * How far, in pixels, a press on the empty canvas may move and still be a click on the pane (`onPaneClick`, clearing the selection). Left out, any press that does not become a pan is a click.
+   */
+  paneClickDistance?: number;
+  /**
+   * How near a handle a dropped connection snaps to it, in graph units (default 20): the nearest connectable handle within that of the pointer is the one it ends at, and the line is drawn to it, even where the pointer is not over it. A handle under the pointer is always preferred. `0` is only a handle the pointer is over. Needs `connectFeature`.
+   */
+  connectionRadius?: number;
+  /**
+   * As `connectionRadius`, for dragging an end of an edge to reconnect it (default 10). Needs `reconnectFeature`.
+   */
+  reconnectRadius?: number;
+  /**
+   * Whether dragging an unselected node selects it (default true). Off, it moves alone and what was selected is dropped; a click still selects. Needs `dragFeature`.
+   */
+  selectNodesOnDrag?: boolean;
+  /**
+   * Make a connection by clicking a handle and then another, as well as by dragging (default true; with `nodesConnectable`). The first click is `onClickConnectStart` and puts a `clickconnecting` class on the handle; the second makes the connection if it is valid and is `onClickConnectEnd` either way. Needs `connectFeature`.
+   */
+  connectOnClick?: boolean;
+  /** A first click on a handle, beginning a connection made by clicking (`connectOnClick`). */
+  onClickConnectStart?: (event: MouseEvent | TouchEvent, params: ConnectStartParams) => void;
+  /** The second click, whether or not it made a connection: `{ connection, isValid }` as `onConnectEnd` is given. */
+  onClickConnectEnd?: (event: MouseEvent | TouchEvent, state: ConnectEndState) => void;
+  /** The rectangle round a box selection starts to be dragged (`nodes`: everything it moves). `onNodeDragStart` is called as well. Needs `selectionRectFeature`. */
+  onSelectionDragStart?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /** The rectangle round a box selection is being dragged. `onNodeDrag` is called as well. Needs `selectionRectFeature`. */
+  onSelectionDrag?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /** The rectangle round a box selection was let go. `onNodeDragStop` is called as well. Needs `selectionRectFeature`. */
+  onSelectionDragStop?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /** A right click on the rectangle round a box selection, with the selected nodes. Needs `selectionRectFeature`. */
+  onSelectionContextMenu?: (event: React.MouseEvent, nodes: Node[]) => void;
+  /**
+   * `'light'`, `'dark'` or `'system'` (the OS's setting, followed as it changes). The canvas gets the class `light` or `dark`, as in React Flow; `light` also sets the `--flowinger-*` colours to a light palette for what is drawn inside the canvas (`dark` is the library's default). Needs `colorModeFeature`.
+   */
+  colorMode?: ColorMode;
+  /**
+   * Raise a selected node (and what is inside it) by 1000, above its overlapping neighbours (default true, as in React Flow). Needs `stackingFeature`.
+   */
+  elevateNodesOnSelect?: boolean;
+  /**
+   * Raise a selected edge by 1000, and the edges of a selected node with it (default false, as in React Flow). Needs `stackingFeature`.
+   */
+  elevateEdgesOnSelect?: boolean;
+  /**
+   * `'basic'` (default): a child above its parent, a node's own `zIndex` honoured, selected ones raised. `'auto'`: as basic, and each group's subtree is kept above the one before it. `'manual'`: only `zIndex`, with no nesting and no raising. Needs `stackingFeature`.
+   */
+  zIndexMode?: ZIndexMode;
+  /**
+   * The colour of an arrowhead that names none. Left out, it is its edge's stroke.
+   */
+  defaultMarkerColor?: string | null;
+  /**
+   * Style for the element the connection line is drawn in — its `zIndex`, say. The line's own style is `connectionLineStyle`. Needs `connectFeature`.
+   */
+  connectionLineContainerStyle?: CSSProperties;
+  /**
+   * A class of your own for what a press does not drag a node from, as `nodrag` does — which keeps working.
+   */
+  noDragClassName?: string;
+  /**
+   * A class of your own for what a press does not pan from, as `nopan` does — which keeps working.
+   */
+  noPanClassName?: string;
+  /**
+   * A class of your own for what the wheel passes through, as `nowheel` does — which keeps working.
+   */
+  noWheelClassName?: string;
+  /**
+   * Whether nodes are tab stops: `true` for every node, selectable or not, `false` for none. Left out, a node is one where it can be selected (`elementsSelectable`), as before. A node's own `focusable` wins. Needs `a11yFeature`.
+   */
+  nodesFocusable?: boolean;
+  /**
+   * Take nodes and edges out of the tab order and silence their keys (Enter and Space to select, the arrows to move). Clicking still works. Needs `a11yFeature`.
+   */
+  disableKeyboardA11y?: boolean;
+  /**
+   * Replacement text for what the canvas says to assistive technology: the descriptions nodes and edges point at (`aria-describedby`), the live message that announces a move made with the keyboard, and the labels of the controls, the minimap and a handle. A part of it may be given; the rest stays English. Needs `a11yFeature`.
+   */
+  ariaLabelConfig?: AriaLabelConfig;
+  /**
+   * Pan to a node that takes focus (from the keyboard) when it is out of view, keeping the zoom (default true). Needs `a11yFeature`.
+   */
+  autoPanOnNodeFocus?: boolean;
+  /**
+   * Pan the view while a selection box is held at the pane's edge, keeping the box's corner on the same place in the graph (default true). Needs `boxSelectFeature`.
+   */
+  autoPanOnSelection?: boolean;
+  /**
+   * Log every change a controlled flow is told of (`flowinger: node changes`, `flowinger: edge changes`) to the console. Needs `debugFeature`.
+   */
+  debug?: boolean;
 }
 
 // --- changes ---------------------------------------------------------------
