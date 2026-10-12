@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { cullingFeature } from '../features/culling.ts';
 import { selectionFeature } from '../features/selection.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore, type EngineOptions } from '../store.ts';
-import type { Edge, Node } from '../types.ts';
+import { Position, type Edge, type Node } from '../types.ts';
 
 const on: EngineOptions = { ...DEFAULT_ENGINE_OPTIONS, elementsSelectable: true, onlyRenderVisibleElements: true };
 
@@ -134,5 +134,44 @@ describe('a selection the caller makes', () => {
     expect(ids(store.getVisible()?.nodes)).toEqual(['far', 'near']);
     store.setNodes([box('near', 0, 0), box('far', 5000, 5000)]);
     expect(ids(store.getVisible()?.nodes)).toEqual(['near']);
+  });
+});
+
+describe('what a node coming and going costs', () => {
+  it('does not recompute the visible set, or wake `useStore`, when a handle registers or goes', () => {
+    // A thousand nodes mounting and unmounting register and unregister two handles each: with the set rebuilt
+    // for every one, culling cost more than it saved — and each state read forced a layout.
+    const store = culled([box('a', 0, 0)]);
+    const changed = vi.fn();
+    store.use([{ name: 'count', install: (ctx) => ctx.on('change', changed) }]);
+    const known = store.getVisible();
+    const woken = vi.fn();
+    const redrawn = vi.fn();
+    store.subscribeState(woken);
+    store.subscribeGeometry(redrawn);
+    const offs = Array.from({ length: 20 }, () =>
+      store.registerHandle('a', {
+        id: null,
+        type: 'source',
+        position: Position.Right,
+        el: document.createElement('div'),
+      }),
+    );
+    for (const off of offs) off();
+    // The edges those handles anchor must still be told...
+    expect(redrawn).toHaveBeenCalledTimes(40);
+    // ...but nothing about the nodes' rectangles, or the state `useStore` reads, changed.
+    expect(woken).not.toHaveBeenCalled();
+    expect(changed).not.toHaveBeenCalled();
+    expect(store.getVisible()).toBe(known);
+  });
+
+  it('still recomputes the visible set when a node moves', () => {
+    const store = culled([box('a', 0, 0)]);
+    const woken = vi.fn();
+    store.subscribeState(woken);
+    store.setNodes([box('a', 5000, 0)]);
+    expect(woken).toHaveBeenCalled();
+    expect(ids(store.getVisible()?.nodes)).toEqual([]);
   });
 });

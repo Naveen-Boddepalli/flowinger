@@ -597,9 +597,19 @@ export function createFlowingerStore(
 
   // --- geometry -------------------------------------------------------------
 
-  const bumpGeometry = () => {
+  /**
+   * A handle appeared, went, or moved: the edges it anchors must be drawn again. No node's rectangle changed, and
+   * `FlowingerState` holds nothing about handles — so neither what culls by rectangles nor `useStore` need hear
+   * of it. That is most of what a node's mount and unmount does, and a state read after the DOM has been
+   * changed forces a layout: a thousand nodes going at once would force a thousand.
+   */
+  const bumpHandles = () => {
     geometryVersion += 1;
     emit(geometryListeners);
+  };
+
+  const bumpGeometry = () => {
+    bumpHandles();
     touch();
     run('change');
   };
@@ -754,7 +764,7 @@ export function createFlowingerStore(
         changed = true;
       }
     }
-    if (changed) bumpGeometry();
+    if (changed) bumpHandles();
   };
 
   const registerHandle = (nodeId: string, registration: HandleRegistration): (() => void) => {
@@ -766,11 +776,11 @@ export function createFlowingerStore(
     }
     records.add(record);
     measureHandles(nodeId);
-    bumpGeometry();
+    bumpHandles();
     return () => {
       records.delete(record);
       if (records.size === 0 && handles.get(nodeId) === records) handles.delete(nodeId);
-      bumpGeometry();
+      bumpHandles();
     };
   };
 
