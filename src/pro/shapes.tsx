@@ -4,6 +4,7 @@ import { Position, type Node, type NodeProps } from '../types.ts';
 
 export interface ShapeNodeData {
   label?: ReactNode;
+  /** The outline colour, when `stroke` is not given. */
   color?: string;
   fill?: string;
   stroke?: string;
@@ -22,8 +23,6 @@ const defaultShapeContainerStyle: CSSProperties = {
   boxSizing: 'border-box',
   width: '100%',
   height: '100%',
-  minWidth: 100,
-  minHeight: 50,
 };
 
 function renderHandles(handles: ('top' | 'bottom' | 'left' | 'right')[] = ['top', 'bottom', 'left', 'right']) {
@@ -43,12 +42,12 @@ function renderHandles(handles: ('top' | 'bottom' | 'left' | 'right')[] = ['top'
 export function DiamondNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: string]: unknown }>>) {
   const shapeData = (data ?? {}) as ShapeNodeData;
   const fill = shapeData.fill ?? 'var(--flowinger-surface, #1e293b)';
-  const stroke = shapeData.stroke ?? 'var(--flowinger-border, #3b82f6)';
+  const stroke = shapeData.stroke ?? shapeData.color ?? 'var(--flowinger-border, #3b82f6)';
   const strokeWidth = shapeData.strokeWidth ?? 2;
   const textColor = shapeData.textColor ?? 'var(--flowinger-text, #f8fafc)';
 
   return (
-    <div style={{ ...defaultShapeContainerStyle, width: 120, height: 80 }}>
+    <div style={{ ...defaultShapeContainerStyle, minWidth: 120, minHeight: 80 }}>
       {renderHandles(shapeData.handles)}
       <svg
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
@@ -70,12 +69,12 @@ export function DiamondNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: 
 export function CircleNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: string]: unknown }>>) {
   const shapeData = (data ?? {}) as ShapeNodeData;
   const fill = shapeData.fill ?? 'var(--flowinger-surface, #1e293b)';
-  const stroke = shapeData.stroke ?? 'var(--flowinger-border, #10b981)';
+  const stroke = shapeData.stroke ?? shapeData.color ?? 'var(--flowinger-border, #10b981)';
   const strokeWidth = shapeData.strokeWidth ?? 2;
   const textColor = shapeData.textColor ?? 'var(--flowinger-text, #f8fafc)';
 
   return (
-    <div style={{ ...defaultShapeContainerStyle, width: 80, height: 80 }}>
+    <div style={{ ...defaultShapeContainerStyle, minWidth: 80, minHeight: 80 }}>
       {renderHandles(shapeData.handles)}
       <svg
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
@@ -96,12 +95,12 @@ export function CircleNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: s
 export function CylinderNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: string]: unknown }>>) {
   const shapeData = (data ?? {}) as ShapeNodeData;
   const fill = shapeData.fill ?? 'var(--flowinger-surface, #1e293b)';
-  const stroke = shapeData.stroke ?? 'var(--flowinger-border, #f59e0b)';
+  const stroke = shapeData.stroke ?? shapeData.color ?? 'var(--flowinger-border, #f59e0b)';
   const strokeWidth = shapeData.strokeWidth ?? 2;
   const textColor = shapeData.textColor ?? 'var(--flowinger-text, #f8fafc)';
 
   return (
-    <div style={{ ...defaultShapeContainerStyle, width: 100, height: 90 }}>
+    <div style={{ ...defaultShapeContainerStyle, minWidth: 100, minHeight: 90 }}>
       {renderHandles(shapeData.handles)}
       <svg
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
@@ -126,12 +125,12 @@ export function CylinderNode({ data }: NodeProps<Node<{ label?: ReactNode; [key:
 export function ParallelogramNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: string]: unknown }>>) {
   const shapeData = (data ?? {}) as ShapeNodeData;
   const fill = shapeData.fill ?? 'var(--flowinger-surface, #1e293b)';
-  const stroke = shapeData.stroke ?? 'var(--flowinger-border, #8b5cf6)';
+  const stroke = shapeData.stroke ?? shapeData.color ?? 'var(--flowinger-border, #8b5cf6)';
   const strokeWidth = shapeData.strokeWidth ?? 2;
   const textColor = shapeData.textColor ?? 'var(--flowinger-text, #f8fafc)';
 
   return (
-    <div style={{ ...defaultShapeContainerStyle, width: 130, height: 60 }}>
+    <div style={{ ...defaultShapeContainerStyle, minWidth: 130, minHeight: 60 }}>
       {renderHandles(shapeData.handles)}
       <svg
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
@@ -153,12 +152,12 @@ export function ParallelogramNode({ data }: NodeProps<Node<{ label?: ReactNode; 
 export function DocumentNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: string]: unknown }>>) {
   const shapeData = (data ?? {}) as ShapeNodeData;
   const fill = shapeData.fill ?? 'var(--flowinger-surface, #1e293b)';
-  const stroke = shapeData.stroke ?? 'var(--flowinger-border, #06b6d4)';
+  const stroke = shapeData.stroke ?? shapeData.color ?? 'var(--flowinger-border, #06b6d4)';
   const strokeWidth = shapeData.strokeWidth ?? 2;
   const textColor = shapeData.textColor ?? 'var(--flowinger-text, #f8fafc)';
 
   return (
-    <div style={{ ...defaultShapeContainerStyle, width: 120, height: 70 }}>
+    <div style={{ ...defaultShapeContainerStyle, minWidth: 120, minHeight: 70 }}>
       {renderHandles(shapeData.handles)}
       <svg
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}

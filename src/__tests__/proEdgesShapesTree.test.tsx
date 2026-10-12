@@ -47,10 +47,10 @@ describe('Pro Modules: SmartEdge (getSmartEdgePath)', () => {
       gridRatio: 10,
     });
 
-    expect(path).toContain('M 0.00 0.00');
-    expect(path).toContain('200.00 0.00');
-    // Ensure path detours and is not just a straight horizontal line
-    expect(path).toContain('L');
+    // It starts and ends where it was told to, and is more than one straight run between them.
+    expect(path.startsWith('M 0 0')).toBe(true);
+    expect(path.endsWith('L 200 0')).toBe(true);
+    expect(path.match(/[LQ]/g)?.length).toBeGreaterThan(2);
   });
 });
 
