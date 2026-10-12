@@ -6,3 +6,8 @@ dist
 demo-dist
 test-results
 playwright-report
+/history
+/clipboard
+/snaplines
+/export
+/pro

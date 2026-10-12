@@ -45,11 +45,75 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./history": {
+      "import": {
+        "types": "./dist/pro/history.d.ts",
+        "default": "./dist/pro/history.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/history.d.ts",
+        "default": "./dist/pro/history.cjs"
+      }
+    },
+    "./clipboard": {
+      "import": {
+        "types": "./dist/pro/clipboard.d.ts",
+        "default": "./dist/pro/clipboard.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/clipboard.d.ts",
+        "default": "./dist/pro/clipboard.cjs"
+      }
+    },
+    "./snaplines": {
+      "import": {
+        "types": "./dist/pro/snaplines.d.ts",
+        "default": "./dist/pro/snaplines.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/snaplines.d.ts",
+        "default": "./dist/pro/snaplines.cjs"
+      }
+    },
+    "./export": {
+      "import": {
+        "types": "./dist/pro/export.d.ts",
+        "default": "./dist/pro/export.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/export.d.ts",
+        "default": "./dist/pro/export.cjs"
+      }
+    },
+    "./pro": {
+      "import": {
+        "types": "./dist/pro/index.d.ts",
+        "default": "./dist/pro/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/index.d.ts",
+        "default": "./dist/pro/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "history": ["dist/pro/history.d.ts"],
+      "clipboard": ["dist/pro/clipboard.d.ts"],
+      "snaplines": ["dist/pro/snaplines.d.ts"],
+      "export": ["dist/pro/export.d.ts"],
+      "pro": ["dist/pro/index.d.ts"]
+    }
   },
   "files": [
     "dist",
-    "NOTICE.md"
+    "NOTICE.md",
+    "history",
+    "clipboard",
+    "snaplines",
+    "export",
+    "pro"
   ],
   "scripts": {
     "dev": "vite",
