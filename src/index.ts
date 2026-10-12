@@ -15,6 +15,8 @@ export {
   reconnectFeature,
   selectionFeature,
   selectionRectFeature,
+  stackingFeature,
+  colorModeFeature,
 } from './features/index.ts';
 export type {
   CanvasArgs,

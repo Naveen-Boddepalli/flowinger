@@ -64,6 +64,13 @@ export interface Feature<Api = unknown> {
   readonly EdgesLayer?: ComponentType<FlowingerEdgesProps>;
   /** Drawn with each edge — the grips on the ends of a selected one. */
   readonly EdgeAdornment?: ComponentType<EdgeAdornmentProps>;
+  /**
+   * Where a node is stacked, given where the engine would put it (`z`). `forEdge` asks for the figure an edge
+   * joined to it is stacked with, which may differ.
+   */
+  readonly stackNode?: (store: FlowingerStore, node: Node, z: number, selected: boolean, forEdge: boolean) => number;
+  /** Which layer an edge is drawn in, given the one the engine would pick. */
+  readonly stackEdge?: (store: FlowingerStore, edge: Edge, level: number, selected: boolean) => number;
 }
 
 /** Things the store tells a feature about, besides the calls made on it. */
@@ -171,6 +178,8 @@ export interface CanvasBits {
   style?: CSSProperties;
   /** A click on the canvas should leave focus on it — a key handler hears nothing otherwise. */
   focusable?: boolean;
+  /** A class for the container, with its own. */
+  className?: string;
   /** The bare canvas was clicked (not the end of a pan, or of a gesture that said so). */
   onPaneClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   /**

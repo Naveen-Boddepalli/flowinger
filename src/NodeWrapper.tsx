@@ -99,8 +99,15 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
   const clickConnect = bits.find((b) => b.clickConnect)?.clickConnect;
-  // Above its parent by depth, unless it says otherwise; above all while dragged.
-  const zIndex = dragging ? 1000 : (node.zIndex ?? 1 + depth);
+  // Above its parent by depth, unless it says otherwise — and as a feature (stacking) lifts or flattens it;
+  // above all while dragged.
+  const baseZ = node.zIndex ?? 1 + depth;
+  const stacked = useSyncExternalStore(
+    subscribe,
+    () => features.reduce((z, f) => f.stackNode?.(store, node, z, store.isSelected(node.id), false) ?? z, baseZ),
+    () => baseZ,
+  );
+  const zIndex = dragging ? Math.max(1000, stacked) : stacked;
 
   // What a `<Handle>` inside this node registers itself with. Without something to start a
   // connection with, its handles only draw.

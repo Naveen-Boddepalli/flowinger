@@ -188,6 +188,8 @@ function InnerCanvas(props: FlowingerProps) {
     noPanClassName,
     noDragClassName,
     paneClickDistance,
+    connectionLineContainerStyle,
+    defaultMarkerColor,
   } = props;
   const store = useFlowingerStore();
   // Installed while rendering, so they are there for every effect below and for whoever holds the
@@ -686,7 +688,7 @@ function InnerCanvas(props: FlowingerProps) {
         ref={containerRef}
         id={id}
         data-testid="rf__wrapper"
-        className={`flowinger react-flow ${className}`}
+        className={`flowinger react-flow ${bits.map((b) => b.className).filter(Boolean).join(' ')} ${className}`}
         style={containerStyle}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -741,6 +743,8 @@ function InnerCanvas(props: FlowingerProps) {
               connectionLineType={connectionLineType}
               connectionLineStyle={connectionLineStyle}
               connectionLineComponent={connectionLineComponent}
+              connectionLineContainerStyle={connectionLineContainerStyle}
+              defaultMarkerColor={defaultMarkerColor}
               reconnectable={edgesReconnectable && onReconnect !== undefined}
               depths={tree.depth}
               features={feats}

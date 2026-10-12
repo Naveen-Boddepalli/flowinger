@@ -17,6 +17,8 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
+  stacking: ['elevateNodesOnSelect', 'elevateEdgesOnSelect', 'zIndexMode'],
+  colorMode: ['colorMode'],
   selectionRect: ['onSelectionDragStart', 'onSelectionDrag', 'onSelectionDragStop', 'onSelectionContextMenu'],
   panKey: ['panActivationKeyCode'],
   connect: [
@@ -35,6 +37,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'connectionRadius',
     'onClickConnectStart',
     'onClickConnectEnd',
+    'connectionLineContainerStyle',
   ],
   reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable', 'reconnectRadius'],
   boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd', 'selectionKeyCode'],
@@ -66,12 +69,6 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
  * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
  */
 export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
-  colorMode: ['light'],
-  elevateNodesOnSelect: [false],
-  elevateEdgesOnSelect: [false],
-  zIndexMode: [],
-  defaultMarkerColor: [null],
-  connectionLineContainerStyle: [],
   nodesFocusable: [true],
   disableKeyboardA11y: [true],
   ariaLabelConfig: [],
