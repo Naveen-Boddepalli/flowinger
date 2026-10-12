@@ -101,7 +101,7 @@ The design notes behind each release — what was measured, what was tried and d
   the way it faced, and recomputed on every drag frame.
 - **Shape nodes** ignored the node's `width` / `height`, and `data.color` was declared and unread.
 
-## [0.4.0] - 2026-10-10
+## [0.4.0] - 2026-10-11
 
 ### Added
 

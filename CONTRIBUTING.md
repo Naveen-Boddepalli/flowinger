@@ -103,7 +103,11 @@ Maintainers only. A release is a tag; there is no npm token anywhere.
    (`## [0.5.0] - YYYY-MM-DD`), and set `version` in `package.json`. The demo's label follows it. If an
    example now uses API this release adds, raise its `flowinger` range in `examples/*/package.json` — they
    ask the registry for the released package, so a copied folder works as it is.
-2. After it merges: `git tag v0.5.0 && git push origin v0.5.0`.
+2. After it merges, **pull `main`** so the tag lands on the merge commit — the one whose `package.json` says
+   `0.5.0`; the workflow refuses a tag whose commit does not agree — then
+   `git tag v0.5.0 && git push origin v0.5.0`. Do not make the release on GitHub by hand first: creating a
+   release creates its tag at that moment, wherever `main` happens to be. (The workflow will edit a page that
+   already exists rather than fail, but the tag is the part that matters.)
 3. [`release.yml`](.github/workflows/release.yml) re-runs the gate, publishes to npm with a provenance
    attestation, and creates the GitHub release from the changelog. A tag with a hyphen (`v0.5.0-rc.1`)
    goes to the `next` dist-tag and is marked a prerelease.

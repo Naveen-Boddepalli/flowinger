@@ -32,7 +32,7 @@ jobs:
         run: |
           version="$(node -p "require('./package.json').version")"
           if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            echo "::error::tag ${GITHUB_REF_NAME} does not match package.json version ${version} - was it made before the release pull request was merged? Merge it, pull main, and tag the merge commit."
             exit 1
           fi
       - name: The changelog has an entry for it
