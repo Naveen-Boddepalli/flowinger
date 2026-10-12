@@ -85,11 +85,14 @@ describe('accepted but not implemented', () => {
   });
 
   it('says it once, for all of them, and counts the ones given', () => {
+    const left = Object.keys(NOT_IMPLEMENTED).sort();
+    if (left.length < 2) return; // nothing is accepted-only any more: there is nothing to count
+    const given = left.slice(0, 3);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    render(<FlowingerCanvas {...propsOf({ connectOnClick: true, debug: true, connectionRadius: 5 })} />);
+    render(<FlowingerCanvas {...propsOf(Object.fromEntries(given.map((name) => [name, '__asked_for__'])))} />);
     const said = aboutUnimplemented(warn);
     expect(said).toHaveLength(1);
-    expect(said[0]).toMatch(/connectOnClick, connectionRadius, debug are accepted/);
+    expect(said[0]).toContain(`${given.join(', ')} ${given.length === 1 ? 'is' : 'are'} accepted`);
   });
 
   it('says so for the handles a node declares, which nothing draws edges from', () => {

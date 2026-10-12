@@ -145,6 +145,7 @@ describe('where an edge is stacked', () => {
       );
       Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => null });
       fireEvent.pointerDown(must(container, '[data-handleid="out"]'), { pointerId: 1, button: 0, clientX: 50, clientY: 40 });
+      fireEvent.pointerMove(window, { pointerId: 1, button: 0, clientX: 80, clientY: 90 });
       const [, high] = layers(container);
       expect(high?.querySelector('[data-testid="line"]')).not.toBeNull();
       expect(layers(container)[0]?.querySelector('[data-testid="line"]')).toBeNull();

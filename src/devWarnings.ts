@@ -29,8 +29,13 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'connectionLineStyle',
     'connectionLineComponent',
     'autoPanOnConnect',
+    'connectOnClick',
+    'connectionDragThreshold',
+    'connectionRadius',
+    'onClickConnectStart',
+    'onClickConnectEnd',
   ],
-  reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable'],
+  reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable', 'reconnectRadius'],
   boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd', 'selectionKeyCode'],
   delete: ['deleteKeyCode', 'onBeforeDelete', 'onNodesDelete', 'onEdgesDelete', 'onDelete'],
   culling: ['onlyRenderVisibleElements'],
@@ -60,12 +65,6 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
  * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
  */
 export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
-  connectionDragThreshold: [0, 1],
-  connectionRadius: [],
-  reconnectRadius: [],
-  connectOnClick: [false],
-  onClickConnectStart: [],
-  onClickConnectEnd: [],
   onSelectionDragStart: [],
   onSelectionDrag: [],
   onSelectionDragStop: [],

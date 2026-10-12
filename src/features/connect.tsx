@@ -9,6 +9,7 @@ import {
   ConnectionLineType,
   type Connection,
   type Edge,
+  type FlowingerProps,
   type HandleType,
   type Position,
   type XYPosition,
@@ -43,6 +44,20 @@ export interface ConnectApi {
     at: PointerEvent,
     reconnect: { edge: Edge; end: HandleType } | null,
   ) => void;
+  /**
+   * A click on a handle: the first begins a connection (`onClickConnectStart`), the second, on another, ends
+   * it — made if valid, and `onClickConnectEnd` either way. Does nothing with `connectOnClick` off.
+   */
+  clickConnect: (nodeId: string, handleEl: HTMLElement, at: MouseEvent) => void;
+  /** What the canvas was last given for the props that shape a connection; written by `useCanvas`. */
+  readonly config: {
+    dragThreshold: number;
+    radius: number;
+    reconnectRadius: number;
+    connectOnClick: boolean;
+    onClickStart: FlowingerProps['onClickConnectStart'];
+    onClickEnd: FlowingerProps['onClickConnectEnd'];
+  };
 }
 
 /** Whether a connection joins the very same two handles an edge already does. */
@@ -103,6 +118,18 @@ export const connectFeature: Feature<ConnectApi> = {
   install(ctx) {
     let stopConnecting: (() => void) | null = null;
     let connecting = false;
+    const config: ConnectApi['config'] = {
+      dragThreshold: 1,
+      radius: 20,
+      reconnectRadius: 10,
+      connectOnClick: true,
+      onClickStart: undefined,
+      onClickEnd: undefined,
+    };
+    /** The handle a first click was made on, waiting for a second. */
+    let pending: { nodeId: string; record: HandleRecord } | null = null;
+    /** The handle a drag just ended on: the click that follows it is not the start of a click connection. */
+    let afterDrag: HTMLElement | null = null;
 
     /** Where a registered handle sits in graph space: its measured anchor, else its side's midpoint. */
     const pointOfHandle = (nodeId: string, record: HandleRecord): XYPosition | null => {
@@ -119,18 +146,67 @@ export const connectFeature: Feature<ConnectApi> = {
      * `data-connectable`; browsers also skip `pointer-events: none` in
      * `elementFromPoint`, but this does not lean on that.
      */
-    const handleAt = (clientX: number, clientY: number): { nodeId: string; record: HandleRecord } | null => {
+    /** The handle nearest a screen point within `radius` graph units, not the one a drag began at. */
+    const nearestHandle = (
+      clientX: number,
+      clientY: number,
+      from: Endpoint,
+      radius: number,
+    ): { nodeId: string; record: HandleRecord } | null => {
+      if (radius <= 0) return null;
+      const p = ctx.toGraph(clientX, clientY);
+      let best: { nodeId: string; record: HandleRecord } | null = null;
+      let bestDistance = Infinity;
+      for (const node of ctx.nodes) {
+        if (node.hidden === true) continue;
+        // A handle sits on its node's edge, give or take its own size: look only at nodes the point is near.
+        const at = ctx.absolutePosition(node);
+        const size = ctx.getNodeSize(node);
+        const margin = radius + 50;
+        if (p.x < at.x - margin || p.x > at.x + size.width + margin) continue;
+        if (p.y < at.y - margin || p.y > at.y + size.height + margin) continue;
+        for (const record of ctx.handlesOf(node.id)) {
+          if (node.id === from.nodeId && record.id === from.id && record.type === from.type) continue;
+          if (!record.el.hasAttribute('data-connectable') || record.options?.current.isConnectableEnd === false) {
+            continue;
+          }
+          const point = pointOfHandle(node.id, record);
+          if (!point) continue;
+          const distance = Math.hypot(point.x - p.x, point.y - p.y);
+          // Several at one distance (overlapping handles): the opposite kind is the one to end at.
+          if (distance > radius || distance > bestDistance) continue;
+          if (distance < bestDistance || record.type !== from.type) {
+            best = { nodeId: node.id, record };
+            bestDistance = distance;
+          }
+        }
+      }
+      return best;
+    };
+
+    const handleAt = (
+      clientX: number,
+      clientY: number,
+      from: Endpoint,
+      radius: number,
+    ): { nodeId: string; record: HandleRecord } | null => {
       if (typeof document === 'undefined' || typeof document.elementFromPoint !== 'function') return null;
       const el = document
         .elementFromPoint(clientX, clientY)
         ?.closest<HTMLElement>('[data-nodeid][data-handletype][data-connectable]');
       const nodeId = el?.dataset.nodeid;
-      if (!el || !nodeId) return null;
-      for (const record of ctx.handlesOf(nodeId)) {
-        // A handle that cannot end a connection is not there, as far as a drop is concerned.
-        if (record.el === el) return record.options?.current.isConnectableEnd === false ? null : { nodeId, record };
+      if (el && nodeId) {
+        for (const record of ctx.handlesOf(nodeId)) {
+          // A handle that cannot end a connection is not there, as far as a drop is concerned.
+          if (record.el === el) {
+            return record.options?.current.isConnectableEnd === false
+              ? nearestHandle(clientX, clientY, from, radius)
+              : { nodeId, record };
+          }
+        }
       }
-      return null;
+      // Not over one: the nearest within reach, as React Flow's `connectionRadius`.
+      return nearestHandle(clientX, clientY, from, radius);
     };
 
     /**
@@ -169,7 +245,7 @@ export const connectFeature: Feature<ConnectApi> = {
       clientX: number,
       clientY: number,
     ) => {
-      const hit = handleAt(clientX, clientY);
+      const hit = handleAt(clientX, clientY, from, reconnecting ? config.reconnectRadius : config.radius);
       // The handle under the pointer, whether or not dropping there would actually connect — so a
       // consumer of `useConnection` can colour it as a target either way, as React Flow's own does.
       const to = hit
@@ -201,6 +277,7 @@ export const connectFeature: Feature<ConnectApi> = {
       cancelConnection();
 
       const from: Endpoint = { nodeId, id: record.id, type: record.type };
+      const radius = reconnect ? config.reconnectRadius : config.radius;
       const follow = (clientX: number, clientY: number) => {
         connecting = true;
         ctx.setConnection({
@@ -213,28 +290,50 @@ export const connectFeature: Feature<ConnectApi> = {
           reconnecting: reconnect?.edge.id ?? null,
         });
       };
-      follow(at.clientX, at.clientY);
-      if (reconnect) ctx.callbacks.onReconnectStart?.(at, reconnect.edge, reconnect.end);
-      else ctx.callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
 
-      // Held near the edge, the view pans — and the line's free end, being in graph
-      // space, has to be worked out again against the view it has just moved to.
+      // A press is not a connection until the pointer has travelled `connectionDragThreshold` — so a click on
+      // a handle is only a click.
+      let started = false;
       let pointer = { x: at.clientX, y: at.clientY };
-      const stopAutoPan = ctx.api(autoPanFeature).beginAutoPan(
-        'connect',
-        () => pointer,
-        () => {
-          follow(pointer.x, pointer.y);
-        },
-      );
+      let stopAutoPan = () => {};
+      const begin = () => {
+        started = true;
+        follow(at.clientX, at.clientY);
+        if (reconnect) ctx.callbacks.onReconnectStart?.(at, reconnect.edge, reconnect.end);
+        else ctx.callbacks.onConnectStart?.(at, { nodeId, handleId: record.id, handleType: record.type });
+        // Held near the edge, the view pans — and the line's free end, being in graph
+        // space, has to be worked out again against the view it has just moved to.
+        stopAutoPan = ctx.api(autoPanFeature).beginAutoPan(
+          'connect',
+          () => pointer,
+          () => {
+            follow(pointer.x, pointer.y);
+          },
+        );
+      };
+      if (config.dragThreshold <= 0) begin();
 
       const onMove = (e: PointerEvent) => {
         pointer = { x: e.clientX, y: e.clientY };
+        if (!started) {
+          if (Math.hypot(e.clientX - at.clientX, e.clientY - at.clientY) <= config.dragThreshold) return;
+          begin();
+        }
         follow(e.clientX, e.clientY);
       };
       const onUp = (e: PointerEvent) => {
-        const hit = handleAt(e.clientX, e.clientY);
+        // A flick: released far from the press with no move between (a touch, a fast mouse) — it travelled.
+        if (!started && Math.hypot(e.clientX - at.clientX, e.clientY - at.clientY) > config.dragThreshold) begin();
+        const hit = started ? handleAt(e.clientX, e.clientY, from, radius) : null;
+        const began = started;
         cancelConnection(); // clear first, so a callback sees a settled canvas
+        // What was only a press is for the click that follows it (`connectOnClick`), not for us.
+        if (!began) return;
+        // The click a release over the handle it began at makes is the end of this drag, not a first click.
+        afterDrag = record.el;
+        setTimeout(() => {
+          afterDrag = null;
+        }, 0);
         const c = hit
           ? connectionBetween(from, { nodeId: hit.nodeId, id: hit.record.id, type: hit.record.type })
           : null;
@@ -272,11 +371,60 @@ export const connectFeature: Feature<ConnectApi> = {
       if (record) beginConnection(nodeId, record, at, null);
     };
 
-    return { startConnection, beginConnection };
+    const clearPending = () => {
+      pending?.record.el.classList.remove('clickconnecting');
+      pending = null;
+    };
+    ctx.on('detach', clearPending);
+
+    const clickConnect: ConnectApi['clickConnect'] = (nodeId, handleEl, e) => {
+      if (!config.connectOnClick) return;
+      if (afterDrag === handleEl) {
+        afterDrag = null;
+        return;
+      }
+      const record = [...ctx.handlesOf(nodeId)].find((r) => r.el === handleEl);
+      if (!record) return;
+      if (!pending) {
+        if (record.options?.current.isConnectableStart === false) return;
+        pending = { nodeId, record };
+        record.el.classList.add('clickconnecting');
+        config.onClickStart?.(e, { nodeId, handleId: record.id, handleType: record.type });
+        return;
+      }
+      const first = pending;
+      clearPending();
+      const c =
+        record.options?.current.isConnectableEnd === false
+          ? null
+          : connectionBetween(
+              { nodeId: first.nodeId, id: first.record.id, type: first.record.type },
+              { nodeId, id: record.id, type: record.type },
+            );
+      const valid = c !== null && isAllowed(c, first.record, false);
+      if (c && valid) {
+        ctx.callbacks.onConnect?.(c);
+        first.record.options?.current.onConnect?.(c);
+      }
+      config.onClickEnd?.(e, { connection: c, isValid: valid });
+    };
+
+    return { startConnection, beginConnection, clickConnect, config };
+  },
+
+  useCanvas({ store, props }) {
+    const { config } = store.api(connectFeature);
+    config.dragThreshold = props.connectionDragThreshold ?? 1;
+    config.radius = props.connectionRadius ?? 20;
+    config.reconnectRadius = props.reconnectRadius ?? 10;
+    config.connectOnClick = props.connectOnClick ?? true;
+    config.onClickStart = props.onClickConnectStart;
+    config.onClickEnd = props.onClickConnectEnd;
+    return undefined;
   },
 
   useNode({ store, node }) {
-    const { startConnection } = store.api(connectFeature);
+    const { startConnection, clickConnect } = store.api(connectFeature);
     const id = node.id;
     // Stable, so a node's context — and every handle reading it — is not remade on each render.
     const start = useCallback(
@@ -285,7 +433,13 @@ export const connectFeature: Feature<ConnectApi> = {
       },
       [startConnection, id],
     );
-    return { startConnection: start };
+    const click = useCallback(
+      (handle: HTMLElement, at: MouseEvent) => {
+        clickConnect(id, handle, at);
+      },
+      [clickConnect, id],
+    );
+    return { startConnection: start, clickConnect: click };
   },
 
   EdgesLayer: ConnectionLine,

@@ -853,8 +853,7 @@ export interface FlowingerProps {
    */
   preventScrolling?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A connection begins the moment a handle is pressed.
+   * Pixels the pointer must travel from a handle before it becomes a connection (default 1). A press that does not travel is only a click on the handle — see `connectOnClick` — and starts no connection, so `onConnectStart` and `onConnectEnd` are not called for it. `0` starts it at the press. Needs `connectFeature`.
    */
   connectionDragThreshold?: number;
   /**
@@ -866,13 +865,11 @@ export interface FlowingerProps {
    */
   paneClickDistance?: number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A connection snaps to a handle the pointer is over, not to one near it.
+   * How near a handle a dropped connection snaps to it, in graph units (default 20): the nearest connectable handle within that of the pointer is the one it ends at, and the line is drawn to it, even where the pointer is not over it. A handle under the pointer is always preferred. `0` is only a handle the pointer is over. Needs `connectFeature`.
    */
   connectionRadius?: number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * As `connectionRadius`.
+   * As `connectionRadius`, for dragging an end of an edge to reconnect it (default 10). Needs `reconnectFeature`.
    */
   reconnectRadius?: number;
   /**
@@ -880,20 +877,13 @@ export interface FlowingerProps {
    */
   selectNodesOnDrag?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Connections are made by dragging from one handle to another; there is no click-to-connect.
+   * Make a connection by clicking a handle and then another, as well as by dragging (default true; with `nodesConnectable`). The first click is `onClickConnectStart` and puts a `clickconnecting` class on the handle; the second makes the connection if it is valid and is `onClickConnectEnd` either way. Needs `connectFeature`.
    */
   connectOnClick?: boolean;
-  /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Never called: there is no click-to-connect.
-   */
-  onClickConnectStart?: (event: React.MouseEvent, params: ConnectStartParams) => void;
-  /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Never called: there is no click-to-connect.
-   */
-  onClickConnectEnd?: (event: MouseEvent | TouchEvent) => void;
+  /** A first click on a handle, beginning a connection made by clicking (`connectOnClick`). */
+  onClickConnectStart?: (event: MouseEvent | TouchEvent, params: ConnectStartParams) => void;
+  /** The second click, whether or not it made a connection: `{ connection, isValid }` as `onConnectEnd` is given. */
+  onClickConnectEnd?: (event: MouseEvent | TouchEvent, state: ConnectEndState) => void;
   /**
    * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
    * Never called. `onNodeDragStart` is, with `nodes` as everything being dragged.

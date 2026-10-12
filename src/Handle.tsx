@@ -1,5 +1,6 @@
 import {
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   memo,
   useContext,
@@ -82,6 +83,12 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
     node.startConnection(e.currentTarget, e.nativeEvent);
   };
 
+  // A click is also how a connection is made without dragging (`connectOnClick`): both ends, so a handle that
+  // cannot start one can still be clicked to end one.
+  const onClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+    node?.clickConnect(e.currentTarget, e.nativeEvent);
+  };
+
   const combinedStyle: CSSProperties = {
     position: 'absolute',
     // Bigger when it has to be hit; the anchor is measured from the centre, so
@@ -108,6 +115,7 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
       className={`flowinger-handle react-flow__handle react-flow__handle-${position} ${className}`}
       style={combinedStyle}
       {...(canStart ? { onPointerDown } : {})}
+      {...(connectable ? { onClick } : {})}
     />
   );
 });

@@ -215,6 +215,8 @@ export interface NodeBits {
   style?: CSSProperties;
   /** What a `<Handle>` inside the node calls to begin a connection; without it, handles only draw. */
   startConnection?: (handle: HTMLElement, at: PointerEvent) => void;
+  /** What a click on a `<Handle>` calls: the first and the second click of a connection made by clicking. */
+  clickConnect?: (handle: HTMLElement, at: MouseEvent) => void;
   /** More props for the node's element, under the ones the canvas puts there itself. */
   props?: HTMLAttributes<HTMLDivElement>;
 }

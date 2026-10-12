@@ -98,6 +98,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const focusable = bits.some((b) => b.focusable === true);
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
+  const clickConnect = bits.find((b) => b.clickConnect)?.clickConnect;
   // Above its parent by depth, unless it says otherwise; above all while dragged.
   const zIndex = dragging ? 1000 : (node.zIndex ?? 1 + depth);
 
@@ -109,8 +110,9 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       connectable: connectable && startConnection !== undefined,
       registerHandle: (registration) => store.registerHandle(node.id, registration),
       startConnection: startConnection ?? NO_START,
+      clickConnect: clickConnect ?? NO_START,
     }),
-    [store, node.id, connectable, startConnection],
+    [store, node.id, connectable, startConnection, clickConnect],
   );
 
   // The edge layer needs the node's real size, and where its handles sit. The

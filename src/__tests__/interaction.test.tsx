@@ -502,11 +502,12 @@ describe('connectionMode and connect callbacks', () => {
   afterEach(() => {
     Reflect.deleteProperty(document, 'elementFromPoint');
   });
-  const drag = (from: Element, to: Element | null) => {
+  // `at` is where it is let go: over nothing, that must be out of reach of every handle (`connectionRadius`).
+  const drag = (from: Element, to: Element | null, at: [number, number] = [50, 200]) => {
     pointerOver(to);
     fireEvent.pointerDown(from, pointer({ clientX: 50, clientY: 40 }));
-    fireEvent.pointerMove(window, pointer({ clientX: 50, clientY: 200 }));
-    fireEvent.pointerUp(window, pointer({ clientX: 50, clientY: 200 }));
+    fireEvent.pointerMove(window, pointer({ clientX: at[0], clientY: at[1] }));
+    fireEvent.pointerUp(window, pointer({ clientX: at[0], clientY: at[1] }));
   };
 
   it('refuses a source dropped on a source in strict mode — the default — and says why', () => {
@@ -578,7 +579,7 @@ describe('connectionMode and connect callbacks', () => {
       isValid: true,
     });
     // Onto nothing.
-    drag(handle(container, 'a', 'out'), null);
+    drag(handle(container, 'a', 'out'), null, [500, 500]);
     expect(onConnectEnd.mock.calls[1]?.[1]).toEqual({ connection: null, isValid: null });
     // Vetoed by isValidConnection.
     expect(onConnect).toHaveBeenCalledTimes(1);
