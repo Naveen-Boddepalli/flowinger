@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
   <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="docs/features.md"><img alt="core size: about 17 kB gzipped" src="https://img.shields.io/badge/core-~17_kB_gzip-blue" /></a>
+  <a href="docs/features.md"><img alt="core size: about 17.5 kB gzipped" src="https://img.shields.io/badge/core-~17.5_kB_gzip-blue" /></a>
   <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
   <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
   <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
@@ -34,8 +34,8 @@
 
 ## Why Flowinger
 
-- **Small, and only what you use.** The core is about 17 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 26 kB. In QueryLens, swapping
+- **Small, and only what you use.** The core is about 17.5 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 27 kB. In QueryLens, swapping
   React Flow for it took the diagram chunk from **60.5 kB to 19.0 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
@@ -138,9 +138,9 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
 | Build | Gzipped |
 |---|---|
-| `FlowingerCore`, no features | about 17 kB |
+| `FlowingerCore`, no features | about 17.5 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 26 kB |
+| `FlowingerCanvas`, every feature | about 27 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).

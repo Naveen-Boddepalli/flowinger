@@ -11,6 +11,7 @@ export {
   edgeLabelsFeature,
   editingFeature,
   eventsFeature,
+  panKeyFeature,
   reconnectFeature,
   selectionFeature,
 } from './features/index.ts';

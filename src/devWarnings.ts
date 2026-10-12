@@ -15,6 +15,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
+  panKey: ['panActivationKeyCode'],
   connect: [
     'nodesConnectable',
     'onConnect',

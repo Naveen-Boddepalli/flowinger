@@ -34,8 +34,14 @@ export const resizeFeature: Feature<ResizeApi> = {
           setAttributes: true,
         },
       ];
-      if (next.x !== from.x || next.y !== from.y) {
-        changes.push({ type: 'position', id, position: { x: next.x, y: next.y } });
+      // The boxes are top-left corners; a position is where the node's origin is. With an origin, a size
+      // change alone moves it (a node centred on its position grows about that centre).
+      const node = ctx.nodeById.get(id);
+      const [ox, oy] = node?.origin ?? ctx.options.nodeOrigin;
+      const was = { x: from.x + ox * from.width, y: from.y + oy * from.height };
+      const now = { x: next.x + ox * next.width, y: next.y + oy * next.height };
+      if (now.x !== was.x || now.y !== was.y) {
+        changes.push({ type: 'position', id, position: now });
       }
       ctx.emitNodeChanges(changes);
     };

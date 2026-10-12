@@ -168,23 +168,18 @@ function endpoint(
   type: HandleType,
   fallback: Position,
 ): { point: { x: number; y: number }; position: Position } {
-  const origin = node.origin ?? store.getOptions().nodeOrigin ?? [0, 0];
-  const size = store.getNodeSize(node);
-  const topLeft = {
-    x: at.x - origin[0] * size.width,
-    y: at.y - origin[1] * size.height,
-  };
+  // `at` is the node's top-left corner (its origin already taken off), which is what an anchor is measured from.
   const handle = store.findHandle(node.id, handleId, type);
   if (handle) {
     return {
       position: handle.position,
       point: handle.anchor
-        ? { x: topLeft.x + handle.anchor.x, y: topLeft.y + handle.anchor.y }
-        : handleCoordinates(topLeft, handle.position, size),
+        ? { x: at.x + handle.anchor.x, y: at.y + handle.anchor.y }
+        : handleCoordinates(at, handle.position, store.getNodeSize(node)),
     };
   }
   const position = resolveHandlePosition(handleId, fallback);
-  return { position, point: handleCoordinates(topLeft, position, size) };
+  return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
 }
 
 
@@ -484,8 +479,9 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     if (reconnecting === edge.id) return null;
 
     const lookup = (id: string) => byId.get(id);
-    const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition);
-    const targetAt = absolutePositionOf(target, lookup, store.resolvePosition);
+    // Top-left corners: each node on a chain gives up its origin's share of its size.
+    const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition, store.originOffset);
+    const targetAt = absolutePositionOf(target, lookup, store.resolvePosition, store.originOffset);
 
     // With nothing to go on, leave the source's bottom for the target's top
     // when the target sits below it, else run sideways.

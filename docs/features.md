@@ -17,7 +17,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 17 kB gzipped (26 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 17.5 kB gzipped (27 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
@@ -32,6 +32,7 @@ only its own code. The props, the nodes and the instance are the same either way
 | `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `updateEdgeData`, `getNodeConnections`, `getHandleConnections`, `getIntersectingNodes`, `isNodeIntersecting` | |
 | `eventsFeature` | A double click, a right click, and the pointer entering, moving over and leaving a node, an edge or the pane; the wheel over the pane. Giving any edge event (or `onEdgeClick`) makes every edge take the pointer, selectable or not | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for edges and the pane, `onPaneScroll` |
 | `edgeLabelsFeature` | The box behind an edge's label (`labelShowBg`), sized to the text once a browser has laid it out | `labelShowBg` on an edge |
+| `panKeyFeature` | A held key turns a drag into a pan, even where `panOnDrag` is off. Off unless `panActivationKeyCode` is given (React Flow's own default is `'Space'`) — it listens for keys, about 0.6 kB a canvas that never wants it should not carry | `panActivationKeyCode` |
 
 Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
 labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the

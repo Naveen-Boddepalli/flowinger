@@ -24,7 +24,6 @@ import { Handle } from './Handle.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
-import { useKeyPress } from './useKeyPress.ts';
 import {
   DRAG_THRESHOLD,
   capturePointer,
@@ -180,8 +179,7 @@ function InnerCanvas(props: FlowingerProps) {
     onMoveStart,
     onMoveEnd,
     nodeOrigin,
-    panActivationKeyCode = 'Space',
-    nodeDragThreshold = 0,
+    nodeDragThreshold,
   } = props;
   const store = useFlowingerStore();
   // Installed while rendering, so they are there for every effect below and for whoever holds the
@@ -299,8 +297,7 @@ function InnerCanvas(props: FlowingerProps) {
       autoPanOnConnect,
       autoPanSpeed,
       nodeOrigin: [originX, originY],
-      nodeDragThreshold,
-      panActivationKeyCode,
+      nodeDragThreshold: nodeDragThreshold ?? null,
     });
   }, [
     store,
@@ -318,7 +315,6 @@ function InnerCanvas(props: FlowingerProps) {
     originX,
     originY,
     nodeDragThreshold,
-    panActivationKeyCode,
   ]);
 
   // Nesting, read from the nodes as given: where each one's parent sits, how deep
@@ -445,10 +441,9 @@ function InnerCanvas(props: FlowingerProps) {
     };
   }, [store, zoomOnScroll, panOnScroll, panOnScrollSpeed]);
 
-  const panActivationKeyPressed = useKeyPress(panActivationKeyCode ?? 'Space');
-
   const canPan = (button: number): boolean =>
-    (panActivationKeyPressed && (button === 0 || button === 1)) ||
+    // `panKeyFeature`: a held key makes any press a pan.
+    (store.isPanKeyHeld() && (button === 0 || button === 1)) ||
     (Array.isArray(panOnDrag) ? panOnDrag.includes(button) : Boolean(panOnDrag && (button === 0 || button === 1)));
 
   /** The pointers' midpoint and spread, in container pixels — the pinch's two numbers. */
@@ -476,7 +471,7 @@ function InnerCanvas(props: FlowingerProps) {
       }
     }
     // A feature may take the press — a selection box — before it becomes a pan.
-    if (!panActivationKeyPressed && bits.some((b) => b.onPointerDown?.(e))) return;
+    if (!store.isPanKeyHeld() && bits.some((b) => b.onPointerDown?.(e))) return;
     if (!canPan(e.button) || isInteractive(e.target)) return;
     pan.current = {
       pointerId: e.pointerId,
@@ -539,7 +534,7 @@ function InnerCanvas(props: FlowingerProps) {
     pan.current = null;
     if (!p.active) return;
     releasePointer(e.currentTarget, e.pointerId);
-    e.currentTarget.style.cursor = panActivationKeyPressed ? 'grab' : (panOnDrag ? 'grab' : '');
+    e.currentTarget.style.cursor = store.isPanKeyHeld() || panOnDrag ? 'grab' : '';
     store.endGesture(e.nativeEvent);
   };
 
@@ -617,7 +612,7 @@ function InnerCanvas(props: FlowingerProps) {
     userSelect: 'none',
     touchAction: 'none',
     ...(focusableForKeys ? { outline: 'none' } : {}),
-    ...(panActivationKeyPressed || (panOnDrag && !selectionOnDrag) ? { cursor: 'grab' } : {}),
+    ...(panOnDrag && !selectionOnDrag ? { cursor: 'grab' } : {}),
     ...Object.assign({}, ...bits.map((b) => b.style)),
     ...style,
   };

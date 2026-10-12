@@ -69,15 +69,20 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const readPosition = () => store.absolutePosition(node);
   // No drag has happened on the server, and nothing is registered there: the
   // layout's own position, placed inside its parent, is it.
+  const origin = node.origin ?? nodeOrigin;
+  const laidOutWidth = node.width ?? node.initialWidth;
+  const laidOutHeight = node.height ?? node.initialHeight;
   const asLaidOut = useMemo(
-    () => ({ x: parentX + node.position.x, y: parentY + node.position.y }),
-    [parentX, parentY, node.position.x, node.position.y],
+    () => ({
+      // The server has measured nothing: a declared size is all an origin can be taken from.
+      x: parentX + node.position.x - (origin && laidOutWidth !== undefined ? origin[0] * laidOutWidth : 0),
+      y: parentY + node.position.y - (origin && laidOutHeight !== undefined ? origin[1] * laidOutHeight : 0),
+    }),
+    [parentX, parentY, node.position.x, node.position.y, origin, laidOutWidth, laidOutHeight],
   );
+  // The node's top-left corner. It is re-read when the node moves — and, for a node with an origin, when it is
+  // measured: the store tells it then, so the position is never one made from a size that has since changed.
   const position = useSyncExternalStore(subscribe, readPosition, () => asLaidOut);
-  const origin = node.origin ?? nodeOrigin ?? store.getOptions().nodeOrigin ?? [0, 0];
-  const size = store.getNodeSize(node);
-  const offsetX = origin[0] * size.width;
-  const offsetY = origin[1] * size.height;
 
   // Selection is per node: selecting one re-renders it (and whichever it replaces), not the rest.
   const selected = useSyncExternalStore(
@@ -173,7 +178,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
         ...(node.height === undefined ? {} : { height: node.height }),
         ...node.style,
         position: 'absolute',
-        transform: `translate(${String(position.x - offsetX)}px, ${String(position.y - offsetY)}px)`,
+        transform: `translate(${String(position.x)}px, ${String(position.y)}px)`,
         pointerEvents: 'all',
         zIndex,
         ...Object.assign({}, ...bits.map((b) => b.style)),
@@ -201,8 +206,8 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
           type={node.type}
           selected={selected}
           isConnectable={connectable}
-          positionAbsoluteX={position.x - offsetX}
-          positionAbsoluteY={position.y - offsetY}
+          positionAbsoluteX={position.x}
+          positionAbsoluteY={position.y}
           selectable={selectable}
           draggable={draggable}
           deletable={node.deletable ?? true}

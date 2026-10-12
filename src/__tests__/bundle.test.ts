@@ -44,6 +44,7 @@ const FEATURES: Record<string, string[]> = {
   connect: ['beginConnection', 'flowinger-connection-line'],
   reconnect: ['startReconnect', 'flowinger-reconnect-anchor'],
   'box selection': ['flowinger-selection', 'subscribeSelectionRect'],
+  'pan key': ['panKey'],
   'own state': ['defaultNodes'],
   'dev warnings': ['do nothing without'],
 };

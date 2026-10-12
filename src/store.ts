@@ -19,7 +19,6 @@ import type {
   FlowingerInstance,
   HandleType,
   InternalNode,
-  KeyCode,
   Node,
   NodeChange,
   NodeOrigin,
@@ -159,9 +158,10 @@ export interface EngineOptions {
   autoPanOnNodeDrag: boolean;
   autoPanOnConnect: boolean;
   autoPanSpeed: number;
+  /** Where a node's `position` is on it: `[0, 0]` its top-left corner, `[0.5, 0.5]` its centre. */
   nodeOrigin: NodeOrigin;
-  nodeDragThreshold: number;
-  panActivationKeyCode?: KeyCode | null;
+  /** Pixels a press must travel to become a node drag; null leaves it at the engine's own 3. */
+  nodeDragThreshold: number | null;
 }
 
 /** The options a store starts with, before a canvas has told it otherwise. */
@@ -176,8 +176,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   autoPanOnConnect: true,
   autoPanSpeed: 15,
   nodeOrigin: [0, 0],
-  nodeDragThreshold: 0,
-  panActivationKeyCode: 'Space',
+  nodeDragThreshold: null,
 };
 
 
@@ -594,14 +593,32 @@ export function createFlowingerStore(
       height: node.height ?? node.initialHeight ?? FALLBACK_SIZE.height,
     };
 
+  /** Whether the pan-activation key is held — set by `panKeyFeature`, read by the canvas when a press begins. */
+  let panKeyHeld = false;
+  const NO_OFFSET: XYPosition = { x: 0, y: 0 };
+  const NO_ORIGIN: NodeOrigin = [0, 0];
+  /** A node's origin: its own, else the canvas's. `[0, 0]` is `position` being its top-left corner. */
+  const hasOrigin = (n: Node): boolean => {
+    const o = n.origin ?? options.nodeOrigin;
+    return o[0] !== 0 || o[1] !== 0;
+  };
+  /** How far a node's top-left corner is from its `position`: its origin times its size. */
+  const originOffset = (n: Node): XYPosition => {
+    const o = n.origin ?? options.nodeOrigin;
+    if (o[0] === 0 && o[1] === 0) return NO_OFFSET;
+    const size = getNodeSize(n);
+    return { x: o[0] * size.width, y: o[1] * size.height };
+  };
+
   /**
-   * A node's place on the canvas: its own position — a drag included — plus its
-   * ancestors'. For a root that is `resolvePosition` itself; for a child it is
-   * remembered by id so `useSyncExternalStore` gets the same object until it moves.
+   * A node's top-left corner on the canvas: its position — a drag included — less its origin's share of its
+   * size, plus the same for every ancestor (a child's `position` is relative to its parent's top-left). For
+   * a root with no origin that is `resolvePosition` itself; otherwise it is remembered by id so
+   * `useSyncExternalStore` gets the same object until it moves.
    */
   const absolutePosition = (node: Node): XYPosition => {
-    if (node.parentId === undefined) return resolvePosition(node.id, node.position);
-    const at = absolutePositionOf(node, (id) => nodeById.get(id), resolvePosition);
+    if (node.parentId === undefined && !hasOrigin(node)) return resolvePosition(node.id, node.position);
+    const at = absolutePositionOf(node, (id) => nodeById.get(id), resolvePosition, originOffset);
     const known = absCache.get(node.id);
     if (known && samePoint(known, at)) return known;
     absCache.set(node.id, at);
@@ -673,6 +690,9 @@ export function createFlowingerStore(
     if (known?.width === width && known.height === height) return;
     sizes.set(id, { width, height });
     bumpGeometry();
+    // With an origin, where the top-left is depends on the size: tell the node, and what is inside it.
+    const measured = nodeById.get(id);
+    if (measured && hasOrigin(measured)) emitNodeTree(id);
     flushDimensions();
   };
 
@@ -793,16 +813,12 @@ export function createFlowingerStore(
   const getNodeRect = (id: string): Rect | null => {
     const n = nodeById.get(id);
     if (!n) return null;
-    const size = getNodeSize(n);
-    const origin = n.origin ?? options.nodeOrigin ?? [0, 0];
+    // In the node's own space — relative to its parent's top-left, which is where a position is written —
+    // and its top-left corner, whatever its origin is.
     const pos = resolvePosition(id, n.position);
-    return {
-      x: pos.x - origin[0] * size.width,
-      y: pos.y - origin[1] * size.height,
-      ...size,
-    };
+    const offset = originOffset(n);
+    return { x: pos.x - offset.x, y: pos.y - offset.y, ...getNodeSize(n) };
   };
-
 
   /** The selection as it stands, as elements. */
   const getSelection = (): { nodes: Node[]; edges: Edge[] } => ({
@@ -913,10 +929,12 @@ export function createFlowingerStore(
     getNodesBounds(
       list.map((n) => ({
         ...snapshotNode(n),
-        position: absolutePosition(n),
+        // The top-left, already — so no origin to take off again. An origin asked for explicitly is the
+        // origin of the position as given: the canvas's own, and the node's, are set aside.
+        position: opts?.nodeOrigin ? absolutePositionOf(n, (id) => nodeById.get(id), resolvePosition) : absolutePosition(n),
+        origin: opts?.nodeOrigin ?? NO_ORIGIN,
         measured: sizes.get(n.id) ?? n.measured,
       })),
-      opts ?? { nodeOrigin: options.nodeOrigin },
     );
 
 
@@ -1242,7 +1260,14 @@ export function createFlowingerStore(
       callbacks = next;
     },
     setOptions: (next: EngineOptions) => {
+      const moved = next.nodeOrigin[0] !== options.nodeOrigin[0] || next.nodeOrigin[1] !== options.nodeOrigin[1];
       options = next;
+      // The canvas's origin changed: every node without one of its own is somewhere else.
+      if (moved) {
+        absCache.clear();
+        bumpGeometry();
+        for (const listeners of nodeListeners.values()) emit(listeners);
+      }
       run('change');
     },
     getOptions: () => options,
@@ -1252,8 +1277,13 @@ export function createFlowingerStore(
     getState,
     getGeometryVersion: () => geometryVersion,
 
+    setPanKeyHeld: (held: boolean) => {
+      panKeyHeld = held;
+    },
+    isPanKeyHeld: () => panKeyHeld,
     resolvePosition,
     absolutePosition,
+    originOffset,
     getNodeSize,
     getVisible: (): VisibleSet | null => visible,
     subscribeVisible: subscribeTo(visibleListeners),

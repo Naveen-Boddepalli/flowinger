@@ -245,6 +245,8 @@ export const dragFeature: Feature<DragApi> = {
     /** Stops watching for a press to become a drag; null when nothing is being watched. */
     const stopClaiming = useRef<(() => void) | null>(null);
     const [dragging, setDragging] = useState(false);
+    /** How far a press travels to become a drag: the canvas's `nodeDragThreshold`, else the engine's own. */
+    const threshold = () => store.getOptions().nodeDragThreshold ?? DRAG_THRESHOLD;
 
     useIsomorphicLayoutEffect(
       () => () => {
@@ -292,8 +294,7 @@ export const dragFeature: Feature<DragApi> = {
           stop();
           return;
         }
-        const threshold = store.getOptions().nodeDragThreshold || DRAG_THRESHOLD;
-        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < threshold) return;
+        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < threshold()) return;
         capturePointer(element, pressed.pointerId);
         stop();
       };
@@ -314,8 +315,7 @@ export const dragFeature: Feature<DragApi> = {
       const d = drag.current;
       if (d?.pointerId !== e.pointerId) return;
       if (!d.session) {
-        const threshold = store.getOptions().nodeDragThreshold || DRAG_THRESHOLD;
-        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold) return;
+        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold()) return;
         d.session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
         justDragged.current = true;
         setDragging(true);
@@ -344,7 +344,7 @@ export const dragFeature: Feature<DragApi> = {
         // is delivered to whatever is under the pointer — the capture it triggers only takes effect from
         // the next event — so the node never saw the pointer travel, and with no move after it the drag
         // would be lost. The release is the capture's first event: begin the drag, and end it, there.
-        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= DRAG_THRESHOLD) {
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= threshold()) {
           const session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
           justDragged.current = true;
           const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });

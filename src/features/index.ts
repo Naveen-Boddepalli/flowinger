@@ -7,6 +7,7 @@ import { dragFeature } from './drag.ts';
 import { edgeLabelsFeature } from './edgeLabels.tsx';
 import { editingFeature } from './editing.ts';
 import { eventsFeature } from './events.ts';
+import { panKeyFeature } from './panKey.ts';
 import { reconnectFeature } from './reconnect.tsx';
 import { selectionFeature } from './selection.ts';
 
@@ -19,6 +20,7 @@ export {
   edgeLabelsFeature,
   editingFeature,
   eventsFeature,
+  panKeyFeature,
   reconnectFeature,
   selectionFeature,
 };
@@ -35,4 +37,5 @@ export const allFeatures: readonly Feature[] = [
   connectFeature,
   reconnectFeature,
   boxSelectFeature,
+  panKeyFeature,
 ];
