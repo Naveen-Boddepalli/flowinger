@@ -577,7 +577,7 @@ came from looking at the **published artifact and the repository's public face**
 - **Not done:** a docs site, and the rest of `ROADMAP.md`. (The release itself, the browser suite, the layout recipes
   and the examples were done afterwards — see below.)
 
-### The release candidate, as verified
+### The release, as verified
 
 `v0.4.0-rc.1` went out through `release.yml` with no stored token, and was checked from the outside, not by the
 green ticks:
@@ -595,6 +595,16 @@ green ticks:
 - **The GitHub release** was created as a prerelease with the changelog's notes.
 - **The npm page:** relative images and links are rewritten to `raw.githubusercontent.com` / `blob/HEAD`.
 
+`v0.4.0` followed the same way, on the second attempt (published 2026-10-11 04:1x UTC, `latest` → `0.4.0`,
+provenance naming `release.yml @ refs/tags/v0.4.0`, `gitHead` `ab14dc6`; installed from the registry into an
+empty project with the same checks passing). The first attempt is worth keeping: the tag `v0.4.0` was
+created while `main` was still the *candidate's* merge commit (`904405d`, where `package.json` says
+`0.4.0-rc.1`), before the release PR had merged. The guard refused it in 10 s — `tag v0.4.0 does not match
+package.json version 0.4.0-rc.1` — and nothing was published; the tag was then moved to the PR's merge commit
+and run #3 published. Two things came of it: the guard's message now names the likely cause, and the release
+step edits a release page that already exists instead of failing on it (`7bc73e8`, the owner's own fix).
+CONTRIBUTING's *Releasing* section says to pull `main` before tagging and not to create the release by hand.
+
 ### Launch checklist
 
 What is *in the repository* is done; what is left is switches only the owner can flip.
@@ -606,7 +616,7 @@ What is *in the repository* is done; what is left is switches only the owner can
 | 3 | npmjs.com → `flowinger` → Settings → **Trusted Publisher** → GitHub Actions: owner `Naveen-Boddepalli`, repo `flowinger`, workflow `release.yml` | **done**, and validated by the first publish. Still open: *Publishing access* → "Require two-factor authentication and disallow bypass 2fa tokens" — trusted publishing keeps working under it, and npm is restricting bypass tokens anyway |
 | 4 | Settings → Security → enable **private vulnerability reporting**; Settings → enable **Discussions**; set the description, homepage (the demo) and topics | open |
 | 5 | Tag the three published releases at the commits npm recorded (`git tag v0.1.0 68bbe79 && git tag v0.2.0 574437d && git tag v0.3.0 a0e9c00`) — so the changelog's compare links work | **done**: tagged, each checked against the registry's `gitHead`, and pushed with the branch |
-| 6 | Merge this work; push a **prerelease** tag first (`v0.4.0-rc.1`) to prove steps 1–3, then `v0.4.0` | `v0.4.0-rc.1` **done** (see below); `v0.4.0` is the PR that sets the version and the changelog heading — merge it, then `git tag v0.4.0 && git push origin v0.4.0` |
+| 6 | Merge this work; push a **prerelease** tag first (`v0.4.0-rc.1`) to prove steps 1–3, then `v0.4.0` | **done**: `v0.4.0-rc.1` (2026-10-10) and `v0.4.0` (2026-10-11, run #3) are on npm, with provenance. See *The release, as verified* |
 | 7 | Replace the contact line in `CODE_OF_CONDUCT.md` with a dedicated address if wanted (it points at the GitHub profile) | optional |
 | 8 | After the first release, look at the README on npmjs.com: its three images are relative paths. | **done**: npm rewrites them to `raw.githubusercontent.com/…/HEAD/docs/assets/…` and all three load; relative links become `github.com/…/blob/HEAD/…`. No change needed |
 
@@ -625,7 +635,7 @@ What is *in the repository* is done; what is left is switches only the owner can
 - `useStore` reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store.
 - Published to npm: `flowinger@0.1.0` (2026-09-21), then `0.2.0` (2026-09-22, the fourth round's additions —
   events, viewport moves, edge label styling, `NodeProps`, the NOTICE), then `0.3.0` (2026-09-22, the fifth
-  round — `getInternalNode`, `useInternalNode`, `useStoreApi`, ARIA fields), then `0.4.0` (2026-10-10 — the
+  round — `getInternalNode`, `useInternalNode`, `useStoreApi`, ARIA fields), then `0.4.0` (2026-10-11 — the
   sixth round and the seventh, published from CI by tag with provenance, after `0.4.0-rc.1` on the `next`
   tag). QueryLens's trial branch tracked the registry version and was bumped at
   each release before it was merged into QueryLens `main` (2026-09-22, PR #6) — QueryLens now bumps `main`

@@ -9,7 +9,7 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-10-10
+## [0.4.0] - 2026-10-11
 
 ### Added
 
