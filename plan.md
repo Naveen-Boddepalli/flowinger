@@ -902,7 +902,8 @@ tests first, with React Flow's source as the oracle (`@xyflow/system`'s `XYPanZo
   `nodesFocusable`; the box's corner slipped as the view panned; and the connection line shared an `<svg>` with
   the edges, so it could not be styled.
 
-**Not built** (listed so nobody reads the first pass's plan as a record): `flowinger/editable-edge` (draggable
-waypoints) — it was in the plan and never existed; a Hexagon shape (there are diamond, circle, cylinder,
-parallelogram and document); and the "production recipes" (grouping, multiplayer presence, workflow
-simulation). Layout recipes (`d3-hierarchy`, `dagre`, `elkjs`) are in `examples/layouts`. See `ROADMAP.md`.
+**Not built at the end of the third pass** (listed so nobody reads the first pass's plan as a record):
+`flowinger/editable-edge` and a Hexagon shape — both were in the plan and neither existed; they were written
+afterwards (see the changelog's *Unreleased*) — and the "production recipes" (grouping, multiplayer presence,
+workflow simulation). Layout recipes (`d3-hierarchy`, `dagre`, `elkjs`) are in `examples/layouts`. See
+`ROADMAP.md`.

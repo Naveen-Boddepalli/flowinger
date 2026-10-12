@@ -288,3 +288,45 @@ test.describe('opt-outs, from a real press', () => {
     await expect.poll(async () => (await view(page)).zoom).toBeGreaterThan(before);
   });
 });
+
+test.describe('editable edges', () => {
+  /** The screen position of the middle of an edge's path, by length. */
+  const middleOf = (page: import('@playwright/test').Page, id: string) =>
+    edge(page, id).evaluate((g) => {
+      const path = g.querySelector('path') as SVGPathElement;
+      const p = path.getPointAtLength(path.getTotalLength() / 2);
+      const m = path.getScreenCTM() as DOMMatrix;
+      return { x: p.x * m.a + p.y * m.c + m.e, y: p.x * m.b + p.y * m.d + m.f };
+    });
+  const pathOf = (page: import('@playwright/test').Page, id: string) =>
+    edge(page, id).locator('path.react-flow__edge-path').getAttribute('d');
+
+  test('a waypoint is dragged out of the middle of an edge, moved, and double-clicked away', async ({ page }) => {
+    await open(page, '?editable=1');
+    const straight = await pathOf(page, 'e3-4');
+    const at = await middleOf(page, 'e3-4');
+    await page.mouse.click(at.x, at.y); // selects it
+    const midpoint = edge(page, 'e3-4').locator('.flowinger-edge-midpoint').first();
+    await expect(midpoint).toBeVisible();
+
+    // Drag the middle sideways: a waypoint is made where the pointer is, and the edge bends through it.
+    const m = await centre(midpoint);
+    await drag(page, m, { x: m.x + 140, y: m.y }, 8);
+    const point = edge(page, 'e3-4').locator('.flowinger-edge-point');
+    await expect(point).toHaveCount(1);
+    expect(await pathOf(page, 'e3-4')).not.toBe(straight);
+    const p0 = await centre(point);
+    expect(Math.abs(p0.x - (m.x + 140))).toBeLessThan(2);
+
+    // Move it again, and the node it joins did not move, nor the view.
+    const before = await view(page);
+    await drag(page, p0, { x: p0.x - 60, y: p0.y - 30 }, 6);
+    const p1 = await centre(point);
+    expect(Math.abs(p1.x - (p0.x - 60))).toBeLessThan(2);
+    expect(await view(page)).toEqual(before);
+
+    await point.dblclick();
+    await expect(point).toHaveCount(0);
+    expect(await pathOf(page, 'e3-4')).toBe(straight);
+  });
+});

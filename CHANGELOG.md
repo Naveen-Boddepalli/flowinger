@@ -9,6 +9,14 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Added
+
+- **`flowinger/editable-edge`** — `EditableEdge`, an edge with waypoints you can move: it runs through
+  `data.points`, and once selected each waypoint is a handle to drag, the dot between each pair of ends is a
+  place to add one, and a double click removes one. Written through `updateEdgeData`, so a controlled flow hears
+  every move. `getEditableEdgePath` is the path as a function. See [the pro modules](docs/pro.md).
+- **`HexagonNode`** in `flowinger/shapes` (`shapeNodeTypes.hexagon`).
+
 ### Fixed
 
 - **The rectangle round a box selection, a `NodeToolbar` for another node (`nodeId`), and the pan to a node

@@ -49,9 +49,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
 1. **Real-browser coverage for what jsdom cannot see** — done for the 0.5.0 behaviour (see *Now*): it found
    one bug jsdom could not (the selection rectangle, a node toolbar for another node and the focus pan used a
    child's position inside its parent, not on the canvas). Left: touch, which needs a device.
-2. **The pro modules' gaps.** `flowinger/editable-edge` (draggable waypoints) and a Hexagon shape are not in
-   the package, though earlier plans said so. Recipes still to write as `examples/`: grouping and swimlanes,
-   multiplayer presence (Yjs), a workflow-simulation stepper.
+2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (unreleased). Still to
+   write as `examples/`: grouping and swimlanes, multiplayer presence (Yjs), a workflow-simulation stepper.
 3. **Size.** The core grew from 17.6 to 18.7 kB and the whole canvas from 27.3 to 33.6 for the 39 props; the
    features are separable, but a `FlowingerCanvas` pays for all of them. A pass that measures each feature and
    removes duplication (three places build "is this key held", several build "the box round some nodes") is

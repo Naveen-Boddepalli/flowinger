@@ -53,6 +53,7 @@ const subpaths = [
   { name: 'snaplines', target: 'pro/snaplines' },
   { name: 'export', target: 'pro/export' },
   { name: 'smart-edges', target: 'pro/smartEdges' },
+  { name: 'editable-edge', target: 'pro/editableEdge' },
   { name: 'shapes', target: 'pro/shapes' },
   { name: 'tree', target: 'pro/tree' },
   { name: 'pro', target: 'pro/index' },

@@ -179,6 +179,33 @@ export function DocumentNode({ data }: NodeProps<Node<{ label?: ReactNode; [key:
 }
 
 /**
+ * Hexagon / Preparation node for flowchart diagrams.
+ */
+export function HexagonNode({ data }: NodeProps<Node<{ label?: ReactNode; [key: string]: unknown }>>) {
+  const shapeData = (data ?? {}) as ShapeNodeData;
+  const fill = shapeData.fill ?? 'var(--flowinger-surface, #1e293b)';
+  const stroke = shapeData.stroke ?? shapeData.color ?? 'var(--flowinger-border, #ec4899)';
+  const strokeWidth = shapeData.strokeWidth ?? 2;
+  const textColor = shapeData.textColor ?? 'var(--flowinger-text, #f8fafc)';
+
+  return (
+    <div style={{ ...defaultShapeContainerStyle, minWidth: 140, minHeight: 80 }}>
+      {renderHandles(shapeData.handles)}
+      <svg
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}
+        viewBox="0 0 140 80"
+        preserveAspectRatio="none"
+      >
+        <polygon points="30,2 110,2 138,40 110,78 30,78 2,40" fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+      </svg>
+      <div style={{ position: 'relative', zIndex: 1, color: textColor, fontSize: 13, fontWeight: 500 }}>
+        {shapeData.label ?? 'Preparation'}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Standard registry dictionary mapping flowchart shape names to their components.
  */
 export const shapeNodeTypes = {
@@ -187,4 +214,5 @@ export const shapeNodeTypes = {
   cylinder: CylinderNode,
   parallelogram: ParallelogramNode,
   document: DocumentNode,
+  hexagon: HexagonNode,
 };

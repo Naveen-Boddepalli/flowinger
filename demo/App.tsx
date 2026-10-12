@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { EditableEdge } from '../src/pro/editableEdge.tsx';
 import { downloadFile, exportCanvasToPng, exportCanvasToSvg } from '../src/pro/export.ts';
 import {
   Background,
@@ -56,7 +57,12 @@ function originFromUrl(): [number, number] | undefined {
 }
 
 /** Props the browser suite sets from the address (`?colorMode=system&zIndexMode=manual&smooth=1`). */
-function propsFromUrl(): { colorMode?: 'light' | 'dark' | 'system'; zIndexMode?: 'auto' | 'basic' | 'manual'; smooth: boolean } {
+function propsFromUrl(): {
+  colorMode?: 'light' | 'dark' | 'system';
+  zIndexMode?: 'auto' | 'basic' | 'manual';
+  smooth: boolean;
+  editable: boolean;
+} {
   const q = new URLSearchParams(window.location.search);
   const colorMode = q.get('colorMode');
   const zIndexMode = q.get('zIndexMode');
@@ -64,6 +70,7 @@ function propsFromUrl(): { colorMode?: 'light' | 'dark' | 'system'; zIndexMode?:
     ...(colorMode === 'light' || colorMode === 'dark' || colorMode === 'system' ? { colorMode } : {}),
     ...(zIndexMode === 'auto' || zIndexMode === 'basic' || zIndexMode === 'manual' ? { zIndexMode } : {}),
     smooth: q.get('smooth') === '1',
+    editable: q.get('editable') === '1',
   };
 }
 
@@ -160,7 +167,7 @@ function CostEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targ
 }
 
 const nodeTypes = { plan: PlanNode, group: GroupNode };
-const edgeTypes = { cost: CostEdge };
+const edgeTypes = { cost: CostEdge, editable: EditableEdge };
 
 const plan = (id: string, x: number, y: number, data: PlanData, extra: Partial<Node> = {}): Node => ({
   id,
@@ -267,6 +274,14 @@ export function App() {
   const Canvas = whole ? FlowingerCanvas : FlowingerCore;
   const nodeOrigin = useMemo(originFromUrl, []);
   const urlProps = useMemo(propsFromUrl, []);
+  // `?editable=1`: two of the edges are `flowinger/editable-edge`'s, for the browser suite.
+  const shownEdges = useMemo(
+    () =>
+      urlProps.editable
+        ? edges.map((e) => (e.id === 'e1-3' || e.id === 'e3-4' ? { ...e, type: 'editable' } : e))
+        : edges,
+    [edges, urlProps.editable],
+  );
   const stress = useMemo(() => bigGrid(2000), []);
 
   const isValidConnection = (c: Connection) => c.source !== c.target;
@@ -310,7 +325,7 @@ export function App() {
             key={whole ? 'whole' : [...picks].sort().join(',')}
             {...(whole ? {} : { features })}
             nodes={many ? stress : nodes}
-            edges={many ? [] : edges}
+            edges={many ? [] : shownEdges}
             {...(many ? {} : { onNodesChange, onEdgesChange })}
             {...(nodeOrigin ? { nodeOrigin } : {})}
             {...(urlProps.colorMode ? { colorMode: urlProps.colorMode } : {})}
