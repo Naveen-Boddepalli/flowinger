@@ -357,3 +357,79 @@ describe('useStore’s snapshot', () => {
     expect(heard).toHaveBeenCalled();
   });
 });
+
+describe('what is asked after every change, answered without a scan', () => {
+  it('knows when every node is measured as nodes arrive, are measured, are hidden and go', () => {
+    const { store } = mounted();
+    const initialized = () => store.areNodesInitialized();
+    expect(initialized()).toBe(false); // an empty diagram is not "initialized"
+
+    store.setNodes([node('a', 0, 0), node('b', 0, 100)]);
+    expect(initialized()).toBe(false);
+    store.setSize('a', 10, 10);
+    expect(initialized()).toBe(false);
+    store.setSize('b', 10, 10);
+    expect(initialized()).toBe(true);
+
+    // Measuring again — the same size, or a new one — is not a second node measured.
+    store.setSize('a', 10, 10);
+    store.setSize('a', 20, 20);
+    store.setNodes([node('a', 0, 0), node('b', 0, 100), node('c', 0, 200)]);
+    expect(initialized()).toBe(false);
+    // A hidden node is not waited for: it is not drawn, so it will not be measured.
+    store.setNodes([node('a', 0, 0), node('b', 0, 100), { ...node('c', 0, 200), hidden: true }]);
+    expect(initialized()).toBe(true);
+    store.setNodes([node('a', 0, 0), node('b', 0, 100), node('c', 0, 200)]);
+    expect(initialized()).toBe(false);
+    store.setSize('c', 10, 10);
+    expect(initialized()).toBe(true);
+
+    // A node that goes takes its size with it: back, it has to be measured again.
+    store.setNodes([node('a', 0, 0), node('c', 0, 200)]);
+    expect(initialized()).toBe(true);
+    store.setNodes([node('a', 0, 0), node('b', 0, 100), node('c', 0, 200)]);
+    expect(initialized()).toBe(false);
+    store.setSize('b', 10, 10);
+    expect(initialized()).toBe(true);
+
+    // A size that arrives before its node counts when the node does.
+    store.setSize('late', 10, 10);
+    store.setNodes([node('a', 0, 0), node('b', 0, 100), node('c', 0, 200), node('late', 0, 300)]);
+    expect(initialized()).toBe(true);
+    // And a zero size is no size.
+    store.setSize('zero', 0, 0);
+    store.setNodes([node('a', 0, 0), node('zero', 0, 400)]);
+    expect(initialized()).toBe(false);
+  });
+
+  it('reports the selection of a controlled flow from the elements, and none when none says so', () => {
+    const { store } = mounted();
+    store.setCallbacks({ onNodesChange: () => {}, onEdgesChange: () => {} });
+    store.setNodes([node('a', 0, 0), { ...node('b', 0, 100), selected: true }]);
+    store.setEdges([{ id: 'e', source: 'a', target: 'b', selected: true } as Edge]);
+    expect(store.getSelection().nodes.map((n) => n.id)).toEqual(['b']);
+    expect(store.getSelection().edges.map((e) => e.id)).toEqual(['e']);
+    expect(store.hasSelection()).toBe(true);
+
+    store.setNodes([node('a', 0, 0), node('b', 0, 100)]);
+    store.setEdges([{ id: 'e', source: 'a', target: 'b' } as Edge]);
+    expect(store.getSelection()).toEqual({ nodes: [], edges: [] });
+    expect(store.hasSelection()).toBe(false);
+
+    // And it is found again.
+    store.setNodes([{ ...node('a', 0, 0), selected: true }, node('b', 0, 100)]);
+    expect(store.getSelection().nodes.map((n) => n.id)).toEqual(['a']);
+    expect(store.hasSelection()).toBe(true);
+  });
+
+  it('reports the selection of an uncontrolled flow from its own set', () => {
+    const { store } = mounted();
+    store.setNodes([node('a', 0, 0), node('b', 0, 100)]);
+    expect(store.hasSelection()).toBe(false);
+    store.api(selectionFeature).selectNode('b');
+    expect(store.getSelection().nodes.map((n) => n.id)).toEqual(['b']);
+    // A node that goes takes its selection with it.
+    store.setNodes([node('a', 0, 0)]);
+    expect(store.hasSelection()).toBe(false);
+  });
+});

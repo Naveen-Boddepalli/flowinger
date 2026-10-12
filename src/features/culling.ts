@@ -61,10 +61,21 @@ export const cullingFeature: Feature = {
         };
         if (isRectIntersecting(span, region, true)) edgeIds.add(e.id);
       }
-      const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
-        a.size === b.size && [...a].every((id) => b.has(id));
+      const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
+        if (a.size !== b.size) return false;
+        for (const id of a) if (!b.has(id)) return false;
+        return true;
+      };
+      // The edge layer draws them in this order, and a later edge is above an earlier one: the same edges in
+      // a new order are a new set. (Nodes are drawn in the order of the list, whatever this one's.)
+      const sameInOrder = (a: ReadonlySet<string>, b: ReadonlySet<string>) => {
+        if (a.size !== b.size) return false;
+        const other = b.values();
+        for (const id of a) if (id !== other.next().value) return false;
+        return true;
+      };
       const known = ctx.visible;
-      if (known && same(known.nodes, nodeIds) && same(known.edges, edgeIds)) return;
+      if (known && same(known.nodes, nodeIds) && sameInOrder(known.edges, edgeIds)) return;
       ctx.setVisible({ nodes: nodeIds, edges: edgeIds });
     };
     ctx.on('change', recompute);
