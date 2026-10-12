@@ -85,6 +85,36 @@
         "default": "./dist/pro/export.cjs"
       }
     },
+    "./smart-edges": {
+      "import": {
+        "types": "./dist/pro/smartEdges.d.ts",
+        "default": "./dist/pro/smartEdges.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/smartEdges.d.ts",
+        "default": "./dist/pro/smartEdges.cjs"
+      }
+    },
+    "./shapes": {
+      "import": {
+        "types": "./dist/pro/shapes.d.ts",
+        "default": "./dist/pro/shapes.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/shapes.d.ts",
+        "default": "./dist/pro/shapes.cjs"
+      }
+    },
+    "./tree": {
+      "import": {
+        "types": "./dist/pro/tree.d.ts",
+        "default": "./dist/pro/tree.js"
+      },
+      "require": {
+        "types": "./dist/cjs/pro/tree.d.ts",
+        "default": "./dist/pro/tree.cjs"
+      }
+    },
     "./pro": {
       "import": {
         "types": "./dist/pro/index.d.ts",
@@ -103,6 +133,9 @@
       "clipboard": ["dist/pro/clipboard.d.ts"],
       "snaplines": ["dist/pro/snaplines.d.ts"],
       "export": ["dist/pro/export.d.ts"],
+      "smart-edges": ["dist/pro/smartEdges.d.ts"],
+      "shapes": ["dist/pro/shapes.d.ts"],
+      "tree": ["dist/pro/tree.d.ts"],
       "pro": ["dist/pro/index.d.ts"]
     }
   },
@@ -113,6 +146,9 @@
     "clipboard",
     "snaplines",
     "export",
+    "smart-edges",
+    "shapes",
+    "tree",
     "pro"
   ],
   "scripts": {
