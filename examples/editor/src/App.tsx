@@ -1,4 +1,4 @@
-import { useCallback, type ChangeEvent } from 'react';
+import { useCallback, useRef, type ChangeEvent } from 'react';
 import {
   Background,
   BaseEdge,
@@ -21,6 +21,12 @@ import {
   type Node,
   type NodeProps,
 } from 'flowinger';
+import { useUndoRedo } from 'flowinger/history';
+import { useClipboard } from 'flowinger/clipboard';
+import { useSnapLines, SnapLinesOverlay } from 'flowinger/snaplines';
+import { exportCanvasToSvg, downloadFile } from 'flowinger/export';
+import { shapeNodeTypes } from 'flowinger/shapes';
+import { SmartEdge } from 'flowinger/smart-edges';
 
 /** A node of your own: a React component. Anything inside it that takes a press — an input, a button —
  *  gets the `nodrag` class, so using it does not drag the node. */
@@ -58,39 +64,51 @@ function RemovableEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition,
 }
 
 // Defined outside the component so they keep their identity between renders.
-const nodeTypes = { task: TaskNode };
-const edgeTypes = { removable: RemovableEdge };
+const nodeTypes = {
+  task: TaskNode,
+  ...shapeNodeTypes,
+};
+const edgeTypes = {
+  removable: RemovableEdge,
+  smart: SmartEdge,
+};
 
 const initialNodes: Node[] = [
   { id: '1', type: 'task', position: { x: 0, y: 60 }, width: 180, height: 44, data: { title: 'Draft the plan' } },
-  { id: '2', type: 'task', position: { x: 280, y: 0 }, width: 180, height: 44, data: { title: 'Review it' } },
-  { id: '3', type: 'task', position: { x: 280, y: 120 }, width: 180, height: 44, data: { title: 'Estimate the work' } },
-  { id: '4', type: 'task', position: { x: 560, y: 60 }, width: 180, height: 44, data: { title: 'Ship it' } },
+  { id: '2', type: 'diamond', position: { x: 260, y: 45 }, width: 120, height: 80, data: { label: 'Approved?' } },
+  { id: '3', type: 'task', position: { x: 440, y: 0 }, width: 180, height: 44, data: { title: 'Implement feature' } },
+  { id: '4', type: 'cylinder', position: { x: 460, y: 120 }, width: 100, height: 90, data: { label: 'Store in DB' } },
 ];
 
 const initialEdges: Edge[] = [
   { id: 'e1-2', source: '1', target: '2', type: 'removable', markerEnd: 'arrowclosed' },
-  { id: 'e1-3', source: '1', target: '3', type: 'removable', markerEnd: 'arrowclosed' },
-  { id: 'e2-4', source: '2', target: '4', type: 'removable', markerEnd: 'arrowclosed' },
+  { id: 'e2-3', source: '2', target: '3', type: 'smart', markerEnd: 'arrowclosed' },
+  { id: 'e2-4', source: '2', target: '4', type: 'smart', markerEnd: 'arrowclosed' },
 ];
 
 let counter = 4;
 
 function Editor() {
-  // Controlled: the canvas reports what happened (a drag, a selection, a removal) and these apply it.
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { addNodes, screenToFlowPosition } = useReactFlow();
 
+  const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo({ enableShortcuts: true });
+  const { copy, paste, canPaste } = useClipboard({ enableShortcuts: true });
+  const { snapLines, handleNodeDrag, clearSnapLines } = useSnapLines({ threshold: 6 });
+
   const onConnect = useCallback(
-    (connection: Connection) =>
-      setEdges((current) => addEdge({ ...connection, type: 'removable', markerEnd: 'arrowclosed' }, current)),
-    [setEdges],
+    (connection: Connection) => {
+      takeSnapshot();
+      setEdges((current) => addEdge({ ...connection, type: 'smart', markerEnd: 'arrowclosed' }, current));
+    },
+    [setEdges, takeSnapshot],
   );
 
   const addTask = () => {
+    takeSnapshot();
     counter += 1;
-    // Where the middle of the visible canvas is, in graph units.
     const at = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     addNodes({
       id: String(counter),
@@ -102,39 +120,63 @@ function Editor() {
     });
   };
 
+  const handleExportSvg = async () => {
+    if (!wrapperRef.current) return;
+    const svg = await exportCanvasToSvg(wrapperRef.current, { backgroundColor: '#0f172a' });
+    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    downloadFile(url, 'diagram.svg');
+    URL.revokeObjectURL(url);
+  };
+
   const reset = () => {
+    takeSnapshot();
     setNodes(initialNodes);
     setEdges(initialEdges);
   };
 
   return (
-    <FlowingerCanvas
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      nodesDraggable
-      nodesConnectable
-      elementsSelectable
-      snapToGrid
-      snapGrid={[20, 20]}
-      deleteKeyCode={['Backspace', 'Delete']}
-      fitView
-      minZoom={0.3}
-    >
-      <Background />
-      <Panel position="top-left">
-        <div className="toolbar">
-          <button onClick={addTask}>Add task</button>
-          <button onClick={reset}>Reset</button>
-          <span>Drag a handle to connect · Backspace deletes the selection</span>
-        </div>
-      </Panel>
-      <MiniMap position="bottom-left" />
-    </FlowingerCanvas>
+    <div ref={wrapperRef} style={{ width: '100%', height: '100%' }}>
+      <FlowingerCanvas
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeDrag={(_e, node) => {
+          handleNodeDrag(node, nodes, node.position);
+        }}
+        onNodeDragStop={() => {
+          clearSnapLines();
+          takeSnapshot();
+        }}
+        nodesDraggable
+        nodesConnectable
+        elementsSelectable
+        snapToGrid
+        snapGrid={[15, 15]}
+        deleteKeyCode={['Backspace', 'Delete']}
+        fitView
+        minZoom={0.3}
+      >
+        <Background />
+        <SnapLinesOverlay snapLines={snapLines} color="#60a5fa" />
+        <Panel position="top-left">
+          <div className="toolbar">
+            <button onClick={addTask}>Add task</button>
+            <button onClick={() => undo()} disabled={!canUndo} title="Undo (Cmd+Z)">Undo</button>
+            <button onClick={() => redo()} disabled={!canRedo} title="Redo (Cmd+Y)">Redo</button>
+            <button onClick={() => void copy()} title="Copy selected (Cmd+C)">Copy</button>
+            <button onClick={() => void paste()} disabled={!canPaste} title="Paste (Cmd+V)">Paste</button>
+            <button onClick={() => void handleExportSvg()} title="Export SVG">Export SVG</button>
+            <button onClick={reset}>Reset</button>
+          </div>
+        </Panel>
+        <MiniMap position="bottom-left" />
+      </FlowingerCanvas>
+    </div>
   );
 }
 
