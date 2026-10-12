@@ -21,6 +21,9 @@
 | `onMoveStart`, `onMove`, `onMoveEnd` | | The view is moving: `(event, viewport)`, `event` the pointer or wheel that moved it, or `null` for a call such as `fitView`. A run of wheel ticks is one move, ended once the wheel has been still for 150 ms; `useOnViewportChange` hears the same moves from anywhere inside a canvas. |
 | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` | | And the same for edges (`onEdgeDoubleClick`…) and the pane (`onPaneContextMenu`, `onPaneMouseEnter`…), plus `onPaneScroll`. Needs `eventsFeature`; giving any edge event makes every edge take the pointer. |
 | `selectionOnDrag`, `selectionMode` | `false`, `'full'` | With `elementsSelectable`, dragging on the empty canvas draws a selection box (Shift does it anyway; Ctrl/⌘ held at the start keeps what is already selected). `'full'` takes nodes wholly inside it, `'partial'` any it touches; edges with both ends inside come along. Pan with the middle/right button (`panOnDrag={[1, 2]}`) or the wheel. `onSelectionStart` / `onSelectionEnd` report it. |
+| `nodeOrigin` | `[0, 0]` | Where on a node its `position` is: `[0, 0]` its top-left corner, `[0.5, 0.5]` its centre. A node's own `origin` wins. A child's `position` is relative to its parent's *top-left* (as in React Flow), whatever either's origin. Edges, hit testing, the minimap, `fitView`, extents and the resizer all use the drawn box. |
+| `nodeDragThreshold` | `3` | Pixels a press must travel before it becomes a node drag; `0` is none. Needs `dragFeature`. |
+| `panActivationKeyCode` | none | Holding this key turns a drag into a pan, even where `panOnDrag` is off (`'Space'` is React Flow's default; here it is off unless asked for). Needs `panKeyFeature`, which `FlowingerCanvas` has; a `FlowingerCore` says in development that it does nothing without it. |
 | `translateExtent` | none | `[[minX, minY], [maxX, maxY]]`: keeps the view inside it. |
 | `nodeExtent` | none | The same shape, but for *nodes*: a dragged node (or selection) stops at its edge. A node's own `extent` wins. |
 | `snapToGrid`, `snapGrid` | `false`, `[15, 15]` | A dragged node lands on the grid; a selection keeps its shape, snapping by the node you hold. |
@@ -39,6 +42,10 @@
 | `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` | | `onBeforeDelete({ nodes, edges })` may return `false`, a smaller `{ nodes, edges }`, or a promise of either; then the removals are reported and these are called with what went. |
 | `onSelectionChange`, `onNodeClick`, `onEdgeClick`, `onPaneClick` | | `onSelectionChange({ nodes, edges })` tells you when the selection changes. A pan's closing click is not a pane click, and neither is a drag's a node click. |
 | `onNodeDragStart`, `onNodeDrag`, `onNodeDragStop`, `onInit` | | The drag callbacks get `(event, node, nodes)`: `nodes` is everything being dragged. |
+
+Props that appear in React Flow's API but that nothing here acts on — `colorMode`, `connectOnClick`,
+`selectionKeyCode` and the rest — are accepted so code compiles, tagged `@unimplemented` in the types, and
+warned about once in development: [the list, with what happens instead](react-flow-coverage.md#accepted-not-implemented).
 
 Without `onNodesChange`, `nodes` is never mutated: a dragged position is kept internally, and a fresh
 layout from you wins over it. Dragging a selected node drags the whole selection; a node with a

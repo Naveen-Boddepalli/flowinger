@@ -41,12 +41,17 @@
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
   they are really drawn, so an edge follows a handle you moved with CSS.
 - **An API you already know.** React Flow's names for components, hooks, props, class names, `data-testid`s and
-  types — [158 of its 211 exports](docs/react-flow-coverage.md), measured from its own type declarations — and
-  a [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ.
+  types — all [211 of its exports](docs/react-flow-coverage.md), and **263 of the 302 members** of the props,
+  instance and components you write against *do* what they say (the other 39 are accepted so your code
+  compiles, tagged, and warned about in development) — measured from its own type declarations, with a
+  [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ.
+- **The "pro" extras, free.** [Undo/redo, copy and paste, snap guides, export, smart edges, flowchart shapes
+  and a collapsible tree](docs/pro.md), each its own entry point (`flowinger/history`…), so they cost the core
+  nothing unless you import them.
 - **Server rendering that works.** Renders and hydrates on React 18 and 19, with the first paint already framed.
 - **Accessible when you ask.** Keyboard navigation, focusable nodes and edges, ARIA fields — opt-in, so a page
   that only shows a diagram does not gain tab stops it did not want.
-- **Tested against the real thing.** More than 850 unit tests (React Flow itself is the oracle for geometry and
+- **Tested against the real thing.** More than 1,000 unit tests (React Flow itself is the oracle for geometry and
   behaviour), mutation-tested guards, a real-browser suite, and CI that installs the *packed* package.
 
 ## Install
@@ -153,6 +158,7 @@ lacks does nothing — and in development the console says so. See [Features](do
 | [API reference](docs/api.md) | Canvas props, nodes and edges, handles, sub-flows, the instance, controlled flows |
 | [Components and hooks](docs/components.md) | `Handle`, `Background`, `Controls`, `MiniMap`, `NodeToolbar`, `NodeResizer`, `useReactFlow`… |
 | [Features](docs/features.md) | What each feature adds, what needs it, and how to write your own |
+| [The "pro" modules](docs/pro.md) | Undo/redo, copy and paste, snap guides, export, smart edges, shapes, a collapsible tree |
 | [Theming](docs/theming.md) | The `--flowinger-*` CSS variables |
 | [Server rendering](docs/server-rendering.md) | What renders on the server and what waits for the client |
 | [Migrating from React Flow](docs/migrating-from-react-flow.md) | Defaults, types, what is missing and what to do instead |

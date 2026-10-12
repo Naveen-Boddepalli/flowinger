@@ -5,11 +5,13 @@
 //
 // Types only: nothing here exists at runtime, so nothing reaches a bundle.
 //
-// Left out on purpose:
-//   - names for something flowinger does not have (`NodeOrigin`, `ColorMode`, `PanOnScrollMode`, the
-//     resize-control and MiniMap-node types): an alias to nothing would compile and mean nothing;
-//   - names whose *shape* differs (`FinalConnectionState` — flowinger's `onConnectEnd` is given a
-//     `ConnectEndState`): the error at the call site is the honest answer;
+// A name here is not a promise of behaviour: where flowinger has the name but not the feature, the prop is tagged
+// `@unimplemented` in `types.ts` and warns in development (`docs/react-flow-coverage.md` lists them).
+//
+// Differences on purpose:
+//   - names whose *shape* differs are still exported, so an import compiles, but a handler annotated with
+//     them is a compile error at the call site: `FinalConnectionState` is not what `onConnectEnd` is given
+//     (it gets a `ConnectEndState`);
 //   - generics flowinger does not have. `ReactFlowProps` and `ReactFlowInstance` take no node/edge type
 //     arguments here, because the canvas and the instance are not generic; `ReactFlowInstance<MyNode>` is
 //     an error rather than a type that quietly ignores `MyNode`.

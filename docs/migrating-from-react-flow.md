@@ -60,32 +60,41 @@ An app that only *shows* a graph (a viewer) needs none of it, and was probably a
 
 ## 3. Types
 
-Flowinger now exports React Flow's names for the types it has (`OnNodesChange`, `OnConnect`,
-`ReactFlowProps`, `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`… — 59 of them), so a type
-import usually needs only the package name changed. Two differences are on purpose:
+Flowinger exports every one of React Flow's 211 names (`OnNodesChange`, `OnConnect`, `ReactFlowProps`,
+`ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`…), so a type import needs only the package name
+changed. A name is not behaviour — see [§4](#4-what-is-not-there). Two differences are on purpose:
 
 - **`ReactFlowProps` and `ReactFlowInstance` are not generic.** `ReactFlowInstance<MyNode, MyEdge>` is an
   error here rather than a type argument quietly ignored. Drop the arguments; `useReactFlow()` is not
   generic either.
 - **`onConnectEnd` is given a `ConnectEndState`** (`{ connection, isValid }`), not React Flow's
-  `FinalConnectionState`.
+  `FinalConnectionState` (the type is exported, but a handler annotated with it is a compile error).
 - `Node<Data, Type>`, `NodeProps<MyNode>`, `Edge`, `NodeChange<MyNode>` and `EdgeChange<MyEdge>` are generic as
   they are in React Flow.
 
 ## 4. What is not there
 
-[React Flow coverage](react-flow-coverage.md) lists it all, from a measurement of
-React Flow's own type declarations. The ones most likely to matter, with what to do:
+Flowinger **names** all of React Flow's props, so code compiles — but a third of the *new* names do nothing here.
+Each is tagged `@unimplemented` in the types (your editor shows it on hover), and **in development a canvas says
+so, once, when you give it one that asks for something it would not do**. [React Flow coverage](react-flow-coverage.md#accepted-not-implemented)
+lists them all, from a measurement of React Flow's own type declarations. The ones most likely to matter:
 
-| Missing | Instead |
+| Accepted, does nothing | Instead |
 |---|---|
-| `nodeOrigin` | compute the top-left yourself: `position - size / 2` |
-| `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode` | Shift (and Ctrl/⌘ to add to a selection) are fixed; there is no Space-to-pan |
-| `connectOnClick`, `connectionRadius` | drag from a handle to a handle |
+| `selectionKeyCode`, `multiSelectionKeyCode`, `zoomActivationKeyCode` | Shift draws a selection box; Shift, Ctrl or ⌘ add to a selection; Ctrl/⌘ and the wheel zoom (with `panOnScroll`). Fixed. |
+| `connectOnClick`, `connectionRadius`, `onClickConnect*` | drag from a handle to a handle; it snaps to the handle under the pointer |
 | `colorMode` | set the `--flowinger-*` variables on an ancestor |
-| `nodeDragThreshold`, `paneClickDistance`… | the 3 px drag threshold is fixed |
-| `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar` | write the edge with `BaseEdge` and `EdgeLabelRenderer` |
-| `elevateNodesOnSelect`, `zIndexMode` | give a node a `zIndex` |
+| `nodeClickDistance`, `paneClickDistance`, `connectionDragThreshold` | a press that moves less than the drag threshold is a click (`nodeDragThreshold`, default 3 px) |
+| `onSelectionDrag*`, `onSelectionContextMenu` | `onNodeDrag*` (its `nodes` is everything dragged), `onNodeContextMenu` |
+| `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode` | give a node or an edge a `zIndex` |
+| `Node.handles` | render `<Handle>`s; edges are drawn from `width` / `height` until they are measured |
+| `Controls` `showInteractive` | set `nodesDraggable`, `nodesConnectable`, `elementsSelectable` |
+
+What *is* here and was missing in earlier versions: `nodeOrigin` (and `node.origin`), `nodeDragThreshold`,
+`panActivationKeyCode` (needs `panKeyFeature`, which `FlowingerCanvas` has; off unless given — React Flow's
+default is `'Space'`), `SimpleBezierEdge`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`, `MiniMapNode`, `MiniMap`'s
+`nodeComponent` / `onNodeClick` / `zoomable` / `offsetScale`, `NodeResizer`'s `autoScale`, viewport `ease`, and
+the change middlewares.
 
 If something *you* use is on the list, [open an issue](https://github.com/Naveen-Boddepalli/flowinger/issues)
 saying what you were building — that is how the list is ordered.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { downloadFile, exportCanvasToPng, exportCanvasToSvg } from '../src/pro/export.ts';
 import {
   Background,
   BackgroundVariant,
@@ -46,6 +47,28 @@ type PlanData = { label: string; kind: string; detail?: string; highlighted?: bo
 
 const button =
   'rounded border border-slate-600 bg-slate-800 px-2 py-0.5 text-xs text-slate-200 hover:border-slate-400';
+
+/** `?origin=0.5,0.5` puts each node's `position` at its centre, as `nodeOrigin` does — for the browser suite. */
+function originFromUrl(): [number, number] | undefined {
+  const raw = new URLSearchParams(window.location.search).get('origin');
+  const [x, y] = (raw ?? '').split(',').map(Number);
+  return x !== undefined && y !== undefined && Number.isFinite(x) && Number.isFinite(y) ? [x, y] : undefined;
+}
+
+/** The whole diagram as an SVG or a PNG, whatever the view shows — `flowinger/export`, in the browser. */
+async function exportDiagram(format: 'svg' | 'png') {
+  const canvas = document.querySelector<HTMLElement>('.react-flow');
+  if (!canvas) return;
+  const options = { backgroundColor: '#0b1120' };
+  if (format === 'png') {
+    downloadFile(await exportCanvasToPng(canvas, options), 'diagram.png');
+    return;
+  }
+  const svg = await exportCanvasToSvg(canvas, options);
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+  downloadFile(url, 'diagram.svg');
+  URL.revokeObjectURL(url);
+}
 
 /** A plan operator: handles on four sides, and a toolbar that appears while it is the only thing selected. */
 function PlanNode({ id, data, selected }: NodeProps) {
@@ -230,6 +253,7 @@ export function App() {
   const [picks, setPicks] = useState<ReadonlySet<string>>(() => new Set(PICKABLE.map((p) => p.label)));
   const features = useMemo(() => PICKABLE.filter((p) => picks.has(p.label)).map((p) => p.feature), [picks]);
   const Canvas = whole ? FlowingerCanvas : FlowingerCore;
+  const nodeOrigin = useMemo(originFromUrl, []);
   const stress = useMemo(() => bigGrid(2000), []);
 
   const isValidConnection = (c: Connection) => c.source !== c.target;
@@ -275,6 +299,7 @@ export function App() {
             nodes={many ? stress : nodes}
             edges={many ? [] : edges}
             {...(many ? {} : { onNodesChange, onEdgesChange })}
+            {...(nodeOrigin ? { nodeOrigin } : {})}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             nodesDraggable
@@ -351,6 +376,14 @@ export function App() {
                     {label}
                   </label>
                 ))}
+                <div className="mt-1 flex gap-2 border-t border-slate-700 pt-1.5">
+                  <button type="button" className={button} onClick={() => void exportDiagram('svg')}>
+                    Export SVG
+                  </button>
+                  <button type="button" className={button} onClick={() => void exportDiagram('png')}>
+                    Export PNG
+                  </button>
+                </div>
                 <div className="text-slate-500" data-testid="picked">{picked}</div>
                 <div className="text-slate-500" data-testid="last-event">{lastEvent || 'no events yet — double-click or right-click a node or the pane'}</div>
                 <div className="text-slate-500"><ShiftState /></div>

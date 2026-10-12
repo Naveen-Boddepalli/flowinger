@@ -17,6 +17,7 @@ These pages describe the current `main`. What is newer than the latest release o
 | [API reference](api.md) | Canvas props, nodes and edges, handles, sub-flows, the instance, controlled flows |
 | [Components and hooks](components.md) | `Handle`, `Background`, `Controls`, `MiniMap`, `NodeToolbar`, `NodeResizer`, `useReactFlow`… |
 | [Features](features.md) | The small core and its opt-in features: what each adds, what needs it, writing your own |
+| [The "pro" modules](pro.md) | Undo/redo, copy and paste, snap guides, export, smart edges, flowchart shapes, a collapsible tree — free, separate entry points |
 | [Theming](theming.md) | The `--flowinger-*` CSS variables |
 | [Server rendering](server-rendering.md) | What renders on the server and what waits for the client |
 

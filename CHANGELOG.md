@@ -9,6 +9,62 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Added
+
+- **Every one of React Flow's 211 exports and 119 canvas props is named**, with the types for them
+  (`NodeOrigin`, `ColorMode`, `PanOnScrollMode`, `ZIndexMode`, `NodeHandle`, the resize-control, edge-toolbar
+  and MiniMap-node types…). Of the 302 members the audit counts across props, the instance and components,
+  **263 do what they say**; the other 39 are accepted so React Flow code compiles and are tagged
+  `@unimplemented`. **In development a canvas now says so, once, when given one** — a name that compiles and
+  does nothing is worse than a missing one. The full list, with what happens instead, is in
+  [React Flow coverage](docs/react-flow-coverage.md#accepted-not-implemented).
+- **`nodeOrigin` and `node.origin`.** Where on a node its `position` is: `[0, 0]` top-left (default),
+  `[0.5, 0.5]` the centre. A child's `position` is relative to its parent's top-left, as in React Flow. Edges,
+  hit testing, the minimap, `fitView`, extents, intersections and the resizer all use the drawn box.
+- **`panActivationKeyCode`** — holding the key turns a drag into a pan — as `panKeyFeature` (in `allFeatures`,
+  so `FlowingerCanvas` has it; a `FlowingerCore` is told in development that it does nothing without it). Off
+  unless given: React Flow's own default of `'Space'` is not applied.
+- **`nodeDragThreshold`**, in pixels; `0` is none. Needs `dragFeature`.
+- **`ease`** on viewport moves (`setViewport`, `fitView`, `setCenter`, `zoomTo`…).
+- **`MiniMap`: `nodeComponent`, `onNodeClick`, `zoomable`, `zoomStep`, `offsetScale`**; `MiniMapNode`.
+- **`NodeResizeControl`**, one resize control (a handle or a line, on a side or a corner) with `children`;
+  `NodeResizer` is eight of them. **`NodeResizer`'s `nodeId` and `autoScale`.**
+- `SimpleBezierEdge` and `getSimpleBezierPath`, `EdgeText`, `EdgeToolbar`, `experimental_useOnNodesChangeMiddleware`
+  and `experimental_useOnEdgesChangeMiddleware`, and `viewportInitialized` on the instance (a live getter).
+- **The "pro" modules, free and separate entry points** — [`flowinger/history`](docs/pro.md#undo-and-redo--flowingerhistory)
+  (`useUndoRedo`), `flowinger/clipboard` (`useClipboard`), `flowinger/snaplines` (`useSnapLines`,
+  `SnapLinesOverlay`), `flowinger/export` (`exportCanvasToSvg`, `exportCanvasToPng`, `downloadFile`),
+  `flowinger/smart-edges` (`SmartEdge`, `getSmartEdgePath`), `flowinger/shapes` (flowchart nodes) and
+  `flowinger/tree` (`useCollapsibleTree`), or all of them from `flowinger/pro`. They add nothing to the core
+  unless imported. See [the pro modules](docs/pro.md).
+- `scripts/audit-react-flow.mjs` reports members *named* and *implemented* apart.
+
+### Changed
+
+- **`FlowingerCanvas`'s node position is a top-left corner everywhere.** `store.absolutePosition` (and
+  `InternalNode.internals.positionAbsolute`) is the node's drawn top-left; with the default `nodeOrigin` this
+  is what it always was.
+- **Size budgets are 28 kB (whole canvas) and 18 kB (core)**, up from 27 / 17.5. Measured: 27.26 / 17.56.
+- `ZIndexMode` is `'auto' | 'basic' | 'manual'`, as in React Flow (it was `'auto' | 'manual'`).
+- `FitViewOptions` no longer repeats `ease` / `interpolate`, which it inherits from `SetViewportOptions`.
+
+### Fixed
+
+- **`MiniMap`'s new props were spread onto the `<svg>` as unknown attributes**, so React warned; `NodeToolbar`'s
+  `nodeId` did the same on a `<div>`. `NodeResizer` ignored `nodeId`.
+- **`useClipboard`** asked the browser for clipboard permission on every paste (it read `navigator.clipboard` on
+  a keydown); it uses the `copy` / `cut` / `paste` events. A copied child is placed in the copy of its parent,
+  and is not offset twice.
+- **`exportCanvasToSvg`** exported the visible view at the wrong size at any zoom but 1. It exports the whole
+  diagram.
+- **`useSnapLines`** left guides on screen for alignments it had not snapped to, compared nodes of different
+  parents as one space, and ignored `nodeOrigin`; **`SnapLinesOverlay`** drew in screen space, so its guides were
+  wrong at any pan or zoom; and it only *drew* guides — `snapNodeChanges` applies the snap.
+- **`useCollapsibleTree`** revealed what sat under a branch still collapsed when an ancestor was expanded.
+- **`SmartEdge`** treated its own end nodes as obstacles (so every edge ran the router), did not leave a handle
+  the way it faced, and recomputed on every drag frame.
+- **Shape nodes** ignored the node's `width` / `height`, and `data.color` was declared and unread.
+
 ## [0.4.0] - 2026-10-10
 
 ### Added

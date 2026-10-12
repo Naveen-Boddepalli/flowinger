@@ -96,7 +96,7 @@ function Editor() {
 
   const { undo, redo, canUndo, canRedo, takeSnapshot } = useUndoRedo({ enableShortcuts: true });
   const { copy, paste, canPaste } = useClipboard({ enableShortcuts: true });
-  const { snapLines, handleNodeDrag, clearSnapLines } = useSnapLines({ threshold: 6 });
+  const { snapLines, snapNodeChanges } = useSnapLines({ threshold: 6 });
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -142,15 +142,15 @@ function Editor() {
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
+        // A drag is snapped to the other nodes where it is applied.
+        onNodesChange={(changes) => onNodesChange(snapNodeChanges(changes, nodes))}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDrag={(_e, node) => {
-          handleNodeDrag(node, nodes, node.position);
-        }}
-        onNodeDragStop={() => {
-          clearSnapLines();
+        // History is taken *before* a change, so an undo has something to go back to.
+        onNodeDragStart={() => takeSnapshot()}
+        onBeforeDelete={(elements) => {
           takeSnapshot();
+          return elements;
         }}
         nodesDraggable
         nodesConnectable

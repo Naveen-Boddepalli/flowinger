@@ -179,3 +179,86 @@ test('Backspace deletes the selected node and the edges that touched it', async 
   await expect(edge(page, 'e3-4')).toHaveCount(0);
   await expect(node(page, '3')).toBeVisible();
 });
+
+test('exporting gives the whole diagram — the same at any pan and zoom — not what the view shows', async ({ page }) => {
+  const exportSvg = async () => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export SVG' }).click(),
+    ]);
+    const { readFile } = await import('node:fs/promises');
+    const svg = await readFile(await download.path(), 'utf8');
+    const size = /<svg[^>]*width="([\d.]+)" height="([\d.]+)"/.exec(svg);
+    return { svg, width: Number(size?.[1]), height: Number(size?.[2]) };
+  };
+
+  // What the drawn diagram measures in graph units now, from where the browser put it.
+  const extent = await page.evaluate(() => {
+    const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
+    const zoom = Number(/scale\(([-\d.e]+)\)/.exec(viewport.style.transform)?.[1]);
+    const boxes = [...viewport.querySelectorAll('.react-flow__node, .react-flow__edge')].map((el) =>
+      el.getBoundingClientRect(),
+    );
+    const left = Math.min(...boxes.map((b) => b.left));
+    const right = Math.max(...boxes.map((b) => b.right));
+    const top = Math.min(...boxes.map((b) => b.top));
+    const bottom = Math.max(...boxes.map((b) => b.bottom));
+    return { width: (right - left) / zoom, height: (bottom - top) / zoom };
+  });
+
+  const fitted = await exportSvg();
+  // The diagram and the default 20 px of padding on each side (a little slack for an edge's stroke).
+  expect(Math.abs(fitted.width - (extent.width + 40))).toBeLessThan(4);
+  expect(Math.abs(fitted.height - (extent.height + 40))).toBeLessThan(4);
+  for (const label of ['IndexScan', 'Filter', 'Projection', 'Output']) expect(fitted.svg).toContain(label);
+
+  // Zoom in on one node and pan away: the view now shows a sliver of the diagram, and the export is the same.
+  const framed = (await view(page)).zoom;
+  const target = await centre(node(page, '4'));
+  await page.mouse.move(target.x, target.y);
+  await page.mouse.wheel(0, -900);
+  await expect.poll(async () => (await view(page)).zoom).toBeGreaterThan(framed * 1.2);
+  const zoomed = await exportSvg();
+  expect(Math.abs(zoomed.width - fitted.width)).toBeLessThan(2);
+  expect(Math.abs(zoomed.height - fitted.height)).toBeLessThan(2);
+});
+
+test('exporting a PNG rasterises in a real browser (the canvas is not tainted)', async ({ page }) => {
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export PNG' }).click(),
+  ]);
+  const { readFile } = await import('node:fs/promises');
+  const bytes = await readFile(await download.path());
+  // The PNG signature, and more than an empty canvas's worth of data.
+  expect([...bytes.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  expect(bytes.length).toBeGreaterThan(5000);
+});
+
+test.describe('nodeOrigin', () => {
+  test('puts a node\'s position at its centre — measured from the drawn box, not a guess — and a child inside its parent\'s top-left', async ({
+    page,
+  }) => {
+    await page.goto('./?origin=0.5,0.5');
+    await expect(node(page, '1')).toBeVisible();
+    await expect.poll(async () => (await view(page)).zoom).not.toBe(1);
+    const v = await view(page);
+    const pane = await page.locator('.react-flow').boundingBox();
+    const at = async (id: string) => {
+      const c = await centre(node(page, id));
+      // Graph units: undo the pane's offset, the viewport's translate and its scale.
+      return { x: (c.x - pane!.x - v.x) / v.zoom, y: (c.y - pane!.y - v.y) / v.zoom };
+    };
+
+    // IndexScan is at (250, 20): its centre is there.
+    const scan = await at('1');
+    expect(scan.x).toBeCloseTo(250, 0);
+    expect(scan.y).toBeCloseTo(20, 0);
+
+    // Filter is at (40, 60) *inside* a group at (40, 140), 520 × 300: relative to the group's top-left,
+    // which is (40 − 260, 140 − 150) = (−220, −10). So its centre is at (−180, 50).
+    const filter = await at('2');
+    expect(filter.x).toBeCloseTo(-180, 0);
+    expect(filter.y).toBeCloseTo(50, 0);
+  });
+});

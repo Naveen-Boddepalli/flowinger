@@ -39,39 +39,32 @@ it.** A library nobody can find the answer to a question about is not helped by 
   connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
   (`nodrag`, `nopan`, `nowheel`) from a real press.
 
-## Next — 100% Free React Flow Parity & Pro Feature Equivalence
+## Next — make the names true
 
-Ordered by how often it comes up, from the audit (`node scripts/audit-react-flow.mjs`: 158 of 211 exports, 83
-of 119 canvas props):
+Flowinger *names* every export and prop of React Flow 12.11.6 (211 of 211 exports, 119 of 119 props) and
+*implements* 263 of the 302 members counted (`node scripts/audit-react-flow.mjs`); the other 39 are tagged
+`@unimplemented` and warn in development — [the list](docs/react-flow-coverage.md#accepted-not-implemented). The
+work now is turning those into behaviour, in the order people hit them, each with the test that fails first and
+a measured byte cost (a feature is a `Feature` object a canvas opts into, never core weight):
 
-1. **Phase 1: High-Frequency Core Parity**
-   - **`nodeOrigin`** and `node.origin` — origin-aware bounding boxes, node rendering transform, handle anchors, subflows.
-   - **Key-code props** — `selectionKeyCode`, `multiSelectionKeyCode`, `panActivationKeyCode`, `zoomActivationKeyCode`, `panOnScrollMode`.
-   - **Thresholds & Radii** — `nodeDragThreshold`, `connectionDragThreshold`, `nodeClickDistance`, `paneClickDistance`, `connectionRadius`, `reconnectRadius`.
-   - **Components & Paths** — `SimpleBezierEdge`, `getSimpleBezierPath`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`.
-   - **Instance & Types** — `viewportInitialized` getter on the stable instance; export the remaining 44 types.
-2. **Phase 2: Complete Free Parity & Middleware**
-   - **Click-to-connect** — `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd`.
-   - **Selection drag events** — `onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu`, `selectNodesOnDrag`.
-   - **`colorMode`** (`light` | `dark` | `system`), `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode`.
-   - **Change Middlewares** — `experimental_useOnNodesChangeMiddleware`, `experimental_useOnEdgesChangeMiddleware`.
-   - **Audit target** — 211 of 211 exports, 0 missing props.
-3. **Phase 3: Zero-Cost "Pro" Utility Modules**
-   - Packaged as tree-shakeable headless hooks and subpath exports without adding a byte to the core canvas:
-   - `flowinger/history` (`useUndoRedo`) — temporal state management with keyboard shortcuts.
-   - `flowinger/clipboard` (`useClipboard`) — copy, cut, paste, duplicate with ID remapping.
-   - `flowinger/snaplines` (`useSnapLines`) — magnetic alignment guides and snap lines.
-   - `flowinger/export` (`exportCanvasToSvg`, `exportCanvasToPng`) — high-DPI full diagram export.
-4. **Phase 4: Pro Edges, Shapes & Tree Controls**
-   - `flowinger/smart-edges` — collision-avoiding A* orthogonal routing.
-   - `flowinger/editable-edge` — draggable waypoints.
-   - `flowinger/shapes` — SVG flowchart nodes (Decision, Cylinder, Hexagon, Circle).
-   - `flowinger/tree` (`useCollapsibleTree`) — collapsible hierarchy branches.
-5. **Phase 5: Production-Ready Pro Recipes & Examples**
-   - Dynamic layouts with animated transitions (`d3-hierarchy`, `dagre`, `elkjs`, `d3-force`).
-   - Dynamic grouping, drag-to-group, auto-resizing parent containers and swimlanes.
-   - Real-time multiplayer canvas with live cursors and Yjs state synchronization.
-   - Workflow simulation pipeline stepper with animated pulse state.
+1. **Interaction props people set from habit** — `selectionKeyCode`, `multiSelectionKeyCode`,
+   `zoomActivationKeyCode` and `panOnScrollMode`; the thresholds and radii (`connectionDragThreshold`,
+   `nodeClickDistance`, `paneClickDistance`, `connectionRadius`, `reconnectRadius`); `selectNodesOnDrag`.
+2. **Selection events** — `onSelectionDragStart` / `onSelectionDrag` / `onSelectionDragStop`,
+   `onSelectionContextMenu`.
+3. **Click-to-connect** — `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd`.
+4. **Look** — `colorMode` (`light` | `dark` | `system`), `elevateNodesOnSelect`, `elevateEdgesOnSelect`,
+   `zIndexMode`, `defaultMarkerColor`, `nodesFocusable`, `ariaLabelConfig`.
+5. **Smaller**: `Node.handles` (edges from declared handles before measurement — what makes edges render in
+   server-rendered output), `interpolate: 'smooth'`, `Controls`' lock button, `NodeToolbar`'s `nodeId` for
+   another node.
+
+### The free "pro" modules
+
+[`flowinger/history`, `/clipboard`, `/snaplines`, `/export`, `/smart-edges`, `/shapes`, `/tree`](docs/pro.md)
+exist and are tested against a real canvas. Not built, though earlier plans said so: **`flowinger/editable-edge`**
+(draggable waypoints) and a **Hexagon** shape. Recipes still to write as `examples/`: grouping and swimlanes,
+multiplayer presence (Yjs), a workflow-simulation stepper.
 
 ## Later
 

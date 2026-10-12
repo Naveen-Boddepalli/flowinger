@@ -13,6 +13,7 @@ import {
 } from '../index.ts';
 import {
   SmartEdge,
+  SnapLinesOverlay,
   exportCanvasToPng,
   exportCanvasToSvg,
   getSmartEdgePath,
@@ -348,6 +349,103 @@ describe('useSnapLines', () => {
       at = result.current.handleNodeDrag(dragged, [other], { x: 203, y: 1000 });
     });
     expect(at.x).toBe(200); // right edge exactly at 250
+  });
+});
+
+describe('useSnapLines: applied to a drag', () => {
+  const nodes = [box('moving', 0, 0), box('still', 300, 0), box('mate', 0, 500)];
+  type Position = { type: 'position'; id: string; position?: { x: number; y: number }; dragging?: boolean };
+
+  it('moves the dragged node onto the line, as the change is applied', () => {
+    const { result } = renderHook(() => useSnapLines({ threshold: 6, snapToCenter: false }));
+    let out: Position[] = [];
+    act(() => {
+      out = result.current.snapNodeChanges<Position>(
+        [{ type: 'position', id: 'moving', position: { x: 296, y: 100 }, dragging: true }],
+        nodes,
+      );
+    });
+    expect(out[0]?.position).toEqual({ x: 300, y: 100 });
+    expect(result.current.snapLines.some((l) => l.type === 'vertical' && l.position === 300)).toBe(true);
+  });
+
+  it('moves a dragged selection together: the others by what the lead moved', () => {
+    const { result } = renderHook(() => useSnapLines({ threshold: 6, snapToCenter: false }));
+    let out: Position[] = [];
+    act(() => {
+      out = result.current.snapNodeChanges<Position>(
+        [
+          { type: 'position', id: 'moving', position: { x: 296, y: 100 }, dragging: true },
+          { type: 'position', id: 'mate', position: { x: 296, y: 600 }, dragging: true },
+        ],
+        nodes,
+      );
+    });
+    expect(out.map((c) => c.position)).toEqual([
+      { x: 300, y: 100 },
+      { x: 300, y: 600 },
+    ]);
+  });
+
+  it('is not lined up with a node that is moving with it', () => {
+    const { result } = renderHook(() => useSnapLines({ threshold: 6, snapToCenter: false }));
+    let out: Position[] = [];
+    act(() => {
+      out = result.current.snapNodeChanges<Position>(
+        [
+          { type: 'position', id: 'moving', position: { x: 296, y: 100 }, dragging: true },
+          { type: 'position', id: 'still', position: { x: 301, y: 100 }, dragging: true },
+        ],
+        nodes,
+      );
+    });
+    // `still` is being dragged too, so it is not something to line up with.
+    expect(out[0]?.position).toEqual({ x: 296, y: 100 });
+  });
+
+  it('leaves other changes alone, and clears the guides when the drag ends', () => {
+    const { result } = renderHook(() => useSnapLines({ threshold: 6, snapToCenter: false }));
+    act(() => {
+      result.current.snapNodeChanges<Position>(
+        [{ type: 'position', id: 'moving', position: { x: 296, y: 100 }, dragging: true }],
+        nodes,
+      );
+    });
+    expect(result.current.snapLines.length).toBeGreaterThan(0);
+    const select = { type: 'select' as const, id: 'moving', selected: true };
+    let out: unknown[] = [];
+    act(() => {
+      out = result.current.snapNodeChanges([select, { type: 'position' as const, id: 'moving', dragging: false }], nodes);
+    });
+    expect(out[0]).toBe(select);
+    expect(result.current.snapLines).toHaveLength(0);
+  });
+
+  it('draws the guides in graph space: inside the viewport, so they pan and zoom with it', () => {
+    function Guides() {
+      const { snapLines, handleNodeDrag } = useSnapLines();
+      return (
+        <>
+          <button
+            data-testid="go"
+            onClick={() => handleNodeDrag(nodes[0] as Node, [nodes[1] as Node], { x: 301, y: 0 })}
+          />
+          <SnapLinesOverlay snapLines={snapLines} />
+        </>
+      );
+    }
+    const { container, getByTestId } = render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes}>
+          <Guides />
+        </FlowingerCanvas>
+      </FlowingerProvider>,
+    );
+    expect(container.querySelector('.flowinger-snaplines-overlay')).toBeNull();
+    fireEvent.click(getByTestId('go'));
+    const overlay = container.querySelector('.flowinger-snaplines-overlay');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.closest('.flowinger-viewport')).not.toBeNull();
   });
 });
 

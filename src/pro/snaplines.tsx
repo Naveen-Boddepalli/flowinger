@@ -1,6 +1,7 @@
 import { useCallback, useState, type CSSProperties } from 'react';
+import { ViewportPortal } from '../ViewportPortal.tsx';
 import { sizeOfNode } from '../geometry.ts';
-import type { Node, NodeOrigin, XYPosition } from '../types.ts';
+import type { Node, NodeChange, NodeOrigin, XYPosition } from '../types.ts';
 
 export interface SnapLine {
   id: string;
@@ -29,6 +30,18 @@ export interface UseSnapLinesResult {
    * Pass this in onNodeDrag or use inside custom drag handlers.
    */
   handleNodeDrag: (node: Node, allNodes: Node[], newPosition: XYPosition) => XYPosition;
+  /**
+   * Snaps a drag where it is applied: give it the changes `onNodesChange` receives and the current nodes, and
+   * pass what it returns on.
+   *
+   * ```tsx
+   * onNodesChange={(changes) => onNodesChange(snapNodeChanges(changes, nodes))}
+   * ```
+   *
+   * The node being dragged is lined up with the nodes that are not moving with it; the rest of a dragged
+   * selection moves by the same amount, so it keeps its shape. The guides clear when the drag ends.
+   */
+  snapNodeChanges: <C extends NodeChange>(changes: C[], nodes: readonly Node[]) => C[];
   clearSnapLines: () => void;
 }
 
@@ -149,9 +162,40 @@ export function useSnapLines(options: UseSnapLinesOptions = {}): UseSnapLinesRes
     [threshold, snapToCenter, snapToEdges, nodeOrigin],
   );
 
+  const snapNodeChanges = useCallback(
+    <C extends NodeChange>(changes: C[], nodes: readonly Node[]): C[] => {
+      const moving = changes.filter(
+        (c): c is C & { type: 'position'; position: XYPosition } =>
+          c.type === 'position' && c.dragging === true && c.position !== undefined,
+      );
+      if (moving.length === 0) {
+        if (changes.some((c) => c.type === 'position' && c.dragging === false)) setSnapLines([]);
+        return changes;
+      }
+      const lead = moving[0];
+      const leadNode = lead && nodes.find((n) => n.id === lead.id);
+      if (!lead || !leadNode) return changes;
+
+      // What the lead is lined up against is what is not moving with it.
+      const movingIds = new Set(moving.map((c) => c.id));
+      const still = nodes.filter((n) => !movingIds.has(n.id));
+      const snapped = handleNodeDrag(leadNode, still, lead.position);
+      const dx = snapped.x - lead.position.x;
+      const dy = snapped.y - lead.position.y;
+      if (dx === 0 && dy === 0) return changes;
+      return changes.map((c) =>
+        c.type === 'position' && movingIds.has(c.id) && c.position
+          ? { ...c, position: { x: c.position.x + dx, y: c.position.y + dy } }
+          : c,
+      );
+    },
+    [handleNodeDrag],
+  );
+
   return {
     snapLines,
     handleNodeDrag,
+    snapNodeChanges,
     clearSnapLines,
   };
 }
@@ -165,7 +209,8 @@ export interface SnapLinesOverlayProps {
 }
 
 /**
- * Visual SVG overlay rendering dashed alignment snap lines across the graph.
+ * The guide lines, drawn in the graph's own space: they pan and zoom with the diagram, and stay one pixel wide.
+ * Render it anywhere inside the canvas (it uses `ViewportPortal`); outside one it draws nothing.
  */
 export function SnapLinesOverlay({
   snapLines,
@@ -176,49 +221,30 @@ export function SnapLinesOverlay({
 }: SnapLinesOverlayProps) {
   if (snapLines.length === 0) return null;
 
+  const line = { stroke: color, strokeWidth, strokeDasharray: '4 4', vectorEffect: 'non-scaling-stroke' as const };
   return (
-    <svg
-      className={`flowinger-snaplines-overlay ${className}`}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        overflow: 'visible',
-        zIndex: 9999,
-        ...style,
-      }}
-    >
-      {snapLines.map((line) => {
-        if (line.type === 'vertical') {
-          return (
-            <line
-              key={line.id}
-              x1={line.position}
-              y1="-100000"
-              x2={line.position}
-              y2="100000"
-              stroke={color}
-              strokeWidth={strokeWidth}
-              strokeDasharray="4 4"
-            />
-          );
-        }
-        return (
-          <line
-            key={line.id}
-            x1="-100000"
-            y1={line.position}
-            x2="100000"
-            y2={line.position}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray="4 4"
-          />
-        );
-      })}
-    </svg>
+    <ViewportPortal>
+      <svg
+        className={`flowinger-snaplines-overlay ${className}`.trim()}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          overflow: 'visible',
+          ...style,
+        }}
+      >
+        {snapLines.map((l) =>
+          l.type === 'vertical' ? (
+            <line key={l.id} x1={l.position} y1="-100000" x2={l.position} y2="100000" {...line} />
+          ) : (
+            <line key={l.id} x1="-100000" y1={l.position} x2="100000" y2={l.position} {...line} />
+          ),
+        )}
+      </svg>
+    </ViewportPortal>
   );
 }

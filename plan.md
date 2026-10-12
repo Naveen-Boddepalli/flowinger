@@ -812,36 +812,65 @@ commit, and takes `FlowTree` across by changing its imports alone.
   `src/paths.ts` (0.2.0).
 - Everything else is the seventh round's **Launch checklist**, above.
 
-### Eighth round: 100% Free React Flow Parity & Zero-Cost Pro Extensions
+### Eighth round: React Flow's names, the free "pro" modules — and making the claims true
 
-Closing the remaining 53 missing exports, 36 missing canvas props, and providing all 13 official React Flow Pro
-capabilities cost-free under MIT:
+The round set out to close the audit (53 missing exports, 36 missing canvas props) and to ship the capabilities
+React Flow sells as "Pro" — undo/redo, copy/paste, snap guides, export, smart edges, shapes, a collapsible tree —
+as MIT, tree-shakeable modules. It landed in two passes, and the second is the more instructive.
 
-1. **Phase 1: High-Frequency Core Parity**
-   - `nodeOrigin` and `node.origin` — origin-adjusted coordinates (`x - originX * width, y - originY * height`), bounds, handles, fitView.
-   - Key-code activation — `panActivationKeyCode`, `selectionKeyCode`, `multiSelectionKeyCode`, `zoomActivationKeyCode`, `panOnScrollMode`.
-   - Thresholds and snapping radii — `nodeDragThreshold`, `connectionDragThreshold`, `nodeClickDistance`, `paneClickDistance`, `connectionRadius`, `reconnectRadius`.
-   - Components & utils — `SimpleBezierEdge`, `getSimpleBezierPath`, `EdgeText`, `EdgeToolbar`, `NodeResizeControl`.
-   - Instance getter — `viewportInitialized` getter on the stable instance; export the remaining 44 missing types.
-2. **Phase 2: Full Free Parity & Middleware**
-   - Click-to-connect interaction (`connectOnClick`, `onClickConnectStart`, `onClickConnectEnd`).
-   - Selection drag events (`onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu`, `selectNodesOnDrag`).
-   - `colorMode` (`light`, `dark`, `system`) with system media query listener and CSS variable synchronization; `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode`.
-   - Middlewares: `experimental_useOnNodesChangeMiddleware`, `experimental_useOnEdgesChangeMiddleware`.
-   - Audit target: 211 / 211 exports and 0 missing props.
-3. **Phase 3: Core Pro Utility Modules (Tree-Shakeable & Decoupled)**
-   - `flowinger/history` (`useUndoRedo`): temporal state manager with keyboard shortcuts.
-   - `flowinger/clipboard` (`useClipboard`): copy, cut, paste, duplicate with ID remapping.
-   - `flowinger/snaplines` (`useSnapLines`): magnetic alignment guides during node drag.
-   - `flowinger/export` (`exportCanvasToSvg`, `exportCanvasToPng`): high-DPI full canvas export.
-4. **Phase 4: Pro Edges, Shapes & Tree Controls**
-   - `flowinger/smart-edges`: orthogonal collision-avoiding A* path router.
-   - `flowinger/editable-edge`: interactive draggable waypoints.
-   - `flowinger/shapes`: SVG flowchart nodes (Decision, Cylinder, Hexagon, Circle).
-   - `flowinger/tree` (`useCollapsibleTree`): hierarchical branch collapse/expand.
-5. **Phase 5: Production-Ready Pro Recipes & Examples**
-   - Dynamic layouts (`d3-hierarchy`, `dagre`, `elkjs`, `d3-force`) with animated transitions.
-   - Dynamic grouping, drag-to-group, auto-resizing parent containers and swimlanes.
-   - Real-time multiplayer presence with shared live cursors and Yjs synchronization.
-   - Workflow simulation pipeline stepper with topological execution and pulse animations.
+**First pass (the branch as written).** Every export and every member the audit lists was *named*: 211 of 211
+exports, 119 of 119 props, 32 of 32 instance members. Seven subpath entry points (`flowinger/history`,
+`/clipboard`, `/snaplines`, `/export`, `/smart-edges`, `/shapes`, `/tree`, and `/pro` for all of them) built from
+one multi-entry Vite library build with shared chunks, so a module costs the core nothing unless imported
+(measured: 0 bytes). `nodeOrigin`, `panActivationKeyCode` and `nodeDragThreshold` were wired in. The audit script
+reported "100%".
 
+**Second pass (checked against the code and a real canvas).** "Named" turned out not to be "done", and the audit
+could not tell the difference: it counts names. What was found, each with a test that failed first:
+
+- **33 of the 119 props, and `Node.handles`, were read by nothing.** Their doc comments described behaviour
+  they did not have (`colorMode: 'system'` "with a media query listener", `connectOnClick` "click-to-connect").
+  A name that compiles and does nothing is worse than a missing one, so each is now tagged `@unimplemented` with
+  what happens instead, and a canvas given one says so in development (a test keeps the tag list, the warning
+  list and "no source file reads it" the same). The audit prints *named* and *implemented* apart: **302
+  members named, 263 implemented, 39 accepted only.** `ZIndexMode` also lacked React Flow's `'basic'`.
+- **`nodeOrigin` was applied to what is drawn and nowhere else.** Nine of fourteen tests written for it failed:
+  a node measured after first render kept the position made from its fallback size, a child was placed
+  relative to its parent's origin point rather than top-left (React Flow: top-left), and edges, hit testing and
+  resizing each disagreed about where a node was. Now there is one definition — `store.absolutePosition` is the
+  node's top-left, each node on a parent chain contributing `position − origin × size` — and edges, the wrapper,
+  the minimap, culling, extents, intersections and `fitView` all read it; the resizer converts a top-left box
+  back to a `position`. Cost: 0.05 kB.
+- **`panActivationKeyCode` defaulted to `'Space'` in the core**: `useKeyPress` in every canvas (0.64 kB) and a
+  silent behaviour change for every page. It is `panKeyFeature` now — in `allFeatures`, off unless the prop is
+  given, with a development warning for a core that has the prop and not the feature.
+- **`nodeDragThreshold: 0` became 3** (`||` for `??`), and the release path of a flick compared against the
+  fixed 3 so a larger threshold was bypassed. One definition, used at all three sites.
+- **`MiniMap`'s `nodeComponent`, `onNodeClick`, `zoomable`, `zoomStep` and `offsetScale` were spread onto the
+  `<svg>` as unknown attributes; `NodeResizeControl` was an inert `<div>`; `NodeResizer` ignored `nodeId`;
+  `NodeToolbar`'s `nodeId` leaked to the DOM.** All implemented or tagged. `ease` on viewport moves was
+  declared and unread; it is read.
+- **The pro modules had only been tested without a canvas** (`renderHook`, no provider), where they fall
+  back to doing nothing. Against one: `exportCanvasToSvg` exported the *visible view* at the *wrong size*
+  (the viewport layer's transformed rect with un-scaled content inside) at every zoom but 1; the clipboard
+  asked for a permission on every paste (`readText` on keydown) and offset a copied child twice and left it in
+  the original parent; snap guides for candidates that had lost the snap stayed on screen, and nodes of
+  different parents were compared as if in one space; expanding a tree branch revealed what sat under a branch
+  still closed; every smart edge ran A* because its own end nodes were obstacles, did not leave a handle the
+  way it faced, and recomputed on every drag frame. All fixed, each with an integration test and a mutant
+  that fails it.
+
+What the second pass changed in the *process*, which is the part to keep: **a count of names is not a claim
+about behaviour**, and an audit that can only count names will say "100%" for a library that does nothing with
+a third of the props. The audit now reads the `@unimplemented` tags; the claim in the README and the coverage
+page is the *implemented* number; and a new prop is added with the behaviour or not at all.
+
+Sizes on the branch: full 27.26 kB / lean 17.56 kB gzip (main: 26.02 / 16.95). Budgets moved 27 / 17.5 → 28 / 18
+under the rule that a budget sits about half a kilobyte above what is measured.
+
+**Not built** (listed so nobody reads the first pass's plan as a record): click-to-connect and its events;
+selection-drag events; `colorMode`; the key-code, click-distance and radius props above; `elevate*OnSelect` and
+`zIndexMode`; `flowinger/editable-edge` (draggable waypoints) — it was in the plan and never existed; a Hexagon
+shape (there are diamond, circle, cylinder, parallelogram and document); and the "production recipes"
+(grouping, multiplayer presence, workflow simulation). Layout recipes (`d3-hierarchy`, `dagre`, `elkjs`) are in
+`examples/layouts`. See `ROADMAP.md`.
