@@ -1,5 +1,6 @@
 import { memo, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import { useFlowinger } from './context.ts';
+import { warnAcceptedProps } from './devWarnings.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import type { FitViewOptions } from './types.ts';
 
@@ -10,9 +11,12 @@ export interface ControlsProps {
   /** The fit button. `showFitView` is the same, under React Flow's name; either can turn it off. */
   showFit?: boolean;
   showFitView?: boolean;
-  /** Whether to show the interactive toggle button. Default false. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles; there is no lock button. Whether nodes
+   * move, connect or select is the canvas's `nodesDraggable`, `nodesConnectable` and `elementsSelectable`.
+   */
   showInteractive?: boolean;
-  /** Called when the interactive lock button is toggled. */
+  /** @unimplemented Never called: there is no lock button. */
   onInteractiveChange?: (interactive: boolean) => void;
   /** Shapes what the fit button does (`padding`, `duration`, …). It takes 300 ms unless this says otherwise. */
   fitViewOptions?: FitViewOptions;
@@ -80,6 +84,8 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   showZoom = true,
   showFit = true,
   showFitView = showFit,
+  showInteractive,
+  onInteractiveChange,
   fitViewOptions,
   onZoomIn,
   onZoomOut,
@@ -88,6 +94,9 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   children,
 }: ControlsProps) {
   const { zoomIn, zoomOut, fitView } = useFlowinger();
+  if (process.env.NODE_ENV !== 'production') {
+    warnAcceptedProps('Controls', { showInteractive, onInteractiveChange });
+  }
 
   const controls = (
     <div

@@ -1,4 +1,10 @@
-import { useRef, type CSSProperties, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useRef,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
 import { resizeFeature } from './features/resize.ts';
 import { capturePointer, releasePointer } from './pointer.ts';
@@ -20,7 +26,10 @@ export interface NodeResizerProps {
   maxHeight?: number;
   /** Hold the node's aspect ratio while resizing. */
   keepAspectRatio?: boolean;
-  /** Automatically scale resize controls with zoom level. */
+  /**
+   * Keep the handles from shrinking out of reach when zoomed out: below zoom 1 they are drawn larger by
+   * the inverse of the zoom. Default true, as in React Flow.
+   */
   autoScale?: boolean;
   handleClassName?: string;
   handleStyle?: CSSProperties;
@@ -34,45 +43,32 @@ export interface NodeResizerProps {
 }
 
 export interface ResizeControlProps {
+  /** The id of the node to resize. Inferred from node context when omitted. */
   nodeId?: string;
+  /** Which side or corner of the node it sits on, and pushes. Default `'bottom-right'`. */
   position?: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  /**
+   * A `'handle'` is a small square on the side or corner (default); a `'line'` is a strip along a whole side
+   * (on a corner it is a handle).
+   */
   variant?: 'line' | 'handle';
   className?: string;
   style?: CSSProperties;
+  /** Drawn inside the control — an icon on a handle, say. */
   children?: ReactNode;
+  /** The colour of the handle, or of the line. Default `--flowinger-selected`. */
   color?: string;
   minWidth?: number;
   minHeight?: number;
   maxWidth?: number;
   maxHeight?: number;
   keepAspectRatio?: boolean;
+  /** As on `NodeResizer`. */
   autoScale?: boolean;
   shouldResize?: (event: ReactPointerEvent, params: ResizeParams) => boolean;
   onResizeStart?: (event: ReactPointerEvent, params: ResizeParams) => void;
   onResize?: (event: ReactPointerEvent, params: ResizeParams) => void;
   onResizeEnd?: (event: ReactPointerEvent, params: ResizeParams) => void;
-}
-
-export function NodeResizeControl({
-  position = 'bottom-right',
-  variant = 'handle',
-  className = '',
-  style,
-  color,
-  children,
-}: ResizeControlProps) {
-  return (
-    <div
-      className={`react-flow__resize-control nodrag ${variant} ${position} ${className}`.trim()}
-      style={{
-        position: 'absolute',
-        backgroundColor: color,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
 }
 
 /** Which way a control pushes: -1 the near edge, 1 the far edge, 0 neither. */
@@ -88,16 +84,26 @@ const CONTROLS = [
 ] as const;
 
 type Control = (typeof CONTROLS)[number];
+type Kind = 'line' | 'handle';
 
 const HANDLE = 8;
 const HIT = 9;
+const SELECTED = 'var(--flowinger-selected, #38bdf8)';
+const noSubscription = () => () => {};
 
-function placement(c: Control): CSSProperties {
-  if (c.kind === 'handle') {
+/** `top` / `left` pinned at 0, or 50%, or — on the far side — `bottom` / `right`, with where its centre goes. */
+function axis(v: number, near: 'top' | 'left', far: 'bottom' | 'right'): CSSProperties {
+  return v === 0 ? { [near]: '50%' } : { [v < 0 ? near : far]: 0 };
+}
+const shift = (v: number) => (v > 0 ? '50%' : '-50%');
+
+function placement(c: Control, kind: Kind, scale: number): CSSProperties {
+  if (kind === 'handle' || (c.x !== 0 && c.y !== 0)) {
     return {
-      [c.y < 0 ? 'top' : 'bottom']: 0,
-      [c.x < 0 ? 'left' : 'right']: 0,
-      transform: `translate(${c.x < 0 ? '-50%' : '50%'}, ${c.y < 0 ? '-50%' : '50%'})`,
+      ...axis(c.y, 'top', 'bottom'),
+      ...axis(c.x, 'left', 'right'),
+      // About its centre, which is on the corner (or the middle of the side) either way.
+      transform: `translate(${shift(c.x)}, ${shift(c.y)})${scale === 1 ? '' : ` scale(${String(scale)})`}`,
       width: HANDLE,
       height: HANDLE,
     };
@@ -116,38 +122,50 @@ interface Session {
 }
 
 /**
- * Drag handles on a node — its sides and corners — that resize it. Goes inside
- * the node's component. A resize is *reported* (a `dimensions` change with
- * `setAttributes`, and a `position` change when the top-left moves), so it needs
- * a controlled flow or `defaultNodes` to have anything to write the size to.
+ * One control that resizes its node: a handle on a corner or a side, or a strip along a side. Goes inside
+ * the node's component, or anywhere with `nodeId`. `NodeResizer` is eight of these; use this one to put a
+ * single control — or your own icon — where you want it. A resize is *reported* (a `dimensions` change
+ * with `setAttributes`, and a `position` change when the top-left moves), so it needs a controlled flow or
+ * `defaultNodes` to have anything to write the size to.
  */
-export function NodeResizer({
-  isVisible = true,
-  color = 'var(--flowinger-selected, #38bdf8)',
+export function NodeResizeControl({
+  nodeId,
+  position = 'bottom-right',
+  variant = 'handle',
+  className = '',
+  style,
+  children,
+  color = SELECTED,
   minWidth = 10,
   minHeight = 10,
   maxWidth = Number.MAX_SAFE_INTEGER,
   maxHeight = Number.MAX_SAFE_INTEGER,
   keepAspectRatio = false,
-  handleClassName = '',
-  handleStyle,
-  lineClassName = '',
-  lineStyle,
+  autoScale = true,
   shouldResize,
   onResizeStart,
   onResize,
   onResizeEnd,
-}: NodeResizerProps) {
+}: ResizeControlProps) {
   const store = useFlowingerStore();
-  // A resizer needs nothing of the canvas but this, so it brings it (idempotently, and only if it is drawn).
+  // A resize control needs nothing of the canvas but this, so it brings it (idempotently, and only if it is drawn).
   store.use([resizeFeature]);
   const { resizeNode, endResize } = store.api(resizeFeature);
-  const id = useNodeId();
+  const contextId = useNodeId();
+  const id = nodeId ?? contextId;
   const session = useRef<Session | null>(null);
-  if (!isVisible || id === null) return null;
+  const c = CONTROLS.find((control) => control.name === position) ?? CONTROLS[7];
+  const kind: Kind = c.x !== 0 && c.y !== 0 ? 'handle' : variant;
+  // Only a handle follows the zoom — and only the zoom, so a pan does not draw it again.
+  const zoom = useSyncExternalStore(
+    autoScale && kind === 'handle' ? store.subscribeViewport : noSubscription,
+    () => store.getViewport().zoom,
+    () => 1,
+  );
+  if (id === null) return null;
 
-  /** The box a drag of `c` by (dx, dy) — graph units — makes of where the node began. */
-  const boxFor = (c: Control, from: Rect, dx: number, dy: number): Rect => {
+  /** The box a drag by (dx, dy) — graph units — makes of where the node began. */
+  const boxFor = (from: Rect, dx: number, dy: number): Rect => {
     let width = from.width + c.x * dx;
     let height = from.height + c.y * dy;
     if (keepAspectRatio && from.height > 0 && from.width > 0) {
@@ -179,12 +197,12 @@ export function NodeResizer({
     onResizeStart?.(e, from);
   };
 
-  const move = (c: Control) => (e: ReactPointerEvent<HTMLDivElement>) => {
+  const move = (e: ReactPointerEvent<HTMLDivElement>) => {
     const s = session.current;
     if (s?.pointerId !== e.pointerId) return;
     e.stopPropagation();
-    const zoom = store.getViewport().zoom;
-    const next = boxFor(c, s.from, (e.clientX - s.startX) / zoom, (e.clientY - s.startY) / zoom);
+    const z = store.getViewport().zoom;
+    const next = boxFor(s.from, (e.clientX - s.startX) / z, (e.clientY - s.startY) / z);
     if (shouldResize && !shouldResize(e, next)) return;
     resizeNode(id, next, true);
     onResize?.(e, next);
@@ -201,45 +219,79 @@ export function NodeResizer({
   };
 
   return (
-    <>
-      {CONTROLS.map((c) => (
+    <div
+      className={`flowinger-resize-control react-flow__resize-control nodrag nopan ${kind} ${c.name} ${className}`.trim()}
+      style={{
+        position: 'absolute',
+        cursor: c.cursor,
+        pointerEvents: 'all',
+        zIndex: 5,
+        touchAction: 'none',
+        ...placement(c, kind, autoScale && kind === 'handle' ? Math.max(1 / zoom, 1) : 1),
+        ...(kind === 'handle'
+          ? { background: color, border: '1px solid var(--flowinger-surface, #1e293b)', borderRadius: 1 }
+          : {}),
+        ...style,
+      }}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      onClick={(e) => {
+        e.stopPropagation(); // not a click on the node, so no selection change
+      }}
+    >
+      {kind === 'line' ? (
         <div
-          key={c.name}
-          className={`flowinger-resize-control react-flow__resize-control nodrag nopan ${c.kind} ${c.name} ${
-            c.kind === 'handle' ? handleClassName : lineClassName
-          }`.trim()}
           style={{
             position: 'absolute',
-            cursor: c.cursor,
-            pointerEvents: 'all',
-            zIndex: 5,
-            touchAction: 'none',
-            ...placement(c),
-            ...(c.kind === 'handle'
-              ? { background: color, border: '1px solid var(--flowinger-surface, #1e293b)', borderRadius: 1, ...handleStyle }
-              : { ...lineStyle }),
+            background: color,
+            pointerEvents: 'none',
+            ...(c.x === 0
+              ? { left: 0, right: 0, top: HIT / 2 - 0.5, height: 1 }
+              : { top: 0, bottom: 0, left: HIT / 2 - 0.5, width: 1 }),
           }}
-          onPointerDown={down}
-          onPointerMove={move(c)}
-          onPointerUp={up}
-          onPointerCancel={up}
-          onClick={(e) => {
-            e.stopPropagation(); // not a click on the node, so no selection change
-          }}
-        >
-          {c.kind === 'line' && (
-            <div
-              style={{
-                position: 'absolute',
-                background: color,
-                pointerEvents: 'none',
-                ...(c.x === 0
-                  ? { left: 0, right: 0, top: HIT / 2 - 0.5, height: 1 }
-                  : { top: 0, bottom: 0, left: HIT / 2 - 0.5, width: 1 }),
-              }}
-            />
-          )}
-        </div>
+        />
+      ) : null}
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Drag handles on a node — its sides and corners — that resize it. Goes inside
+ * the node's component. A resize is *reported* (a `dimensions` change with
+ * `setAttributes`, and a `position` change when the top-left moves), so it needs
+ * a controlled flow or `defaultNodes` to have anything to write the size to.
+ */
+export function NodeResizer({
+  nodeId,
+  isVisible = true,
+  color,
+  handleClassName = '',
+  handleStyle,
+  lineClassName = '',
+  lineStyle,
+  ...shared
+}: NodeResizerProps) {
+  const contextId = useNodeId();
+  const id = nodeId ?? contextId;
+  if (!isVisible || id === null) return null;
+  return (
+    <>
+      {CONTROLS.map((c) => (
+        <NodeResizeControl
+          key={c.name}
+          {...shared}
+          nodeId={id}
+          position={c.name}
+          variant={c.kind}
+          {...(color === undefined ? {} : { color })}
+          className={c.kind === 'handle' ? handleClassName : lineClassName}
+          {...((c.kind === 'handle' ? handleStyle : lineStyle) === undefined
+            ? {}
+            : { style: c.kind === 'handle' ? handleStyle : lineStyle })}
+        />
       ))}
     </>
   );

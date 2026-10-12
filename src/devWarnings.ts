@@ -142,3 +142,28 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
     );
   }
 }
+
+const said = new Set<string>();
+
+/**
+ * Says, once a page, that a component was given props it accepts for React Flow's sake and does nothing
+ * with. `props` maps each such prop to what was passed; `undefined` and `false` ask for nothing. Called
+ * from a render behind `process.env.NODE_ENV !== 'production'`, which a production bundle drops.
+ */
+export function warnAcceptedProps(component: string, props: Record<string, unknown>): void {
+  const given = Object.keys(props)
+    .filter((name) => props[name] !== undefined && props[name] !== false && !said.has(`${component}.${name}`))
+    .sort();
+  if (given.length === 0) return;
+  for (const name of given) said.add(`${component}.${name}`);
+  console.warn(
+    `flowinger: <${component}> ${given.join(', ')} ${given.length === 1 ? 'is' : 'are'} accepted so React Flow ` +
+      `code compiles, but ${given.length === 1 ? 'does' : 'do'} nothing here — see "Accepted, not implemented" ` +
+      'in docs/react-flow-coverage.md.',
+  );
+}
+
+/** For tests: the next component to be given such a prop says so again. */
+export function forgetAcceptedProps(): void {
+  said.clear();
+}

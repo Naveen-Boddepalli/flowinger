@@ -1,10 +1,15 @@
 import { useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
+import { warnAcceptedProps } from './devWarnings.ts';
 import { Position } from './types.ts';
 import type { PassThroughHtml } from './attributes.ts';
 
 export interface NodeToolbarProps extends PassThroughHtml {
-  /** Node id (or list of node ids) to attach this toolbar to. Inferred from context if omitted. */
+  /**
+   * @unimplemented Accepted so code written for React Flow compiles. The toolbar rides on the node it is
+   * rendered inside, so only that node — which is what it is when this is left out, or names it — is
+   * supported; another node, or several, is not.
+   */
   nodeId?: string | string[];
   /** Which side of the node it sits on. Default top. */
   position?: Position;
@@ -57,6 +62,7 @@ function placement(position: Position, align: 'center' | 'start' | 'end', offset
  * A press on it does not drag the node or pan the canvas.
  */
 export function NodeToolbar({
+  nodeId,
   position = Position.Top,
   align = 'center',
   offset = 10,
@@ -68,6 +74,10 @@ export function NodeToolbar({
 }: NodeToolbarProps) {
   const store = useFlowingerStore();
   const id = useNodeId();
+  if (process.env.NODE_ENV !== 'production') {
+    const here = Array.isArray(nodeId) ? nodeId.length === 1 && nodeId[0] === id : nodeId === id;
+    warnAcceptedProps('NodeToolbar', { nodeId: nodeId !== undefined && !here });
+  }
   const alone = useSyncExternalStore(
     store.subscribeSelection,
     () => id !== null && store.isSelected(id) && store.getSelectedNodeCount() === 1,
