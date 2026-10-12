@@ -14,7 +14,9 @@ import { panKeyFeature } from './panKey.ts';
 import { reconnectFeature } from './reconnect.tsx';
 import { selectionFeature } from './selection.ts';
 import { selectionRectFeature } from './selectionRect.tsx';
+import { smoothFeature } from './smooth.ts';
 import { stackingFeature } from './stacking.ts';
+import { zoomKeyFeature } from './zoomKey.ts';
 
 export {
   a11yFeature,
@@ -32,7 +34,9 @@ export {
   reconnectFeature,
   selectionFeature,
   selectionRectFeature,
+  smoothFeature,
   stackingFeature,
+  zoomKeyFeature,
 };
 
 /** Every feature: what `<FlowingerCanvas>` (and `ReactFlow`) has. */
@@ -52,6 +56,8 @@ export const allFeatures: readonly Feature[] = [
   boxSelectFeature,
   selectionRectFeature,
   stackingFeature,
+  smoothFeature,
+  zoomKeyFeature,
   colorModeFeature,
   panKeyFeature,
 ];

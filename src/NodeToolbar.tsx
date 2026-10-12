@@ -1,14 +1,14 @@
 import { useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
-import { warnAcceptedProps } from './devWarnings.ts';
-import { Position } from './types.ts';
+import { Position, type Rect } from './types.ts';
+import { ViewportPortal } from './ViewportPortal.tsx';
 import type { PassThroughHtml } from './attributes.ts';
 
 export interface NodeToolbarProps extends PassThroughHtml {
   /**
-   * @unimplemented Accepted so code written for React Flow compiles. The toolbar rides on the node it is
-   * rendered inside, so only that node — which is what it is when this is left out, or names it — is
-   * supported; another node, or several, is not.
+   * The node (or the nodes) the toolbar is for, where that is not the one it is drawn in. Naming the node it
+   * is in is the same as leaving it out; naming others draws it in graph space, at the box round them, and it
+   * follows them as they move. Shown by default while a single node it names is the only thing selected.
    */
   nodeId?: string | string[];
   /** Which side of the node it sits on. Default top. */
@@ -55,11 +55,32 @@ function placement(position: Position, align: 'center' | 'start' | 'end', offset
   return style;
 }
 
+const noSubscription = () => () => {};
+
+/** The box round some nodes, in graph units; null when none of them is there. */
+function boxOf(rects: (Rect | null)[]): Rect | null {
+  let box: Rect | null = null;
+  for (const r of rects) {
+    if (!r) continue;
+    if (!box) {
+      box = { ...r };
+      continue;
+    }
+    const right = Math.max(box.x + box.width, r.x + r.width);
+    const bottom = Math.max(box.y + box.height, r.y + r.height);
+    box.x = Math.min(box.x, r.x);
+    box.y = Math.min(box.y, r.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  }
+  return box;
+}
+
 /**
- * A toolbar attached to the node it is rendered inside — buttons for what can
- * be done to it. It rides on the node (absolutely positioned within it), so it
- * follows drags and zoom for free and never changes the node's measured size.
- * A press on it does not drag the node or pan the canvas.
+ * A toolbar attached to a node — buttons for what can be done to it. Drawn inside the node it is rendered in,
+ * it rides on it (absolutely positioned within it), so it follows drags and zoom for free and never changes
+ * the node's measured size. Given a `nodeId` of another node, or several, it is drawn at them in graph space
+ * instead. A press on it does not drag the node or pan the canvas.
  */
 export function NodeToolbar({
   nodeId,
@@ -73,24 +94,54 @@ export function NodeToolbar({
   ...rest
 }: NodeToolbarProps) {
   const store = useFlowingerStore();
-  const id = useNodeId();
-  if (process.env.NODE_ENV !== 'production') {
-    const here = Array.isArray(nodeId) ? nodeId.length === 1 && nodeId[0] === id : nodeId === id;
-    warnAcceptedProps('NodeToolbar', { nodeId: nodeId !== undefined && !here });
-  }
+  const own = useNodeId();
+  const named = nodeId === undefined ? undefined : typeof nodeId === 'string' ? [nodeId] : nodeId;
+  // For its own node it rides on it; for others it is placed at them.
+  const foreign = named !== undefined && !(named.length === 1 && named[0] === own);
+  const ids = foreign ? named : own === null ? [] : [own];
+
   const alone = useSyncExternalStore(
     store.subscribeSelection,
-    () => id !== null && store.isSelected(id) && store.getSelectedNodeCount() === 1,
+    () => ids.length === 1 && store.isSelected(ids[0] as string) && store.getSelectedNodeCount() === 1,
     () => false,
   );
+  // Where the nodes are is read as they move — only for a toolbar that is drawn at others.
+  useSyncExternalStore(
+    foreign ? store.subscribeGeometry : noSubscription,
+    foreign ? store.getGeometryVersion : () => 0,
+    () => 0,
+  );
   if (!(isVisible ?? alone)) return null;
-  return (
+
+  const bar = (
     <div
       {...rest}
       className={`flowinger-node-toolbar react-flow__node-toolbar nodrag nopan ${className}`.trim()}
-      style={{ ...placement(position, align, offset), zIndex: 10, cursor: 'default', ...style }}
+      style={{ ...placement(position, align, offset), zIndex: 10, cursor: 'default', ...(foreign ? { pointerEvents: 'all' as const } : {}), ...style }}
     >
       {children}
     </div>
+  );
+  if (!foreign) return bar;
+
+  const box = boxOf(ids.map((id) => store.getNodeRect(id)));
+  if (!box) return null;
+  return (
+    <ViewportPortal>
+      <div
+        className="flowinger-node-toolbar-holder"
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: box.width,
+          height: box.height,
+          transform: `translate(${String(box.x)}px, ${String(box.y)}px)`,
+          pointerEvents: 'none',
+        }}
+      >
+        {bar}
+      </div>
+    </ViewportPortal>
   );
 }

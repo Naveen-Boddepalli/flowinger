@@ -1,14 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
-import { forgetAcceptedProps } from '../devWarnings.ts';
 import {
-  Controls,
   FlowingerCanvas,
   FlowingerProvider,
   MiniMap,
   NodeResizeControl,
   NodeResizer,
-  NodeToolbar,
   useNodesState,
   type MiniMapNodeProps,
   type Node,
@@ -25,7 +22,6 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  forgetAcceptedProps(); // each test is the first to be given what it is given
 });
 
 describe('MiniMap props', () => {
@@ -175,17 +171,6 @@ describe('MiniMap props', () => {
     }
     expect(error).not.toHaveBeenCalled();
   });
-
-  it('says `inversePan` does nothing, once, and not when it is false', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    draw(<MiniMap inversePan={false} />);
-    expect(warn).not.toHaveBeenCalled();
-    draw(<MiniMap inversePan />);
-    draw(<MiniMap inversePan />);
-    const said = warn.mock.calls.map((c) => String(c[0])).filter((m) => m.includes('<MiniMap>'));
-    expect(said).toHaveLength(1);
-    expect(said[0]).toContain('inversePan');
-  });
 });
 
 describe('NodeResizeControl and NodeResizer.nodeId', () => {
@@ -299,54 +284,5 @@ describe('NodeResizeControl and NodeResizer.nodeId', () => {
       const { container } = render(<Harness nodeTypes={types} zoom={0.5} />);
       expect(handleTransform(container, 'bottom-right')).not.toContain('scale');
     });
-  });
-});
-
-describe('NodeToolbar.nodeId and Controls.showInteractive', () => {
-  const nodes: Node[] = [{ id: 'a', type: 't', position: { x: 0, y: 0 }, width: 100, height: 40, data: {} }];
-
-  it('is quiet, and not a DOM attribute, when `nodeId` is the node it is drawn in', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const types = {
-      t: () => (
-        <NodeToolbar nodeId="a" isVisible data-testid="bar">
-          x
-        </NodeToolbar>
-      ),
-    };
-    const { getByTestId } = render(<FlowingerCanvas nodes={nodes} nodeTypes={types} />);
-    expect(getByTestId('bar').hasAttribute('nodeid')).toBe(false);
-    expect(warn).not.toHaveBeenCalled();
-    expect(error).not.toHaveBeenCalled();
-  });
-
-  it('says so when `nodeId` names another node, which a toolbar on its own node cannot be on', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const types = {
-      t: () => (
-        <NodeToolbar nodeId={['a', 'b']} isVisible>
-          x
-        </NodeToolbar>
-      ),
-    };
-    render(<FlowingerCanvas nodes={nodes} nodeTypes={types} />);
-    expect(String(warn.mock.calls[0]?.[0])).toMatch(/<NodeToolbar> nodeId is accepted/);
-  });
-
-  it('says there is no lock button when `showInteractive` is asked for, and not when it is not', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    render(
-      <FlowingerProvider>
-        <Controls showInteractive={false} />
-      </FlowingerProvider>,
-    );
-    expect(warn).not.toHaveBeenCalled();
-    render(
-      <FlowingerProvider>
-        <Controls showInteractive onInteractiveChange={() => {}} />
-      </FlowingerProvider>,
-    );
-    expect(String(warn.mock.calls[0]?.[0])).toMatch(/<Controls> onInteractiveChange, showInteractive are accepted/);
   });
 });

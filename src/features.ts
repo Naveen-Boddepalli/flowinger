@@ -11,6 +11,7 @@ import type {
   SVGAttributes,
 } from 'react';
 import type { FlowingerEdgesProps } from './FlowingerEdges.tsx';
+import type { Modifiers } from './keys.ts';
 import type { Size } from './geometry.ts';
 import type {
   DragConnection,
@@ -25,6 +26,7 @@ import type {
   EdgeChange,
   FlowingerProps,
   HandleType,
+  KeyCode,
   Node,
   NodeChange,
   Rect,
@@ -69,6 +71,13 @@ export interface Feature<Api = unknown> {
    * joined to it is stacked with, which may differ.
    */
   readonly stackNode?: (store: FlowingerStore, node: Node, z: number, selected: boolean, forEdge: boolean) => number;
+  /**
+   * The path of an animated viewport move with `interpolate: 'smooth'`: from one view to another, as a function of
+   * the eased fraction. Without a feature that has it, a move is linear.
+   */
+  readonly smoothViewport?: (from: Viewport, to: Viewport, width: number, height: number) => (t: number) => Viewport;
+  /** Whether a key code (a key, a combination, a list) is held, as an event's modifiers and the keys seen say. */
+  readonly keyHeld?: (code: KeyCode | null | undefined, e: Modifiers) => boolean;
   /** Which layer an edge is drawn in, given the one the engine would pick. */
   readonly stackEdge?: (store: FlowingerStore, edge: Edge, level: number, selected: boolean) => number;
 }

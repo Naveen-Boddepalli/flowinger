@@ -95,22 +95,6 @@ describe('accepted but not implemented', () => {
     expect(said[0]).toContain(`${given.join(', ')} ${given.length === 1 ? 'is' : 'are'} accepted`);
   });
 
-  it('says so for the handles a node declares, which nothing draws edges from', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const withHandles: Node = {
-      id: 'h',
-      position: { x: 0, y: 0 },
-      data: {},
-      handles: [{ type: 'source', position: 'right' as never, x: 10, y: 10 }],
-    };
-    render(<FlowingerCanvas nodes={[withHandles]} />);
-    expect(aboutUnimplemented(warn)[0]).toContain('nodes[].handles');
-  });
-
-  it('is tagged on Node.handles too', () => {
-    expect(taggedIn('Node')).toContain('handles');
-  });
-
   it('does not warn about anything a plain canvas is given', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     render(<FlowingerCanvas nodes={nodes} edges={[]} fitView />);

@@ -21,7 +21,6 @@ import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { Handle } from './Handle.tsx';
-import { isKeyHeld, useKeyTracking } from './keys.ts';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
@@ -120,7 +119,7 @@ function InnerCanvas(props: FlowingerProps) {
     edgeTypes,
     minZoom = 0.05,
     maxZoom = 2,
-    nodesDraggable = false,
+    nodesDraggable: nodesDraggableProp = false,
     panOnDrag = true,
     selectionOnDrag = false,
     panOnScroll = false,
@@ -134,8 +133,8 @@ function InnerCanvas(props: FlowingerProps) {
     connectionLineStyle,
     connectionLineComponent,
     zoomOnPinch = true,
-    elementsSelectable = false,
-    nodesConnectable = false,
+    elementsSelectable: elementsSelectableProp = false,
+    nodesConnectable: nodesConnectableProp = false,
     translateExtent,
     connectionMode = 'strict',
     edgesFocusable = true,
@@ -193,6 +192,11 @@ function InnerCanvas(props: FlowingerProps) {
     disableKeyboardA11y,
   } = props;
   const store = useFlowingerStore();
+  // The Controls' lock, where there is one, is over what these say: all on, or all off.
+  const locked = useSyncExternalStore(store.subscribeInteractive, store.getInteractive, () => null);
+  const nodesDraggable = locked ?? nodesDraggableProp;
+  const nodesConnectable = locked ?? nodesConnectableProp;
+  const elementsSelectable = locked ?? elementsSelectableProp;
   // Installed while rendering, so they are there for every effect below and for whoever holds the
   // instance; installing is idempotent, so a render that is discarded or repeated does no harm.
   // Read once: a feature is not something a canvas gains or loses.
@@ -241,7 +245,8 @@ function InnerCanvas(props: FlowingerProps) {
   const suppressPaneClick = useCallback(() => {
     justPanned.current = true;
   }, []);
-  const bits = feats.flatMap((f) => f.useCanvas?.({ store, props, suppressPaneClick }) ?? []);
+  const featureProps = locked === null ? props : { ...props, nodesDraggable, nodesConnectable, elementsSelectable };
+  const bits = feats.flatMap((f) => f.useCanvas?.({ store, props: featureProps, suppressPaneClick }) ?? []);
   // Selecting needs a feature that acts on it. Given that, a node or edge is selectable where it says so itself,
   // else where the canvas allows it (`elementsSelectable`).
   const canSelect = bits.some((b) => b.selectable === true);
@@ -307,6 +312,7 @@ function InnerCanvas(props: FlowingerProps) {
   useIsomorphicLayoutEffect(() => {
     store.setOptions({
       nodesDraggable,
+      nodesConnectable,
       elementsSelectable,
       snapGrid: snapToGrid ? [gridX, gridY] : null,
       nodeExtent: nodeExtent ?? null,
@@ -322,6 +328,7 @@ function InnerCanvas(props: FlowingerProps) {
   }, [
     store,
     nodesDraggable,
+    nodesConnectable,
     elementsSelectable,
     snapToGrid,
     gridX,
@@ -427,7 +434,6 @@ function InnerCanvas(props: FlowingerProps) {
     onInitRef.current?.(store.instance);
   }, [store]);
 
-  useKeyTracking(zoomActivationKeyCode);
   // Wheel: zoom, or — with `panOnScroll` — pan. A native listener: React
   // registers `wheel` as passive, and a passive listener cannot stop the page
   // scrolling underneath.
@@ -448,7 +454,7 @@ function InnerCanvas(props: FlowingerProps) {
       // or ⌘ (a trackpad pinch arrives as ctrl+wheel) only chooses between zooming and panning, and
       // `zoomOnScroll` off means no zoom at all.
       const keyed = zoomActivationKeyCode !== undefined;
-      const held = keyed && isKeyHeld(zoomActivationKeyCode, e);
+      const held = keyed && store.isKeyHeld(zoomActivationKeyCode, e);
       const pinch = keyed && zoomOnPinch && e.ctrlKey;
       const zooming = panOnScroll ? (keyed ? held || pinch : e.ctrlKey || e.metaKey) : true;
       if (zooming && !(zoomOnScroll || held || pinch)) return;

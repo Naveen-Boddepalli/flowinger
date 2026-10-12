@@ -17,6 +17,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
+  zoomKey: ['zoomActivationKeyCode'],
   a11y: ['nodesFocusable', 'disableKeyboardA11y', 'ariaLabelConfig', 'autoPanOnNodeFocus'],
   debug: ['debug'],
   stacking: ['elevateNodesOnSelect', 'elevateEdgesOnSelect', 'zIndexMode'],
@@ -69,6 +70,9 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
  * Props that are in React Flow's API, so code written for it compiles, but that nothing here reads. Each
  * is `@unimplemented` in `types.ts` (a test keeps the two lists the same). The values are the ones that ask
  * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
+ *
+ * There are none: every prop in React Flow's `ReactFlow` does something here. This is where a name goes that
+ * is added before it works — a name that compiles and does nothing is worse than a missing one.
  */
 export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
 };
@@ -95,9 +99,6 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
     const value = props[name];
     return value !== undefined && !NOT_IMPLEMENTED[name]?.includes(value);
   });
-  if ((props.nodes ?? props.defaultNodes)?.some((node) => node.handles !== undefined)) {
-    accepted.push('nodes[].handles' as keyof FlowingerProps);
-  }
   if (accepted.length > 0) {
     accepted.sort();
     console.warn(
@@ -121,29 +122,4 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
         '<FlowingerCore> shows the `nodes` it is given.',
     );
   }
-}
-
-const said = new Set<string>();
-
-/**
- * Says, once a page, that a component was given props it accepts for React Flow's sake and does nothing
- * with. `props` maps each such prop to what was passed; `undefined` and `false` ask for nothing. Called
- * from a render behind `process.env.NODE_ENV !== 'production'`, which a production bundle drops.
- */
-export function warnAcceptedProps(component: string, props: Record<string, unknown>): void {
-  const given = Object.keys(props)
-    .filter((name) => props[name] !== undefined && props[name] !== false && !said.has(`${component}.${name}`))
-    .sort();
-  if (given.length === 0) return;
-  for (const name of given) said.add(`${component}.${name}`);
-  console.warn(
-    `flowinger: <${component}> ${given.join(', ')} ${given.length === 1 ? 'is' : 'are'} accepted so React Flow ` +
-      `code compiles, but ${given.length === 1 ? 'does' : 'do'} nothing here — see "Accepted, not implemented" ` +
-      'in docs/react-flow-coverage.md.',
-  );
-}
-
-/** For tests: the next component to be given such a prop says so again. */
-export function forgetAcceptedProps(): void {
-  said.clear();
 }

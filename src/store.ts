@@ -7,6 +7,7 @@ import {
   viewportForBounds,
   type Size,
 } from './geometry.ts';
+import type { Modifiers } from './keys.ts';
 import { layoutSize } from './measure.ts';
 import type {
   ConnectEndState,
@@ -19,6 +20,7 @@ import type {
   FlowingerInstance,
   HandleType,
   InternalNode,
+  KeyCode,
   Node,
   NodeChange,
   NodeOrigin,
@@ -147,6 +149,7 @@ export interface NodeCallbacks {
 /** The canvas's settings the store needs to act on a gesture. */
 export interface EngineOptions {
   nodesDraggable: boolean;
+  nodesConnectable: boolean;
   elementsSelectable: boolean;
   /** Round a dragged node's position to a multiple of these. */
   snapGrid: readonly [number, number] | null;
@@ -169,6 +172,7 @@ export interface EngineOptions {
 /** The options a store starts with, before a canvas has told it otherwise. */
 export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   nodesDraggable: false,
+  nodesConnectable: false,
   elementsSelectable: false,
   snapGrid: null,
   nodeExtent: null,
@@ -302,6 +306,12 @@ export function createFlowingerStore(
   let viewportEl: HTMLElement | null = null;
   let containerEl: HTMLElement | null = null;
   let mounted = false;
+  let interactiveOverride: boolean | null = null;
+  /** A feature's path for `interpolate: 'smooth'`, if any. */
+  let smoothFn: Feature['smoothViewport'];
+  /** A feature's way of knowing a key is held (`zoomKeyFeature`); without one, none is. */
+  let keyFn: Feature['keyHeld'];
+  const interactiveListeners = new Set<Listener>();
 
   let nodes: readonly Node[] = [];
   let nodeById = new Map<string, Node>();
@@ -527,6 +537,12 @@ export function createFlowingerStore(
         cancelTween(true);
         commitViewport(to);
       };
+      // `'smooth'` is a path through the zoom — out and back in over a long move — which needs the pane's size.
+      const pane = containerEl ? { width: containerEl.clientWidth, height: containerEl.clientHeight } : null;
+      const smooth =
+        options?.interpolate === 'smooth' && smoothFn && pane && pane.width > 0 && pane.height > 0
+          ? smoothFn(from, to, pane.width, pane.height)
+          : null;
       const tick = (now: number) => {
         const t = Math.min(1, (now - start) / duration);
         if (t >= 1) {
@@ -534,11 +550,15 @@ export function createFlowingerStore(
           return;
         }
         const e = ease(t);
-        commitViewport({
-          x: from.x + (to.x - from.x) * e,
-          y: from.y + (to.y - from.y) * e,
-          zoom: from.zoom + (to.zoom - from.zoom) * e,
-        });
+        commitViewport(
+          smooth
+            ? smooth(e)
+            : {
+                x: from.x + (to.x - from.x) * e,
+                y: from.y + (to.y - from.y) * e,
+                zoom: from.zoom + (to.zoom - from.zoom) * e,
+              },
+        );
         if (tween) tween.frame = requestAnimationFrame(tick);
       };
       tween = {
@@ -1172,6 +1192,8 @@ export function createFlowingerStore(
   const use = (list: readonly Feature[]) => {
     for (const feature of resolveFeatures(list)) {
       if (!installed.has(feature.name)) installed.set(feature.name, feature.install?.(ctx));
+      if (feature.smoothViewport) smoothFn = feature.smoothViewport;
+      if (feature.keyHeld) keyFn = feature.keyHeld;
     }
   };
 
@@ -1318,6 +1340,15 @@ export function createFlowingerStore(
     onEdgesChangeMiddlewareMap,
     /** Labels for the controls, the minimap and handles, from `ariaLabelConfig` — written by `a11yFeature`. */
     labels: {} as Record<string, string | undefined>,
+
+    isKeyHeld: (code: KeyCode | null | undefined, e: Modifiers): boolean => keyFn?.(code, e) ?? false,
+    /** The Controls' lock: whether interaction is forced on or off, over what the canvas's props say; null when not. */
+    getInteractive: (): boolean | null => interactiveOverride,
+    setInteractive: (next: boolean | null) => {
+      interactiveOverride = next;
+      for (const fn of interactiveListeners) fn();
+    },
+    subscribeInteractive: subscribeTo(interactiveListeners),
 
     subscribeViewport: subscribeTo(viewportListeners),
     subscribeGeometry: subscribeTo(geometryListeners),

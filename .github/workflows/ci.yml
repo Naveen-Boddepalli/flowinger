@@ -38,7 +38,7 @@ jobs:
       # What a small consumer pays: the whole canvas, and the core with no features (from src, then from
       # the built package — one pre-bundled file, where a stray top-level call keeps unused code alive).
       # Raise a budget deliberately, not by drift; the lean one is the one that matters.
-      - run: pnpm size --max-full 29 --max-lean 19
+      - run: pnpm size --max-full 34 --max-lean 19
       - run: node scripts/size-dist.mjs --max-lean 19
       # The package itself, once: exports, types for import *and* require, and what the tarball holds.
       # (publint and Are the Types Wrong — the failure they exist for is a consumer who cannot import it.)

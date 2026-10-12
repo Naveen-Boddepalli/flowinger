@@ -18,6 +18,8 @@ export {
   a11yFeature,
   debugFeature,
   stackingFeature,
+  smoothFeature,
+  zoomKeyFeature,
   colorModeFeature,
 } from './features/index.ts';
 export type {

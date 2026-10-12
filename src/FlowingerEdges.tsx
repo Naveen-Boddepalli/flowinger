@@ -184,6 +184,22 @@ function endpoint(
         : handleCoordinates(at, handle.position, store.getNodeSize(node)),
     };
   }
+  // Not drawn (yet — or on a server): the node may declare where its handles are.
+  const ofType = node.handles?.filter((h) => h.type === type);
+  const declared = handleId ? ofType?.find((h) => h.id === handleId) : ofType?.[0];
+  if (declared) {
+    const { x, y, width = 0, height = 0, position } = declared;
+    // A box, as a measured handle is: the edge meets its outer edge. Without one, the middle of its side.
+    if (x === undefined || y === undefined) {
+      return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
+    }
+    const across = position === Position.Left || position === Position.Right;
+    const point = {
+      x: at.x + x + (across ? (position === Position.Right ? width : 0) : width / 2),
+      y: at.y + y + (across ? height / 2 : position === Position.Bottom ? height : 0),
+    };
+    return { position, point };
+  }
   const position = resolveHandlePosition(handleId, fallback);
   return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
 }

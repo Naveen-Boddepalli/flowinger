@@ -177,9 +177,10 @@ export interface Node<T = Record<string, unknown>, Type extends string = string>
    */
   origin?: NodeOrigin;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in
-   * development says so. Edges attach to the `<Handle>`s a node renders, measured in the browser — a node's
-   * declared handles do not stand in for them before then.
+   * Where the node's handles are, for an edge to meet before they are drawn and measured — in server-rendered
+   * output, or before the first measure. A handle is a box (`x`, `y`, `width`, `height`, from the node's
+   * top-left) on a `position` side, as a measured one is; with no box, the middle of that side. Edges name them
+   * by `sourceHandle` / `targetHandle` as they do a drawn handle; a drawn handle, once measured, wins.
    */
   handles?: NodeHandle[];
   /**
@@ -399,8 +400,9 @@ export interface SetViewportOptions {
   /** Easing of the move, `t` from 0 to 1 in and 0 to 1 out. Default: ease-out cubic. */
   ease?: (t: number) => number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; a move is always a straight, eased
-   * interpolation of x, y and zoom — which is React Flow's `'linear'`. `'smooth'` (its default) is not here.
+   * `'linear'` (the default here): x, y and zoom each move by the eased fraction. `'smooth'`: van Wijk and
+   * Nuij's path — over a long move it zooms out and back in so the eye can follow — which is what React Flow
+   * does unless told otherwise.
    */
   interpolate?: 'smooth' | 'linear';
 }

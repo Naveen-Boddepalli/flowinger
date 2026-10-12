@@ -1,6 +1,5 @@
-import { memo, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
+import { memo, useSyncExternalStore, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import { useFlowinger, useFlowingerStore } from './context.ts';
-import { warnAcceptedProps } from './devWarnings.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import type { FitViewOptions } from './types.ts';
 
@@ -12,11 +11,12 @@ export interface ControlsProps {
   showFit?: boolean;
   showFitView?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; there is no lock button. Whether nodes
-   * move, connect or select is the canvas's `nodesDraggable`, `nodesConnectable` and `elementsSelectable`.
+   * A lock button that switches interaction off and on — nodes dragged, connected and selected — over what the
+   * canvas's `nodesDraggable`, `nodesConnectable` and `elementsSelectable` say. Pressed while all three are
+   * off it switches them on, as in React Flow. Default false (React Flow's is true).
    */
   showInteractive?: boolean;
-  /** @unimplemented Never called: there is no lock button. */
+  /** After the lock was pressed: `true` when the canvas is now interactive. */
   onInteractiveChange?: (interactive: boolean) => void;
   /** Shapes what the fit button does (`padding`, `duration`, …). It takes 300 ms unless this says otherwise. */
   fitViewOptions?: FitViewOptions;
@@ -94,10 +94,17 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
   children,
 }: ControlsProps) {
   const { zoomIn, zoomOut, fitView } = useFlowinger();
-  const labels = useFlowingerStore().labels;
-  if (process.env.NODE_ENV !== 'production') {
-    warnAcceptedProps('Controls', { showInteractive, onInteractiveChange });
-  }
+  const store = useFlowingerStore();
+  const labels = store.labels;
+  // Whether anything can be done to the nodes right now: the canvas's props, or the lock over them.
+  const interactive = useSyncExternalStore(
+    store.subscribeInteractive,
+    () => {
+      const o = store.getOptions();
+      return store.getInteractive() ?? (o.nodesDraggable || o.nodesConnectable || o.elementsSelectable);
+    },
+    () => false,
+  );
 
   const controls = (
     <div
@@ -143,6 +150,24 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
           style={fitStyle}
         >
           Fit
+        </button>
+      )}
+      {showInteractive && (
+        <button
+          type="button"
+          onClick={() => {
+            store.setInteractive(!interactive);
+            onInteractiveChange?.(!interactive);
+          }}
+          aria-label={labels['controls.interactive.ariaLabel'] ?? 'Toggle interactivity'}
+          aria-pressed={!interactive}
+          style={buttonStyle}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden fill="none" stroke="currentColor" strokeWidth="1.4">
+            <rect x="2" y="5.5" width="8" height="5.5" rx="1" />
+            {/* Shut when locked, lifted when not. */}
+            <path d={interactive ? 'M4 5.5V3.5a2 2 0 0 1 3.8-0.9' : 'M4 5.5V3.5a2 2 0 0 1 4 0v2'} />
+          </svg>
         </button>
       )}
       {children}

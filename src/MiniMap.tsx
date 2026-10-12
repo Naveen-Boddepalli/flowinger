@@ -10,7 +10,6 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useFlowingerStore, useViewport } from './context.ts';
-import { warnAcceptedProps } from './devWarnings.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import { capturePointer, releasePointer } from './pointer.ts';
 import type { PassThroughHtml } from './attributes.ts';
@@ -98,8 +97,8 @@ export interface MiniMapProps extends PassThroughHtml<'role', SVGSVGElement> {
   /** Click or drag on the overview to move the view. Default true. */
   pannable?: boolean;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; here a press or drag puts the view
-   * where the pointer is, so there is no relative pan to invert.
+   * Drag the other way: the view goes where the pointer is *not* — as far from where the press began as the
+   * pointer is, on the other side of it. Default false.
    */
   inversePan?: boolean;
   /** The wheel over the overview zooms the canvas, about its centre. Default false. */
@@ -163,7 +162,6 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   style,
   ...rest
 }: MiniMapProps) {
-  if (process.env.NODE_ENV !== 'production') warnAcceptedProps('MiniMap', { inversePan });
   const store = useFlowingerStore();
   // Positions, sizes, node lists and the pane's size all arrive as geometry
   // changes; the viewport is its own subscription.
@@ -180,6 +178,8 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
   /** Where the press on the overview began, in client pixels: a click is one that has not moved far. */
   const press = useRef<{ x: number; y: number } | null>(null);
   const svg = useRef<SVGSVGElement>(null);
+  /** Where in the graph the press began, for `inversePan`. */
+  const anchor = useRef<{ x: number; y: number } | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
 
   const pane = store.getContainerSize();
@@ -244,7 +244,10 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
 
   const centreOn = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (!pane) return;
-    const at = toGraph(e);
+    let at = toGraph(e);
+    // Inverted, the view goes as far the other side of where the press began as the pointer is on this one.
+    const from = anchor.current;
+    if (inversePan && from) at = { x: 2 * from.x - at.x, y: 2 * from.y - at.y };
     const { zoom } = store.getViewport();
     void store.instance.setViewport({
       x: pane.width / 2 - at.x * zoom,
@@ -262,6 +265,7 @@ export const MiniMap = /*#__PURE__*/ memo(function MiniMap({
     e.preventDefault();
     dragging.current = true;
     frozen.current = box; // what is on screen now is what the pointer is mapped to
+    anchor.current = toGraph(e);
     capturePointer(e.currentTarget, e.pointerId);
     centreOn(e);
   };
