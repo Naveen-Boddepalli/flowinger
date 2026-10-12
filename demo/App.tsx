@@ -55,6 +55,18 @@ function originFromUrl(): [number, number] | undefined {
   return x !== undefined && y !== undefined && Number.isFinite(x) && Number.isFinite(y) ? [x, y] : undefined;
 }
 
+/** Props the browser suite sets from the address (`?colorMode=system&zIndexMode=manual&smooth=1`). */
+function propsFromUrl(): { colorMode?: 'light' | 'dark' | 'system'; zIndexMode?: 'auto' | 'basic' | 'manual'; smooth: boolean } {
+  const q = new URLSearchParams(window.location.search);
+  const colorMode = q.get('colorMode');
+  const zIndexMode = q.get('zIndexMode');
+  return {
+    ...(colorMode === 'light' || colorMode === 'dark' || colorMode === 'system' ? { colorMode } : {}),
+    ...(zIndexMode === 'auto' || zIndexMode === 'basic' || zIndexMode === 'manual' ? { zIndexMode } : {}),
+    smooth: q.get('smooth') === '1',
+  };
+}
+
 /** The whole diagram as an SVG or a PNG, whatever the view shows — `flowinger/export`, in the browser. */
 async function exportDiagram(format: 'svg' | 'png') {
   const canvas = document.querySelector<HTMLElement>('.react-flow');
@@ -90,7 +102,7 @@ function PlanNode({ id, data, selected }: NodeProps) {
       }`}
     >
       <NodeToolbar>
-        <div className="flex gap-1 rounded-md border border-slate-700 bg-slate-900 p-1 shadow-lg">
+        <div className="nowheel flex gap-1 rounded-md border border-slate-700 bg-slate-900 p-1 shadow-lg">
           <button type="button" className={button} onClick={duplicate}>
             Duplicate
           </button>
@@ -254,6 +266,7 @@ export function App() {
   const features = useMemo(() => PICKABLE.filter((p) => picks.has(p.label)).map((p) => p.feature), [picks]);
   const Canvas = whole ? FlowingerCanvas : FlowingerCore;
   const nodeOrigin = useMemo(originFromUrl, []);
+  const urlProps = useMemo(propsFromUrl, []);
   const stress = useMemo(() => bigGrid(2000), []);
 
   const isValidConnection = (c: Connection) => c.source !== c.target;
@@ -300,6 +313,8 @@ export function App() {
             edges={many ? [] : edges}
             {...(many ? {} : { onNodesChange, onEdgesChange })}
             {...(nodeOrigin ? { nodeOrigin } : {})}
+            {...(urlProps.colorMode ? { colorMode: urlProps.colorMode } : {})}
+            {...(urlProps.zIndexMode ? { zIndexMode: urlProps.zIndexMode } : {})}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             nodesDraggable
@@ -401,7 +416,11 @@ export function App() {
             nodeStrokeColor="#1e293b"
             nodeStrokeWidth={1}
           />
-          <Controls position="bottom-right" />
+          <Controls
+            position="bottom-right"
+            showInteractive
+            {...(urlProps.smooth ? { fitViewOptions: { duration: 500, interpolate: 'smooth' as const } } : {})}
+          />
         </FlowingerProvider>
       </div>
     </div>

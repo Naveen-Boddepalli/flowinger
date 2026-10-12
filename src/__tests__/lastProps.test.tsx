@@ -291,6 +291,22 @@ describe("NodeToolbar's nodeId", () => {
     expect(container.querySelector('[data-testid="tool"]')).toBeNull();
   });
 
+  it('is drawn at a child where it is on the canvas, not inside its parent', () => {
+    const tree = [
+      n('a', 0, 0, { type: 'holder' }),
+      n('g', 300, 200, { width: 300, height: 200 }),
+      n('k', 20, 30, { parentId: 'g' }),
+    ];
+    const { container } = render(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCanvas nodes={tree} nodeTypes={types('k', true)} elementsSelectable />
+      </div>,
+    );
+    expect(must<HTMLElement>(container, '.flowinger-node-toolbar-holder').style.transform).toBe(
+      'translate(320px, 230px)',
+    );
+  });
+
   it('follows the node when it moves', () => {
     const { container } = mount('b', true, { nodesDraggable: true });
     const b = node(container, 'b');

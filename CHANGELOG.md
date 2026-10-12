@@ -9,6 +9,13 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **The rectangle round a box selection, a `NodeToolbar` for another node (`nodeId`), and the pan to a node
+  that takes keyboard focus (`autoPanOnNodeFocus`) used a child's position *inside its parent* as if it were on
+  the canvas.** With a group in the selection the rectangle's corner was wrong, and the toolbar and the pan went
+  to the wrong place for a child. Found by watching them in a browser; the unit tests had no sub-flow.
+
 ## [0.5.0] - 2026-10-13
 
 ### Added

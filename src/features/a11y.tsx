@@ -125,7 +125,7 @@ export const a11yFeature: Feature<A11yApi> = {
       } catch {
         // No such selector here: treat it as the keyboard.
       }
-      const rect = store.getNodeRect(node.id);
+      const rect = store.getAbsoluteRect(node.id);
       const size = store.getContainerSize();
       const view = store.getViewport();
       if (!rect || !size) return;

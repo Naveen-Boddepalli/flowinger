@@ -133,6 +133,20 @@ describe('autoPanOnNodeFocus', () => {
     expect(viewOf(container)).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 
+  it('pans to where a child really is, not to its position inside its parent', () => {
+    const tree = [
+      n('near', 0, 0),
+      n('g', 3000, 2000, { width: 300, height: 200 }),
+      n('k', 10, 10, { parentId: 'g' }),
+    ];
+    const { container } = render(canvas({ nodes: tree, nodesFocusable: true }));
+    act(() => {
+      fireEvent.focus(node(container, 'k'));
+    });
+    // k is at (3010, 2010), 100 × 40: its centre (3060, 2030) is now the pane's (400, 300).
+    expect(viewOf(container)).toEqual({ x: 400 - 3060, y: 300 - 2030, zoom: 1 });
+  });
+
   it('off, it does not pan', () => {
     const { container } = render(canvas({ nodes: far, nodesFocusable: true, autoPanOnNodeFocus: false }));
     act(() => {

@@ -844,6 +844,16 @@ export function createFlowingerStore(
     return { x: pos.x - offset.x, y: pos.y - offset.y, ...getNodeSize(n) };
   };
 
+  /**
+   * Where a node is on the canvas — its top-left corner, whatever its parents and its origin — and how big:
+   * graph units, as the nodes are drawn. (`getNodeRect` is in the node's own space, which for a child is
+   * relative to its parent.)
+   */
+  const getAbsoluteRect = (id: string): Rect | null => {
+    const n = nodeById.get(id);
+    return n ? { ...absolutePosition(n), ...getNodeSize(n) } : null;
+  };
+
   /** The selection as it stands, as elements. */
   const getSelection = (): { nodes: Node[]; edges: Edge[] } => ({
     nodes: selectedNodeIds().flatMap((id) => nodeById.get(id) ?? []),
@@ -1329,6 +1339,7 @@ export function createFlowingerStore(
     isEdgeSelected,
     hasSelection,
     getNodeRect,
+    getAbsoluteRect,
     getInternalNode,
     getSelectedNodeCount: (): number => selectedNodeIds().length,
     subscribeSelection: subscribeTo(selectionChangeListeners),

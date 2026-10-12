@@ -73,7 +73,7 @@ function SelectionRect() {
 
   let box: Rect | null = null;
   for (const id of picked.split('|')) {
-    const r = store.getNodeRect(id);
+    const r = store.getAbsoluteRect(id);
     if (!r) continue;
     if (!box) {
       box = { ...r };
