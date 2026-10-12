@@ -833,28 +833,23 @@ export interface FlowingerProps {
    */
   nodeDragThreshold?: number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A selection box starts with Shift, whatever this says.
+   * The key that, held, turns a drag on the empty canvas into a selection box (with `elementsSelectable`). A key or combination (`'Alt'`, `'Meta+a'`), or a list; `null` for none, so only `selectionOnDrag` draws one. Default `'Shift'`. Needs `boxSelectFeature`.
    */
   selectionKeyCode?: string | string[] | null;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Shift, Ctrl or ⌘ adds to a selection, whatever this says.
+   * The key that, held, makes a click or a drag add to the selection instead of replacing it. Left out, Shift, Control and ⌘ all do; given, only this key; `null` for none. Needs `selectionFeature`.
    */
   multiSelectionKeyCode?: string | string[] | null;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * With `panOnScroll`, Ctrl or ⌘ and the wheel zoom; the key is fixed.
+   * The key that, held, makes the wheel zoom — even where `zoomOnScroll` is off, and instead of panning under `panOnScroll`. A pinch (Control + wheel) zooms whatever `zoomOnScroll` says once a key is given. Left out, Control or ⌘ only chooses between panning and zooming under `panOnScroll`.
    */
   zoomActivationKeyCode?: string | string[] | null;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A wheel pan is free: both axes.
+   * With `panOnScroll`, which axes the wheel pans: `'free'` (both, the default), `'vertical'` or `'horizontal'`. Shift turns a vertical wheel sideways, except in `'vertical'` (macOS does that itself).
    */
   panOnScrollMode?: PanOnScrollMode;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * The wheel is the canvas's whenever `zoomOnScroll` or `panOnScroll` is on, and the page does not scroll then; turn both off to give it to the page.
+   * Whether the wheel over the canvas is the canvas's and the page does not scroll (default true). Off, a plain wheel scrolls the page and does not zoom; a pinch (Control + wheel) still zooms, and a wheel that pans (`panOnScroll`) is still the canvas's.
    */
   preventScrolling?: boolean;
   /**
@@ -863,13 +858,11 @@ export interface FlowingerProps {
    */
   connectionDragThreshold?: number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A press that moves less than the drag threshold is a click.
+   * How far, in pixels, a press on a node may move and still be a click. Further than that, and not far enough to be a drag, it is not a click (no `onNodeClick`, no selection). Left out, any press that does not become a drag is a click. Needs `dragFeature`.
    */
   nodeClickDistance?: number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * A press that moves less than the drag threshold is a click.
+   * How far, in pixels, a press on the empty canvas may move and still be a click on the pane (`onPaneClick`, clearing the selection). Left out, any press that does not become a pan is a click.
    */
   paneClickDistance?: number;
   /**
@@ -883,8 +876,7 @@ export interface FlowingerProps {
    */
   reconnectRadius?: number;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * Dragging an unselected node selects it.
+   * Whether dragging an unselected node selects it (default true). Off, it moves alone and what was selected is dropped; a click still selects. Needs `dragFeature`.
    */
   selectNodesOnDrag?: boolean;
   /**
@@ -953,18 +945,15 @@ export interface FlowingerProps {
    */
   connectionLineContainerStyle?: CSSProperties;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * The class that keeps a press from dragging is `nodrag`, fixed.
+   * A class of your own for what a press does not drag a node from, as `nodrag` does — which keeps working.
    */
   noDragClassName?: string;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * The class that keeps a press from panning is `nopan`, fixed.
+   * A class of your own for what a press does not pan from, as `nopan` does — which keeps working.
    */
   noPanClassName?: string;
   /**
-   * @unimplemented Accepted so code written for React Flow compiles; this canvas does not act on it, and in development says so.
-   * The class that lets the wheel through is `nowheel`, fixed.
+   * A class of your own for what the wheel passes through, as `nowheel` does — which keeps working.
    */
   noWheelClassName?: string;
   /**

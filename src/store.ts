@@ -162,6 +162,8 @@ export interface EngineOptions {
   nodeOrigin: NodeOrigin;
   /** Pixels a press must travel to become a node drag; null leaves it at the engine's own 3. */
   nodeDragThreshold: number | null;
+  /** A selector for what a press is not the canvas's or a node's on, besides `nodrag` and `nopan`: yours. */
+  ignored: string | null;
 }
 
 /** The options a store starts with, before a canvas has told it otherwise. */
@@ -177,6 +179,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   autoPanSpeed: 15,
   nodeOrigin: [0, 0],
   nodeDragThreshold: null,
+  ignored: null,
 };
 
 

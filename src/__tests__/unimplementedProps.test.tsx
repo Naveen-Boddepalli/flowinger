@@ -86,10 +86,10 @@ describe('accepted but not implemented', () => {
 
   it('says it once, for all of them, and counts the ones given', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    render(<FlowingerCanvas {...propsOf({ connectOnClick: true, debug: true, nodeClickDistance: 5 })} />);
+    render(<FlowingerCanvas {...propsOf({ connectOnClick: true, debug: true, connectionRadius: 5 })} />);
     const said = aboutUnimplemented(warn);
     expect(said).toHaveLength(1);
-    expect(said[0]).toMatch(/connectOnClick, debug, nodeClickDistance are accepted/);
+    expect(said[0]).toMatch(/connectOnClick, connectionRadius, debug are accepted/);
   });
 
   it('says so for the handles a node declares, which nothing draws edges from', () => {

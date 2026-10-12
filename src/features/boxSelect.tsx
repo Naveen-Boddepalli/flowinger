@@ -2,6 +2,7 @@ import { useRef, useSyncExternalStore } from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import { isRectIntersecting } from '../geometry.ts';
+import { isKeyHeld, useKeyTracking } from '../keys.ts';
 import { DRAG_THRESHOLD, capturePointer, releasePointer } from '../pointer.ts';
 import { selectionFeature } from './selection.ts';
 import type { Rect, SelectionMode } from '../types.ts';
@@ -122,18 +123,27 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
 
   useCanvas({ store, props, suppressPaneClick }) {
     const { elementsSelectable = false, selectionOnDrag = false, selectionMode = 'full' } = props;
-    const { onSelectionStart, onSelectionEnd } = props;
+    const { onSelectionStart, onSelectionEnd, selectionKeyCode = 'Shift' } = props;
     const { boxSelect, endBoxSelect } = store.api(boxSelectFeature);
+    const { isMulti } = store.api(selectionFeature);
+    useKeyTracking(selectionKeyCode);
     const box = useRef<BoxState | null>(null);
     return {
       // A bare press on the pane draws a selection box when that is asked for (always with Shift);
       // everything else falls through to panning.
       onPointerDown: (e) => {
-        if (!(elementsSelectable && e.button === 0 && e.target === e.currentTarget && (selectionOnDrag || e.shiftKey))) {
+        if (
+          !(
+            elementsSelectable &&
+            e.button === 0 &&
+            e.target === e.currentTarget &&
+            (selectionOnDrag || isKeyHeld(selectionKeyCode, e))
+          )
+        ) {
           return false;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-        const keep = e.ctrlKey || e.metaKey ? store.getSelection() : null;
+        const keep = isMulti(e, true) ? store.getSelection() : null;
         box.current = {
           pointerId: e.pointerId,
           startX: e.clientX,

@@ -17,6 +17,8 @@ export interface DragSession {
 }
 
 export interface DragApi {
+  /** What the canvas was last given for `selectNodesOnDrag` and `nodeClickDistance`; written by `useCanvas`. */
+  readonly config: { selectOnDrag: boolean; clickDistance: number | undefined };
   /**
    * Starts dragging `lead`. If it is part of the selection the whole selection
    * goes with it; otherwise it is selected (where selecting is on) and goes
@@ -60,7 +62,8 @@ export const dragFeature: Feature<DragApi> = {
   name: 'drag',
   needs: [autoPanFeature, selectionFeature],
   install(ctx) {
-    const { isSelectable, selectNode } = ctx.api(selectionFeature);
+    const { isSelectable, selectNode, clearSelection } = ctx.api(selectionFeature);
+    const config: DragApi['config'] = { selectOnDrag: true, clickDistance: undefined };
     const isDraggable = (n: Node): boolean => n.draggable ?? ctx.options.nodesDraggable;
 
     /** Where a node may go, in canvas coordinates: its own extent, its parent's box, or the canvas'. */
@@ -83,9 +86,13 @@ export const dragFeature: Feature<DragApi> = {
       let group = [lead.id];
       if (before.includes(lead.id)) {
         group = before;
-      } else if (isSelectable(lead)) {
+      } else if (config.selectOnDrag && isSelectable(lead)) {
         selectNode(lead.id, additive);
         group = additive ? [...before, lead.id] : [lead.id];
+      } else if (!additive) {
+        // Not selected by the drag (`selectNodesOnDrag` off, or it cannot be selected): the drag is of it
+        // alone, and what was selected is not any more — as in React Flow.
+        clearSelection();
       }
       const movable = group.flatMap((id) => {
         const n = ctx.nodeById.get(id) ?? (id === lead.id ? lead : undefined);
@@ -235,12 +242,20 @@ export const dragFeature: Feature<DragApi> = {
       ctx.emitNodeChanges(changes);
     };
 
-    return { beginNodeDrag, nudgeSelection };
+    return { beginNodeDrag, nudgeSelection, config };
+  },
+
+  useCanvas({ store, props }) {
+    const { config } = store.api(dragFeature);
+    config.selectOnDrag = props.selectNodesOnDrag ?? true;
+    config.clickDistance = props.nodeClickDistance;
+    return undefined;
   },
 
   useNode({ store, node, draggable, selected, justDragged }): NodeBits {
-    const { beginNodeDrag, nudgeSelection } = store.api(dragFeature);
+    const { beginNodeDrag, nudgeSelection, config } = store.api(dragFeature);
     const { beginAutoPan } = store.api(autoPanFeature);
+    const { isMulti } = store.api(selectionFeature);
     const drag = useRef<DragState | null>(null);
     /** Stops watching for a press to become a drag; null when nothing is being watched. */
     const stopClaiming = useRef<(() => void) | null>(null);
@@ -257,7 +272,7 @@ export const dragFeature: Feature<DragApi> = {
     );
 
     const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!draggable || e.button !== 0 || isInteractive(e.target)) return;
+      if (!draggable || e.button !== 0 || isInteractive(e.target, store.getOptions().ignored)) return;
       // With a drag handle, only a press on it drags; elsewhere the canvas pans.
       if (node.dragHandle && !(e.target instanceof Element && e.target.closest(node.dragHandle))) return;
       // Claimed from the first press, so the canvas underneath does not start a
@@ -316,7 +331,7 @@ export const dragFeature: Feature<DragApi> = {
       if (d?.pointerId !== e.pointerId) return;
       if (!d.session) {
         if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold()) return;
-        d.session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
+        d.session = beginNodeDrag(node, e, isMulti(e));
         justDragged.current = true;
         setDragging(true);
         capturePointer(e.currentTarget, e.pointerId);
@@ -345,13 +360,20 @@ export const dragFeature: Feature<DragApi> = {
         // the next event — so the node never saw the pointer travel, and with no move after it the drag
         // would be lost. The release is the capture's first event: begin the drag, and end it, there.
         if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= threshold()) {
-          const session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
+          const session = beginNodeDrag(node, e, isMulti(e));
           justDragged.current = true;
           const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
           session.move(e, at.x - d.startGraph.x, at.y - d.startGraph.y);
           e.stopPropagation();
           releasePointer(e.currentTarget, e.pointerId);
           session.end(e);
+        } else if (
+          e.type === 'pointerup' &&
+          config.clickDistance !== undefined &&
+          Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > config.clickDistance
+        ) {
+          // Moved too far to be a click, and not far enough to be a drag: the click that follows is not one.
+          justDragged.current = true;
         }
         return;
       }

@@ -1,6 +1,7 @@
 import type { Feature } from '../features.ts';
+import { isKeyHeld, useKeyTracking, type Modifiers } from '../keys.ts';
 import { isInteractive } from '../pointer.ts';
-import type { EdgeChange, Node, NodeChange } from '../types.ts';
+import type { EdgeChange, KeyCode, Node, NodeChange } from '../types.ts';
 
 export interface SelectionApi {
   /** Whether a click, or Enter and Space, may select it: what the node says itself, else the canvas's `elementsSelectable`. */
@@ -20,6 +21,14 @@ export interface SelectionApi {
   /** Selects an edge, replacing the selection or — `additive` — toggling it in or out. */
   selectEdge: (id: string, additive?: boolean) => void;
   clearSelection: () => void;
+  /**
+   * Whether a press adds to the selection rather than replacing it: `multiSelectionKeyCode` where it is given,
+   * else Shift, Control or ⌘. A box (`box`) keeps what is selected only with Control or ⌘ by default, because
+   * Shift is what draws it.
+   */
+  isMulti: (e: Modifiers, box?: boolean) => boolean;
+  /** What the canvas was last given for `multiSelectionKeyCode`; written by `useCanvas`. */
+  readonly keys: { multi: KeyCode | null | undefined };
 }
 
 /**
@@ -87,12 +96,18 @@ export const selectionFeature: Feature<SelectionApi> = {
       setSelection(new Set(), new Set());
     };
 
-    return { isSelectable, setSelection, selectNode, selectEdge, clearSelection };
+    const keys: SelectionApi['keys'] = { multi: undefined };
+    const isMulti: SelectionApi['isMulti'] = (e, box = false) =>
+      keys.multi === undefined ? e.ctrlKey || e.metaKey || (!box && e.shiftKey) : isKeyHeld(keys.multi, e);
+
+    return { isSelectable, setSelection, selectNode, selectEdge, clearSelection, isMulti, keys };
   },
 
   useCanvas({ store, props }) {
-    const { elementsSelectable = false, keyboardNavigation = false } = props;
-    const { clearSelection } = store.api(selectionFeature);
+    const { elementsSelectable = false, keyboardNavigation = false, multiSelectionKeyCode } = props;
+    const { clearSelection, keys } = store.api(selectionFeature);
+    keys.multi = multiSelectionKeyCode;
+    useKeyTracking(multiSelectionKeyCode);
     return {
       // Nodes and edges are selectable; whether the canvas allows it (`elementsSelectable`) is the canvas's to say.
       selectable: true,
@@ -113,13 +128,13 @@ export const selectionFeature: Feature<SelectionApi> = {
   },
 
   useNode({ store, node, selectable }) {
-    const { selectNode } = store.api(selectionFeature);
+    const { selectNode, isMulti } = store.api(selectionFeature);
     return {
       // Selectable means reachable from the keyboard too.
       focusable: selectable,
       // A click on a control inside the node is that control's, not a selection.
       onClick: (e) => {
-        if (selectable && !isInteractive(e.target)) selectNode(node.id, e.shiftKey || e.metaKey || e.ctrlKey);
+        if (selectable && !isInteractive(e.target, store.getOptions().ignored)) selectNode(node.id, isMulti(e));
       },
       onKeyDown: (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -130,10 +145,10 @@ export const selectionFeature: Feature<SelectionApi> = {
   },
 
   useEdge({ store, edge, selectable }) {
-    const { selectEdge } = store.api(selectionFeature);
+    const { selectEdge, isMulti } = store.api(selectionFeature);
     return {
       onClick: (e) => {
-        if (selectable) selectEdge(edge.id, e.shiftKey || e.metaKey || e.ctrlKey);
+        if (selectable) selectEdge(edge.id, isMulti(e));
       },
       onKeyDown: (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;

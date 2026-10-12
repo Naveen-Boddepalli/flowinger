@@ -21,6 +21,7 @@ import { FlowingerEdges } from './FlowingerEdges.tsx';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { Handle } from './Handle.tsx';
+import { isKeyHeld, useKeyTracking } from './keys.ts';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
@@ -180,6 +181,13 @@ function InnerCanvas(props: FlowingerProps) {
     onMoveEnd,
     nodeOrigin,
     nodeDragThreshold,
+    zoomActivationKeyCode,
+    panOnScrollMode,
+    preventScrolling,
+    noWheelClassName,
+    noPanClassName,
+    noDragClassName,
+    paneClickDistance,
   } = props;
   const store = useFlowingerStore();
   // Installed while rendering, so they are there for every effect below and for whoever holds the
@@ -224,6 +232,8 @@ function InnerCanvas(props: FlowingerProps) {
   const pinch = useRef<PinchStart | null>(null);
   /** A pan just ended: the click that follows it is not a click on the canvas. */
   const justPanned = useRef(false);
+  /** Where the last press began, for `paneClickDistance`. */
+  const pressedAt = useRef<XYPosition | null>(null);
   // What each feature adds to the canvas's own handlers, in the order they were given.
   const suppressPaneClick = useCallback(() => {
     justPanned.current = true;
@@ -285,6 +295,12 @@ function InnerCanvas(props: FlowingerProps) {
   // them, and the nodes below are read in that light.
   const [gridX, gridY] = snapGrid ?? [15, 15];
   const [originX, originY] = nodeOrigin ?? [0, 0];
+  // Your own classes for what a press passes through (`nodrag` and `nopan` always do).
+  const ignored =
+    [noPanClassName, noDragClassName]
+      .filter(Boolean)
+      .map((c) => `.${String(c)}`)
+      .join(', ') || null;
   useIsomorphicLayoutEffect(() => {
     store.setOptions({
       nodesDraggable,
@@ -298,6 +314,7 @@ function InnerCanvas(props: FlowingerProps) {
       autoPanSpeed,
       nodeOrigin: [originX, originY],
       nodeDragThreshold: nodeDragThreshold ?? null,
+      ignored,
     });
   }, [
     store,
@@ -315,6 +332,7 @@ function InnerCanvas(props: FlowingerProps) {
     originX,
     originY,
     nodeDragThreshold,
+    ignored,
   ]);
 
   // Nesting, read from the nodes as given: where each one's parent sits, how deep
@@ -406,19 +424,33 @@ function InnerCanvas(props: FlowingerProps) {
     onInitRef.current?.(store.instance);
   }, [store]);
 
+  useKeyTracking(zoomActivationKeyCode);
   // Wheel: zoom, or — with `panOnScroll` — pan. A native listener: React
   // registers `wheel` as passive, and a passive listener cannot stop the page
   // scrolling underneath.
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || (!zoomOnScroll && !panOnScroll)) return;
+    if (!container) return;
     const onWheel = (e: WheelEvent) => {
       // Something inside that scrolls, or zooms, for itself: `nowheel` lets the wheel through to it.
-      if (e.target instanceof Element && e.target.closest('.nowheel')) return;
+      if (
+        e.target instanceof Element &&
+        e.target.closest(noWheelClassName ? `.nowheel, .${noWheelClassName}` : '.nowheel')
+      ) {
+        return;
+      }
       const unit = WHEEL_PIXELS_PER_UNIT[e.deltaMode as 0 | 1 | 2];
-      // A trackpad pinch arrives as ctrl+wheel with small deltas.
-      const zooming = panOnScroll ? e.ctrlKey || e.metaKey : true;
-      if (zooming && !zoomOnScroll) return;
+      // The key that makes the wheel zoom, where a key is given: then holding it zooms even where
+      // `zoomOnScroll` is off, and a pinch zooms whatever `zoomOnScroll` says, as in React Flow. Not given, Ctrl
+      // or ⌘ (a trackpad pinch arrives as ctrl+wheel) only chooses between zooming and panning, and
+      // `zoomOnScroll` off means no zoom at all.
+      const keyed = zoomActivationKeyCode !== undefined;
+      const held = keyed && isKeyHeld(zoomActivationKeyCode, e);
+      const pinch = keyed && zoomOnPinch && e.ctrlKey;
+      const zooming = panOnScroll ? (keyed ? held || pinch : e.ctrlKey || e.metaKey) : true;
+      if (zooming && !(zoomOnScroll || held || pinch)) return;
+      // Off, a plain wheel is the page's; a pinch is still ours.
+      if (zooming && preventScrolling === false && !e.ctrlKey) return;
       e.preventDefault();
       // A run of ticks is one move; it ends when the wheel goes quiet.
       store.beginGesture(e, WHEEL_QUIET_MS);
@@ -429,9 +461,18 @@ function InnerCanvas(props: FlowingerProps) {
         return;
       }
       const vp = store.getViewport();
+      let dx = e.deltaX;
+      let dy = e.deltaY;
+      if (panOnScrollMode === 'vertical') dx = 0;
+      else if (panOnScrollMode === 'horizontal') dy = 0;
+      // Shift turns a vertical wheel sideways (macOS does it itself, before the page sees it).
+      if (e.shiftKey && panOnScrollMode !== 'vertical' && !navigator.userAgent.includes('Mac')) {
+        dx = e.deltaY;
+        dy = 0;
+      }
       void store.instance.setViewport({
-        x: vp.x - e.deltaX * unit * panOnScrollSpeed,
-        y: vp.y - e.deltaY * unit * panOnScrollSpeed,
+        x: vp.x - dx * unit * panOnScrollSpeed,
+        y: vp.y - dy * unit * panOnScrollSpeed,
         zoom: vp.zoom,
       });
     };
@@ -439,7 +480,17 @@ function InnerCanvas(props: FlowingerProps) {
     return () => {
       container.removeEventListener('wheel', onWheel);
     };
-  }, [store, zoomOnScroll, panOnScroll, panOnScrollSpeed]);
+  }, [
+    store,
+    zoomOnScroll,
+    zoomOnPinch,
+    panOnScroll,
+    panOnScrollSpeed,
+    panOnScrollMode,
+    zoomActivationKeyCode,
+    preventScrolling,
+    noWheelClassName,
+  ]);
 
   const canPan = (button: number): boolean =>
     // `panKeyFeature`: a held key makes any press a pan.
@@ -458,6 +509,7 @@ function InnerCanvas(props: FlowingerProps) {
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     justPanned.current = false;
+    pressedAt.current = { x: e.clientX, y: e.clientY };
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (zoomOnPinch && pointers.current.size === 2) {
       // A second finger turns whatever the first was doing into a pinch.
@@ -472,7 +524,7 @@ function InnerCanvas(props: FlowingerProps) {
     }
     // A feature may take the press — a selection box — before it becomes a pan.
     if (!store.isPanKeyHeld() && bits.some((b) => b.onPointerDown?.(e))) return;
-    if (!canPan(e.button) || isInteractive(e.target)) return;
+    if (!canPan(e.button) || isInteractive(e.target, ignored)) return;
     pan.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -547,6 +599,15 @@ function InnerCanvas(props: FlowingerProps) {
       return;
     }
     if (e.target !== e.currentTarget) return;
+    // A press that moved further than `paneClickDistance` was not a click, however little it moved.
+    const from = pressedAt.current;
+    if (
+      paneClickDistance !== undefined &&
+      from &&
+      Math.hypot(e.clientX - from.x, e.clientY - from.y) > paneClickDistance
+    ) {
+      return;
+    }
     onPaneClick?.(e);
     for (const b of bits) b.onPaneClick?.(e);
   };

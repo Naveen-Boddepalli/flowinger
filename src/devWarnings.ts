@@ -5,6 +5,8 @@ import type { FlowingerProps } from './types.ts';
 const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
   drag: [
     'nodesDraggable',
+    'selectNodesOnDrag',
+    'nodeClickDistance',
     'onNodeDragStart',
     'onNodeDrag',
     'onNodeDragStop',
@@ -29,10 +31,10 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'autoPanOnConnect',
   ],
   reconnect: ['onReconnect', 'onReconnectStart', 'onReconnectEnd', 'edgesReconnectable'],
-  boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd'],
+  boxSelect: ['selectionOnDrag', 'selectionMode', 'onSelectionStart', 'onSelectionEnd', 'selectionKeyCode'],
   delete: ['deleteKeyCode', 'onBeforeDelete', 'onNodesDelete', 'onEdgesDelete', 'onDelete'],
   culling: ['onlyRenderVisibleElements'],
-  selection: ['elementsSelectable', 'edgesFocusable'],
+  selection: ['elementsSelectable', 'edgesFocusable', 'multiSelectionKeyCode'],
   events: [
     'onNodeDoubleClick',
     'onNodeContextMenu',
@@ -58,17 +60,9 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
  * for what the canvas does anyway — React Flow's own default, mostly — and are not worth a warning.
  */
 export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly unknown[] } = {
-  selectionKeyCode: ['Shift'],
-  multiSelectionKeyCode: ['Shift', 'Control', 'Meta'],
-  zoomActivationKeyCode: ['Control', 'Meta'],
-  panOnScrollMode: ['free'],
-  preventScrolling: [true],
   connectionDragThreshold: [0, 1],
-  nodeClickDistance: [0],
-  paneClickDistance: [0],
   connectionRadius: [],
   reconnectRadius: [],
-  selectNodesOnDrag: [true],
   connectOnClick: [false],
   onClickConnectStart: [],
   onClickConnectEnd: [],
@@ -82,9 +76,6 @@ export const NOT_IMPLEMENTED: { readonly [K in keyof FlowingerProps]?: readonly 
   zIndexMode: [],
   defaultMarkerColor: [null],
   connectionLineContainerStyle: [],
-  noDragClassName: ['nodrag'],
-  noPanClassName: ['nopan'],
-  noWheelClassName: ['nowheel'],
   nodesFocusable: [true],
   disableKeyboardA11y: [true],
   ariaLabelConfig: [],
