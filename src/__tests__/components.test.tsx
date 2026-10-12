@@ -95,6 +95,16 @@ describe('Controls', () => {
     expect(label(noFitView.container, 'Zoom in')).not.toBeNull();
   });
 
+  it('falls back to the surface colour, not a dark one, when only the surface is themed', () => {
+    // A light theme that sets `--flowinger-surface` and `--flowinger-text`: with the raised surface left to a
+    // dark fallback, the buttons were dark under dark text.
+    const { container } = inStore(<Controls />);
+    const button = label(container, 'Zoom in') as HTMLElement;
+    expect(button.style.background).toBe(
+      'var(--flowinger-surface-raised, var(--flowinger-surface, #0f172a))',
+    );
+  });
+
   it('lets showFitView, the name React Flow has, say so outright', () => {
     const { container } = inStore(<Controls showFit={false} showFitView />);
     expect(label(container, 'Fit view')).not.toBeNull();

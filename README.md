@@ -180,6 +180,12 @@ lacks does nothing — and in development the console says so. See [Features](do
     <td><a href="examples/layouts"><strong>Layouts</strong></a> — one query plan laid out by <code>d3-hierarchy</code>, <code>dagre</code> and <code>elkjs</code> behind a single signature. Positions are yours; this is how you get them.</td>
     <td><a href="examples/editor"><strong>Editor</strong></a> — a controlled editor: drag, connect, select, delete, snap to a grid, a custom node and a custom edge.</td>
   </tr>
+  <tr>
+    <td>
+      <a href="examples/tree"><img src="docs/assets/tree.png" alt="The tree example: an organisation as a left-to-right tree, each branch with a button that folds it, one folded to show how many people it holds" /></a>
+    </td>
+    <td valign="top"><a href="examples/tree"><strong>Tree</strong></a> — an org chart whose branches fold: <code>useCollapsibleTree</code> from <code>flowinger/tree</code> hides what is under a node, and the layout runs again over what is left so the tree closes up.</td>
+  </tr>
 </table>
 
 Each is a complete Vite + React + TypeScript project you can copy out and run, and CI builds each one against

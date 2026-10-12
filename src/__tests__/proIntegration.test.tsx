@@ -482,6 +482,26 @@ describe('useCollapsibleTree on a real canvas', () => {
     expect(hidden(out)).toEqual(['a1', 'a2']);
   });
 
+  it('collapses and expands several at once, as a button above the chart does', () => {
+    const { out, result } = useHookIn<UseCollapsibleTreeResult>(() => useCollapsibleTree(), tree);
+    // Two branches, and one inside another, in one handler — before the canvas has heard of the first.
+    act(() => {
+      result.current.collapseNode('a');
+      result.current.collapseNode('b');
+    });
+    expect(hidden(out)).toEqual(['a1', 'a2', 'b1']);
+    act(() => {
+      result.current.collapseNode('root');
+      result.current.collapseNode('a');
+    });
+    expect(hidden(out)).toEqual(['a', 'a1', 'a2', 'b', 'b1']);
+    act(() => {
+      for (const id of [...result.current.collapsedNodeIds]) result.current.expandNode(id);
+    });
+    expect(hidden(out)).toEqual([]);
+    expect(out.edges.some((e) => e.hidden)).toBe(false);
+  });
+
   it('is not its own descendant when the graph loops back', () => {
     const { result } = renderHook(() => useCollapsibleTree());
     const loop: Edge[] = [
