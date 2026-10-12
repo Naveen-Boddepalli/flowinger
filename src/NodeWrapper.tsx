@@ -13,7 +13,7 @@ import { useFlowingerStore } from './context.ts';
 import type { Feature } from './features.ts';
 import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { NodeContext, type NodeContextValue } from './nodeContext.ts';
-import type { Node, NodeProps } from './types.ts';
+import type { Node, NodeOrigin, NodeProps } from './types.ts';
 
 const NO_FEATURES: readonly Feature[] = [];
 const NO_START = () => {};
@@ -32,6 +32,7 @@ export interface NodeWrapperProps {
   parentX: number;
   parentY: number;
   depth: number;
+  nodeOrigin?: NodeOrigin;
   /** What the canvas can do with it — dragging, connecting — see `Feature`. Must not change. */
   features?: readonly Feature[];
 }
@@ -53,6 +54,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   parentX,
   parentY,
   depth,
+  nodeOrigin,
   features = NO_FEATURES,
 }: NodeWrapperProps) {
   const store = useFlowingerStore();
@@ -72,6 +74,10 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
     [parentX, parentY, node.position.x, node.position.y],
   );
   const position = useSyncExternalStore(subscribe, readPosition, () => asLaidOut);
+  const origin = node.origin ?? nodeOrigin ?? store.getOptions().nodeOrigin ?? [0, 0];
+  const size = store.getNodeSize(node);
+  const offsetX = origin[0] * size.width;
+  const offsetY = origin[1] * size.height;
 
   // Selection is per node: selecting one re-renders it (and whichever it replaces), not the rest.
   const selected = useSyncExternalStore(
@@ -167,7 +173,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
         ...(node.height === undefined ? {} : { height: node.height }),
         ...node.style,
         position: 'absolute',
-        transform: `translate(${String(position.x)}px, ${String(position.y)}px)`,
+        transform: `translate(${String(position.x - offsetX)}px, ${String(position.y - offsetY)}px)`,
         pointerEvents: 'all',
         zIndex,
         ...Object.assign({}, ...bits.map((b) => b.style)),
@@ -195,8 +201,8 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
           type={node.type}
           selected={selected}
           isConnectable={connectable}
-          positionAbsoluteX={position.x}
-          positionAbsoluteY={position.y}
+          positionAbsoluteX={position.x - offsetX}
+          positionAbsoluteY={position.y - offsetY}
           selectable={selectable}
           draggable={draggable}
           deletable={node.deletable ?? true}

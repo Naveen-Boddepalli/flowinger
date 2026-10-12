@@ -12,6 +12,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
     'nodeExtent',
     'snapToGrid',
     'snapGrid',
+    'nodeDragThreshold',
   ],
   autoPan: ['autoPanSpeed'],
   connect: [

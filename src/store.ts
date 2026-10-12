@@ -19,8 +19,10 @@ import type {
   FlowingerInstance,
   HandleType,
   InternalNode,
+  KeyCode,
   Node,
   NodeChange,
+  NodeOrigin,
   Position,
   Rect,
   SetCenterOptions,
@@ -157,6 +159,9 @@ export interface EngineOptions {
   autoPanOnNodeDrag: boolean;
   autoPanOnConnect: boolean;
   autoPanSpeed: number;
+  nodeOrigin: NodeOrigin;
+  nodeDragThreshold: number;
+  panActivationKeyCode?: KeyCode | null;
 }
 
 /** The options a store starts with, before a canvas has told it otherwise. */
@@ -170,7 +175,11 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
   autoPanOnNodeDrag: true,
   autoPanOnConnect: true,
   autoPanSpeed: 15,
+  nodeOrigin: [0, 0],
+  nodeDragThreshold: 0,
+  panActivationKeyCode: 'Space',
 };
+
 
 /** What is worth drawing right now — null means everything. */
 export interface VisibleSet {
@@ -783,8 +792,17 @@ export function createFlowingerStore(
   /** Where a node is and how big, in graph units: the dragged position, the measured size. */
   const getNodeRect = (id: string): Rect | null => {
     const n = nodeById.get(id);
-    return n ? { ...resolvePosition(id, n.position), ...getNodeSize(n) } : null;
+    if (!n) return null;
+    const size = getNodeSize(n);
+    const origin = n.origin ?? options.nodeOrigin ?? [0, 0];
+    const pos = resolvePosition(id, n.position);
+    return {
+      x: pos.x - origin[0] * size.width,
+      y: pos.y - origin[1] * size.height,
+      ...size,
+    };
   };
+
 
   /** The selection as it stands, as elements. */
   const getSelection = (): { nodes: Node[]; edges: Edge[] } => ({
@@ -891,14 +909,16 @@ export function createFlowingerStore(
     };
   };
 
-  const boundsOfNodes = (list: readonly Node[]): Rect =>
+  const boundsOfNodes = (list: readonly Node[], opts?: { nodeOrigin?: NodeOrigin }): Rect =>
     getNodesBounds(
       list.map((n) => ({
         ...snapshotNode(n),
         position: absolutePosition(n),
         measured: sizes.get(n.id) ?? n.measured,
       })),
+      opts ?? { nodeOrigin: options.nodeOrigin },
     );
+
 
   const fitBounds = (bounds: Rect, opts?: FitViewOptions): Promise<boolean> => {
     const pane = paneSize();
@@ -1176,7 +1196,11 @@ export function createFlowingerStore(
     updateEdgeData: lend('editing', 'updateEdgeData'),
     getIntersectingNodes: lend('editing', 'getIntersectingNodes'),
     isNodeIntersecting: lend('editing', 'isNodeIntersecting'),
-    getNodesBounds: (list) => boundsOfNodes(list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n))),
+    getNodesBounds: (list, opts) =>
+      boundsOfNodes(
+        list.flatMap((n) => (typeof n === 'string' ? (nodeById.get(n) ?? []) : n)),
+        opts,
+      ),
     getNodeConnections: lend('editing', 'getNodeConnections'),
     getHandleConnections: lend('editing', 'getHandleConnections'),
     toObject: () => ({ nodes: getNodesNow(), edges: getEdgesNow(), viewport }),
@@ -1221,6 +1245,7 @@ export function createFlowingerStore(
       options = next;
       run('change');
     },
+    getOptions: () => options,
     getCallbacks: () => callbacks,
 
     getViewport: () => viewport,

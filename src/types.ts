@@ -24,6 +24,8 @@ export type HandleType = 'source' | 'target';
 
 export type NodeOrigin = [number, number];
 
+export type KeyCode = string | string[];
+
 export type Align = 'center' | 'start' | 'end';
 
 export interface NodeHandle {
@@ -553,7 +555,7 @@ export interface FlowingerInstance {
   ) => Node[];
   isNodeIntersecting: (target: Node | Rect | { id: string }, area: Rect, partially?: boolean) => boolean;
   /** The smallest rectangle holding these nodes (or ids). */
-  getNodesBounds: (nodes: (Node | string)[]) => Rect;
+  getNodesBounds: (nodes: (Node | string)[], options?: { nodeOrigin?: NodeOrigin }) => Rect;
   toObject: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
 }
 

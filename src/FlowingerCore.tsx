@@ -24,6 +24,7 @@ import { Handle } from './Handle.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
 import { treeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
+import { useKeyPress } from './useKeyPress.ts';
 import {
   DRAG_THRESHOLD,
   capturePointer,
@@ -178,6 +179,9 @@ function InnerCanvas(props: FlowingerProps) {
     onMove,
     onMoveStart,
     onMoveEnd,
+    nodeOrigin,
+    panActivationKeyCode = 'Space',
+    nodeDragThreshold = 0,
   } = props;
   const store = useFlowingerStore();
   // Installed while rendering, so they are there for every effect below and for whoever holds the
@@ -282,6 +286,7 @@ function InnerCanvas(props: FlowingerProps) {
   // Callbacks and options first: whether the flow is controlled is decided by
   // them, and the nodes below are read in that light.
   const [gridX, gridY] = snapGrid ?? [15, 15];
+  const [originX, originY] = nodeOrigin ?? [0, 0];
   useIsomorphicLayoutEffect(() => {
     store.setOptions({
       nodesDraggable,
@@ -293,6 +298,9 @@ function InnerCanvas(props: FlowingerProps) {
       autoPanOnNodeDrag,
       autoPanOnConnect,
       autoPanSpeed,
+      nodeOrigin: [originX, originY],
+      nodeDragThreshold,
+      panActivationKeyCode,
     });
   }, [
     store,
@@ -307,6 +315,10 @@ function InnerCanvas(props: FlowingerProps) {
     autoPanOnNodeDrag,
     autoPanOnConnect,
     autoPanSpeed,
+    originX,
+    originY,
+    nodeDragThreshold,
+    panActivationKeyCode,
   ]);
 
   // Nesting, read from the nodes as given: where each one's parent sits, how deep
@@ -433,8 +445,11 @@ function InnerCanvas(props: FlowingerProps) {
     };
   }, [store, zoomOnScroll, panOnScroll, panOnScrollSpeed]);
 
+  const panActivationKeyPressed = useKeyPress(panActivationKeyCode ?? 'Space');
+
   const canPan = (button: number): boolean =>
-    Array.isArray(panOnDrag) ? panOnDrag.includes(button) : panOnDrag && (button === 0 || button === 1);
+    (panActivationKeyPressed && (button === 0 || button === 1)) ||
+    (Array.isArray(panOnDrag) ? panOnDrag.includes(button) : Boolean(panOnDrag && (button === 0 || button === 1)));
 
   /** The pointers' midpoint and spread, in container pixels — the pinch's two numbers. */
   const fingers = (container: HTMLElement): { mid: XYPosition; dist: number } | null => {
@@ -461,7 +476,7 @@ function InnerCanvas(props: FlowingerProps) {
       }
     }
     // A feature may take the press — a selection box — before it becomes a pan.
-    if (bits.some((b) => b.onPointerDown?.(e))) return;
+    if (!panActivationKeyPressed && bits.some((b) => b.onPointerDown?.(e))) return;
     if (!canPan(e.button) || isInteractive(e.target)) return;
     pan.current = {
       pointerId: e.pointerId,
@@ -524,7 +539,7 @@ function InnerCanvas(props: FlowingerProps) {
     pan.current = null;
     if (!p.active) return;
     releasePointer(e.currentTarget, e.pointerId);
-    e.currentTarget.style.cursor = panOnDrag ? 'grab' : '';
+    e.currentTarget.style.cursor = panActivationKeyPressed ? 'grab' : (panOnDrag ? 'grab' : '');
     store.endGesture(e.nativeEvent);
   };
 
@@ -602,7 +617,7 @@ function InnerCanvas(props: FlowingerProps) {
     userSelect: 'none',
     touchAction: 'none',
     ...(focusableForKeys ? { outline: 'none' } : {}),
-    ...(panOnDrag && !selectionOnDrag ? { cursor: 'grab' } : {}),
+    ...(panActivationKeyPressed || (panOnDrag && !selectionOnDrag) ? { cursor: 'grab' } : {}),
     ...Object.assign({}, ...bits.map((b) => b.style)),
     ...style,
   };
@@ -730,6 +745,7 @@ function InnerCanvas(props: FlowingerProps) {
                 parentX={tree.origin.get(node.id)?.x ?? 0}
                 parentY={tree.origin.get(node.id)?.y ?? 0}
                 depth={tree.depth.get(node.id) ?? 0}
+                nodeOrigin={nodeOrigin}
                 features={feats}
               />
             ))}

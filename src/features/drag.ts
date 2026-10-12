@@ -292,7 +292,8 @@ export const dragFeature: Feature<DragApi> = {
           stop();
           return;
         }
-        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < DRAG_THRESHOLD) return;
+        const threshold = store.getOptions().nodeDragThreshold || DRAG_THRESHOLD;
+        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < threshold) return;
         capturePointer(element, pressed.pointerId);
         stop();
       };
@@ -313,7 +314,8 @@ export const dragFeature: Feature<DragApi> = {
       const d = drag.current;
       if (d?.pointerId !== e.pointerId) return;
       if (!d.session) {
-        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_THRESHOLD) return;
+        const threshold = store.getOptions().nodeDragThreshold || DRAG_THRESHOLD;
+        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold) return;
         d.session = beginNodeDrag(node, e, e.shiftKey || e.metaKey || e.ctrlKey);
         justDragged.current = true;
         setDragging(true);
