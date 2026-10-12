@@ -41,6 +41,19 @@ only its own code. The props, the nodes and the instance are the same either way
 | `debugFeature` | Logs the changes a controlled flow is told of | `debug` |
 | `panKeyFeature` | A held key turns a drag into a pan, even where `panOnDrag` is off. Off unless `panActivationKeyCode` is given (React Flow's own default is `'Space'`) — it listens for keys, about 0.6 kB a canvas that never wants it should not carry | `panActivationKeyCode` |
 
+**What each costs**, gzipped, on its own — so each includes what it needs (`dragFeature` brings selection and
+auto-pan; `reconnectFeature` brings connect; `selectionRectFeature` brings drag and box select). Measured by
+`pnpm size:features` against a bare `FlowingerCore` of about 18.1 kB:
+
+| | kB | | kB | | kB |
+|---|---|---|---|---|---|
+| `selectionFeature` | +1.1 | `connectFeature` | +2.6 | `a11yFeature` | +1.1 |
+| `dragFeature` | +4.1 | `reconnectFeature` | +3.0 | `stackingFeature` | +0.7 |
+| `boxSelectFeature` | +2.6 | `selectionRectFeature` | +6.0 | `panKeyFeature` | +0.7 |
+| `deleteFeature` | +0.5 | `editingFeature` | +0.8 | `smoothFeature`, `zoomKeyFeature` | +0.4 each |
+| `cullingFeature` | +0.5 | `eventsFeature` | +0.4 | `colorModeFeature` | +0.3 |
+| `edgeLabelsFeature` | +0.3 | `debugFeature` | +0.1 | | |
+
 Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
 labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the
 hooks — and *reporting* the selection: a controlled node's `selected` is drawn, and `onSelectionChange`,

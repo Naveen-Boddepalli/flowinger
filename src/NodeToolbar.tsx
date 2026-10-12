@@ -124,7 +124,7 @@ export function NodeToolbar({
   );
   if (!foreign) return bar;
 
-  const box = boxOf(ids.map((id) => store.getNodeRect(id)));
+  const box = boxOf(ids.map((id) => store.getAbsoluteRect(id)));
   if (!box) return null;
   return (
     <ViewportPortal>

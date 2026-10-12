@@ -19,6 +19,7 @@ export default defineConfig({
         'pro/snaplines': resolve(import.meta.dirname, 'src/pro/snaplines.tsx'),
         'pro/export': resolve(import.meta.dirname, 'src/pro/export.ts'),
         'pro/smartEdges': resolve(import.meta.dirname, 'src/pro/smartEdges.tsx'),
+        'pro/editableEdge': resolve(import.meta.dirname, 'src/pro/editableEdge.tsx'),
         'pro/shapes': resolve(import.meta.dirname, 'src/pro/shapes.tsx'),
         'pro/tree': resolve(import.meta.dirname, 'src/pro/tree.ts'),
         'pro/index': resolve(import.meta.dirname, 'src/pro/index.ts'),

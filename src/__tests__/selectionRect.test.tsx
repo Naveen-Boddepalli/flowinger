@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
-import { FlowingerCanvas, FlowingerCore, type FlowingerProps, type Node } from '../index.ts';
+import { FlowingerCanvas, FlowingerCore, useNodesState, type FlowingerProps, type Node } from '../index.ts';
 
 // What follows a box selection in React Flow: a rectangle round what was selected, which is dragged to move
 // all of it — and is where `onSelectionDrag*` and `onSelectionContextMenu` come from. (RF's NodesSelection,
@@ -148,6 +148,67 @@ describe('dragging the rectangle', () => {
     box(container, [-10, -10], [420, 160]);
     dragRect(container, 0, 0);
     expect(onSelectionDragStart).not.toHaveBeenCalled();
+  });
+});
+
+describe('the rectangle in a controlled flow, where a change is applied after the pointer has moved on', () => {
+  function Controlled() {
+    const [list, , onChange] = useNodesState(nodes);
+    return (
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCanvas nodes={list} onNodesChange={onChange} elementsSelectable nodesDraggable />
+      </div>
+    );
+  }
+
+  it('is round the nodes where they are now, not where they were', () => {
+    const { container } = render(<Controlled />);
+    box(container, [-10, -10], [420, 160]); // a and b
+    const r = must<HTMLElement>(container, '.flowinger-nodesselection-rect');
+    expect(r.style.transform).toBe('translate(0px, 0px)');
+    fireEvent.pointerDown(r, pointer({ clientX: 100, clientY: 70 }));
+    fireEvent.pointerMove(r, pointer({ clientX: 160, clientY: 100 }));
+    fireEvent.pointerUp(r, pointer({ clientX: 160, clientY: 100 }));
+    expect(at(container, 'a')).toBe('translate(60px, 30px)');
+    expect(at(container, 'b')).toBe('translate(360px, 130px)');
+    const moved = must<HTMLElement>(container, '.flowinger-nodesselection-rect');
+    // From a's top-left to b's bottom-right, all of it moved by (60, 30): the same size, the same corner.
+    expect(moved.style.transform).toBe('translate(60px, 30px)');
+    expect(moved.style.width).toBe('400px');
+    expect(moved.style.height).toBe('140px');
+  });
+});
+
+describe('the rectangle round a group and what is inside it', () => {
+  const tree: Node[] = [
+    { id: 'g', position: { x: 40, y: 140 }, width: 300, height: 200, data: {} },
+    { id: 'k', position: { x: 20, y: 30 }, width: 100, height: 40, data: {}, parentId: 'g', expandParent: true },
+    { id: 'free', position: { x: 400, y: 20 }, width: 100, height: 40, data: {} },
+  ];
+  function Tree() {
+    const [list, , onChange] = useNodesState(tree);
+    return (
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCanvas nodes={list} onNodesChange={onChange} elementsSelectable nodesDraggable />
+      </div>
+    );
+  }
+
+  it('is round them where they are now', () => {
+    const { container } = render(<Tree />);
+    box(container, [-10, -10], [600, 400]);
+    const r = must<HTMLElement>(container, '.flowinger-nodesselection-rect');
+    // From g's left (40) to free's right (500); from free's top (20) to g's bottom (340).
+    expect(r.style.transform).toBe('translate(40px, 20px)');
+    expect(r.style.width).toBe('460px');
+    fireEvent.pointerDown(r, pointer({ clientX: 200, clientY: 200 }));
+    fireEvent.pointerMove(r, pointer({ clientX: 260, clientY: 230 }));
+    fireEvent.pointerUp(r, pointer({ clientX: 260, clientY: 230 }));
+    expect(at(container, 'g')).toBe('translate(100px, 170px)');
+    expect(at(container, 'free')).toBe('translate(460px, 50px)');
+    const moved = must<HTMLElement>(container, '.flowinger-nodesselection-rect');
+    expect(moved.style.transform).toBe('translate(100px, 50px)');
+    expect(moved.style.width).toBe('460px');
   });
 });
 

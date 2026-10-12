@@ -35,9 +35,10 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - **More examples.** `examples/` has a layout viewer and a controlled editor; wanted next: a tree with
   collapsible subtrees, a graph that loads and saves JSON, and one inside a Next.js app (the server-render
   story, shown rather than claimed).
-- **More in the browser suite.** `e2e/smoke.spec.ts` covers load, anchors, wheel, pan, drag, a flick and a
-  connection; still by hand: multi-touch pinch, a reconnect, the box selection, and each opt-out
-  (`nodrag`, `nopan`, `nowheel`) from a real press.
+- **More in the browser suite.** `e2e/` covers load, anchors, wheel, pan, drag, a flick, connecting by
+  dragging and by clicking, reconnecting, deleting, export, `nodeOrigin`, the selection rectangle and a box
+  held at the pane's edge, stacking by what is on top, `colorMode: 'system'`, the lock, `'smooth'` moves, and
+  `nodrag` / `nopan` / `nowheel` from a real press. Still by hand: multi-touch pinch, and a screen reader.
 
 ## Next
 
@@ -45,14 +46,11 @@ Flowinger *names* every export and prop of React Flow 12.11.6 (211 of 211 export
 one does something** (302 of 302 members counted by `node scripts/audit-react-flow.mjs`; the audit counts a name
 that compiles and does nothing apart, and there are none). What is left is breadth and proof:
 
-1. **Real-browser coverage for what jsdom cannot see.** The e2e suite covers load, anchors, wheel, pan, drag, a
-   flick, a connection, delete, export and `nodeOrigin`. Not yet in a browser: click-to-connect, the selection
-   rectangle's drag, a box held at the pane's edge, `zIndexMode`, `colorMode: 'system'`, the lock, and
-   `interpolate: 'smooth'` — each is tested against jsdom's model and, where React Flow is the oracle, its
-   source, but has not been watched.
-2. **The pro modules' gaps.** `flowinger/editable-edge` (draggable waypoints) and a Hexagon shape are not in
-   the package, though earlier plans said so. Recipes still to write as `examples/`: grouping and swimlanes,
-   multiplayer presence (Yjs), a workflow-simulation stepper.
+1. **Real-browser coverage for what jsdom cannot see** — done for the 0.5.0 behaviour (see *Now*): it found
+   one bug jsdom could not (the selection rectangle, a node toolbar for another node and the focus pan used a
+   child's position inside its parent, not on the canvas). Left: touch, which needs a device.
+2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (unreleased). Still to
+   write as `examples/`: grouping and swimlanes, multiplayer presence (Yjs), a workflow-simulation stepper.
 3. **Size.** The core grew from 17.6 to 18.7 kB and the whole canvas from 27.3 to 33.6 for the 39 props; the
    features are separable, but a `FlowingerCanvas` pays for all of them. A pass that measures each feature and
    removes duplication (three places build "is this key held", several build "the box round some nodes") is

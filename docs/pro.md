@@ -1,7 +1,7 @@
 # The "pro" modules
 
-[← Documentation](README.md) · Undo/redo, copy and paste, snap guides, export, smart edges, flowchart shapes
-and a collapsible tree — the things React Flow sells as "Pro", here free and MIT-licensed.
+[← Documentation](README.md) · Undo/redo, copy and paste, snap guides, export, smart edges, editable edges,
+flowchart shapes and a collapsible tree — the things React Flow sells as "Pro", here free and MIT-licensed.
 
 Each is a separate entry point, so it costs the core canvas **nothing** unless you import it (measured: the core
 is the same size with the modules in the package as without). Import what you use:
@@ -12,6 +12,7 @@ import { useClipboard } from 'flowinger/clipboard';
 import { useSnapLines, SnapLinesOverlay } from 'flowinger/snaplines';
 import { exportCanvasToSvg, exportCanvasToPng, downloadFile } from 'flowinger/export';
 import { SmartEdge, getSmartEdgePath } from 'flowinger/smart-edges';
+import { EditableEdge, getEditableEdgePath } from 'flowinger/editable-edge';
 import { shapeNodeTypes } from 'flowinger/shapes';
 import { useCollapsibleTree } from 'flowinger/tree';
 // or all of them: import { … } from 'flowinger/pro';
@@ -128,10 +129,26 @@ function, for an edge of your own.
 It reads the graph's nodes, so an edge re-routes when a node near it moves; the route is memoised on the boxes
 near it, not on every frame of a drag elsewhere. A very dense graph is a case to measure.
 
+## Editable edges — `flowinger/editable-edge`
+
+```tsx
+const edgeTypes = { editable: EditableEdge };
+{ id: 'e', source: 'a', target: 'b', type: 'editable', data: { points: [{ x: 250, y: 80 }], borderRadius: 8 } }
+```
+
+An edge with waypoints you can move. It runs from its source through `data.points` to its target in straight
+runs (corners rounded by `data.borderRadius`, default square). Once it is **selected**, each waypoint is a handle
+to drag, and the small dot between each pair of ends is a place to add one — drag it out and the waypoint is
+made there, in order, and goes on following the pointer. **Double-click a waypoint** to remove it.
+
+The waypoints live in the edge's `data`, written through `updateEdgeData`, so a controlled flow hears of every
+move as an edge change and keeps them (`useEdgesState`, or your own). `getEditableEdgePath({ from, points, to,
+borderRadius })` is the path and label position as a function, for an edge of your own.
+
 ## Flowchart shapes — `flowinger/shapes`
 
 ```tsx
-const nodeTypes = { ...shapeNodeTypes };   // diamond, circle, cylinder, parallelogram, document
+const nodeTypes = { ...shapeNodeTypes };   // diamond, circle, cylinder, parallelogram, document, hexagon
 { id: 'q', type: 'diamond', position, width: 140, height: 90, data: { label: 'Approved?' } }
 ```
 
@@ -152,7 +169,7 @@ is hidden with the collapsed one; use `getDescendantIds` to build your own rule.
 
 ## What is not here
 
-- **Draggable edge waypoints** (`editable-edge`) and a **Hexagon** shape are on the [roadmap](../ROADMAP.md);
-  they are not in the package.
-- Real-browser coverage for these is the editor example and a manual pass; the logic above is unit- and
-  integration-tested in jsdom, with the export additionally checked in Chrome.
+- Real-browser coverage for the pro modules beyond export and editable edges is the editor example and a
+  manual pass; the logic above is unit- and integration-tested in jsdom.
+- Recipes for grouping and swimlanes, multiplayer presence and a workflow stepper are on the
+  [roadmap](../ROADMAP.md); they are examples, not modules.
