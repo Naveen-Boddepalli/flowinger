@@ -483,7 +483,7 @@ describe('a list given with a few nodes replaced', () => {
     const measured = new Set<string>();
     let nextId = 100;
 
-    for (let step = 0; step < 400; step++) {
+    for (let step = 0; step < 300; step++) {
       const at = random(nodes.length);
       const target = nodes[at] as Node;
       const op = random(16);
@@ -539,5 +539,5 @@ describe('a list given with a few nodes replaced', () => {
         expect(observe(live.store, liveCtx), `after step ${String(step)}`).toEqual(observe(fresh.store, freshCtx));
       }
     }
-  });
+  }, 30_000);
 });

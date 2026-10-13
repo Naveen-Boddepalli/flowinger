@@ -30,7 +30,10 @@ it.** A library nobody can find the answer to a question about is not helped by 
   GitHub or npm; [CONTRIBUTING.md](CONTRIBUTING.md#releasing) lists them.)
 - Contribution, conduct and security policies; issue and pull-request templates.
 - [Published benchmarks](docs/benchmarks.md) against React Flow at 1,000, 5,000 and 10,000 nodes, culled and
-  not, reproducible with `pnpm bench` — and the three scaling bugs they found in Flowinger's own culling.
+  not, reproducible with `pnpm bench` — and the scaling bugs they found in Flowinger's own culling, fixed:
+  with culling on, a drag at 10,000 nodes went from 10 ms to 4.3 (React Flow: 4.5).
+- `0.5.0` and `0.6.0` (2026-10-13): every React Flow prop does something; the pro modules as entry points;
+  editable edges; a collapsible-tree example; benchmarks.
 
 ## Now — be easy to try and to trust
 
@@ -51,17 +54,17 @@ that compiles and does nothing apart, and there are none). What is left is bread
 1. **Real-browser coverage for what jsdom cannot see** — done for the 0.5.0 behaviour (see *Now*): it found
    one bug jsdom could not (the selection rectangle, a node toolbar for another node and the focus pan used a
    child's position inside its parent, not on the canvas). Left: touch, which needs a device.
-2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (unreleased). Still to
+2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (0.6.0). Still to
    write as `examples/`: grouping and swimlanes, multiplayer presence (Yjs), a workflow-simulation stepper.
-3. **Size.** The core grew from 17.6 to 18.9 kB and the whole canvas from 27.3 to 33.9 for the 39 props; the
-   features are separable, but a `FlowingerCanvas` pays for all of them. A pass that measures each feature and
-   removes duplication (three places build "is this key held", several build "the box round some nodes") is
-   worth a day.
-4. **Close the culled gap.** With `onlyRenderVisibleElements` on, React Flow is 1.3–1.8× cheaper to drag and
-   up to 1.7× to zoom ([benchmarks](docs/benchmarks.md)): Flowinger draws a quarter-view margin (40% more
-   nodes), finds the visible set by scanning every node, rebuilds parent structure in three places per drag
-   move, and its first render draws every node before culling. Wanted: one shared structure, a visible set
-   found incrementally or from a spatial index, and a first render that does not draw what it will remove.
+3. **Size.** The core grew from 17.6 to 19.6 kB and the whole canvas from 27.3 to 35.4 — the 39 props, then
+   making a drag cost what changed rather than the size of the graph. The features are separable, but a
+   `FlowingerCanvas` pays for all of them. A pass that measures each feature and removes duplication (three
+   places build "is this key held", several build "the box round some nodes") is worth a day.
+4. **Close the culled gap — what is left.** With `onlyRenderVisibleElements` on, a drag and a mount are now
+   level with React Flow's; a pan and a zoom are not (1.1–1.6×, up to 1.8 ms a frame at 10,000 nodes —
+   [benchmarks](docs/benchmarks.md)). Flowinger draws a quarter-view margin (40% more nodes), and when the
+   *view* moves it finds the visible set by asking every node. Wanted: a spatial index (a grid of node ids)
+   so a pan asks only the cells it enters, and a first render that does not draw every node before culling.
 5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
 
 ## Later

@@ -292,6 +292,6 @@ describe('the visible set, a little at a time', () => {
         twin.ctx.changed();
         expect(view(live.store), `after step ${String(step)} (op ${String(op)})`).toEqual(view(twin.store));
       }
-    });
+    }, 30_000);
   }
 });

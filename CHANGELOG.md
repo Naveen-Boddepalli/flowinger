@@ -9,6 +9,27 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **A drag, a measurement or a selection now costs what changed, not the size of the graph.** A drag hands the
+  canvas a list that is the last one with one node replaced, and everything that was worked out from the whole
+  list — the store's maps and counts, the canvas's and the stacking feature's nesting, the dimension reports,
+  and the culling pass — now starts from the answer it had and looks at what was replaced. With
+  `onlyRenderVisibleElements` on, at 10,000 nodes a drag costs 4.3 ms a move (7.7 before; React Flow 4.5), and
+  a mount 0.5 s. See [the benchmarks](docs/benchmarks.md).
+- **Size.** The core is 19.6 kB gzipped (was 18.9) and the whole canvas 35.4 (was 33.9); the culling feature
+  1.2 kB (was 0.5). The budgets are 20 and 36 kB (were 19 and 34).
+
+### Added
+
+- `EngineContext.takeDirtyNodes()` for features: the nodes whose place, size, visibility or selection changed
+  since it was last asked, or `null` for "any". What `cullingFeature` looks again at.
+
+### Fixed
+
+- **In an uncontrolled flow, selecting a node did not tell culling**, so a selected node outside the view was
+  not drawn until the next change of anything else, and one that was let go of stayed drawn.
+
 ## [0.6.0] - 2026-10-13
 
 ### Added
