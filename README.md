@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/icon.svg" alt="Flowinger Logo" width="120" height="120" />
+</p>
+
 <h1 align="center">Flowinger</h1>
 
 <p align="center">

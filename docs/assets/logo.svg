@@ -1,0 +1,92 @@
+<svg width="512" height="512" viewBox="80 70 340 370" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Glow Filters -->
+    <filter id="logoGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Edge Gradients -->
+    <linearGradient id="logoTopEdge" x1="136" y1="124" x2="376" y2="124" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+
+    <linearGradient id="logoStemEdge" x1="136" y1="124" x2="136" y2="388" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+
+    <linearGradient id="logoMidEdge" x1="136" y1="256" x2="304" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+
+    <linearGradient id="logoCurveBranch" x1="256" y1="146" x2="304" y2="228" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+
+    <linearGradient id="logoLoop" x1="164" y1="256" x2="164" y2="388" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Glow Behind Edges -->
+  <g opacity="0.4" filter="url(#logoGlow)">
+    <path d="M 136 124 H 376" stroke="url(#logoTopEdge)" stroke-width="12" stroke-linecap="round" />
+    <path d="M 136 124 V 388" stroke="url(#logoStemEdge)" stroke-width="12" stroke-linecap="round" />
+    <path d="M 136 256 H 304" stroke="url(#logoMidEdge)" stroke-width="12" stroke-linecap="round" />
+    <path d="M 256 124 C 256 195, 304 185, 304 256" stroke="url(#logoCurveBranch)" stroke-width="10" stroke-linecap="round" fill="none" />
+  </g>
+
+  <!-- Secondary decorative loop -->
+  <path d="M 164 256 C 230 280, 230 365, 164 388" stroke="url(#logoLoop)" stroke-width="4" stroke-dasharray="7 7" fill="none" stroke-linecap="round" />
+
+  <!-- Primary Crisp SVG Edges -->
+  <path d="M 256 124 C 256 195, 304 185, 304 256" stroke="url(#logoCurveBranch)" stroke-width="6" stroke-linecap="round" fill="none" />
+  <path d="M 136 124 H 376" stroke="url(#logoTopEdge)" stroke-width="6.5" stroke-linecap="round" />
+  <path d="M 136 124 V 388" stroke="url(#logoStemEdge)" stroke-width="6.5" stroke-linecap="round" />
+  <path d="M 136 256 H 304" stroke="url(#logoMidEdge)" stroke-width="6.5" stroke-linecap="round" />
+
+  <!-- Graph Nodes -->
+  <!-- Node A -->
+  <rect x="106" y="94" width="60" height="60" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-width="3" />
+  <circle cx="136" cy="124" r="9" fill="#38bdf8" />
+  <circle cx="166" cy="124" r="5" fill="#38bdf8" stroke="#0b1120" stroke-width="2.5" />
+  <circle cx="136" cy="154" r="5" fill="#38bdf8" stroke="#0b1120" stroke-width="2.5" />
+
+  <!-- Node B1 -->
+  <circle cx="256" cy="124" r="26" fill="#0f172a" stroke="#60a5fa" stroke-width="3" />
+  <circle cx="256" cy="124" r="8" fill="#60a5fa" />
+  <circle cx="230" cy="124" r="5" fill="#60a5fa" stroke="#0b1120" stroke-width="2" />
+  <circle cx="282" cy="124" r="5" fill="#60a5fa" stroke="#0b1120" stroke-width="2" />
+  <circle cx="256" cy="150" r="5" fill="#60a5fa" stroke="#0b1120" stroke-width="2" />
+
+  <!-- Node B2 -->
+  <rect x="346" y="94" width="60" height="60" rx="18" fill="#0f172a" stroke="#818cf8" stroke-width="3" />
+  <circle cx="376" cy="124" r="9" fill="#818cf8" />
+  <circle cx="346" cy="124" r="5" fill="#818cf8" stroke="#0b1120" stroke-width="2.5" />
+
+  <!-- Node C -->
+  <rect x="106" y="226" width="60" height="60" rx="18" fill="#0f172a" stroke="#6366f1" stroke-width="3" />
+  <circle cx="136" cy="256" r="9" fill="#6366f1" />
+  <circle cx="136" cy="226" r="5" fill="#6366f1" stroke="#0b1120" stroke-width="2.5" />
+  <circle cx="166" cy="256" r="5" fill="#6366f1" stroke="#0b1120" stroke-width="2.5" />
+  <circle cx="136" cy="286" r="5" fill="#6366f1" stroke="#0b1120" stroke-width="2.5" />
+
+  <!-- Node D -->
+  <rect x="274" y="226" width="60" height="60" rx="18" fill="#0f172a" stroke="#c084fc" stroke-width="3" />
+  <circle cx="304" cy="256" r="9" fill="#c084fc" />
+  <circle cx="274" cy="256" r="5" fill="#c084fc" stroke="#0b1120" stroke-width="2.5" />
+  <circle cx="304" cy="226" r="5" fill="#c084fc" stroke="#0b1120" stroke-width="2.5" />
+
+  <!-- Node E -->
+  <rect x="106" y="358" width="60" height="60" rx="18" fill="#0f172a" stroke="#a855f7" stroke-width="3" />
+  <circle cx="136" cy="388" r="9" fill="#a855f7" />
+  <circle cx="136" cy="358" r="5" fill="#a855f7" stroke="#0b1120" stroke-width="2.5" />
+  <circle cx="166" cy="388" r="5" fill="#a855f7" stroke="#0b1120" stroke-width="2.5" />
+</svg>
