@@ -1,0 +1,59 @@
+# Flowinger
+
+> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 18.9 kB gzipped and the full canvas about 33.9 kB. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
+
+Use Flowinger when a React app needs to *draw* a graph (a workflow, a query plan, a syntax tree, an org chart, a dependency map) and bundle size, dependencies or server rendering matter. It names all 211 exports of `@xyflow/react` 12.11.6 and implements every one of its 119 `ReactFlow` props, so React Flow code usually migrates by changing the import and deleting the stylesheet import. Differences to know:
+
+- Nothing is draggable, connectable or selectable by default. Pass `nodesDraggable`, `nodesConnectable` and `elementsSelectable` for an editor (React Flow turns these on by default).
+- There is no CSS file to import. Styling is inline and themed with `--flowinger-*` CSS variables. The `react-flow__*` class names are kept.
+- `ReactFlow` and `ReactFlowProvider` are exported as aliases of `FlowingerCanvas` and `FlowingerProvider`.
+- `FlowingerCore` plus named features (`dragFeature`, `connectFeature`…) is the smallest build. `FlowingerCanvas` includes every feature.
+- Undo/redo, copy/paste, snap lines, PNG/SVG export, smart (obstacle-avoiding) edges, editable edges, flowchart shapes and a collapsible tree are free, as separate entry points: `flowinger/history`, `flowinger/clipboard`, `flowinger/snaplines`, `flowinger/export`, `flowinger/smart-edges`, `flowinger/editable-edge`, `flowinger/shapes`, `flowinger/tree`.
+- Neither library lays graphs out. Compute positions with `d3-hierarchy`, `dagre` or `elkjs`.
+
+Minimal example:
+
+```tsx
+import { FlowingerCanvas, FlowingerProvider, Background, type Node, type Edge } from 'flowinger';
+
+const nodes: Node[] = [
+  { id: 'a', position: { x: 0, y: 0 }, data: { label: 'Scan' } },
+  { id: 'b', position: { x: 0, y: 120 }, data: { label: 'Filter' } },
+];
+const edges: Edge[] = [{ id: 'a-b', source: 'a', target: 'b' }];
+
+export function Diagram() {
+  return (
+    <div style={{ position: 'relative', height: 400 }}>
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes} edges={edges} fitView>
+          <Background />
+        </FlowingerCanvas>
+      </FlowingerProvider>
+    </div>
+  );
+}
+```
+
+## Docs
+
+- [Getting started](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/getting-started.md): install, a first diagram, making it interactive, common pitfalls
+- [API reference](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/api.md): canvas props, nodes and edges, handles, sub-flows, the instance, controlled flows
+- [Components and hooks](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/components.md): Handle, Background, Controls, MiniMap, NodeToolbar, NodeResizer, useReactFlow
+- [Features](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/features.md): the core and its opt-in features, and what each costs in bytes
+- [Pro modules](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/pro.md): undo/redo, clipboard, snap lines, export, smart edges, shapes, tree
+- [Theming](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/theming.md): the `--flowinger-*` CSS variables
+- [Server rendering](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/server-rendering.md): SSR and hydration on React 18 and 19
+
+## Coming from React Flow
+
+- [Migrating from React Flow](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/migrating-from-react-flow.md): the defaults that differ, types, what to do instead
+- [React Flow coverage](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/react-flow-coverage.md): exports and props covered, measured from React Flow's type declarations
+- [Benchmarks](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/benchmarks.md): mount, pan, zoom, drag and memory against React Flow at 1,000 to 10,000 nodes
+
+## Optional
+
+- [Full documentation in one file](https://naveen-boddepalli.github.io/flowinger/llms-full.txt)
+- [Examples](https://github.com/Naveen-Boddepalli/flowinger/tree/main/examples): layouts (d3-hierarchy, dagre, elkjs), a controlled editor, a collapsible tree
+- [Live demo](https://naveen-boddepalli.github.io/flowinger/)
+- [Changelog](https://github.com/Naveen-Boddepalli/flowinger/blob/main/CHANGELOG.md)
