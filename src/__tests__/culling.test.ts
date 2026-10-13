@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { cullingFeature } from '../features/culling.ts';
 import { selectionFeature } from '../features/selection.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore, type EngineOptions } from '../store.ts';
+import type { Feature } from '../features.ts';
 import { Position, type Edge, type Node } from '../types.ts';
 
 const on: EngineOptions = { ...DEFAULT_ENGINE_OPTIONS, elementsSelectable: true, onlyRenderVisibleElements: true };
@@ -194,4 +195,103 @@ describe('the order of the visible edges', () => {
     store.setEdges([...edges].reverse());
     expect(store.getVisible()).toBe(after);
   });
+});
+
+describe('the visible set, a little at a time', () => {
+  /**
+   * When a few nodes change — a drag, a measurement, a selection — the set is not worked out from every node
+   * again. This holds that to the same answer: after each of a long run of edits, a store that has been given
+   * them one by one has the visible set a store given the end state at once has — edges in the list's order.
+   */
+  for (const controlled of [true, false]) {
+    it(`matches a fresh store after each of 300 random edits (${controlled ? 'controlled' : 'uncontrolled'})`, () => {
+      let seed = controlled ? 7001 : 7002;
+      const random = (n: number) => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed % n;
+      };
+      type Ctx = Parameters<NonNullable<Feature['install']>>[0];
+      const make = (nodes: Node[], edges: Edge[]) => {
+        const store = culled(nodes, edges);
+        let ctx: Ctx | null = null;
+        store.use([{ name: 'probe', install: (c) => { ctx = c; return {}; } }]);
+        if (controlled) store.setCallbacks({ onNodesChange: () => {}, onEdgesChange: () => {} });
+        store.setNodes(nodes);
+        store.setEdges(edges);
+        return { store, ctx: ctx as unknown as Ctx };
+      };
+      const view = (store: ReturnType<typeof fresh>) => {
+        const v = store.getVisible();
+        return v ? { nodes: ids(v.nodes), edges: [...v.edges] } : null;
+      };
+
+      let nodes: Node[] = Array.from({ length: 60 }, (_, i) =>
+        box(`n${String(i)}`, (i % 10) * 220, Math.floor(i / 10) * 140, i % 7 === 6 ? { parentId: `n${String(i - 6)}` } : {}),
+      );
+      let edges: Edge[] = Array.from({ length: 70 }, (_, i) => ({
+        id: `e${String(i)}`,
+        source: `n${String(random(60))}`,
+        target: `n${String(random(60))}`,
+      }));
+      const live = make(nodes, edges);
+      const sizes = new Map<string, [number, number]>();
+      const dragged = new Map<string, { x: number; y: number }>();
+      let viewport = { x: 0, y: 0, zoom: 1 };
+
+      for (let step = 0; step < 300; step++) {
+        const at = random(nodes.length);
+        const target = nodes[at] as Node;
+        const op = random(11);
+        if (op <= 2) {
+          nodes = nodes.map((n, i) => (i === at ? { ...n, position: { x: random(2200), y: random(1400) } } : n));
+          // A node given a new place is no longer where a drag left it.
+          dragged.delete(target.id);
+          live.store.setNodes(nodes);
+        } else if (op === 3 && controlled) {
+          nodes = nodes.map((n, i) => (i === at ? { ...n, selected: n.selected !== true } : n));
+          live.store.setNodes(nodes);
+        } else if (op === 3) {
+          live.store.api(selectionFeature).selectNode(target.id, true);
+        } else if (op === 4) {
+          nodes = nodes.map((n, i) => (i === at ? { ...n, hidden: n.hidden !== true } : n));
+          live.store.setNodes(nodes);
+        } else if (op === 5) {
+          const size: [number, number] = [60 + random(160), 30 + random(80)];
+          sizes.set(target.id, size);
+          live.store.setSize(target.id, size[0], size[1]);
+        } else if (op === 6) {
+          viewport = { x: -random(1500), y: -random(900), zoom: [0.5, 1, 1.5][random(3)] as number };
+          live.store.instance.setViewport(viewport);
+        } else if (op === 7) {
+          edges = edges.map((e, i) => (i === random(edges.length) ? { ...e, hidden: e.hidden !== true } : e));
+          live.store.setEdges(edges);
+        } else if (op === 8) {
+          edges = [...edges].reverse();
+          live.store.setEdges(edges);
+        } else if (op === 9 && !controlled) {
+          const position = { x: random(2200), y: random(1400) };
+          dragged.set(target.id, position);
+          live.ctx.setNodePosition(target, position);
+        } else {
+          nodes = nodes.map((n, i) => (i === at ? { ...n, data: { step } } : n));
+          live.store.setNodes(nodes);
+        }
+
+        const twin = make(nodes, edges);
+        twin.store.instance.setViewport(viewport);
+        for (const [id, [w, h]] of sizes) twin.store.setSize(id, w, h);
+        if (!controlled) {
+          for (const n of live.ctx.ownSelection.nodes) twin.store.api(selectionFeature).selectNode(n, true);
+          for (const [id, position] of dragged) {
+            const n = nodes.find((m) => m.id === id);
+            if (n) twin.ctx.setNodePosition(n, position);
+          }
+        }
+        // The twin is told once more, so it has judged everything — it is built from parts that do not each say
+        // so. The live store is not: what it holds is what its own edit made of it.
+        twin.ctx.changed();
+        expect(view(live.store), `after step ${String(step)} (op ${String(op)})`).toEqual(view(twin.store));
+      }
+    });
+  }
 });

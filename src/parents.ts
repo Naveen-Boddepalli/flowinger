@@ -172,3 +172,33 @@ export function createTreeInfo(): (nodes: readonly Node[]) => TreeInfo {
     return info;
   };
 }
+
+/**
+ * A map of nodes by id that is kept between lists: given the last list with some nodes replaced, it updates
+ * those entries instead of making the map again. For whoever is handed a new list at every drag move and
+ * wants only to look a few of them up.
+ */
+export function createNodeIndex(): (nodes: readonly Node[]) => ReadonlyMap<string, Node> {
+  let last: readonly Node[] = [];
+  let index = new Map<string, Node>();
+  return (nodes) => {
+    if (nodes === last) return index;
+    let same = nodes.length === last.length;
+    if (same) {
+      for (let i = 0; i < nodes.length; i++) {
+        const a = last[i] as Node;
+        const b = nodes[i] as Node;
+        if (a === b) continue;
+        if (a.id !== b.id) {
+          same = false;
+          break;
+        }
+        index.set(b.id, b);
+      }
+    }
+    // Nodes came, went or changed places: a map of the new list. (A partly updated one is not used.)
+    if (!same) index = new Map(nodes.map((n) => [n.id, n]));
+    last = nodes;
+    return index;
+  };
+}

@@ -14,7 +14,7 @@ import { EdgeContext } from './edgeContext.ts';
 import type { Feature } from './features.ts';
 import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
-import { absolutePositionOf } from './parents.ts';
+import { absolutePositionOf, createNodeIndex } from './parents.ts';
 import { pathFor } from './paths.ts';
 import type { ConnectionLineProps, ConnectionLineType } from './types.ts';
 import {
@@ -458,9 +458,11 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     () => null,
   );
 
-  // Rebuilt when the lists change, not at every render: with culling the edge layer renders as the view
-  // moves, and a map of every node and edge made each time cost more than drawing what is in view.
-  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  // Kept between renders, not made at each: with culling the edge layer renders as the view moves, and a map
+  // of every node and edge made each time cost more than drawing what is in view. A drag replaces one node
+  // in the list, and the map is told of that one.
+  const indexNodes = useMemo(createNodeIndex, []);
+  const byId = useMemo(() => indexNodes(nodes), [indexNodes, nodes]);
   const edgeById = useMemo(
     () => (visibleEdgeIds ? new Map(edges.map((e) => [e.id, e])) : null),
     [edges, visibleEdgeIds !== undefined],
