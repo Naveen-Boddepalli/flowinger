@@ -74,6 +74,8 @@ export const selectionFeature: Feature<SelectionApi> = {
         }
       }
       for (const id of flipped) ctx.notifyNode(id);
+      // A selected node is drawn wherever it is — what culls must hear that it is, or no longer is, one.
+      if (flipped.length > 0) ctx.changed();
       if (edgesFlipped) ctx.geometryChanged();
       ctx.emitNodeChanges(nodeChanges);
       ctx.emitEdgeChanges(edgeChanges);

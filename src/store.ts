@@ -225,20 +225,29 @@ const sameExtent = (a: TranslateExtent | null, b: TranslateExtent | null): boole
     a[1][1] === b[1][1]);
 
 /** Whether two node lists lay out the same: same ids, positions and declared sizes, in order. */
+/** Where a node is, how big it is declared, and whether it is drawn: what a layout is made of. */
+const sameBox = (n: Node, m: Node): boolean =>
+  n === m ||
+  (samePoint(n.position, m.position) && n.width === m.width && n.height === m.height && n.hidden === m.hidden);
+
 const sameLayout = (a: readonly Node[], b: readonly Node[]): boolean =>
   a === b ||
   (a.length === b.length &&
     a.every((n, i) => {
       const m = b[i];
-      return (
-        m !== undefined &&
-        n.id === m.id &&
-        samePoint(n.position, m.position) &&
-        n.width === m.width &&
-        n.height === m.height &&
-        n.hidden === m.hidden
-      );
+      return m !== undefined && n.id === m.id && sameBox(n, m);
     }));
+
+const childrenIn = (list: readonly Node[]): Map<string, string[]> => {
+  const out = new Map<string, string[]>();
+  for (const n of list) {
+    if (n.parentId === undefined) continue;
+    const children = out.get(n.parentId);
+    if (children) children.push(n.id);
+    else out.set(n.parentId, [n.id]);
+  }
+  return out;
+};
 
 const sameAnchor = (a: XYPosition | null, b: XYPosition | null): boolean =>
   a === null || b === null ? a === b : samePoint(a, b);
@@ -328,6 +337,18 @@ export function createFlowingerStore(
    * handle and every measurement, and a scan of ten thousand nodes each time was most of a mount.
    */
   let unmeasured = 0;
+  /** Sizes measured and not yet looked at by `flushDimensions`: a controlled flow is told of these, and only these. */
+  const unreportedSizes = new Set<string>();
+  /**
+   * The nodes that have changed in a way that matters to what is drawn, since a feature last took the list —
+   * 'all' when a change cannot say which. Nodes are added to it where a change names them, and everything else
+   * that changes the layout says 'all': so a reader of it that is wrong is wrong in the safe direction.
+   */
+  let dirty: Set<string> | 'all' = 'all';
+  const markDirty = (ids?: Iterable<string>) => {
+    if (ids === undefined) dirty = 'all';
+    else if (dirty !== 'all') for (const id of ids) dirty.add(id);
+  };
   /** How many of the nodes and edges handed over say they are selected: what a controlled flow's selection is. */
   let controlledSelectedNodes = 0;
   let controlledSelectedEdges = 0;
@@ -617,7 +638,8 @@ export function createFlowingerStore(
     emit(geometryListeners);
   };
 
-  const bumpGeometry = () => {
+  const bumpGeometry = (ids?: Iterable<string>) => {
+    markDirty(ids);
     bumpHandles();
     touch();
     run('change');
@@ -683,7 +705,7 @@ export function createFlowingerStore(
 
   const setNodePosition = (node: Node, position: XYPosition) => {
     overrides.set(node.id, { base: node.position, position });
-    bumpGeometry();
+    bumpGeometry([node.id]);
     emitNodeTree(node.id);
   };
 
@@ -715,10 +737,20 @@ export function createFlowingerStore(
   const flushDimensions = () => {
     if (!nodesControlled()) return;
     const changes: NodeChange[] = [];
-    for (const [id, size] of sizes) {
+    // Only sizes that have changed since they were last looked at — this runs after every change to the nodes,
+    // and a drag of one in ten thousand has nothing to say of the other nine thousand nine hundred and ninety-nine.
+    for (const id of unreportedSizes) {
+      const size = sizes.get(id);
+      if (!size) {
+        unreportedSizes.delete(id);
+        continue;
+      }
       const node = nodeById.get(id);
+      // Not a node yet: measured before it arrived, and heard of when it does.
+      if (!node) continue;
+      unreportedSizes.delete(id);
       const last = reported.get(id);
-      if (!node || (last?.width === size.width && last.height === size.height)) continue;
+      if (last?.width === size.width && last.height === size.height) continue;
       reported.set(id, size);
       if (node.measured?.width === size.width && node.measured.height === size.height) continue;
       changes.push({ type: 'dimensions', id, dimensions: { width: size.width, height: size.height } });
@@ -732,11 +764,12 @@ export function createFlowingerStore(
     const known = sizes.get(id);
     if (known?.width === width && known.height === height) return;
     sizes.set(id, { width, height });
+    unreportedSizes.add(id);
     if (!known) {
       const counted = nodeById.get(id);
       if (counted && counted.hidden !== true) unmeasured -= 1;
     }
-    bumpGeometry();
+    bumpGeometry([id]);
     // With an origin, where the top-left is depends on the size: tell the node, and what is inside it.
     const measured = nodeById.get(id);
     if (measured && hasOrigin(measured)) emitNodeTree(id);
@@ -894,35 +927,61 @@ export function createFlowingerStore(
 
   // --- what the canvas hands over ------------------------------------------
 
+  /**
+   * The nodes that are not the ones they were, as `[was, now]` — when `next` is `nodes` with some replaced by
+   * copies: the same length, the same ids in the same places. Null when nodes came, went or changed places.
+   * A drag, a selection or an edit does this to a list of any size, a thousand times a second.
+   */
+  const replacedIn = (next: readonly Node[]): [Node, Node][] | null => {
+    if (next.length !== nodes.length) return null;
+    const out: [Node, Node][] = [];
+    for (let i = 0; i < next.length; i++) {
+      const was = nodes[i] as Node;
+      const now = next[i] as Node;
+      if (was === now) continue;
+      if (was.id !== now.id) return null;
+      out.push([was, now]);
+    }
+    return out;
+  };
+
   const setNodes = (next: readonly Node[]) => {
+    // A list that is the last with some nodes replaced — a drag, a selection, an edit — is a handful of
+    // changes, not a new graph: nothing is added, removed or reordered, so what was worked out from the list
+    // as a whole (who is whose child, what is measured) holds, apart from what these nodes say differently.
+    const replaced = replacedIn(next);
     // Anything drawing from geometry (the edge layer, a minimap) must hear of a
     // new layout, not only of a measurement or a drag.
-    const relaid = !sameLayout(nodes, next);
+    const relaid = replaced ? replaced.some(([was, now]) => !sameBox(was, now)) : !sameLayout(nodes, next);
     const before = nodeById;
     nodes = next;
-    nodeById = new Map(next.map((n) => [n.id, n]));
-    childrenOf = new Map();
-    for (const n of next) {
-      if (n.parentId === undefined) continue;
-      const list = childrenOf.get(n.parentId);
-      if (list) list.push(n.id);
-      else childrenOf.set(n.parentId, [n.id]);
+    let pruned = false;
+    if (replaced) {
+      for (const [, now] of replaced) nodeById.set(now.id, now);
+      if (replaced.some(([was, now]) => was.parentId !== now.parentId)) childrenOf = childrenIn(next);
+      for (const [was, now] of replaced) {
+        if (was.hidden !== now.hidden && !sizes.has(now.id)) unmeasured += (now.hidden === true ? 0 : 1) - (was.hidden === true ? 0 : 1);
+        controlledSelectedNodes += (now.selected === true ? 1 : 0) - (was.selected === true ? 1 : 0);
+      }
+    } else {
+      nodeById = new Map(next.map((n) => [n.id, n]));
+      childrenOf = childrenIn(next);
+      for (const id of [...sizes.keys()]) {
+        if (!nodeById.has(id)) {
+          sizes.delete(id);
+          reported.delete(id);
+          pruned = true;
+        }
+      }
+      unmeasured = 0;
+      controlledSelectedNodes = 0;
+      for (const n of next) {
+        if (n.hidden !== true && !sizes.has(n.id)) unmeasured += 1;
+        if (n.selected === true) controlledSelectedNodes += 1;
+      }
+      for (const id of [...selected]) if (!nodeById.has(id)) selected.delete(id);
     }
     absCache.clear();
-    let pruned = false;
-    for (const id of [...sizes.keys()]) {
-      if (!nodeById.has(id)) {
-        sizes.delete(id);
-        reported.delete(id);
-        pruned = true;
-      }
-    }
-    unmeasured = 0;
-    controlledSelectedNodes = 0;
-    for (const n of next) {
-      if (n.hidden !== true && !sizes.has(n.id)) unmeasured += 1;
-      if (n.selected === true) controlledSelectedNodes += 1;
-    }
     for (const [id, dragged] of [...overrides]) {
       const node = nodeById.get(id);
       if (!node || !samePoint(node.position, dragged.base)) {
@@ -930,22 +989,30 @@ export function createFlowingerStore(
         pruned = true;
       }
     }
-    for (const id of [...selected]) if (!nodeById.has(id)) selected.delete(id);
     // A controlled node's selection lives on the node: whoever it flipped for must redraw.
     if (nodesControlled()) {
-      for (const n of next) {
-        if ((before.get(n.id)?.selected === true) !== (n.selected === true)) {
-          emit(nodeListeners.get(n.id) ?? []);
-        }
-      }
+      const flip = (was: Node | undefined, now: Node) => {
+        if ((was?.selected === true) !== (now.selected === true)) emit(nodeListeners.get(now.id) ?? []);
+      };
+      if (replaced) for (const [was, now] of replaced) flip(was, now);
+      else for (const n of next) flip(before.get(n.id), n);
     }
-    if (pruned || relaid) bumpGeometry();
+    // What a reader of the layout looks at again: these nodes, or — when the list is new — any.
+    const named = replaced ? replaced.map(([, now]) => now.id) : undefined;
+    if (pruned || relaid) bumpGeometry(named);
     else {
+      markDirty(named);
       touch();
       run('change');
     }
     // A child's place depends on its ancestors', which this may have moved.
-    if (relaid) for (const [, ids] of childrenOf) for (const id of ids) emit(nodeListeners.get(id) ?? []);
+    if (relaid) {
+      if (replaced) {
+        for (const [was, now] of replaced) if (!sameBox(was, now)) emitNodeTree(now.id);
+      } else {
+        for (const [, ids] of childrenOf) for (const id of ids) emit(nodeListeners.get(id) ?? []);
+      }
+    }
     announceIfChanged();
     flushDimensions();
   };
@@ -1215,7 +1282,13 @@ export function createFlowingerStore(
       hooks[event].push(fn);
     },
     changed: () => {
+      markDirty();
       run('change');
+    },
+    takeDirtyNodes: () => {
+      const taken = dirty;
+      dirty = new Set();
+      return taken === 'all' ? null : taken;
     },
     api,
   };
@@ -1336,6 +1409,7 @@ export function createFlowingerStore(
     setOptions: (next: EngineOptions) => {
       const moved = next.nodeOrigin[0] !== options.nodeOrigin[0] || next.nodeOrigin[1] !== options.nodeOrigin[1];
       options = next;
+      markDirty();
       // The canvas's origin changed: every node without one of its own is somewhere else.
       if (moved) {
         absCache.clear();

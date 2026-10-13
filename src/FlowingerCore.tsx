@@ -22,7 +22,7 @@ import { useIsomorphicLayoutEffect } from './useIsomorphicLayoutEffect.ts';
 import { FlowingerProvider } from './FlowingerProvider.tsx';
 import { Handle } from './Handle.tsx';
 import { NodeWrapper } from './NodeWrapper.tsx';
-import { treeInfo } from './parents.ts';
+import { createTreeInfo } from './parents.ts';
 import { viewportTransform } from './store.ts';
 import {
   DRAG_THRESHOLD,
@@ -347,7 +347,8 @@ function InnerCanvas(props: FlowingerProps) {
 
   // Nesting, read from the nodes as given: where each one's parent sits, how deep
   // it is, and what is hidden along with a hidden parent.
-  const tree = useMemo(() => treeInfo(nodes), [nodes]);
+  const treeOf = useMemo(createTreeInfo, []);
+  const tree = useMemo(() => treeOf(nodes), [treeOf, nodes]);
   // With `onlyRenderVisibleElements`: what is in view. Null (everything) otherwise, and on the server.
   const visible = useSyncExternalStore(store.subscribeVisible, store.getVisible, () => null);
 

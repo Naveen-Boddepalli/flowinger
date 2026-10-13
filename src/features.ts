@@ -163,6 +163,12 @@ export interface EngineContext {
   on: (event: FeatureEvent, fn: () => void) => void;
   /** Says the layout changed in a way `on('change')` would not otherwise hear of. */
   changed: () => void;
+  /**
+   * The nodes whose place, size, visibility or selection changed since this was last asked — or null, for
+   * "any, or no way of saying which". For something that works out a thing for every node on each `'change'`
+   * and would rather work it out again for only these. Asking resets it: one feature should ask.
+   */
+  takeDirtyNodes: () => ReadonlySet<string> | null;
   /** Another feature's methods — it must be installed, which `needs` makes sure of. */
   api: <A>(feature: Feature<A>) => A;
 }

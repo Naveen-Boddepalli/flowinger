@@ -17,7 +17,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 18.9 kB gzipped (33.9 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 19.6 kB gzipped (35.4 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
@@ -43,16 +43,16 @@ only its own code. The props, the nodes and the instance are the same either way
 
 **What each costs**, gzipped, on its own — so each includes what it needs (`dragFeature` brings selection and
 auto-pan; `reconnectFeature` brings connect; `selectionRectFeature` brings drag and box select). Measured by
-`pnpm size:features` against a bare `FlowingerCore` of about 18.4 kB:
+`pnpm size:features` against a bare `FlowingerCore` of about 19.1 kB:
 
 | | kB | | kB | | kB |
 |---|---|---|---|---|---|
 | `selectionFeature` | +1.1 | `connectFeature` | +2.6 | `a11yFeature` | +1.1 |
-| `dragFeature` | +4.1 | `reconnectFeature` | +3.0 | `stackingFeature` | +0.7 |
-| `boxSelectFeature` | +2.6 | `selectionRectFeature` | +6.0 | `panKeyFeature` | +0.7 |
-| `deleteFeature` | +0.5 | `editingFeature` | +0.8 | `smoothFeature`, `zoomKeyFeature` | +0.4 each |
-| `cullingFeature` | +0.5 | `eventsFeature` | +0.4 | `colorModeFeature` | +0.3 |
-| `edgeLabelsFeature` | +0.3 | `debugFeature` | +0.1 | | |
+| `dragFeature` | +4.1 | `reconnectFeature` | +3.0 | `stackingFeature` | +0.8 |
+| `boxSelectFeature` | +2.5 | `selectionRectFeature` | +6.0 | `panKeyFeature` | +0.6 |
+| `deleteFeature` | +0.4 | `editingFeature` | +0.8 | `smoothFeature`, `zoomKeyFeature` | +0.4 each |
+| `cullingFeature` | +1.2 | `eventsFeature` | +0.3 | `colorModeFeature` | +0.3 |
+| `edgeLabelsFeature` | +0.2 | `debugFeature` | +0.1 | | |
 
 Always in the core: pan and zoom (drag, wheel, pinch, double click, keyboard), nodes, edges (every built-in path,
 labels, arrowheads, custom edges) and handles, the viewport calls and `fitView`, sub-flows, `useStore`, and the

@@ -3,7 +3,7 @@
 // smooth move's path, reconnecting, and `nodrag` / `nopan` / `nowheel` from a real press. Each of these was
 // implemented against jsdom and React Flow's source; here they are watched in a browser.
 import { expect, test } from '@playwright/test';
-import { centre, drag, edge, handle, node, nodeAt, open, paneBox, view } from './helpers.ts';
+import { centre, drag, edge, emptyPoint, handle, node, nodeAt, open, paneBox, pressablePoint, view } from './helpers.ts';
 
 test.describe('connecting by clicking', () => {
   test('two clicks on handles make a connection, and the first is marked', async ({ page }) => {
@@ -175,13 +175,18 @@ test.describe('the lock', () => {
     await dragFour();
     expect(await placed()).toBe(moved);
     // Nor can anything be selected: a click on an unselected node leaves it so.
-    await node(page, '1').click({ position: { x: 20, y: 6 } });
+    // Where a press reaches it: the framing can leave part of it under the demo's header.
+    const pressOne = async () => {
+      const at = await pressablePoint(node(page, '1'));
+      await page.mouse.click(at.x, at.y);
+    };
+    await pressOne();
     await expect(node(page, '1')).not.toHaveClass(/\bselected\b/);
 
     await lock.click();
     await dragFour();
     expect(await placed()).not.toBe(moved);
-    await node(page, '1').click({ position: { x: 20, y: 6 } });
+    await pressOne();
     await expect(node(page, '1')).toHaveClass(/\bselected\b/);
   });
 });
@@ -328,5 +333,54 @@ test.describe('editable edges', () => {
     await point.dblclick();
     await expect(point).toHaveCount(0);
     expect(await pathOf(page, 'e3-4')).toBe(straight);
+  });
+});
+
+test.describe('onlyRenderVisibleElements', () => {
+  const ids = (page: import('@playwright/test').Page) =>
+    page.locator('.react-flow__node').evaluateAll((els) => els.map((el) => el.getAttribute('data-id') ?? ''));
+
+  test('draws what is in view, brings in what a pan reaches, and a dragged node stays where it is put', async ({ page }) => {
+    await open(page);
+    await page.getByLabel('2,000 nodes, drawn only in view').check();
+    await expect.poll(async () => (await ids(page)).length).toBeGreaterThan(0);
+    // The demo frames the four it began with: zoom to a place where the grid is bigger than the pane.
+    await page.getByRole('button', { name: 'Zoom out' }).click();
+    await expect.poll(async () => (await ids(page)).length).toBeGreaterThan(20);
+    const first = await ids(page);
+    expect(first.length).toBeLessThan(2000);
+
+    // A drag of the empty canvas, a long way: what is in view is not what was. Empty is looked for each time —
+    // a fixed corner is where `Controls` sits, and after a pan a node may be there.
+    for (let i = 0; i < 3; i++) {
+      const empty = await emptyPoint(page);
+      await drag(page, empty, { x: empty.x - 220, y: empty.y - 220 }, 6);
+    }
+    await expect.poll(async () => (await ids(page)).filter((id) => !first.includes(id)).length).toBeGreaterThan(0);
+    const after = await ids(page);
+    expect(after.length).toBeLessThan(2000);
+
+    // A node taken with the pointer goes where it is taken — it is not dropped from the document on the way,
+    // and where it is put is where it is drawn.
+    // One that is under the pointer where its middle is: the demo's panel covers a corner of the canvas.
+    const pick = await page.evaluate(() => {
+      const found = [...document.querySelectorAll<HTMLElement>('.react-flow__node')].find((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return r.left > 20 && r.top > 120 && hit !== null && el.contains(hit);
+      });
+      return found?.getAttribute('data-id') ?? null;
+    });
+    expect(pick).not.toBeNull();
+    const one = node(page, pick as string);
+    const from = await centre(one);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 90, from.y + 40, { steps: 10 });
+    await expect(one).toBeVisible();
+    await page.mouse.up();
+    const to = await centre(one);
+    expect(Math.abs(to.x - (from.x + 90))).toBeLessThan(3);
+    expect(Math.abs(to.y - (from.y + 40))).toBeLessThan(3);
   });
 });
