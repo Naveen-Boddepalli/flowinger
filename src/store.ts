@@ -328,6 +328,8 @@ export function createFlowingerStore(
    * handle and every measurement, and a scan of ten thousand nodes each time was most of a mount.
    */
   let unmeasured = 0;
+  /** Sizes measured and not yet looked at by `flushDimensions`: a controlled flow is told of these, and only these. */
+  const unreportedSizes = new Set<string>();
   /** How many of the nodes and edges handed over say they are selected: what a controlled flow's selection is. */
   let controlledSelectedNodes = 0;
   let controlledSelectedEdges = 0;
@@ -715,10 +717,20 @@ export function createFlowingerStore(
   const flushDimensions = () => {
     if (!nodesControlled()) return;
     const changes: NodeChange[] = [];
-    for (const [id, size] of sizes) {
+    // Only sizes that have changed since they were last looked at — this runs after every change to the nodes,
+    // and a drag of one in ten thousand has nothing to say of the other nine thousand nine hundred and ninety-nine.
+    for (const id of unreportedSizes) {
+      const size = sizes.get(id);
+      if (!size) {
+        unreportedSizes.delete(id);
+        continue;
+      }
       const node = nodeById.get(id);
+      // Not a node yet: measured before it arrived, and heard of when it does.
+      if (!node) continue;
+      unreportedSizes.delete(id);
       const last = reported.get(id);
-      if (!node || (last?.width === size.width && last.height === size.height)) continue;
+      if (last?.width === size.width && last.height === size.height) continue;
       reported.set(id, size);
       if (node.measured?.width === size.width && node.measured.height === size.height) continue;
       changes.push({ type: 'dimensions', id, dimensions: { width: size.width, height: size.height } });
@@ -732,6 +744,7 @@ export function createFlowingerStore(
     const known = sizes.get(id);
     if (known?.width === width && known.height === height) return;
     sizes.set(id, { width, height });
+    unreportedSizes.add(id);
     if (!known) {
       const counted = nodeById.get(id);
       if (counted && counted.hidden !== true) unmeasured -= 1;
@@ -894,7 +907,92 @@ export function createFlowingerStore(
 
   // --- what the canvas hands over ------------------------------------------
 
+  /**
+   * The nodes that are not the ones they were, as `[was, now]` — when `next` is `nodes` with some replaced by
+   * copies: the same length, the same ids in the same places. Null when nodes came, went or changed places.
+   * A drag, a selection or an edit does this to a list of any size, a thousand times a second.
+   */
+  const replacedIn = (next: readonly Node[]): [Node, Node][] | null => {
+    if (next.length !== nodes.length) return null;
+    const out: [Node, Node][] = [];
+    for (let i = 0; i < next.length; i++) {
+      const was = nodes[i] as Node;
+      const now = next[i] as Node;
+      if (was === now) continue;
+      if (was.id !== now.id) return null;
+      out.push([was, now]);
+    }
+    return out;
+  };
+
+  const moved = (was: Node, now: Node): boolean =>
+    !samePoint(was.position, now.position) ||
+    was.width !== now.width ||
+    was.height !== now.height ||
+    was.hidden !== now.hidden;
+
+  /** Tells whatever draws `id`'s place — and so, its children's, which are relative to it. */
+  const notifyTree = (id: string) => {
+    for (const child of childrenOf.get(id) ?? []) {
+      emit(nodeListeners.get(child) ?? []);
+      notifyTree(child);
+    }
+  };
+
   const setNodes = (next: readonly Node[]) => {
+    const replaced = replacedIn(next);
+    if (replaced) {
+      // The list is the one it was, with some nodes replaced. Nothing is added, removed or reordered, so what
+      // was worked out from the list as a whole — who is whose child, what is measured — is still so, apart
+      // from what these nodes say differently. The same as below, without a pass over every node for each.
+      let relaid = false;
+      let rebuildChildren = false;
+      for (const [was, now] of replaced) {
+        if (moved(was, now)) relaid = true;
+        if (was.parentId !== now.parentId) rebuildChildren = true;
+      }
+      nodes = next;
+      for (const [, now] of replaced) nodeById.set(now.id, now);
+      if (rebuildChildren) {
+        childrenOf = new Map();
+        for (const n of next) {
+          if (n.parentId === undefined) continue;
+          const list = childrenOf.get(n.parentId);
+          if (list) list.push(n.id);
+          else childrenOf.set(n.parentId, [n.id]);
+        }
+      }
+      absCache.clear();
+      let pruned = false;
+      for (const [was, now] of replaced) {
+        if (was.hidden !== now.hidden && !sizes.has(now.id)) unmeasured += (now.hidden === true ? 0 : 1) - (was.hidden === true ? 0 : 1);
+        controlledSelectedNodes += (now.selected === true ? 1 : 0) - (was.selected === true ? 1 : 0);
+      }
+      for (const [id, dragged] of [...overrides]) {
+        const node = nodeById.get(id);
+        if (!node || !samePoint(node.position, dragged.base)) {
+          overrides.delete(id);
+          pruned = true;
+        }
+      }
+      // A controlled node's selection lives on the node: whoever it flipped for must redraw.
+      if (nodesControlled()) {
+        for (const [was, now] of replaced) {
+          if ((was.selected === true) !== (now.selected === true)) emit(nodeListeners.get(now.id) ?? []);
+        }
+      }
+      if (pruned || relaid) bumpGeometry();
+      else {
+        touch();
+        run('change');
+      }
+      // A child's place depends on its ancestors', which this may have moved.
+      if (relaid) for (const [was, now] of replaced) if (moved(was, now)) notifyTree(now.id);
+      announceIfChanged();
+      flushDimensions();
+      return;
+    }
+
     // Anything drawing from geometry (the edge layer, a minimap) must hear of a
     // new layout, not only of a measurement or a drag.
     const relaid = !sameLayout(nodes, next);

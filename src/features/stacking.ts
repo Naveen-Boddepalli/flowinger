@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { Feature } from '../features.ts';
+import { parentIds, sameStructure } from '../parents.ts';
 import type { FlowingerStore } from '../store.ts';
 import type { Edge, Node, ZIndexMode } from '../types.ts';
 
@@ -41,16 +42,33 @@ export const stackingFeature: Feature<StackingApi> = {
       controlled: false,
     };
 
-    /** The structure of the nodes, worked out from `config.nodes` once per list. */
+    /** The structure of the nodes, worked out from `config.nodes` — again only when its shape changes. */
     let tree: {
       nodes: readonly Node[];
       byId: Map<string, Node>;
       depth: Map<string, number>;
       /** In `'auto'`: each group that has children lifts its whole subtree, in order of appearance. */
       root: Map<string, number>;
+      /** The ids that have children: a list in which only others moved has the same shape. */
+      parents: ReadonlySet<string>;
     } | null = null;
     const treeOf = () => {
       if (tree?.nodes === config.nodes) return tree;
+      // A drag, a selection, an edit of `data`: the list is new and what it says of nesting is not. The map of
+      // nodes is kept in step, since it is what a node's own `selected` is read from.
+      if (tree) {
+        const known = tree;
+        if (sameStructure(known.nodes, config.nodes, known.parents, (n) => known.byId.set(n.id, n))) {
+          known.nodes = config.nodes;
+          return known;
+        }
+      }
+      const parents = parentIds(config.nodes);
+      // Nothing nested: every node is a root at depth 0, and there is nothing to walk.
+      if (parents.size === 0) {
+        tree = { nodes: config.nodes, byId: new Map(), depth: new Map(), root: new Map(), parents };
+        return tree;
+      }
       const byId = new Map(config.nodes.map((n) => [n.id, n] as const));
       const kids = new Map<string, string[]>();
       for (const n of config.nodes) {
@@ -75,7 +93,7 @@ export const stackingFeature: Feature<StackingApi> = {
         if (n.parentId !== undefined && byId.has(n.parentId)) continue;
         visit(n.id, 0, kids.has(n.id) ? ++index * ROOT_STEP : 0, seen);
       }
-      tree = { nodes: config.nodes, byId, depth, root };
+      tree = { nodes: config.nodes, byId, depth, root, parents };
       return tree;
     };
 

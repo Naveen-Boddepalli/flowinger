@@ -6,6 +6,7 @@ import {
   isRectIntersecting,
   viewportForBounds,
 } from '../geometry.ts';
+import type { Feature } from '../features.ts';
 import type { Edge, EdgeChange, Node, NodeChange } from '../types.ts';
 
 /** A store attached to detached elements, the pane sized and placed as given. */
@@ -431,5 +432,112 @@ describe('what is asked after every change, answered without a scan', () => {
     // A node that goes takes its selection with it.
     store.setNodes([node('a', 0, 0)]);
     expect(store.hasSelection()).toBe(false);
+  });
+});
+
+describe('a list given with a few nodes replaced', () => {
+  /**
+   * `setNodes` does less work for a list that is the last one with some nodes replaced — a drag, a selection —
+   * than for one that is new. This holds it to the same result: a store that is given a long run of such edits
+   * (and of the others, which take the long way) ends up as a store that is given the last list at once.
+   */
+  it('leaves the store as the whole list given at once would', () => {
+    let seed = 20261013;
+    const random = (n: number) => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed % n;
+    };
+    const probeOf = (store: ReturnType<typeof mounted>['store']) => {
+      let ctx: Parameters<NonNullable<Feature['install']>>[0] | null = null;
+      store.use([
+        {
+          name: 'probe',
+          install(c) {
+            ctx = c;
+            return {};
+          },
+        },
+      ]);
+      if (!ctx) throw new Error('not installed');
+      return ctx as Parameters<NonNullable<Feature['install']>>[0];
+    };
+    const observe = (store: ReturnType<typeof mounted>['store'], ctx: ReturnType<typeof probeOf>) => ({
+      initialized: store.areNodesInitialized(),
+      selected: store.getSelection().nodes.map((n) => n.id),
+      hasSelection: store.hasSelection(),
+      positions: Object.fromEntries(
+        store.getNodes().map((n) => [n.id, store.instance.getInternalNode(n.id)?.internals.positionAbsolute]),
+      ),
+      children: Object.fromEntries([...ctx.childrenOf].map(([k, v]) => [k, [...v].sort()])),
+      lookup: [...ctx.nodeById.keys()].sort(),
+    });
+
+    const live = mounted();
+    live.store.setCallbacks({ onNodesChange: () => {}, onEdgesChange: () => {} });
+    const liveCtx = probeOf(live.store);
+
+    let nodes: Node[] = Array.from({ length: 24 }, (_, i) => ({
+      ...node(`n${String(i)}`, (i % 6) * 120, Math.floor(i / 6) * 80),
+      ...(i % 5 === 4 ? { parentId: `n${String(i - 4)}` } : {}),
+    }));
+    const measured = new Set<string>();
+    let nextId = 100;
+
+    for (let step = 0; step < 400; step++) {
+      const at = random(nodes.length);
+      const target = nodes[at] as Node;
+      const op = random(16);
+      let next = nodes;
+      if (op <= 4) {
+        next = nodes.map((n, i) => (i === at ? { ...n, position: { x: random(900), y: random(500) } } : n));
+      } else if (op === 5 || op === 6) {
+        next = nodes.map((n, i) => (i === at ? { ...n, selected: n.selected !== true } : n));
+      } else if (op === 7) {
+        next = nodes.map((n, i) => (i === at ? { ...n, hidden: n.hidden !== true } : n));
+      } else if (op === 8) {
+        next = nodes.map((n, i) => (i === at ? { ...n, data: { step } } : n));
+      } else if (op === 9 && at > 0) {
+        // Reparent to an earlier node (so no loops), or to nothing.
+        const { parentId: _gone, ...rest } = target;
+        next = nodes.map((n, i) =>
+          i === at ? (random(2) === 0 ? rest : { ...rest, parentId: (nodes[random(at)] as Node).id }) : n,
+        );
+      } else if (op === 10) {
+        next = [...nodes, node(`n${String(nextId++)}`, random(900), random(500))];
+      } else if (op === 11 && nodes.length > 8) {
+        next = nodes.filter((_, i) => i !== at);
+        const kept = new Set(next.map((n) => n.id));
+        for (const id of [...measured]) if (!kept.has(id)) measured.delete(id);
+      } else if (op === 12 && nodes.length > 2) {
+        next = [...nodes];
+        const other = random(nodes.length);
+        [next[at], next[other]] = [next[other] as Node, next[at] as Node];
+      } else if (op === 13) {
+        const id = target.id;
+        live.store.setSize(id, 50 + random(60), 30 + random(30));
+        measured.add(id);
+      } else if (op >= 14) {
+        // Let go of everything: what a click on the empty pane does — several nodes replaced at once.
+        next = nodes.map((n) => (n.selected === true ? { ...n, selected: false } : n));
+      }
+      nodes = next;
+      live.store.setNodes(nodes);
+      // Ids that have gone have lost their size, as they would on any store.
+      for (const id of [...measured]) if (!nodes.some((n) => n.id === id)) measured.delete(id);
+
+      {
+        const fresh = mounted();
+        fresh.store.setCallbacks({ onNodesChange: () => {}, onEdgesChange: () => {} });
+        const freshCtx = probeOf(fresh.store);
+        fresh.store.setNodes(nodes);
+        // The sizes `live` holds, as the same measurements.
+        for (const id of measured) {
+          const size = live.store.instance.getInternalNode(id)?.measured;
+          if (size?.width && size.height) fresh.store.setSize(id, size.width, size.height);
+        }
+        fresh.store.setNodes(nodes);
+        expect(observe(live.store, liveCtx), `after step ${String(step)}`).toEqual(observe(fresh.store, freshCtx));
+      }
+    }
   });
 });

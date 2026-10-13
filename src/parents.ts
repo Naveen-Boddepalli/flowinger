@@ -97,3 +97,78 @@ export function treeInfo(nodes: readonly Node[]): TreeInfo {
   for (const id of descendantsOf([...hidden], nodes)) hidden.add(id);
   return { origin, depth, hidden };
 }
+
+/** What there is to say of a list with nothing nested and nothing hidden: nothing. Shared, and not to be written to. */
+const FLAT: TreeInfo = { origin: new Map(), depth: new Map(), hidden: new Set() };
+const NO_IDS: ReadonlySet<string> = new Set();
+
+/** The ids that some node names as its parent. */
+export function parentIds(nodes: readonly Node[]): Set<string> {
+  const out = new Set<string>();
+  for (const n of nodes) if (n.parentId !== undefined) out.add(n.parentId);
+  return out;
+}
+
+/**
+ * Whether `next` is `last` with nodes replaced by copies that are nested, hidden and — where they are
+ * parents — placed as they were: what a drag, a selection or an edit of `data` does to a list. Then what was
+ * worked out from the shape of `last` — who is whose child, how deep, what is hidden — holds for `next`.
+ * A pointer comparison of the list, not a rebuild of it.
+ *
+ * `moved` is told of each node that is not the one it was, so a map of them can be kept in step.
+ */
+export function sameStructure(
+  last: readonly Node[],
+  next: readonly Node[],
+  parents: ReadonlySet<string>,
+  moved?: (node: Node) => void,
+): boolean {
+  if (last.length !== next.length) return false;
+  for (let i = 0; i < next.length; i++) {
+    const a = last[i] as Node;
+    const b = next[i] as Node;
+    if (a === b) continue;
+    if (a.id !== b.id || a.parentId !== b.parentId || a.hidden !== b.hidden) return false;
+    if (
+      a.position !== b.position &&
+      (a.position.x !== b.position.x || a.position.y !== b.position.y) &&
+      parents.has(a.id)
+    ) {
+      return false;
+    }
+    moved?.(b);
+  }
+  return true;
+}
+
+/**
+ * `treeInfo`, for a canvas that is given a new list at every drag move: a list with nothing nested or hidden
+ * has nothing to work out, and one that only moved or changed its `data` has the answer it had. The rest is
+ * `treeInfo`, again.
+ */
+export function createTreeInfo(): (nodes: readonly Node[]) => TreeInfo {
+  let last: readonly Node[] | null = null;
+  let info: TreeInfo = FLAT;
+  let parents: ReadonlySet<string> = NO_IDS;
+  return (nodes) => {
+    if (nodes === last) return info;
+    const same = last !== null && sameStructure(last, nodes, parents);
+    last = nodes;
+    if (same) return info;
+    let flat = true;
+    for (const n of nodes) {
+      if (n.parentId !== undefined || n.hidden === true) {
+        flat = false;
+        break;
+      }
+    }
+    if (flat) {
+      info = FLAT;
+      parents = NO_IDS;
+    } else {
+      info = treeInfo(nodes);
+      parents = parentIds(nodes);
+    }
+    return info;
+  };
+}
