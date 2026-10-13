@@ -1,7 +1,7 @@
 {
   "name": "flowinger",
   "version": "0.6.0",
-  "description": "Bespoke, lightweight, and dependency-free React node graph renderer",
+  "description": "A small, dependency-free React Flow alternative: a node-graph and flowchart renderer for React with React Flow's API, ~19 kB gzipped core, SSR, and free undo/redo, export and smart edges",
   "keywords": [
     "react",
     "node-graph",
@@ -15,6 +15,13 @@
     "svg",
     "react-flow",
     "react-flow-alternative",
+    "xyflow",
+    "node-based-ui",
+    "workflow-editor",
+    "workflow-builder",
+    "dag",
+    "canvas",
+    "zero-dependency",
     "typescript",
     "ssr"
   ],
