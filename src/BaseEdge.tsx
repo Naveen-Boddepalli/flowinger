@@ -16,11 +16,12 @@ const labelTextStyle: CSSProperties = {
 };
 
 // A halo in the surface colour keeps the text readable where it crosses the
-// line, without measuring the text to size a background box.
+// line, without measuring the text to size a background box. 6, not 4: at 4 the
+// line still showed in the gap between two stems ("TT" in "HTTPS" at 12px).
 const labelHaloStyle: CSSProperties = {
   ...labelTextStyle,
   stroke: 'var(--flowinger-surface, #1e293b)',
-  strokeWidth: 4,
+  strokeWidth: 6,
   strokeLinejoin: 'round',
   paintOrder: 'stroke',
 };

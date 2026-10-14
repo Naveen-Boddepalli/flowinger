@@ -324,7 +324,7 @@ describe('an edge\'s label', () => {
     expect(text.style.fill).toBe('red');
     expect(text.style.fontSize).toBe('20px');
     // What labelStyle leaves alone keeps its default — the halo that keeps it readable.
-    expect(text.style.strokeWidth).toBe('4');
+    expect(text.style.strokeWidth).toBe('6');
     expect(container.querySelector('.react-flow__edge-textbg')).toBeNull();
   });
 
@@ -383,7 +383,7 @@ describe('an edge\'s label', () => {
     withBBox(() => box);
     const { container } = withEdge({ label: 'hi', labelShowBg: true });
     expect(container.querySelector('.react-flow__edge-textbg')).toBeNull();
-    expect(must<SVGTextElement>(container, '.react-flow__edge-text').style.strokeWidth).toBe('4');
+    expect(must<SVGTextElement>(container, '.react-flow__edge-text').style.strokeWidth).toBe('6');
   });
 
   it('is measured again when the label changes', () => {

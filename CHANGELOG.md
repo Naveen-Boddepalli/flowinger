@@ -11,6 +11,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Changed
 
+- **An edge label's halo is 6 px wide (was 4),** so the line no longer shows between two close stems — the
+  "TT" in "HTTPS" at the default 12 px. Labels drawn with `labelShowBg` are unchanged.
 - **A drag, a measurement or a selection now costs what changed, not the size of the graph.** A drag hands the
   canvas a list that is the last one with one node replaced, and everything that was worked out from the whole
   list — the store's maps and counts, the canvas's and the stacking feature's nesting, the dimension reports,
