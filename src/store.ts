@@ -1391,6 +1391,16 @@ export function createFlowingerStore(
     setViewportControlled: (controlled: boolean) => {
       viewportControlled = controlled;
     },
+    /**
+     * Where a canvas inside a caller's provider starts (`defaultViewport`), taken while it first renders — so
+     * a server render, which runs no effects, draws it, and a hydrating client draws the same. Only while
+     * nothing has moved the view and no canvas is mounted: after that, it is the effect's `setViewport`.
+     */
+    startAt: (at: Viewport) => {
+      if (mounted || viewport !== initialViewport || target !== initialViewport) return;
+      viewport = at;
+      target = at;
+    },
     syncViewport,
     setBounds: (min: number, max: number, nextExtent: TranslateExtent | null = null) => {
       minZoom = min;

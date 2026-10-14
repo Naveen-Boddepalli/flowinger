@@ -4,7 +4,7 @@
 // defines `document` at module load and would hide exactly what is being tested.
 import { describe, expect, it, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { tree } from './ssrFixture.tsx';
+import { framedByCanvas, heldByCanvas, tree } from './ssrFixture.tsx';
 
 describe('Flowinger server rendering', () => {
   it('has no document, as a server has none', () => {
@@ -28,6 +28,11 @@ describe('Flowinger server rendering', () => {
   it('writes the initial viewport into the markup, so the first paint is already framed', () => {
     const html = renderToString(tree);
     expect(html).toContain('translate(5px, 6px) scale(2)');
+  });
+
+  it('frames the markup where a canvas inside a provider says: `defaultViewport`, or a controlled `viewport`', () => {
+    expect(renderToString(framedByCanvas)).toContain('translate(30px, 40px) scale(1.5)');
+    expect(renderToString(heldByCanvas)).toContain('translate(-7px, 8px) scale(0.5)');
   });
 
   it('draws edges from declared sizes, before anything can be measured', () => {

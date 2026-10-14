@@ -192,6 +192,13 @@ function InnerCanvas(props: FlowingerProps) {
     disableKeyboardA11y,
   } = props;
   const store = useFlowingerStore();
+  // Inside a caller's provider, the view starts where this canvas says on its first render, not in an effect:
+  // a server runs none, and its HTML would be framed at the origin. (Once — a lazy initial state.)
+  useState(() => {
+    const at = controlledViewport ?? defaultViewport;
+    if (at) store.startAt(at);
+    return null;
+  });
   // The Controls' lock, where there is one, is over what these say: all on, or all off.
   const locked = useSyncExternalStore(store.subscribeInteractive, store.getInteractive, () => null);
   const nodesDraggable = locked ?? nodesDraggableProp;

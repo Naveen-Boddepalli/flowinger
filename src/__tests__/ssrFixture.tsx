@@ -92,3 +92,18 @@ export const tree = (
     <MiniMap />
   </FlowingerProvider>
 );
+
+/**
+ * The view given by the canvas, not the provider — as a page does that lays the graph out on the server and
+ * frames it there (`examples/nextjs`): `defaultViewport`, and a controlled `viewport`.
+ */
+export const framedByCanvas = (
+  <FlowingerProvider>
+    <FlowingerCanvas nodes={nodes} edges={[]} nodeTypes={{ port: PortNode }} defaultViewport={{ x: 30, y: 40, zoom: 1.5 }} />
+  </FlowingerProvider>
+);
+export const heldByCanvas = (
+  <FlowingerProvider>
+    <FlowingerCanvas nodes={nodes} edges={[]} nodeTypes={{ port: PortNode }} viewport={{ x: -7, y: 8, zoom: 0.5 }} />
+  </FlowingerProvider>
+);
