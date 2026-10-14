@@ -1,0 +1,5 @@
+# pnpm 10 and later do not run a dependency's install script until it is allowed, and report the skipped
+# one as an error. esbuild's (Vite's bundler) only checks and optimises its binary, so it is allowed here;
+# npm and Yarn need nothing.
+allowBuilds:
+  esbuild: true

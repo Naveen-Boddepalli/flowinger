@@ -22,6 +22,9 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **An example that exports the diagram as an image** ([`examples/export`](examples/export)): PNG, JPEG, WebP
+  or SVG at 1–3×, with the page's background, none or white, as the whole diagram or fitted to a 1200 × 630
+  card; previewed, downloaded or copied to the clipboard, with `filter` leaving out a badge and the handles.
 - **An example that saves and loads a graph as JSON** ([`examples/save-load`](examples/save-load)): `toObject()`
   kept in the browser across a reload, downloaded and opened as a file, or edited as text, with a check that
   says what is wrong with a file instead of handing the canvas something it cannot draw.

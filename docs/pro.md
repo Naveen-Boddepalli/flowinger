@@ -111,7 +111,9 @@ and `filter(element)` leaves elements out.
 It is the page's own DOM drawn into an SVG `<foreignObject>`, which an image can render but not fetch for: an
 `<img>` or web font that is not a `data:` URL will not be in the export. `downloadFile` takes a URL, so turn an
 SVG string into one first (`URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))`, as the editor
-example does).
+example does). The [export example](../examples/export) puts every option side by side — format, resolution,
+background, a social-card size, `filter` — and copies a PNG to the clipboard
+(`navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])`).
 
 ## Smart edges — `flowinger/smart-edges`
 

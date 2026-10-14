@@ -1,0 +1,219 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --flowinger-surface: #ffffff;
+  --flowinger-surface-raised: #f1f5f9;
+  --flowinger-border: #cbd5e1;
+  --flowinger-text: #0f172a;
+  --flowinger-text-dim: #64748b;
+  --flowinger-edge: #64748b;
+  --flowinger-selected: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --flowinger-surface: #1e293b;
+    --flowinger-surface-raised: #334155;
+    --flowinger-border: #475569;
+    --flowinger-text: #f1f5f9;
+    --flowinger-text-dim: #94a3b8;
+    --flowinger-edge: #94a3b8;
+    --flowinger-selected: #38bdf8;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+}
+
+.layout {
+  display: flex;
+  height: 100%;
+}
+
+.canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--page);
+}
+
+:root {
+  --page: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0b1120;
+  }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(340px, 42%);
+  padding: 14px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  border-left: 1px solid var(--flowinger-border);
+  font-size: 13px;
+}
+
+.side h1 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--flowinger-text-dim);
+}
+
+fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 6px 10px 8px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+}
+
+fieldset:disabled {
+  opacity: 0.5;
+}
+
+legend {
+  padding: 0 4px;
+  color: var(--flowinger-text-dim);
+}
+
+fieldset label,
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row input[type='range'] {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  padding: 5px 12px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.actions .primary {
+  border-color: var(--flowinger-selected);
+  background: var(--flowinger-selected);
+  color: #fff;
+}
+
+.status {
+  margin: 0;
+}
+
+/* A checkerboard behind the preview, so a transparent export shows as one. */
+.preview {
+  padding: 8px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+  background: repeating-conic-gradient(#8882 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+}
+
+.preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 700px) {
+  .layout {
+    flex-direction: column;
+  }
+  .side {
+    width: auto;
+    height: 50%;
+    border-left: 0;
+    border-top: 1px solid var(--flowinger-border);
+  }
+}
+
+/* The nodes: styled by class, with a colour per kind. */
+.service {
+  position: relative;
+  width: 150px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--flowinger-border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--flowinger-surface);
+  color: var(--flowinger-text);
+}
+
+.service-client {
+  --accent: #8b5cf6;
+}
+
+.service-edge {
+  --accent: #0ea5e9;
+}
+
+.service-service {
+  --accent: #22c55e;
+}
+
+.service-store {
+  --accent: #f59e0b;
+}
+
+.service-kind {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.service-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.badge {
+  position: absolute;
+  top: -9px;
+  right: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+}
