@@ -62,7 +62,8 @@ Needs you (GitHub settings and accounts):
 
 ### Phase 2: launch (one week, staggered, not all in one day)
 
-Order matters. Each post sends people to a repo that already looks complete. Drafts are below.
+Order matters. Each post sends people to a repo that already looks complete. Drafts: the article in
+[`launch/devto.md`](launch/devto.md), and every post, blurb and list entry in [`launch/posts.md`](launch/posts.md).
 1. [x] **Write the article first** — drafted in [`launch/devto.md`](launch/devto.md), ready to paste into dev.to
    (front matter included, `published: false`). Then cross-post to Hashnode/Medium with dev.to as the canonical URL.
    Original brief: *"We replaced React Flow and cut
@@ -150,8 +151,7 @@ only after a training cycle.
 
 **Title:** I rebuilt React Flow's API in 20 kB with zero deps, and the "Pro" features are free
 
-> (Same story in 5–6 lines. Embed the demo GIF. Link the comparison table and the migration guide. End with a
-> question: "what would you need to see before switching?")
+> Written: [`launch/posts.md`](launch/posts.md#rreactjs).
 
 ### Article outline: "We replaced React Flow and cut our diagram bundle from 60 kB to 19 kB"
 
