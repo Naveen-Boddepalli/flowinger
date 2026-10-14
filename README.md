@@ -65,16 +65,17 @@
 | Runtime dependencies | **0** | 3 direct (`@xyflow/system`, `zustand`, `classcat`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
 | Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)) | **19.0 kB** gzipped | 60.5 kB gzipped |
-| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.3 s |
-| Pan / zoom 10,000 nodes, no culling | **8.8 / 10.7 ms** a frame | 33.9 / 34.8 ms a frame |
-| Pan / zoom 10,000 nodes, culled | **3.2 / 2.3 ms** a frame | 4.2 / 4.5 ms a frame |
-| Drag at 10,000 nodes, culled | **4.0 ms** a move | 4.9 ms a move |
+| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.2 s |
+| Mount 10,000 nodes, culled | **55 ms** | 594 ms |
+| Pan / zoom 10,000 nodes, no culling | **8.5 / 10.7 ms** a frame | 32.6 / 33.0 ms a frame |
+| Pan / zoom 10,000 nodes, culled | **3.6 / 2.5 ms** a frame | 4.2 / 4.7 ms a frame |
+| Drag at 10,000 nodes, culled | **4.0 ms** a move | 4.8 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
 | API | React Flow's names: 211 of 211 exports, 119 of 119 props | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
 The culled pan is level within the noise (React Flow's read 2.6–4.2 ms across runs); the zoom is about half
-React Flow's cost in every run. Where React Flow is still ahead is the last row: its ecosystem.
+React Flow's cost, and a culled mount a tenth, because Flowinger's first render is culled too. Where React Flow is still ahead is the last row: its ecosystem.
 
 ## Install
 

@@ -6,7 +6,7 @@ article ([`devto.md`](devto.md)) first, then these over a week. Replace `<articl
 
 Numbers used below, so they stay the same everywhere: diagram chunk 60.5 → 19.0 kB (QueryLens); core ~19.7 kB,
 whole canvas ~35.5 kB gzipped; 0 dependencies; 211/211 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
-1.3 s, unculled pan 8.8 vs 33.9 ms a frame, culled zoom 2.3 vs 4.5 ms (culled pan level within noise).
+1.2 s (culled: 55 ms vs 594), unculled pan 8.5 vs 32.6 ms a frame, culled zoom 2.5 vs 4.7 ms (culled pan level within noise).
 
 ---
 
@@ -52,8 +52,8 @@ connect two, undo, export a PNG.
 > 3/ Undo/redo, copy-paste, snap lines, PNG/SVG export and edges that route around nodes are free, as separate
 > imports: `flowinger/history`, `flowinger/export`, `flowinger/smart-edges`…
 
-> 4/ Benchmarked against React Flow at 10k nodes: mounts in 0.6 s vs 1.3 s; pans unculled at 8.8 vs 34 ms a
-> frame. With culling the pan is a tie and the zoom is half the cost. Reproducible: `pnpm bench`.
+> 4/ Benchmarked against React Flow at 10k nodes: with culling it mounts in 55 ms vs 594, because its first
+> render is culled too; unculled it pans at 8.5 vs 33 ms a frame. The culled pan is a tie. Reproducible: `pnpm bench`.
 
 > 5/ It's 0.x and new; React Flow's ecosystem is much bigger, and the docs say when to stay on it. Write-up with
 > the trade-offs: <article>

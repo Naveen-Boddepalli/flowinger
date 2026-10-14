@@ -85,15 +85,17 @@ Performance, at 10,000 nodes, Chrome on an Apple M4, median of 5 runs ([full tab
 
 | | Flowinger | React Flow 12 |
 |---|---|---|
-| Mount, no culling | **0.6 s** | 1.3 s |
-| Pan / zoom, no culling | **8.8 / 10.7 ms** a frame | 33.9 / 34.8 ms |
-| Pan / zoom, culled | **3.2 / 2.3 ms** a frame | 4.2 / 4.5 ms |
-| Drag, culled | **4.0 ms** a move | 4.9 ms |
+| Mount, no culling | **0.6 s** | 1.2 s |
+| Mount, culled | **55 ms** | 594 ms |
+| Pan / zoom, no culling | **8.5 / 10.7 ms** a frame | 32.6 / 33.0 ms |
+| Pan / zoom, culled | **3.6 / 2.5 ms** a frame | 4.2 / 4.7 ms |
+| Drag, culled | **4.0 ms** a move | 4.8 ms |
 | JS heap, no culling | **169 MB** | 254 MB |
 
 Two honest notes on that table. First, the culled pan is a tie, not a win: across three runs on the same day
-React Flow's read between 2.6 and 4.2 ms, and Flowinger's 3.1 and 3.2. The culled zoom is about half React
-Flow's cost in every run. Second, until this release React Flow was ahead on culled pan and zoom — the benchmark
+React Flow's read between 2.6 and 4.2 ms, and Flowinger's 3.1 to 3.6. The culled zoom is about half React
+Flow's cost in every run, and a culled mount about a tenth: both libraries draw only what is in view in the end,
+but React Flow's first render draws every node first. Second, until this release React Flow was ahead on culled pan and zoom — the benchmark
 found why (Flowinger re-checked every node on every frame of a pan), and 0.7.0 fixed it: while the view stays
 inside the region last worked out, a frame costs nothing. That is the kind of thing a published benchmark is
 for.
