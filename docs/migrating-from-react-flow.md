@@ -118,7 +118,7 @@ saying what you were building.
   `getState` and `subscribe` but no `setState`.
 - **`useReactFlow()` returns one object for the life of the provider.** An effect with it in its
   dependencies runs once. (In React Flow it is rebuilt when the viewport initialises.) `viewportInitialized`
-  is therefore not on it.
+  is on it as a getter, so read it when you need it rather than depending on it.
 - **The instance's editing calls report changes.** `setNodes`, `updateNodeData` and friends are applied by
   your `onNodesChange` (or by `defaultNodes`); on nodes you merely pass in they do nothing. With
   `FlowingerCore` they need `editingFeature`.

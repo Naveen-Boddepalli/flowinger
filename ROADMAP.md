@@ -69,7 +69,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
    because gzip had already folded most of the copies — and the faster culling pass took about that back (35.5 kB). Measured, the core is the store (37%), the canvas (19%) and
    the edges (13%), with no development text left in a production build. What remains is the React Flow
    instance API itself; moving its rarely used methods behind features would save more, and break code that
-   calls them — so not before a `1.0` that can say so.
+   calls them — so not before a `1.0` that can say so. [The 1.0 plan](PLAN-1.0.md) says what that release
+   promises, breaks and has to be seen doing first.
 4. **The culled gap is closed.** With `onlyRenderVisibleElements` on, a pan or zoom that stays inside the
    region last worked out costs nothing, and at 10,000 nodes a pan is 3.2 ms a frame (was 4.4; React Flow
    2.6–4.2 across runs) and a zoom 2.3 (was 5.0; React Flow 4.3–4.5) — [benchmarks](docs/benchmarks.md).
