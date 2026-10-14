@@ -92,7 +92,7 @@ Order matters. Each post sends people to a repo that already looks complete. Dra
 - **Get a second user.** QueryLens is the only public consumer. Open-source workflow tools that ship React
   Flow (n8n-like builders, LangGraph/agent UIs, data-lineage viewers) are the targets. Offer a PR that does the
   migration and measures the bundle win. A "used by" row with real names is the strongest trust signal.
-- **A docs site** with search, once the questions start. Each doc page becomes a search landing page.
+- [x] **A docs site** with search ([`site/`](site), generated from `docs/`). Each doc page is a search landing page.
 - **Release rhythm.** Keep up a steady minor-release cadence, and make each changelog entry worth a short post.
 
 ### What to measure
@@ -138,7 +138,7 @@ only after a training cycle.
 >   about 2× faster and pans about 3× cheaper. With culling on, React Flow is still faster at pan and zoom (Flowinger is faster at drag), and the README says so.
 > - React Flow is the test oracle: geometry and behaviour are checked against it in over 1,000 tests.
 >
-> Demo: https://naveen-boddepalli.github.io/flowinger/ · Code: https://github.com/Naveen-Boddepalli/flowinger
+> Site: https://naveen-boddepalli.github.io/flowinger/ · Demo: https://naveen-boddepalli.github.io/flowinger/demo/ · Code: https://github.com/Naveen-Boddepalli/flowinger
 >
 > It is 0.x and has one maintainer. If you have an app on React Flow, I'd love to hear what blocks a switch.
 

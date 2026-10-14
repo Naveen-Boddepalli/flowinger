@@ -10,6 +10,14 @@ Four small apps, each a complete React + TypeScript project you can copy out of 
 | [`nextjs`](nextjs) | **Server rendering in Next.js** (App Router). A Server Component builds a pipeline, lays it out and works out the viewport with flowinger's own `viewportForBounds`, so the HTML arrives framed and nothing moves on load. Then the same graph as a viewer and as an editor with undo. The parts to read: [`app/pipeline.ts`](nextjs/app/pipeline.ts) (server-only) and [`app/Viewer.tsx`](nextjs/app/Viewer.tsx) (why it is a client component). |
 | [`tree`](tree) | An **org chart with collapsible branches**, on `FlowingerCore` and `flowinger/tree`. Each node has a button that folds everything under it; the tree closes up around what is hidden. The parts to read: [`useCollapsibleTree`](tree/src/App.tsx) called once and handed to the nodes by context, and [`layoutShown`](tree/src/layout.ts), which runs the layout again over only what is shown. |
 
+<table>
+  <tr>
+    <td width="33%"><a href="layouts"><img src="../docs/assets/layouts.png" alt="The layouts example: a query plan laid out left to right by ELK" /></a><br /><b>layouts</b></td>
+    <td width="33%"><a href="editor"><img src="../docs/assets/editor.png" alt="The editor example: four task nodes with connections, a minimap and an add-task button" /></a><br /><b>editor</b></td>
+    <td width="33%"><a href="tree"><img src="../docs/assets/tree.png" alt="The tree example: an organisation as a left-to-right tree, each branch with a button that folds it" /></a><br /><b>tree</b></td>
+  </tr>
+</table>
+
 Open one without installing anything, once the repository is public:
 [`layouts`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/layouts) ·
 [`editor`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/editor) ·

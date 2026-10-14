@@ -35,6 +35,16 @@ pnpm install
 pnpm dev           # the demo at http://localhost:5173 (index.html + demo/)
 ```
 
+The documentation site (`site/`, Astro Starlight) has its own dependencies. Its pages are generated from the
+repository's Markdown — `docs/`, `examples/README.md`, the changelog, roadmap, this file and `plan.md` — so edit
+those; of `site/src/content/docs/`, only `index.mdx` (the home page) is written by hand:
+
+```bash
+pnpm --dir site install
+pnpm --dir site dev    # the site at http://localhost:4321/flowinger/
+pnpm site:build        # what Pages serves: the site, with the demo under demo/ (site/dist)
+```
+
 ## The gate
 
 A change is ready when all of these pass; CI runs them on React 18 and 19.

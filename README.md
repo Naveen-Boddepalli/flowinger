@@ -19,8 +19,8 @@
 </p>
 
 <p align="center">
-  <a href="https://naveen-boddepalli.github.io/flowinger/"><strong>Live demo</strong></a> ·
-  <a href="docs/README.md">Documentation</a> ·
+  <a href="https://naveen-boddepalli.github.io/flowinger/"><strong>Website and docs</strong></a> ·
+  <a href="https://naveen-boddepalli.github.io/flowinger/demo/"><strong>Live demo</strong></a> ·
   <a href="examples">Examples</a> ·
   <a href="docs/migrating-from-react-flow.md">Migrating from React Flow</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·

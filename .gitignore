@@ -16,3 +16,8 @@ playwright-report
 /shapes
 /tree
 /pro
+site/dist
+site/.astro
+site/src/content/docs/*
+!site/src/content/docs/index.mdx
+site/public/assets
