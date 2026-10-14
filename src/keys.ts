@@ -10,7 +10,8 @@ export interface Modifiers {
   metaKey: boolean;
 }
 
-const MODIFIER = {
+/** Every name a modifier goes by in a key code, and the event flag that says it is held. */
+export const MODIFIER = {
   control: 'ctrlKey',
   ctrl: 'ctrlKey',
   shift: 'shiftKey',
@@ -25,7 +26,8 @@ const MODIFIER = {
 const down = new Set<string>();
 let watchers = 0;
 
-const parts = (code: string): string[] => (code === '+' ? ['+'] : code.split('+').filter((p) => p !== ''));
+/** A key code's parts: `'Meta+z'` → `['Meta', 'z']`; a lone `'+'` is the plus key. */
+export const parts = (code: string): string[] => (code === '+' ? ['+'] : code.split('+').filter((p) => p !== ''));
 const lower = (part: string) => part.toLowerCase();
 
 /**

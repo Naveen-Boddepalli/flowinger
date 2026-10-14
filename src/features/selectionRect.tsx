@@ -7,8 +7,9 @@ import {
 } from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
+import { boxAround } from '../geometry.ts';
 import { DRAG_THRESHOLD, capturePointer, releasePointer } from '../pointer.ts';
-import type { FlowingerProps, Rect, XYPosition } from '../types.ts';
+import type { FlowingerProps, XYPosition } from '../types.ts';
 import { useIsomorphicLayoutEffect } from '../useIsomorphicLayoutEffect.ts';
 import { ViewportPortal } from '../ViewportPortal.tsx';
 import { autoPanFeature } from './autoPan.ts';
@@ -77,21 +78,7 @@ const SelectionRect = /*#__PURE__*/ memo(function SelectionRect() {
 
   if (!armed || picked === '' || (settled.current !== null && settled.current !== picked)) return null;
 
-  let box: Rect | null = null;
-  for (const id of picked.split('|')) {
-    const r = store.getAbsoluteRect(id);
-    if (!r) continue;
-    if (!box) {
-      box = { ...r };
-      continue;
-    }
-    const right = Math.max(box.x + box.width, r.x + r.width);
-    const bottom = Math.max(box.y + box.height, r.y + r.height);
-    box.x = Math.min(box.x, r.x);
-    box.y = Math.min(box.y, r.y);
-    box.width = right - box.x;
-    box.height = bottom - box.y;
-  }
+  const box = boxAround(picked.split('|').map((id) => store.getAbsoluteRect(id)));
   if (!box) return null;
 
   const moveTo = (p: Press, e: ReactPointerEvent<HTMLDivElement>) => {

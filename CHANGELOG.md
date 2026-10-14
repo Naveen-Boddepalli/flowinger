@@ -19,7 +19,7 @@ The design notes behind each release — what was measured, what was tried and d
   and the culling pass — now starts from the answer it had and looks at what was replaced. With
   `onlyRenderVisibleElements` on, at 10,000 nodes a drag costs 4.3 ms a move (7.7 before; React Flow 4.5), and
   a mount 0.5 s. See [the benchmarks](docs/benchmarks.md).
-- **Size.** The core is 19.6 kB gzipped (was 18.9) and the whole canvas 35.4 (was 33.9); the culling feature
+- **Size.** The core is 19.7 kB gzipped (was 18.9) and the whole canvas 35.3 (was 33.9); the culling feature
   1.2 kB (was 0.5). The budgets are 20 and 36 kB (were 19 and 34).
 
 ### Added

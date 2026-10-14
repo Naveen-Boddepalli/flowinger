@@ -61,9 +61,12 @@ that compiles and does nothing apart, and there are none). What is left is bread
 2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (0.6.0). Still to
    write as `examples/`: grouping and swimlanes, multiplayer presence (Yjs), a workflow-simulation stepper.
 3. **Size.** The core grew from 17.6 to 19.6 kB and the whole canvas from 27.3 to 35.4 — the 39 props, then
-   making a drag cost what changed rather than the size of the graph. The features are separable, but a
-   `FlowingerCanvas` pays for all of them. A pass that measures each feature and removes duplication (three
-   places build "is this key held", several build "the box round some nodes") is worth a day.
+   making a drag cost what changed rather than the size of the graph. The duplication pass is done (one parser
+   for key codes, one box round some rectangles): 35.3 kB for the whole canvas, the core unchanged, because
+   gzip had already folded most of the copies. Measured, the core is the store (37%), the canvas (19%) and
+   the edges (13%), with no development text left in a production build. What remains is the React Flow
+   instance API itself; moving its rarely used methods behind features would save more, and break code that
+   calls them — so not before a `1.0` that can say so.
 4. **Close the culled gap — what is left.** With `onlyRenderVisibleElements` on, a drag and a mount are now
    level with React Flow's; a pan and a zoom are not (1.1–1.6×, up to 1.8 ms a frame at 10,000 nodes —
    [benchmarks](docs/benchmarks.md)). Flowinger draws a quarter-view margin (40% more nodes), and when the

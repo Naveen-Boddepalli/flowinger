@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { useFlowingerStore, useNodeId } from './context.ts';
-import { Position, type Rect } from './types.ts';
+import { boxAround } from './geometry.ts';
+import { Position } from './types.ts';
 import { ViewportPortal } from './ViewportPortal.tsx';
 import type { PassThroughHtml } from './attributes.ts';
 
@@ -57,25 +58,6 @@ function placement(position: Position, align: 'center' | 'start' | 'end', offset
 
 const noSubscription = () => () => {};
 
-/** The box round some nodes, in graph units; null when none of them is there. */
-function boxOf(rects: (Rect | null)[]): Rect | null {
-  let box: Rect | null = null;
-  for (const r of rects) {
-    if (!r) continue;
-    if (!box) {
-      box = { ...r };
-      continue;
-    }
-    const right = Math.max(box.x + box.width, r.x + r.width);
-    const bottom = Math.max(box.y + box.height, r.y + r.height);
-    box.x = Math.min(box.x, r.x);
-    box.y = Math.min(box.y, r.y);
-    box.width = right - box.x;
-    box.height = bottom - box.y;
-  }
-  return box;
-}
-
 /**
  * A toolbar attached to a node — buttons for what can be done to it. Drawn inside the node it is rendered in,
  * it rides on it (absolutely positioned within it), so it follows drags and zoom for free and never changes
@@ -124,7 +106,7 @@ export function NodeToolbar({
   );
   if (!foreign) return bar;
 
-  const box = boxOf(ids.map((id) => store.getAbsoluteRect(id)));
+  const box = boxAround(ids.map((id) => store.getAbsoluteRect(id)));
   if (!box) return null;
   return (
     <ViewportPortal>

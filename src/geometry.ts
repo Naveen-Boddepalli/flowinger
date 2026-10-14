@@ -38,6 +38,25 @@ export function getNodesBounds(nodes: readonly Node[], options?: { nodeOrigin?: 
 }
 
 
+/** The smallest rectangle holding every rectangle given — a missing one is skipped; null when none is there. */
+export function boxAround(rects: Iterable<Rect | null>): Rect | null {
+  let box: Rect | null = null;
+  for (const r of rects) {
+    if (!r) continue;
+    if (!box) {
+      box = { ...r };
+      continue;
+    }
+    const right = Math.max(box.x + box.width, r.x + r.width);
+    const bottom = Math.max(box.y + box.height, r.y + r.height);
+    box.x = Math.min(box.x, r.x);
+    box.y = Math.min(box.y, r.y);
+    box.width = right - box.x;
+    box.height = bottom - box.y;
+  }
+  return box;
+}
+
 export function overlappingArea(a: Rect, b: Rect): number {
   const x = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
   const y = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));

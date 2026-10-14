@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MODIFIER, parts as partsOf, type Modifiers } from './keys.ts';
 import { isEditable } from './pointer.ts';
 
 export interface UseKeyPressOptions {
@@ -8,33 +9,23 @@ export interface UseKeyPressOptions {
   actInsideInputWithModifier?: boolean;
 }
 
-interface Combo {
-  ctrl: boolean;
-  shift: boolean;
-  alt: boolean;
-  meta: boolean;
+/** The modifiers a combination needs (as the event flags that say they are held), and the key that completes it. */
+interface Combo extends Modifiers {
   key: string;
 }
 
-const ALIASES: Record<string, keyof Omit<Combo, 'key'>> = {
-  control: 'ctrl',
-  ctrl: 'ctrl',
-  shift: 'shift',
-  alt: 'alt',
-  option: 'alt',
-  meta: 'meta',
-  cmd: 'meta',
-  command: 'meta',
-};
+type Flag = keyof Modifiers;
+const FLAGS: Flag[] = ['ctrlKey', 'shiftKey', 'altKey', 'metaKey'];
+const flagOf = (name: string): Flag | undefined => MODIFIER[name as keyof typeof MODIFIER];
 
 /** `'Meta+s'` → the modifiers it needs and the key that completes it. A lone `'+'` is the plus key. */
 function parse(code: string): Combo {
-  const combo: Combo = { ctrl: false, shift: false, alt: false, meta: false, key: '' };
-  const parts = code === '+' ? ['+'] : code.split('+').filter((p) => p !== '');
+  const combo: Combo = { ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, key: '' };
+  const parts = partsOf(code);
   const last = parts.pop() ?? '';
   for (const part of parts) {
-    const modifier = ALIASES[part.toLowerCase()];
-    if (modifier) combo[modifier] = true;
+    const flag = flagOf(part.toLowerCase());
+    if (flag) combo[flag] = true;
   }
   combo.key = last.toLowerCase();
   return combo;
@@ -45,13 +36,8 @@ const matches = (e: KeyboardEvent, c: Combo): boolean => {
   if (c.key === '') return false;
   if (e.key.toLowerCase() !== c.key && e.code.toLowerCase() !== c.key) return false;
   // Exactly the modifiers asked for — `s` is not `Meta+s` — bar the one a modifier key is itself.
-  const own = ALIASES[c.key];
-  return (
-    (c.ctrl || own === 'ctrl') === e.ctrlKey &&
-    (c.shift || own === 'shift') === e.shiftKey &&
-    (c.alt || own === 'alt') === e.altKey &&
-    (c.meta || own === 'meta') === e.metaKey
-  );
+  const own = flagOf(c.key);
+  return FLAGS.every((flag) => (c[flag] || own === flag) === e[flag]);
 };
 
 /**
@@ -85,15 +71,10 @@ export function useKeyPress(
       const key = e.key.toLowerCase();
       const code = e.code.toLowerCase();
       // Released: the key that completes a combination, or one of the modifiers it needed.
-      const released = combos.some(
-        (c) =>
-          key === c.key ||
-          code === c.key ||
-          (c.ctrl && key === 'control') ||
-          (c.shift && key === 'shift') ||
-          (c.alt && key === 'alt') ||
-          (c.meta && key === 'meta'),
-      );
+      const released = combos.some((c) => {
+        const flag = flagOf(key);
+        return key === c.key || code === c.key || (flag !== undefined && c[flag]);
+      });
       if (released) setPressed(false);
     };
     const blur = () => {
