@@ -3,6 +3,7 @@ import { cullingFeature } from '../features/culling.ts';
 import { selectionFeature } from '../features/selection.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore, type EngineOptions } from '../store.ts';
 import type { Feature } from '../features.ts';
+import { isRectIntersecting } from '../geometry.ts';
 import { Position, type Edge, type Node } from '../types.ts';
 
 const on: EngineOptions = { ...DEFAULT_ENGINE_OPTIONS, elementsSelectable: true, onlyRenderVisibleElements: true };
@@ -70,6 +71,34 @@ describe('the visible set', () => {
     expect(ids(store.getVisible()?.nodes)).toEqual(['a']);
     void store.instance.setViewport({ x: -5000, y: 0, zoom: 1 });
     expect(ids(store.getVisible()?.nodes)).toEqual(['b']);
+  });
+
+  it('keeps the set while a pan stays inside the region it was worked out for', () => {
+    // Region -200–1000 × -150–750. 'edge' is in its margin, out of the view; 'far' is out of both.
+    const store = culled([box('in', 100, 100), box('edge', 950, 100), box('far', 1300, 100)]);
+    const first = store.getVisible();
+    expect(ids(first?.nodes)).toEqual(['edge', 'in']);
+    // The view moves to 150–950: still inside the region, so nothing is worked out or drawn again — and 'edge',
+    // now partly in view, was already there.
+    void store.instance.setViewport({ x: -150, y: -100, zoom: 1 });
+    expect(store.getVisible()).toBe(first);
+    // To 400–1200, past the region's right side: worked out again, round the new view (region 200–1400).
+    void store.instance.setViewport({ x: -400, y: 0, zoom: 1 });
+    expect(ids(store.getVisible()?.nodes)).toEqual(['edge', 'far']);
+  });
+
+  it('works the set out again after a zoom in that leaves the region much bigger than the view', () => {
+    const store = culled([box('in', 300, 250), box('margin', 1700, 100)]);
+    // At 0.5× the view is 0–1600 × 0–1200 and the region -400–2000 × -300–1500: both nodes are in it.
+    void store.instance.setViewport({ x: 0, y: 0, zoom: 0.5 });
+    const first = store.getVisible();
+    expect(ids(first?.nodes)).toEqual(['in', 'margin']);
+    // 1×: the view is 800 × 600, a third of the region each way — kept.
+    void store.instance.setViewport({ x: -200, y: -150, zoom: 1 });
+    expect(store.getVisible()).toBe(first);
+    // 2×: 400 × 300, under a third — worked out round the view, and 'margin', far from it, goes.
+    void store.instance.setViewport({ x: -600, y: -500, zoom: 2 });
+    expect(ids(store.getVisible()?.nodes)).toEqual(['in']);
   });
 
   it('leaves out hidden nodes and hidden edges', () => {
@@ -200,8 +229,10 @@ describe('the order of the visible edges', () => {
 describe('the visible set, a little at a time', () => {
   /**
    * When a few nodes change — a drag, a measurement, a selection — the set is not worked out from every node
-   * again. This holds that to the same answer: after each of a long run of edits, a store that has been given
-   * them one by one has the visible set a store given the end state at once has — edges in the list's order.
+   * again, and a view that stays inside the region last worked out keeps it. This holds that to a safe answer:
+   * after each of a long run of edits, a store that has been given them one by one draws everything a store
+   * given the end state at once draws (it may draw more, kept from a region it still holds), nothing hidden,
+   * and its edges in the list's order.
    */
   for (const controlled of [true, false]) {
     it(`matches a fresh store after each of 300 random edits (${controlled ? 'controlled' : 'uncontrolled'})`, () => {
@@ -290,7 +321,36 @@ describe('the visible set, a little at a time', () => {
         // The twin is told once more, so it has judged everything — it is built from parts that do not each say
         // so. The live store is not: what it holds is what its own edit made of it.
         twin.ctx.changed();
-        expect(view(live.store), `after step ${String(step)} (op ${String(op)})`).toEqual(view(twin.store));
+        const got = view(live.store);
+        const want = view(twin.store);
+        const label = `after step ${String(step)} (op ${String(op)})`;
+        expect(got === null, label).toBe(want === null);
+        if (!got || !want) continue;
+        // Everything in view is drawn: what the twin draws that is selected or meets the view itself (the
+        // twin's margin round the view may differ from the region the live store still holds), and the edges
+        // that touch those.
+        const pane = { width: 800, height: 600 };
+        const seen = { x: -viewport.x / viewport.zoom, y: -viewport.y / viewport.zoom, width: pane.width / viewport.zoom, height: pane.height / viewport.zoom };
+        const inView = want.nodes.filter((id) => {
+          const n = live.ctx.nodeById.get(id);
+          if (!n) return false;
+          const at = live.ctx.absolutePosition(n);
+          const size = live.ctx.getNodeSize(n);
+          return live.ctx.isSelected(id) || isRectIntersecting({ ...at, ...size }, seen, true);
+        });
+        const touching = new Set(inView);
+        const edgesInView = want.edges.filter((id) => {
+          const e = edges.find((x) => x.id === id);
+          return e !== undefined && (touching.has(e.source) || touching.has(e.target));
+        });
+        expect(got.nodes, label).toEqual(expect.arrayContaining(inView));
+        expect(got.edges, label).toEqual(expect.arrayContaining(edgesInView));
+        // Nothing hidden is.
+        const hiddenNodes = new Set(nodes.filter((n) => n.hidden === true).map((n) => n.id));
+        const shownEdges = edges.filter((e) => e.hidden !== true).map((e) => e.id);
+        expect(got.nodes.filter((id) => hiddenNodes.has(id)), label).toEqual([]);
+        // The edges are the list's, in its order.
+        expect(got.edges, label).toEqual(shownEdges.filter((id) => got.edges.includes(id)));
       }
     }, 30_000);
   }

@@ -5,6 +5,15 @@ import type { Edge, Node, Rect } from '../types.ts';
 /** More than this many changed nodes (with what is inside them) and it is cheaper to look at all of them. */
 const INCREMENTAL_LIMIT = 256;
 
+/** The region round the view, as a share of the view on each side: a node is drawn a little before it slides in. */
+const MARGIN = 0.25;
+
+/**
+ * How much bigger than the view (on each side) the region worked out last time may be and still be kept: past
+ * this, after a zoom in, it would keep drawing many nodes now far out of view.
+ */
+const KEEP_LIMIT = 3;
+
 /**
  * What was worked out last time, and what it was worked out from.
  */
@@ -32,9 +41,11 @@ interface Memo {
  * only when that set changes — a pan that reveals nothing new costs no render. Off, or before the pane
  * has a size, everything counts (a null set).
  *
- * The set is worked out for every node when the view or the lists change. When only some nodes changed — a
- * drag, a measurement, a selection — only those, what is inside them, and the edges that touch them are looked
- * at again: ten thousand nodes are not asked about for one that moved.
+ * The set is worked out for every node when the lists change, or when the view leaves the region (the view
+ * and a margin round it) it was last worked out for. A pan or zoom that stays inside that region costs nothing:
+ * every node in view is already drawn. When only some nodes changed — a drag, a measurement, a selection —
+ * only those, what is inside them, and the edges that touch them are looked at again: ten thousand nodes are
+ * not asked about for one that moved.
  */
 export const cullingFeature: Feature = {
   name: 'culling',
@@ -66,6 +77,9 @@ export const cullingFeature: Feature = {
       // engine's own) — so what is selected is not part of what is remembered.
       const dragging = ctx.draggingIds.size === 0 ? '' : [...ctx.draggingIds].sort().join('|');
 
+      // What is in view now, in graph units.
+      const view: Rect = { x: -viewport.x / zoom, y: -viewport.y / zoom, width: pane.width / zoom, height: pane.height / zoom };
+
       const known = memo;
       if (
         known &&
@@ -73,32 +87,33 @@ export const cullingFeature: Feature = {
         dirty.size <= INCREMENTAL_LIMIT &&
         known.edges === edges &&
         known.nodeCount === nodes.length &&
-        known.x === viewport.x &&
-        known.y === viewport.y &&
-        known.zoom === zoom &&
         known.width === pane.width &&
         known.height === pane.height &&
-        known.dragging === dragging
+        known.dragging === dragging &&
+        keeps(known.region, view)
       ) {
-        if (incremental(known, dirty, nodes, edges)) return;
+        // The region still holds the view: what was drawn for it still covers everything in view.
+        const moved = { ...known, x: viewport.x, y: viewport.y, zoom };
+        if (dirty.size === 0) {
+          memo = moved;
+          return;
+        }
+        if (incremental(moved, dirty, nodes, edges)) return;
       }
 
-      const left = -viewport.x / zoom;
-      const top = -viewport.y / zoom;
-      const width = pane.width / zoom;
-      const height = pane.height / zoom;
-      // A margin, so a node is drawn a little before it slides into view.
       const region: Rect = {
-        x: left - width * 0.25,
-        y: top - height * 0.25,
-        width: width * 1.5,
-        height: height * 1.5,
+        x: view.x - view.width * MARGIN,
+        y: view.y - view.height * MARGIN,
+        width: view.width * (1 + 2 * MARGIN),
+        height: view.height * (1 + 2 * MARGIN),
       };
+      // Each node's box once, for the nodes and again for the edges between nodes out of view.
+      const rects = new Map<string, Rect>();
       const nodeIds = new Set<string>();
-      for (const n of nodes) if (drawsNode(n, region)) nodeIds.add(n.id);
+      for (const n of nodes) if (drawsNode(n, region, rects)) nodeIds.add(n.id);
       const edgeIndices = new Set<number>();
       edges.forEach((e, i) => {
-        if (drawsEdge(e, nodeIds, region)) edgeIndices.add(i);
+        if (drawsEdge(e, nodeIds, region, rects)) edgeIndices.add(i);
       });
 
       memo = {
@@ -167,24 +182,30 @@ export const cullingFeature: Feature = {
       return true;
     };
 
-    const rectOf = (n: Node): Rect => {
-      const at = ctx.absolutePosition(n);
-      const size = ctx.getNodeSize(n);
-      return { x: at.x, y: at.y, width: size.width, height: size.height };
+    /** A node's box on the canvas — from `cache` when this pass has worked it out already. */
+    const rectOf = (n: Node, cache?: Map<string, Rect>): Rect => {
+      let rect = cache?.get(n.id);
+      if (!rect) {
+        const at = ctx.absolutePosition(n);
+        const size = ctx.getNodeSize(n);
+        rect = { x: at.x, y: at.y, width: size.width, height: size.height };
+        cache?.set(n.id, rect);
+      }
+      return rect;
     };
 
     /** A node is drawn if it is in the region — or selected or being dragged, wherever it is. */
-    const drawsNode = (n: Node, region: Rect): boolean =>
+    const drawsNode = (n: Node, region: Rect, cache?: Map<string, Rect>): boolean =>
       n.hidden !== true &&
-      (ctx.isSelected(n.id) || ctx.draggingIds.has(n.id) || isRectIntersecting(rectOf(n), region, true));
+      (ctx.isSelected(n.id) || ctx.draggingIds.has(n.id) || isRectIntersecting(rectOf(n, cache), region, true));
 
     /** An edge, if either end is drawn — or it crosses the region between two that are not. */
-    const drawsEdge = (e: Edge, nodeIds: ReadonlySet<string>, region: Rect): boolean => {
+    const drawsEdge = (e: Edge, nodeIds: ReadonlySet<string>, region: Rect, cache?: Map<string, Rect>): boolean => {
       if (e.hidden === true) return false;
       if (nodeIds.has(e.source) || nodeIds.has(e.target)) return true;
       const a = ctx.nodeById.get(e.source);
       const b = ctx.nodeById.get(e.target);
-      return a !== undefined && b !== undefined && crosses(rectOf(a), rectOf(b), region);
+      return a !== undefined && b !== undefined && crosses(rectOf(a, cache), rectOf(b, cache), region);
     };
 
     ctx.on('change', recompute);
@@ -192,6 +213,21 @@ export const cullingFeature: Feature = {
     return {};
   },
 };
+
+/**
+ * Whether a region worked out earlier still serves `view`: it holds all of it, and is not so much bigger (after
+ * a zoom in) that it would keep many nodes drawn that are far from view.
+ */
+function keeps(region: Rect, view: Rect): boolean {
+  return (
+    view.x >= region.x &&
+    view.y >= region.y &&
+    view.x + view.width <= region.x + region.width &&
+    view.y + view.height <= region.y + region.height &&
+    region.width <= view.width * KEEP_LIMIT &&
+    region.height <= view.height * KEEP_LIMIT
+  );
+}
 
 /** Whether the box that holds both of two nodes reaches the region: the line between them may cross it. */
 function crosses(a: Rect, b: Rect, region: Rect): boolean {
