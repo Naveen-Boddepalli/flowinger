@@ -59,7 +59,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
    one bug jsdom could not (the selection rectangle, a node toolbar for another node and the focus pan used a
    child's position inside its parent, not on the canvas). Left: touch, which needs a device.
 2. **The pro modules' recipes.** `flowinger/editable-edge` and the Hexagon shape are in (0.6.0). Still to
-   write as `examples/`: grouping and swimlanes, multiplayer presence (Yjs), a workflow-simulation stepper.
+   write as `examples/`: multiplayer presence (Yjs), a workflow-simulation stepper. (Grouping and swimlanes:
+   [`examples/swimlanes`](examples/swimlanes).)
 3. **Size.** The core grew from 17.6 to 19.6 kB and the whole canvas from 27.3 to 35.4 — the 39 props, then
    making a drag cost what changed rather than the size of the graph. The duplication pass is done (one parser
    for key codes, one box round some rectangles): 35.3 kB for the whole canvas, the core unchanged, because

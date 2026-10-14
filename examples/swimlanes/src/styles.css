@@ -1,0 +1,112 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --flowinger-surface: #ffffff;
+  --flowinger-surface-raised: #f1f5f9;
+  --flowinger-border: #cbd5e1;
+  --flowinger-text: #0f172a;
+  --flowinger-text-dim: #64748b;
+  --flowinger-edge: #64748b;
+  --flowinger-selected: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --flowinger-surface: #1e293b;
+    --flowinger-surface-raised: #334155;
+    --flowinger-border: #475569;
+    --flowinger-text: #f1f5f9;
+    --flowinger-text-dim: #94a3b8;
+    --flowinger-edge: #94a3b8;
+    --flowinger-selected: #38bdf8;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+}
+
+.app {
+  height: 100%;
+}
+
+.lane {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--flowinger-border);
+  border-top-width: 0;
+  background: color-mix(in srgb, var(--flowinger-surface) 55%, transparent);
+  transition: background-color 0.12s;
+}
+
+.lane-hovered {
+  background: color-mix(in srgb, var(--flowinger-selected) 14%, var(--flowinger-surface));
+}
+
+.lane-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 100%;
+  box-sizing: border-box;
+  border-right: 1px solid var(--flowinger-border);
+  background: var(--flowinger-surface-raised);
+  color: var(--flowinger-text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.step {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 8px;
+  background: var(--flowinger-surface);
+  color: var(--flowinger-text);
+  font-size: 13px;
+}
+
+.step-selected {
+  border-color: var(--flowinger-selected);
+  box-shadow: 0 0 0 1px var(--flowinger-selected);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--flowinger-surface);
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.toolbar span {
+  color: var(--flowinger-text-dim);
+}
+
+.toolbar button {
+  padding: 3px 10px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

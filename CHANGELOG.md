@@ -24,6 +24,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **A swimlanes example** ([`examples/swimlanes`](examples/swimlanes)): lanes as parent nodes, steps as their
+  children, and moving a step to another lane by re-parenting it on drop, re-based so it stays put.
 - **Guides** ([`docs/guides/`](docs/guides), and a section on the site): an org chart, laying out a DAG with
   dagre, a flowchart editor with undo, export to PNG/SVG, save and load as JSON, and a workflow builder in
   Next.js — each leads with what people search for and points at the example that does it.

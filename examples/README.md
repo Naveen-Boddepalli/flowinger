@@ -1,7 +1,7 @@
 # Examples
 
-Six small apps, each a complete React + TypeScript project you can copy out of this repository and run:
-`pnpm install && pnpm dev` (or `npm install && npm run dev`). Five are Vite apps; one is Next.js.
+Seven small apps, each a complete React + TypeScript project you can copy out of this repository and run:
+`pnpm install && pnpm dev` (or `npm install && npm run dev`). Six are Vite apps; one is Next.js.
 
 | | What it shows |
 |---|---|
@@ -10,6 +10,7 @@ Six small apps, each a complete React + TypeScript project you can copy out of t
 | [`editor`](editor) | A **controlled editor** on `FlowingerCanvas`: drag, connect, select, delete, snap to a grid, a mini-map; a custom node with an input that does not drag it, and a custom edge with a button on it (`BaseEdge` + `EdgeLabelRenderer`). |
 | [`nextjs`](nextjs) | **Server rendering in Next.js** (App Router). A Server Component builds a pipeline, lays it out and works out the viewport with flowinger's own `viewportForBounds`, so the HTML arrives framed and nothing moves on load. Then the same graph as a viewer and as an editor with undo. The parts to read: [`app/pipeline.ts`](nextjs/app/pipeline.ts) (server-only) and [`app/Viewer.tsx`](nextjs/app/Viewer.tsx) (why it is a client component). |
 | [`save-load`](save-load) | **Saving and loading a graph as JSON.** `toObject()` is the graph as it stands — dragged positions, what was typed into a node, the view — so it is what gets saved: in the browser (it comes back after a reload), as a downloaded `.json` file, or as text you can edit and load. The part to read is [`src/flowFile.ts`](save-load/src/flowFile.ts): it checks a file somebody else wrote (ids, positions, edges that point at real nodes) and says what is wrong instead of handing the canvas something it cannot draw. |
+| [`swimlanes`](swimlanes) | **A process in swimlanes**: each lane a parent node, each step a child of its lane (`parentId`), so a step's position is relative to its lane and it moves with it. Drag a step into another lane and it *changes* lanes: on `onNodeDragStop` the lane under its centre becomes its parent and its position is re-based on that lane, so it stays where it was dropped; dropped outside every lane it goes back into the nearest. The lane it would land in lights up during the drag. |
 | [`tree`](tree) | An **org chart with collapsible branches**, on `FlowingerCore` and `flowinger/tree`. Each node has a button that folds everything under it; the tree closes up around what is hidden. The parts to read: [`useCollapsibleTree`](tree/src/App.tsx) called once and handed to the nodes by context, and [`layoutShown`](tree/src/layout.ts), which runs the layout again over only what is shown. |
 
 <table>
@@ -19,7 +20,7 @@ Six small apps, each a complete React + TypeScript project you can copy out of t
   </tr>
   <tr>
     <td><a href="export"><img src="../docs/assets/export.png" alt="The export example: an architecture diagram beside export options, an Export button and a preview of the exported PNG" /></a><br /><b>export</b></td>
-    <td></td>
+    <td><a href="swimlanes"><img src="../docs/assets/swimlanes.png" alt="The swimlanes example: an order process in four lanes — Customer, Sales, Warehouse, Billing — with steps joined by right-angled edges" /></a><br /><b>swimlanes</b></td>
   </tr>
   <tr>
     <td><a href="save-load"><img src="../docs/assets/save-load.png" alt="The save-load example: three notes joined by arrows, a toolbar with Save, Restore, Download and Open, and the graph as JSON beside it" /></a><br /><b>save-load</b></td>
@@ -32,6 +33,7 @@ Open one without installing anything, once the repository is public:
 [`editor`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/editor) ·
 [`export`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/export) ·
 [`save-load`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/save-load) ·
+[`swimlanes`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/swimlanes) ·
 [`tree`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/tree) ·
 [`nextjs`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/nextjs).
 
