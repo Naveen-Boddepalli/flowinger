@@ -204,7 +204,7 @@ lacks does nothing — and in development the console says so. See [Features](do
     <td>
       <a href="examples/tree"><img src="docs/assets/tree.png" alt="The tree example: an organisation as a left-to-right tree, each branch with a button that folds it, one folded to show how many people it holds" /></a>
     </td>
-    <td valign="top"><a href="examples/tree"><strong>Tree</strong></a> — an org chart whose branches fold: <code>useCollapsibleTree</code> from <code>flowinger/tree</code> hides what is under a node, and the layout runs again over what is left so the tree closes up.</td>
+    <td valign="top"><a href="examples/nextjs"><strong>Next.js</strong></a> — laid out and framed in a Server Component, so the diagram is in the HTML and does not move on load; then hydrated into an editor with undo. See <a href="docs/server-rendering.md">Server rendering</a>.<br /><br /><a href="examples/tree"><strong>Tree</strong></a> — an org chart whose branches fold: <code>useCollapsibleTree</code> from <code>flowinger/tree</code> hides what is under a node, and the layout runs again over what is left so the tree closes up.</td>
   </tr>
 </table>
 
@@ -212,7 +212,8 @@ Each is a complete Vite + React + TypeScript project you can copy out and run, a
 the packed library on every pull request. To try one in the browser with nothing installed, open it in
 StackBlitz: [layouts](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/layouts) ·
 [editor](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/editor) ·
-[tree](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/tree).
+[tree](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/tree) ·
+[Next.js](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/nextjs).
 
 ## Is it for you?
 

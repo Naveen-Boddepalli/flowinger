@@ -22,11 +22,18 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **An example in Next.js** ([`examples/nextjs`](examples/nextjs)): a graph laid out and framed in a Server
+  Component, then shown as a viewer and as an editor with undo. Built against the packed library in CI like the
+  others. [Server rendering](docs/server-rendering.md) is rewritten around it: what the server draws, what
+  waits for the client, and how to frame the first paint.
 - `EngineContext.takeDirtyNodes()` for features: the nodes whose place, size, visibility or selection changed
   since it was last asked, or `null` for "any". What `cullingFeature` looks again at.
 
 ### Fixed
 
+- **A canvas inside a `FlowingerProvider` was server-rendered at the origin**, not at its `defaultViewport` or
+  controlled `viewport`: the canvas moved the provider's view there in an effect, and a server runs none. It
+  now starts there on its first render, so the server's HTML is framed and hydration draws the same.
 - **In an uncontrolled flow, selecting a node did not tell culling**, so a selected node outside the view was
   not drawn until the next change of anything else, and one that was let go of stayed drawn.
 

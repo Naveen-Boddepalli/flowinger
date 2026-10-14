@@ -37,9 +37,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 ## Now — be easy to try and to trust
 
-- **More examples.** `examples/` has a layout viewer, a controlled editor and a collapsible tree; wanted next:
-  a graph that loads and saves JSON, and one inside a Next.js app (the server-render story, shown rather
-  than claimed).
+- **More examples.** `examples/` has a layout viewer, a controlled editor, a collapsible tree and a Next.js
+  app (laid out and framed on the server, hydrated into an editor); wanted next: a graph that loads and saves
+  JSON.
 - **More in the browser suite.** `e2e/` covers load, anchors, wheel, pan, drag, a flick, connecting by
   dragging and by clicking, reconnecting, deleting, export, `nodeOrigin`, the selection rectangle and a box
   held at the pane's edge, stacking by what is on top, `colorMode: 'system'`, the lock, `'smooth'` moves, and
