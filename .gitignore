@@ -18,4 +18,6 @@ playwright-report
 /pro
 site/dist
 site/.astro
-site/src/content/docs/docs
+site/src/content/docs/*
+!site/src/content/docs/index.mdx
+site/public/assets

@@ -50,3 +50,9 @@
     display: none !important;
   }
 }
+
+/* The changelog's version headings are links (Keep a Changelog); read them as headings. */
+.sl-markdown-content :is(h2, h3) > a {
+  color: inherit;
+  text-decoration: none;
+}

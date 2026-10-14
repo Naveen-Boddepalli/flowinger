@@ -1,4 +1,5 @@
-// The documentation site: a landing page plus docs/ rendered as pages (scripts/sync-docs.mjs copies them in),
+// The documentation site: a landing page plus the repository's Markdown (docs/, the examples' README, the
+// changelog, roadmap, contributing guide and design record) rendered as pages (scripts/sync-docs.mjs copies it in),
 // served from GitHub Pages beside the demo. `pnpm site:build` at the repository root builds both and puts the
 // demo at <base>demo/.
 import { fileURLToPath } from 'node:url';
@@ -45,8 +46,8 @@ export default defineConfig({
           items: [
             { label: 'Overview', link: '/docs/' },
             { label: 'Getting started', link: '/docs/getting-started/' },
+            { label: 'Examples', link: '/examples/' },
             { label: 'Live demo', link: '/demo/', attrs: { target: '_blank' } },
-            { label: 'Examples', link: `${github}/tree/main/examples` },
           ],
         },
         {
@@ -71,9 +72,10 @@ export default defineConfig({
         {
           label: 'Project',
           items: [
-            { label: 'Changelog', link: `${github}/blob/main/CHANGELOG.md` },
-            { label: 'Roadmap', link: `${github}/blob/main/ROADMAP.md` },
-            { label: 'Contributing', link: `${github}/blob/main/CONTRIBUTING.md` },
+            { label: 'Changelog', link: '/changelog/' },
+            { label: 'Roadmap', link: '/roadmap/' },
+            { label: 'Contributing', link: '/contributing/' },
+            { label: 'Design record', link: '/design-record/' },
           ],
         },
       ],
