@@ -1,0 +1,117 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --flowinger-surface: #ffffff;
+  --flowinger-surface-raised: #f1f5f9;
+  --flowinger-border: #cbd5e1;
+  --flowinger-text: #0f172a;
+  --flowinger-text-dim: #64748b;
+  --flowinger-edge: #64748b;
+  --flowinger-selected: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --flowinger-surface: #1e293b;
+    --flowinger-surface-raised: #334155;
+    --flowinger-border: #475569;
+    --flowinger-text: #f1f5f9;
+    --flowinger-text-dim: #94a3b8;
+    --flowinger-edge: #94a3b8;
+    --flowinger-selected: #38bdf8;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+}
+
+.board {
+  position: relative;
+  height: 100%;
+}
+
+.card {
+  position: relative;
+  min-width: 120px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 8px;
+  background: var(--flowinger-surface);
+  color: var(--flowinger-text);
+  font-size: 14px;
+  text-align: center;
+}
+
+.card-selected {
+  border-color: var(--flowinger-selected);
+}
+
+.tags {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.tags span,
+.cursor span,
+.me {
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A cursor's top-left is the point; it is scaled from there. */
+.cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  transition: transform 60ms linear;
+}
+
+.cursor span {
+  position: absolute;
+  left: 14px;
+  top: 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--flowinger-surface);
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.toolbar span:not(.me) {
+  color: var(--flowinger-text-dim);
+}
+
+.toolbar button {
+  padding: 3px 10px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

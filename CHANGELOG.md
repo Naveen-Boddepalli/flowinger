@@ -24,6 +24,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **A multiplayer example with Yjs** ([`examples/presence`](examples/presence)): a shared graph, and each
+  person's cursor (in graph units) and selection through Yjs awareness, synced between tabs with no server.
 - **A swimlanes example** ([`examples/swimlanes`](examples/swimlanes)): lanes as parent nodes, steps as their
   children, and moving a step to another lane by re-parenting it on drop, re-based so it stays put.
 - **Guides** ([`docs/guides/`](docs/guides), and a section on the site): an org chart, laying out a DAG with
