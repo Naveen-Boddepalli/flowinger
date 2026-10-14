@@ -63,7 +63,9 @@ Needs you (GitHub settings and accounts):
 ### Phase 2: launch (one week, staggered, not all in one day)
 
 Order matters. Each post sends people to a repo that already looks complete. Drafts are below.
-1. **Write the article first** (dev.to, cross-post to Hashnode/Medium): *"We replaced React Flow and cut
+1. [x] **Write the article first** — drafted in [`launch/devto.md`](launch/devto.md), ready to paste into dev.to
+   (front matter included, `published: false`). Then cross-post to Hashnode/Medium with dev.to as the canonical URL.
+   Original brief: *"We replaced React Flow and cut
    our diagram bundle from 60 kB to 19 kB"*. Real numbers, the trade-offs, and where React Flow still wins.
    Honest articles get shared and cited. This one is the anchor everything else links to.
 2. **r/reactjs** "Show-off Saturday" or a regular post (read the subreddit rules first). Then r/javascript and r/webdev.
@@ -135,7 +137,9 @@ only after a training cycle.
 > A few things I'd like feedback on:
 > - Undo/redo, copy-paste, snap lines, PNG/SVG export and obstacle-avoiding edges are included free, as separate entry points.
 > - Benchmarks against React Flow at 1k–10k nodes are reproducible with `pnpm bench`. Without culling it mounts
->   about 2× faster and pans about 3× cheaper. With culling on, React Flow is still faster at pan and zoom (Flowinger is faster at drag), and the README says so.
+>   about 2× faster and pans about 4× cheaper. With culling on, the pan is level within the noise and the zoom
+>   and drag are cheaper — React Flow led on culled pan and zoom until 0.7.0, and the benchmark is how that was
+>   found and fixed.
 > - React Flow is the test oracle: geometry and behaviour are checked against it in over 1,000 tests.
 >
 > Site: https://naveen-boddepalli.github.io/flowinger/ · Demo: https://naveen-boddepalli.github.io/flowinger/demo/ · Code: https://github.com/Naveen-Boddepalli/flowinger
