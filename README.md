@@ -65,14 +65,16 @@
 | Runtime dependencies | **0** | 3 direct (`@xyflow/system`, `zustand`, `classcat`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
 | Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)) | **19.0 kB** gzipped | 60.5 kB gzipped |
-| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.3 s |
-| Pan / zoom 10,000 nodes, no culling | **9 / 10.5 ms** a frame | 33 / 34 ms a frame |
-| Pan / zoom / drag 10,000 nodes, culled | 4.5 / 5.5 / 7.7 ms | **4.3 / 4.8 / 4.7 ms** |
+| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.7 s** | 1.3 s |
+| Pan / zoom 10,000 nodes, no culling | **10.6 / 12.0 ms** a frame | 35.4 / 35.5 ms a frame |
+| Pan / zoom 10,000 nodes, culled | 4.4 / 5.0 ms a frame | **3.1 / 3.2 ms** a frame |
+| Drag at 10,000 nodes, culled | **4.3 ms** a move | 4.5 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
 | API | React Flow's names: 211 of 211 exports, 119 of 119 props | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
-The culled row is where React Flow is still ahead; closing it is on the [roadmap](ROADMAP.md).
+With culling on, React Flow is still ahead at panning and zooming (both are well inside a 60 Hz frame); closing
+that is on the [roadmap](ROADMAP.md).
 
 ## Install
 

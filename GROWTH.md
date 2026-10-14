@@ -86,8 +86,9 @@ Order matters. Each post sends people to a repo that already looks complete. Dra
   diagram export to PNG". The [roadmap](ROADMAP.md) already wants Next.js and JSON save/load examples. Do those first.
 - **A codemod** (`npx flowinger-migrate`) that rewrites `@xyflow/react` imports, removes the CSS import and adds
   the three `nodes*` props. Then "switching takes one command" is literally true.
-- **Close the culled gap** (in progress on `perf/culled-gap`). Then the comparison table has no
-  performance row where React Flow wins, which is a headline in itself.
+- **Close the culled gap.** Drag is closed (4.3 ms against React Flow's 4.5 at 10,000 nodes); culled pan and
+  zoom are left (4.4 / 5.0 against 3.1 / 3.2 ms). Then the comparison table has no performance row where
+  React Flow wins, which is a headline in itself.
 - **Get a second user.** QueryLens is the only public consumer. Open-source workflow tools that ship React
   Flow (n8n-like builders, LangGraph/agent UIs, data-lineage viewers) are the targets. Offer a PR that does the
   migration and measures the bundle win. A "used by" row with real names is the strongest trust signal.
@@ -123,18 +124,18 @@ only after a training cycle.
 
 ### Show HN
 
-**Title:** Show HN: Flowinger – React Flow's API in 19 kB, with no dependencies
+**Title:** Show HN: Flowinger – React Flow's API in 20 kB, with no dependencies
 
 > I built Flowinger for QueryLens, a tool that draws SQL query plans. React Flow was most of its bundle, and
 > it only needed the viewer part. Flowinger keeps React Flow's API (same component, hook, prop and type names,
-> all 211 exports), but it is a small core plus opt-in features. A viewer pays about 19 kB gzipped and the
-> full editor about 34 kB, with no dependencies and no stylesheet. In QueryLens the diagram chunk went from
+> all 211 exports), but it is a small core plus opt-in features. A viewer pays about 20 kB gzipped and the
+> full editor about 35 kB, with no dependencies and no stylesheet. In QueryLens the diagram chunk went from
 > 60.5 kB to 19 kB.
 >
 > A few things I'd like feedback on:
 > - Undo/redo, copy-paste, snap lines, PNG/SVG export and obstacle-avoiding edges are included free, as separate entry points.
 > - Benchmarks against React Flow at 1k–10k nodes are reproducible with `pnpm bench`. Without culling it mounts
->   about 2× faster and pans about 3× cheaper. With culling on, React Flow is still faster at zoom and drag, and the README says so.
+>   about 2× faster and pans about 3× cheaper. With culling on, React Flow is still faster at pan and zoom (Flowinger is faster at drag), and the README says so.
 > - React Flow is the test oracle: geometry and behaviour are checked against it in over 1,000 tests.
 >
 > Demo: https://naveen-boddepalli.github.io/flowinger/ · Code: https://github.com/Naveen-Boddepalli/flowinger
@@ -143,7 +144,7 @@ only after a training cycle.
 
 ### r/reactjs
 
-**Title:** I rebuilt React Flow's API in 19 kB with zero deps, and the "Pro" features are free
+**Title:** I rebuilt React Flow's API in 20 kB with zero deps, and the "Pro" features are free
 
 > (Same story in 5–6 lines. Embed the demo GIF. Link the comparison table and the migration guide. End with a
 > question: "what would you need to see before switching?")
