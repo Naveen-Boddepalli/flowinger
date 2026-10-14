@@ -51,6 +51,17 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Guides',
+          items: [
+            { label: 'An org chart', link: '/docs/guides/org-chart/' },
+            { label: 'Lay out a DAG with dagre', link: '/docs/guides/dag-layout/' },
+            { label: 'A flowchart editor with undo', link: '/docs/guides/flowchart-editor/' },
+            { label: 'Export to PNG or SVG', link: '/docs/guides/export-png/' },
+            { label: 'Save and load as JSON', link: '/docs/guides/save-load-json/' },
+            { label: 'A workflow builder in Next.js', link: '/docs/guides/nextjs-workflow/' },
+          ],
+        },
+        {
           label: 'Reference',
           items: [
             { label: 'API reference', link: '/docs/api/' },

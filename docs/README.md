@@ -10,6 +10,17 @@ These pages describe the current `main`. What is newer than the latest release o
 | [Getting started](getting-started.md) | Install, a first diagram, making it interactive, and the first things that trip people |
 | [Examples](../examples) | Two complete Vite apps: a layout viewer and a controlled editor |
 
+## Guides
+
+| | |
+|---|---|
+| [An org chart](guides/org-chart.md) | A tree of people with collapsible branches, laid out by `d3-hierarchy` |
+| [Lay out a DAG with dagre](guides/dag-layout.md) | Positions from dagre, ELK or d3-hierarchy, and which to pick |
+| [A flowchart editor with undo and redo](guides/flowchart-editor.md) | Drag, connect, delete, shapes, copy and paste, snap guides — and undo |
+| [Export to PNG, JPEG or SVG](guides/export-png.md) | The whole diagram as an image: resolution, background, a social card, the clipboard |
+| [Save and load as JSON](guides/save-load-json.md) | `toObject()` to storage or a file and back, with a check for files you did not write |
+| [A workflow builder in Next.js](guides/nextjs-workflow.md) | Laid out in a Server Component, hydrated into an editor, nothing jumps |
+
 ## Reference
 
 | | |

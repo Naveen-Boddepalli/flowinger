@@ -24,6 +24,9 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **Guides** ([`docs/guides/`](docs/guides), and a section on the site): an org chart, laying out a DAG with
+  dagre, a flowchart editor with undo, export to PNG/SVG, save and load as JSON, and a workflow builder in
+  Next.js — each leads with what people search for and points at the example that does it.
 - **An example that exports the diagram as an image** ([`examples/export`](examples/export)): PNG, JPEG, WebP
   or SVG at 1–3×, with the page's background, none or white, as the whole diagram or fitted to a 1200 × 630
   card; previewed, downloaded or copied to the clipboard, with `filter` leaving out a badge and the handles.

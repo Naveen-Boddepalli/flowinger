@@ -1,5 +1,5 @@
 // Copies the repository's Markdown into the site's content collection, so each page is written once, where
-// GitHub renders it, and this turns it into a site page: docs/*.md, the examples' README, the changelog,
+// GitHub renders it, and this turns it into a site page: docs/*.md and docs/guides/*.md, the examples' README, the changelog,
 // roadmap, contributing guide and design record. The copies are generated (and git-ignored); edit the files
 // in the repository, never src/content/docs/ (apart from index.mdx, the home page, which lives there).
 //
@@ -27,6 +27,9 @@ const pages = new Map([
   ...readdirSync(join(repoDir, 'docs'))
     .filter((file) => file.endsWith('.md') && file !== 'README.md')
     .map((file) => [`docs/${file}`, { slug: `docs/${file.slice(0, -3)}` }]),
+  ...readdirSync(join(repoDir, 'docs/guides'))
+    .filter((file) => file.endsWith('.md'))
+    .map((file) => [`docs/guides/${file}`, { slug: `docs/guides/${file.slice(0, -3)}` }]),
   ['examples/README.md', { slug: 'examples' }],
   ['CHANGELOG.md', { slug: 'changelog' }],
   ['ROADMAP.md', { slug: 'roadmap' }],
@@ -83,7 +86,7 @@ function convert(repoPath, { slug, title }) {
 
   // The breadcrumb paragraph: "[← Documentation](README.md) · lead text…" up to the first blank line.
   let description;
-  const crumb = body.match(/^\[← Documentation\]\(README\.md\)( · )?([\s\S]*?)(\n\s*\n|$)/);
+  const crumb = body.match(/^\[← Documentation\]\((?:\.\.\/)?README\.md\)( · )?([\s\S]*?)(\n\s*\n|$)/);
   if (crumb) {
     const lead = crumb[2].trim();
     if (lead) description = plainText(lead);

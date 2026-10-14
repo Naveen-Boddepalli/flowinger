@@ -8,6 +8,12 @@ import react from '@vitejs/plugin-react';
 const llmsFullDocs = [
   'README.md',
   'docs/getting-started.md',
+  'docs/guides/org-chart.md',
+  'docs/guides/dag-layout.md',
+  'docs/guides/flowchart-editor.md',
+  'docs/guides/export-png.md',
+  'docs/guides/save-load-json.md',
+  'docs/guides/nextjs-workflow.md',
   'docs/api.md',
   'docs/components.md',
   'docs/features.md',

@@ -83,8 +83,7 @@ Order matters. Each post sends people to a repo that already looks complete. Dra
   Assistants learn heavily from these threads.
 - **Recipes that rank.** One page or example per search intent: "React flowchart editor with undo/redo",
   "React workflow builder in Next.js", "React org chart", "Render a DAG in React with dagre", "React
-  diagram export to PNG". Next.js, JSON save/load and export to PNG are done; "React org chart" (the tree example) and "a DAG with dagre"
-  (the layouts example) need only a page each that leads with the search phrase.
+  diagram export to PNG". All five now have a guide in [`docs/guides/`](docs/guides) and an example behind it.
 - **A codemod** (`npx flowinger-migrate`) that rewrites `@xyflow/react` imports, removes the CSS import and adds
   the three `nodes*` props. Then "switching takes one command" is literally true.
 - **Close the culled gap.** Drag is closed (4.3 ms against React Flow's 4.5 at 10,000 nodes); culled pan and

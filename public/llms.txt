@@ -45,6 +45,15 @@ export function Diagram() {
 - [Theming](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/theming.md): the `--flowinger-*` CSS variables
 - [Server rendering](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/server-rendering.md): SSR and hydration on React 18 and 19, framing the first paint, Next.js App Router
 
+## Guides
+
+- [An org chart in React](https://naveen-boddepalli.github.io/flowinger/docs/guides/org-chart/): a tree of people with collapsible branches, laid out by d3-hierarchy
+- [Lay out a DAG with dagre](https://naveen-boddepalli.github.io/flowinger/docs/guides/dag-layout/): positions from dagre, ELK or d3-hierarchy, and which to pick
+- [A flowchart editor with undo and redo](https://naveen-boddepalli.github.io/flowinger/docs/guides/flowchart-editor/): drag, connect, shapes, copy/paste, snap guides, undo
+- [Export to PNG, JPEG or SVG](https://naveen-boddepalli.github.io/flowinger/docs/guides/export-png/): resolution, background, a social card, the clipboard
+- [Save and load as JSON](https://naveen-boddepalli.github.io/flowinger/docs/guides/save-load-json/): toObject() to storage or a file and back, validating input
+- [A workflow builder in Next.js](https://naveen-boddepalli.github.io/flowinger/docs/guides/nextjs-workflow/): laid out in a Server Component, hydrated into an editor
+
 ## Coming from React Flow
 
 - [Migrating from React Flow](https://github.com/Naveen-Boddepalli/flowinger/blob/main/docs/migrating-from-react-flow.md): the defaults that differ, types, what to do instead
