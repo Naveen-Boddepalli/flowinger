@@ -86,9 +86,9 @@ Order matters. Each post sends people to a repo that already looks complete. Dra
   diagram export to PNG". All five now have a guide in [`docs/guides/`](docs/guides) and an example behind it.
 - **A codemod** (`npx flowinger-migrate`) that rewrites `@xyflow/react` imports, removes the CSS import and adds
   the three `nodes*` props. Then "switching takes one command" is literally true.
-- **Close the culled gap.** Drag is closed (4.3 ms against React Flow's 4.5 at 10,000 nodes); culled pan and
-  zoom are left (4.4 / 5.0 against 3.1 / 3.2 ms). Then the comparison table has no performance row where
-  React Flow wins, which is a headline in itself.
+- [x] **Close the culled gap.** Done: at 10,000 nodes, culled, Flowinger pans in 3.2 ms (level with React Flow
+  within the noise) and zooms in 2.3 against 4.5. No performance row in the comparison table is React Flow's
+  now — say it with the noise, as the benchmarks page does.
 - **Get a second user.** QueryLens is the only public consumer. Open-source workflow tools that ship React
   Flow (n8n-like builders, LangGraph/agent UIs, data-lineage viewers) are the targets. Offer a PR that does the
   migration and measures the bundle win. A "used by" row with real names is the strongest trust signal.

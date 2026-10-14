@@ -68,11 +68,11 @@ that compiles and does nothing apart, and there are none). What is left is bread
    the edges (13%), with no development text left in a production build. What remains is the React Flow
    instance API itself; moving its rarely used methods behind features would save more, and break code that
    calls them — so not before a `1.0` that can say so.
-4. **Close the culled gap — what is left.** With `onlyRenderVisibleElements` on, a drag and a mount are now
-   level with React Flow's; a pan and a zoom are not (1.1–1.6×, up to 1.8 ms a frame at 10,000 nodes —
-   [benchmarks](docs/benchmarks.md)). Flowinger draws a quarter-view margin (40% more nodes), and when the
-   *view* moves it finds the visible set by asking every node. Wanted: a spatial index (a grid of node ids)
-   so a pan asks only the cells it enters, and a first render that does not draw every node before culling.
+4. **The culled gap is closed.** With `onlyRenderVisibleElements` on, a pan or zoom that stays inside the
+   region last worked out costs nothing, and at 10,000 nodes a pan is 3.2 ms a frame (was 4.4; React Flow
+   2.6–4.2 across runs) and a zoom 2.3 (was 5.0; React Flow 4.3–4.5) — [benchmarks](docs/benchmarks.md).
+   Still possible: a spatial index (a grid of node ids) so the pass that does run, when the view leaves the
+   region, asks only the cells it enters; and a first render that does not draw every node before culling.
 5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
 
 ## Later
