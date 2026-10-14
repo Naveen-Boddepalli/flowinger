@@ -1,7 +1,7 @@
 # Examples
 
-Eight small apps, each a complete React + TypeScript project you can copy out of this repository and run:
-`pnpm install && pnpm dev` (or `npm install && npm run dev`). Seven are Vite apps; one is Next.js.
+Nine small apps, each a complete React + TypeScript project you can copy out of this repository and run:
+`pnpm install && pnpm dev` (or `npm install && npm run dev`). Eight are Vite apps; one is Next.js.
 
 | | What it shows |
 |---|---|
@@ -11,6 +11,7 @@ Eight small apps, each a complete React + TypeScript project you can copy out of
 | [`nextjs`](nextjs) | **Server rendering in Next.js** (App Router). A Server Component builds a pipeline, lays it out and works out the viewport with flowinger's own `viewportForBounds`, so the HTML arrives framed and nothing moves on load. Then the same graph as a viewer and as an editor with undo. The parts to read: [`app/pipeline.ts`](nextjs/app/pipeline.ts) (server-only) and [`app/Viewer.tsx`](nextjs/app/Viewer.tsx) (why it is a client component). |
 | [`presence`](presence) | **Multiplayer, with Yjs**: the graph is a shared Yjs document, so a drag, a new card, a connection or a delete in one tab appears in every other; and each person's pointer and selection are shared through Yjs awareness — cursors drawn in graph units (so they sit on the same node whatever your pan and zoom), and a ring and name tag on what someone else has selected. It syncs browser tabs over a `BroadcastChannel`, so it runs with no server: open it twice. [`src/room.ts`](presence/src/room.ts) says what to swap in (`y-websocket`, `y-webrtc`) for people on different machines. |
 | [`save-load`](save-load) | **Saving and loading a graph as JSON.** `toObject()` is the graph as it stands — dragged positions, what was typed into a node, the view — so it is what gets saved: in the browser (it comes back after a reload), as a downloaded `.json` file, or as text you can edit and load. The part to read is [`src/flowFile.ts`](save-load/src/flowFile.ts): it checks a file somebody else wrote (ids, positions, edges that point at real nodes) and says what is wrong instead of handing the canvas something it cannot draw. |
+| [`stepper`](stepper) | **A workflow, simulated a tick at a time**: Run, Step, Pause and Reset over an order process with a decision in it. Each step is waiting, running, done, failed or skipped; an edge is drawn by what it carries (taken, flowing now, or never — the branch a decision did not choose). The order's amount picks the branch, and a declined card fails the run and skips what follows. The rules are [`src/simulate.ts`](stepper/src/simulate.ts), a pure function from one state to the next, apart from the canvas — which only draws each state, so it is a `FlowingerCore` with no editing features. |
 | [`swimlanes`](swimlanes) | **A process in swimlanes**: each lane a parent node, each step a child of its lane (`parentId`), so a step's position is relative to its lane and it moves with it. Drag a step into another lane and it *changes* lanes: on `onNodeDragStop` the lane under its centre becomes its parent and its position is re-based on that lane, so it stays where it was dropped; dropped outside every lane it goes back into the nearest. The lane it would land in lights up during the drag. |
 | [`tree`](tree) | An **org chart with collapsible branches**, on `FlowingerCore` and `flowinger/tree`. Each node has a button that folds everything under it; the tree closes up around what is hidden. The parts to read: [`useCollapsibleTree`](tree/src/App.tsx) called once and handed to the nodes by context, and [`layoutShown`](tree/src/layout.ts), which runs the layout again over only what is shown. |
 
@@ -25,7 +26,7 @@ Eight small apps, each a complete React + TypeScript project you can copy out of
   </tr>
   <tr>
     <td><a href="presence"><img src="../docs/assets/presence.png" alt="The presence example: a graph with another person's cursor over one card and their name tag on the card they have selected" /></a><br /><b>presence</b></td>
-    <td></td>
+    <td><a href="stepper"><img src="../docs/assets/stepper.png" alt="The stepper example: an order workflow mid-run, finished steps in green, the charge step running, the unchosen branch skipped, and a log of each tick" /></a><br /><b>stepper</b></td>
   </tr>
   <tr>
     <td><a href="save-load"><img src="../docs/assets/save-load.png" alt="The save-load example: three notes joined by arrows, a toolbar with Save, Restore, Download and Open, and the graph as JSON beside it" /></a><br /><b>save-load</b></td>
@@ -39,6 +40,7 @@ Open one without installing anything, once the repository is public:
 [`export`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/export) ·
 [`presence`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/presence) ·
 [`save-load`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/save-load) ·
+[`stepper`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/stepper) ·
 [`swimlanes`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/swimlanes) ·
 [`tree`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/tree) ·
 [`nextjs`](https://stackblitz.com/github/Naveen-Boddepalli/flowinger/tree/main/examples/nextjs).

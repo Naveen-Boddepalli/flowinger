@@ -24,6 +24,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **A workflow-simulation example** ([`examples/stepper`](examples/stepper)): run, step and pause an order process
+  with a decision and a failure path; each step's status and each edge's flow drawn from a pure `next(state)`.
 - **A multiplayer example with Yjs** ([`examples/presence`](examples/presence)): a shared graph, and each
   person's cursor (in graph units) and selection through Yjs awareness, synced between tabs with no server.
 - **A swimlanes example** ([`examples/swimlanes`](examples/swimlanes)): lanes as parent nodes, steps as their

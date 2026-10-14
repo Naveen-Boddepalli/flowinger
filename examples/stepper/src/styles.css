@@ -1,0 +1,261 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --flowinger-surface: #ffffff;
+  --flowinger-surface-raised: #f1f5f9;
+  --flowinger-border: #cbd5e1;
+  --flowinger-text: #0f172a;
+  --flowinger-text-dim: #64748b;
+  --flowinger-edge: #64748b;
+  --flowinger-selected: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --flowinger-surface: #1e293b;
+    --flowinger-surface-raised: #334155;
+    --flowinger-border: #475569;
+    --flowinger-text: #f1f5f9;
+    --flowinger-text-dim: #94a3b8;
+    --flowinger-edge: #94a3b8;
+    --flowinger-selected: #38bdf8;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+}
+
+:root {
+  --ok: #16a34a;
+  --run: #2563eb;
+  --bad: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ok: #22c55e;
+    --run: #60a5fa;
+    --bad: #f87171;
+  }
+}
+
+.layout {
+  display: flex;
+  height: 100%;
+}
+
+.canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(320px, 40%);
+  padding: 14px;
+  box-sizing: border-box;
+  border-left: 1px solid var(--flowinger-border);
+  font-size: 13px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.controls button {
+  padding: 5px 14px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.controls button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.controls .primary {
+  border-color: var(--run);
+  background: var(--run);
+  color: #fff;
+}
+
+fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+}
+
+fieldset:disabled {
+  opacity: 0.6;
+}
+
+legend {
+  padding: 0 4px;
+  color: var(--flowinger-text-dim);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row input[type='range'] {
+  flex: 1;
+}
+
+.outcome {
+  margin: 0;
+  font-weight: 600;
+}
+
+.outcome-complete {
+  color: var(--ok);
+}
+
+.outcome-failed {
+  color: var(--bad);
+}
+
+.log {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 6px;
+  background: var(--flowinger-surface);
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* --- the steps --- */
+
+.step {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 7px 12px;
+  border: 1px solid var(--flowinger-border);
+  border-left: 4px solid var(--flowinger-border);
+  border-radius: 8px;
+  background: var(--flowinger-surface);
+  color: var(--flowinger-text);
+  transition: border-color 0.2s, opacity 0.2s;
+}
+
+.step-decision {
+  border-style: dashed;
+  border-left-style: solid;
+}
+
+.step-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.step-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  color: var(--flowinger-text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.step-running {
+  border-color: var(--run);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--run) 25%, transparent);
+}
+
+.step-running .step-status {
+  color: var(--run);
+}
+
+.step-done {
+  border-left-color: var(--ok);
+}
+
+.step-done .step-status {
+  color: var(--ok);
+}
+
+.step-failed {
+  border-color: var(--bad);
+}
+
+.step-failed .step-status {
+  color: var(--bad);
+}
+
+.step-skipped {
+  opacity: 0.4;
+}
+
+.spinner {
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- the edges, by what they carry --- */
+
+.edge-taken .react-flow__edge-path {
+  stroke: var(--ok);
+  stroke-width: 2;
+}
+
+.edge-flowing .react-flow__edge-path {
+  stroke: var(--run);
+  stroke-width: 2;
+}
+
+.edge-dead .react-flow__edge-path {
+  stroke-dasharray: 3 4;
+  opacity: 0.4;
+}
+
+@media (max-width: 700px) {
+  .layout {
+    flex-direction: column;
+  }
+  .side {
+    width: auto;
+    height: 50%;
+    border-left: 0;
+    border-top: 1px solid var(--flowinger-border);
+  }
+}

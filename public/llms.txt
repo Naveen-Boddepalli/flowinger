@@ -63,7 +63,7 @@ export function Diagram() {
 ## Optional
 
 - [Full documentation in one file](https://naveen-boddepalli.github.io/flowinger/llms-full.txt)
-- [Examples](https://github.com/Naveen-Boddepalli/flowinger/tree/main/examples): layouts (d3-hierarchy, dagre, elkjs), a controlled editor, exporting PNG/JPEG/WebP/SVG, saving and loading JSON, swimlanes (re-parenting a node on drop), multiplayer presence with Yjs, a collapsible tree, Next.js with server rendering
+- [Examples](https://github.com/Naveen-Boddepalli/flowinger/tree/main/examples): layouts (d3-hierarchy, dagre, elkjs), a controlled editor, exporting PNG/JPEG/WebP/SVG, saving and loading JSON, swimlanes (re-parenting a node on drop), multiplayer presence with Yjs, a workflow-simulation stepper, a collapsible tree, Next.js with server rendering
 - [Documentation site](https://naveen-boddepalli.github.io/flowinger/)
 - [Live demo](https://naveen-boddepalli.github.io/flowinger/demo/)
 - [Changelog](https://github.com/Naveen-Boddepalli/flowinger/blob/main/CHANGELOG.md)
