@@ -9,8 +9,16 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-14
+
 ### Changed
 
+- **With `onlyRenderVisibleElements`, a pan or zoom that stays inside the region last worked out costs nothing.**
+  The visible set is worked out for the view and a quarter-view margin round it; while the view stays inside
+  that region (and it is not more than three times the view after a zoom in), every node in view is already
+  drawn, so nothing is looked at again. A node kept from that region may be drawn a little further out of view
+  than before. At 10,000 nodes a pan costs 3.2 ms a frame (was 4.4) and a zoom 2.3 (was 5.0); React Flow 4.2
+  and 4.5 in the same run — [the benchmarks](docs/benchmarks.md).
 - **An edge label's halo is 6 px wide (was 4),** so the line no longer shows between two close stems — the
   "TT" in "HTTPS" at the default 12 px. Labels drawn with `labelShowBg` are unchanged.
 - **A drag, a measurement or a selection now costs what changed, not the size of the graph.** A drag hands the
@@ -19,7 +27,7 @@ The design notes behind each release — what was measured, what was tried and d
   and the culling pass — now starts from the answer it had and looks at what was replaced. With
   `onlyRenderVisibleElements` on, at 10,000 nodes a drag costs 4.3 ms a move (7.7 before; React Flow 4.5), and
   a mount 0.5 s. See [the benchmarks](docs/benchmarks.md).
-- **Size.** The core is 19.7 kB gzipped (was 18.9) and the whole canvas 35.3 (was 33.9); the culling feature
+- **Size.** The core is 19.7 kB gzipped (was 18.9) and the whole canvas 35.5 (was 33.9); the culling feature
   1.2 kB (was 0.5). The budgets are 20 and 36 kB (were 19 and 34).
 
 ### Added
@@ -315,7 +323,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.3.0...v0.4.0

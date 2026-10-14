@@ -37,6 +37,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   with culling on, a drag at 10,000 nodes went from 10 ms to 4.3 (React Flow: 4.5).
 - `0.5.0` and `0.6.0` (2026-10-13): every React Flow prop does something; the pro modules as entry points;
   editable edges; a collapsible-tree example; benchmarks.
+- `0.7.0` (2026-10-14): culled pan and zoom level with or ahead of React Flow; a drag that costs what changed;
+  a documentation site and guides; examples for Next.js, export, JSON, swimlanes, Yjs presence and a stepper.
 
 ## Now — be easy to try and to trust
 
@@ -63,8 +65,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
    Yjs](examples/presence) and [a workflow-simulation stepper](examples/stepper).
 3. **Size.** The core grew from 17.6 to 19.6 kB and the whole canvas from 27.3 to 35.4 — the 39 props, then
    making a drag cost what changed rather than the size of the graph. The duplication pass is done (one parser
-   for key codes, one box round some rectangles): 35.3 kB for the whole canvas, the core unchanged, because
-   gzip had already folded most of the copies. Measured, the core is the store (37%), the canvas (19%) and
+   for key codes, one box round some rectangles) saved 0.13 kB of the whole canvas and nothing of the core,
+   because gzip had already folded most of the copies — and the faster culling pass took about that back (35.5 kB). Measured, the core is the store (37%), the canvas (19%) and
    the edges (13%), with no development text left in a production build. What remains is the React Flow
    instance API itself; moving its rarely used methods behind features would save more, and break code that
    calls them — so not before a `1.0` that can say so.

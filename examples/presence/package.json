@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
-    "flowinger": "^0.6.0",
+    "flowinger": "^0.7.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "y-protocols": "^1.0.7",
