@@ -9,6 +9,16 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **With `onlyRenderVisibleElements`, the first render is culled too.** The nodes and options reach the store in
+  layout effects, after the first render, which therefore drew every node — to measure it, and then drop all but
+  those in view. The culling feature now judges that render from the props: the nodes as declared, against the
+  starting view and an assumed 1920 × 1080 pane, with selected nodes always drawn. At 10,000 nodes a culled
+  mount went from about 570 ms to about 70 in a profile. A **server** renders the same set (so hydration matches),
+  where it rendered every node: a culled page no longer sends all its nodes as HTML. In a test environment
+  with no layout, everything is still drawn once the canvas has mounted.
+
 ## [0.7.0] - 2026-10-14
 
 ### Changed

@@ -29,6 +29,7 @@ import type {
   KeyCode,
   Node,
   NodeChange,
+  NodeOrigin,
   Rect,
   Viewport,
   XYPosition,
@@ -80,6 +81,11 @@ export interface Feature<Api = unknown> {
   readonly keyHeld?: (code: KeyCode | null | undefined, e: Modifiers) => boolean;
   /** Which layer an edge is drawn in, given the one the engine would pick. */
   readonly stackEdge?: (store: FlowingerStore, edge: Edge, level: number, selected: boolean) => number;
+  /**
+   * What to draw on a render before the store has a visible set of its own — the first one, on a server too —
+   * from the props alone. Null draws everything.
+   */
+  readonly firstVisible?: (nodes: readonly Node[], edges: readonly Edge[], viewport: Viewport, origin: NodeOrigin) => VisibleSet | null;
 }
 
 /** Things the store tells a feature about, besides the calls made on it. */

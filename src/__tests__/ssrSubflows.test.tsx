@@ -35,11 +35,27 @@ describe('server rendering nested nodes and a culled diagram', () => {
     expect(html).toContain('data-id="x"');
   });
 
-  it('draws everything when only what is in view is asked for, since nothing has a size yet', () => {
+  it('draws what is near the starting view when only what is in view is asked for — and what is selected', () => {
+    // Judged against a 1920 × 1080 pane (there is none to measure), so a 10,000-node page does not send them all.
     const html = renderToString(
-      <FlowingerCanvas nodes={[n('near', 0, 0), n('far', 5000, 0)]} onlyRenderVisibleElements />,
+      <FlowingerCanvas
+        nodes={[n('near', 0, 0), n('far', 5000, 0), n('picked', 6000, 0, { selected: true })]}
+        edges={[{ id: 'near-far', source: 'near', target: 'far' }]}
+        onlyRenderVisibleElements
+      />,
     );
     expect(html).toContain('data-id="near"');
+    expect(html).not.toContain('data-id="far"');
+    expect(html).toContain('data-id="picked"');
+    // An edge with one end drawn is drawn.
+    expect(html).toContain('data-testid="rf__edge-near-far"');
+  });
+
+  it('judges from where the view starts', () => {
+    const html = renderToString(
+      <FlowingerCanvas nodes={[n('near', 0, 0), n('far', 5000, 0)]} defaultViewport={{ x: -5000, y: 0, zoom: 1 }} onlyRenderVisibleElements />,
+    );
+    expect(html).not.toContain('data-id="near"');
     expect(html).toContain('data-id="far"');
   });
 

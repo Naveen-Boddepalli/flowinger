@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
   useSyncExternalStore,
@@ -356,8 +357,22 @@ function InnerCanvas(props: FlowingerProps) {
   // it is, and what is hidden along with a hidden parent.
   const treeOf = useMemo(createTreeInfo, []);
   const tree = useMemo(() => treeOf(nodes), [treeOf, nodes]);
-  // With `onlyRenderVisibleElements`: what is in view. Null (everything) otherwise, and on the server.
-  const visible = useSyncExternalStore(store.subscribeVisible, store.getVisible, () => null);
+  // With `onlyRenderVisibleElements`: what is in view. Null (everything) otherwise.
+  const storeVisible = useSyncExternalStore(store.subscribeVisible, store.getVisible, () => null);
+  // The store has no set until the nodes and options reach it, in the layout effects below — so the first
+  // render (and a server's) would draw every node, only to drop all but those in view. Until then, the culling
+  // feature judges the props (`firstVisible`). Worked out only until the store has its own.
+  const seeded = useRef(false);
+  const firstVisible = useMemo(() => feats.find((f) => f.firstVisible)?.firstVisible, [feats]);
+  const provisional = useMemo(
+    () =>
+      !seeded.current && onlyRenderVisibleElements && firstVisible
+        ? firstVisible(nodes, edges, store.instance.getViewport(), [originX, originY])
+        : null,
+    [firstVisible, onlyRenderVisibleElements, nodes, edges, store, originX, originY],
+  );
+  const visible = storeVisible ?? (seeded.current ? null : provisional);
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
 
 
   useIsomorphicLayoutEffect(() => {
@@ -420,6 +435,16 @@ function InnerCanvas(props: FlowingerProps) {
   useIsomorphicLayoutEffect(() => {
     store.setEdges(edges);
   }, [store, edges]);
+
+  // The store has the nodes, edges and options now, and its own set (or none). If it has none — a pane with no
+  // size, where everything is drawn — draw what the first render left out. Before the first paint.
+  useIsomorphicLayoutEffect(() => {
+    if (seeded.current) return;
+    seeded.current = true;
+    if (provisional && store.getVisible() === null) rerender();
+    // Once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Once, when every node has a size: before that there is nothing to frame. After
   // `setNodes` above, so it frames the nodes it is given, not the ones before them. And once the pane has

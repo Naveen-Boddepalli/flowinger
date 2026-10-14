@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act } from '@testing-library/react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
+import { FlowingerCanvas, type Node } from '../index.ts';
 import { framedByCanvas, heldByCanvas, tree } from './ssrFixture.tsx';
 
 afterEach(() => {
@@ -9,6 +10,34 @@ afterEach(() => {
 });
 
 describe('Flowinger hydration', () => {
+  it('hydrates a culled canvas: the server and the first render judge the same, and nothing is missed after', async () => {
+    const box = (id: string, x: number): Node => ({ id, position: { x, y: 0 }, width: 100, height: 40, data: {} });
+    const element = (
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCanvas nodes={[box('near', 0), box('far', 5000)]} onlyRenderVisibleElements />
+      </div>
+    );
+    const html = renderToString(element);
+    expect(html).not.toContain('data-id="far"');
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    document.body.appendChild(container);
+
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let root!: ReturnType<typeof hydrateRoot>;
+    await act(async () => {
+      root = hydrateRoot(container, element);
+    });
+    expect(errors).not.toHaveBeenCalled();
+    // jsdom lays nothing out, so the pane has no size and culling draws everything — as it always has here.
+    expect(container.querySelector('[data-id="far"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
   it('hydrates the server markup without a mismatch or a warning', async () => {
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
     const html = renderToString(tree);

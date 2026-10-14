@@ -1,12 +1,19 @@
 import type { Feature } from '../features.ts';
-import { isRectIntersecting } from '../geometry.ts';
-import type { Edge, Node, Rect } from '../types.ts';
+import { isRectIntersecting, sizeOfNode } from '../geometry.ts';
+import type { VisibleSet } from '../store.ts';
+import type { Edge, Node, NodeOrigin, Rect, Viewport, XYPosition } from '../types.ts';
 
 /** More than this many changed nodes (with what is inside them) and it is cheaper to look at all of them. */
 const INCREMENTAL_LIMIT = 256;
 
 /** The region round the view, as a share of the view on each side: a node is drawn a little before it slides in. */
 const MARGIN = 0.25;
+
+/**
+ * The pane assumed for {@link firstVisible}, before there is one to measure: a common screen. The same on a
+ * server and in the browser, so the two first renders agree and hydration matches.
+ */
+const ASSUMED_PANE = { width: 1920, height: 1080 };
 
 /**
  * How much bigger than the view (on each side) the region worked out last time may be and still be kept: past
@@ -49,6 +56,7 @@ interface Memo {
  */
 export const cullingFeature: Feature = {
   name: 'culling',
+  firstVisible,
   install(ctx) {
     let memo: Memo | null = null;
 
@@ -213,6 +221,63 @@ export const cullingFeature: Feature = {
     return {};
   },
 };
+
+/**
+ * The set for a render before the store has one. The nodes and options reach the store in layout effects, after
+ * the first render — which would otherwise draw every node, measure it, and drop all but the few in view. This
+ * judges the props instead: the nodes as declared (positions, and sizes where given), against the view and an
+ * assumed pane. Selected nodes are drawn wherever they are, hidden ones never, and an edge with either end
+ * drawn. It need only be close: in the browser the store's own set replaces it before the first paint; a
+ * server's HTML is drawn from it, which covers what is in view on a screen up to the assumed size.
+ */
+function firstVisible(nodes: readonly Node[], edges: readonly Edge[], viewport: Viewport, origin: NodeOrigin): VisibleSet {
+  const zoom = viewport.zoom;
+  const width = ASSUMED_PANE.width / zoom;
+  const height = ASSUMED_PANE.height / zoom;
+  const region: Rect = {
+    x: -viewport.x / zoom - width * MARGIN,
+    y: -viewport.y / zoom - height * MARGIN,
+    width: width * (1 + 2 * MARGIN),
+    height: height * (1 + 2 * MARGIN),
+  };
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const placed = new Map<string, XYPosition>();
+  /** Where a node's top-left is on the canvas: its position, less its origin, plus its parents' (a few deep). */
+  const at = (n: Node, depth = 0): XYPosition => {
+    const known = placed.get(n.id);
+    if (known) return known;
+    const size = sizeOfNode(n);
+    const [ox, oy] = n.origin ?? origin;
+    let x = n.position.x - ox * size.width;
+    let y = n.position.y - oy * size.height;
+    const parent = n.parentId === undefined ? undefined : byId.get(n.parentId);
+    if (parent && depth < 32) {
+      const p = at(parent, depth + 1);
+      x += p.x;
+      y += p.y;
+    }
+    const point = { x, y };
+    placed.set(n.id, point);
+    return point;
+  };
+
+  const nodeIds = new Set<string>();
+  for (const n of nodes) {
+    if (n.hidden === true) continue;
+    if (n.selected === true) {
+      nodeIds.add(n.id);
+      continue;
+    }
+    const p = at(n);
+    if (isRectIntersecting({ ...p, ...sizeOfNode(n) }, region, true)) nodeIds.add(n.id);
+  }
+  // In the list's order, which is the order they are drawn in.
+  const edgeIds = new Set<string>();
+  for (const e of edges) {
+    if (e.hidden !== true && (nodeIds.has(e.source) || nodeIds.has(e.target))) edgeIds.add(e.id);
+  }
+  return { nodes: nodeIds, edges: edgeIds };
+}
 
 /**
  * Whether a region worked out earlier still serves `view`: it holds all of it, and is not so much bigger (after
