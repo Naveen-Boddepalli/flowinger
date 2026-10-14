@@ -29,6 +29,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
   provenance attestation — a changelog, and a demo built for GitHub Pages. (Each needs a one-time switch on
   GitHub or npm; [CONTRIBUTING.md](CONTRIBUTING.md#releasing) lists them.)
 - Contribution, conduct and security policies; issue and pull-request templates.
+- A [documentation site](https://naveen-boddepalli.github.io/flowinger/) (Astro Starlight) with search, a
+  sidebar and a live editor on the home page, generated from `docs/` so the Markdown stays the one copy; the
+  demo moved to `/flowinger/demo/`.
 - [Published benchmarks](docs/benchmarks.md) against React Flow at 1,000, 5,000 and 10,000 nodes, culled and
   not, reproducible with `pnpm bench` — and the scaling bugs they found in Flowinger's own culling, fixed:
   with culling on, a drag at 10,000 nodes went from 10 ms to 4.3 (React Flow: 4.5).
@@ -69,9 +72,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
 
 ## Later
 
-- **A docs site.** The reference lives in [`docs/`](docs/README.md) as Markdown, which GitHub renders; when
-  that stops being findable — search, a sidebar, versions — it becomes a site (a static site generator,
-  deployed beside the demo). Not before there is more than one reader's worth of questions.
+- **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
+  release only once a `1.x` has users on more than one version.
 - **An accessibility pass** with a screen reader and the keyboard alone, written up honestly. The canvas is
   opt-in tab stops and ARIA fields today; "good" is not yet measured.
 - **Real touch devices.** Multi-touch pinch is unit-tested in its maths and handling but has not been seen

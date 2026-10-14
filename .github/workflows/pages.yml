@@ -1,8 +1,8 @@
-name: Demo
+name: Site
 
-# Publishes the demo (index.html + demo/) to GitHub Pages on every push to main. In the repository's
-# Settings -> Pages, set the source to "GitHub Actions" once; the site is then at
-# https://<owner>.github.io/flowinger/.
+# Publishes the documentation site (site/) and the demo (index.html + demo/, under demo/) to GitHub Pages on
+# every push to main (scripts/build-site.mjs). In the repository's Settings -> Pages, set the source to
+# "GitHub Actions" once; the site is then at https://<owner>.github.io/flowinger/.
 on:
   push:
     branches: [main]
@@ -27,10 +27,11 @@ jobs:
           node-version: 24
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: pnpm demo:build
+      - run: pnpm --dir site install --frozen-lockfile
+      - run: pnpm site:build
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: demo-dist
+          path: site/dist
 
   deploy:
     needs: build

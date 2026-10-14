@@ -181,6 +181,7 @@
     "bench": "node scripts/bench.mjs",
     "check:package": "publint --strict && attw --pack .",
     "demo:build": "vite build --config vite.demo.config.ts",
+    "site:build": "node scripts/build-site.mjs",
     "check:examples": "node scripts/check-examples.mjs",
     "e2e": "playwright test"
   },

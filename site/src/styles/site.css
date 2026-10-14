@@ -1,0 +1,52 @@
+/* The live examples: a canvas fills its parent, so the parent has the height. */
+.flowinger-live {
+  position: relative;
+  height: 420px;
+  margin-block: 1.5rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  /* Flowinger's theme from Starlight's, so the diagram follows the light/dark switch. */
+  --flowinger-surface: var(--sl-color-bg);
+  --flowinger-surface-raised: var(--sl-color-gray-6);
+  --flowinger-border: var(--sl-color-gray-4);
+  --flowinger-text: var(--sl-color-white);
+  --flowinger-text-dim: var(--sl-color-gray-2);
+  --flowinger-edge: var(--sl-color-gray-3);
+  --flowinger-selected: var(--sl-color-accent);
+  background: var(--sl-color-bg-nav);
+}
+
+.flowinger-live-caption {
+  margin-top: -0.75rem !important;
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+}
+
+.flowinger-compare th,
+.flowinger-compare td {
+  vertical-align: top;
+}
+
+.flowinger-step {
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--flowinger-border);
+  border-radius: 0.5rem;
+  background: var(--sl-color-bg);
+  color: var(--flowinger-text);
+  font-size: var(--sl-text-sm);
+  white-space: nowrap;
+}
+
+.flowinger-step.is-selected {
+  border-color: var(--sl-color-accent);
+  box-shadow: 0 0 0 2px var(--sl-color-accent-low);
+}
+
+/* At phone width the minimap would cover half the diagram. */
+@media (max-width: 50rem) {
+  /* !important: the minimap's panel is positioned with inline styles. */
+  .flowinger-live .react-flow__panel:has(> .react-flow__minimap) {
+    display: none !important;
+  }
+}

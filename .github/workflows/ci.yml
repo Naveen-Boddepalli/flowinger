@@ -52,7 +52,8 @@ jobs:
         run: node scripts/audit-react-flow.mjs node_modules/@xyflow/react/dist/esm/index.d.ts
 
   demo:
-    # The demo is built from source, so a change that breaks it should fail the PR, not the deploy.
+    # The demo and the docs site are built from source (and docs/), so a change that breaks either should fail
+    # the PR, not the deploy.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -61,7 +62,8 @@ jobs:
           node-version: 24
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: pnpm demo:build
+      - run: pnpm --dir site install --frozen-lockfile
+      - run: pnpm site:build
 
   examples:
     # Each example is built against the packed library — what a consumer installs — so one that stops

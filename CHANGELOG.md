@@ -22,6 +22,9 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
+- **A documentation site** at https://naveen-boddepalli.github.io/flowinger/ (Astro Starlight, in
+  [`site/`](site)): search, a sidebar, and a live editor on the home page that is rendered on the server. Its
+  pages are generated from `docs/`. The demo moved to `/flowinger/demo/`; `llms.txt` stays at the root.
 - **An example in Next.js** ([`examples/nextjs`](examples/nextjs)): a graph laid out and framed in a Server
   Component, then shown as a viewer and as an editor with undo. Built against the packed library in CI like the
   others. [Server rendering](docs/server-rendering.md) is rewritten around it: what the server draws, what
