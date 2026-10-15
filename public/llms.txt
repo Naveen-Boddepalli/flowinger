@@ -1,12 +1,12 @@
 # Flowinger
 
-> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 19.6 kB gzipped and the full canvas about 35.4 kB. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
+> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 19.9 kB gzipped and the full canvas about 36.4 kB. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
 
 Use Flowinger when a React app needs to *draw* a graph (a workflow, a query plan, a syntax tree, an org chart, a dependency map) and bundle size, dependencies or server rendering matter. It names all 211 exports of `@xyflow/react` 12.11.6 and implements every one of its 119 `ReactFlow` props, so React Flow code usually migrates by changing the import and deleting the stylesheet import. Differences to know:
 
-- Nothing is draggable, connectable or selectable by default. Pass `nodesDraggable`, `nodesConnectable` and `elementsSelectable` for an editor (React Flow turns these on by default).
+- `<ReactFlow>` has React Flow's defaults (interaction on, `minZoom` 0.5…), so React Flow code migrates by changing the import. `<FlowingerCanvas>` is the same canvas with flowinger's viewer-first defaults: nothing is draggable, connectable or selectable until `nodesDraggable`, `nodesConnectable` and `elementsSelectable` are passed. `reactFlowDefaults` spreads React Flow's onto any canvas.
 - There is no CSS file to import. Styling is inline and themed with `--flowinger-*` CSS variables. The `react-flow__*` class names are kept.
-- `ReactFlow` and `ReactFlowProvider` are exported as aliases of `FlowingerCanvas` and `FlowingerProvider`.
+- `ReactFlowProvider` is an alias of `FlowingerProvider`. Since 1.0 Flowinger follows semantic versioning (what it covers: https://naveen-boddepalli.github.io/flowinger/docs/stability/).
 - `FlowingerCore` plus named features (`dragFeature`, `connectFeature`…) is the smallest build. `FlowingerCanvas` includes every feature.
 - Undo/redo, copy/paste, snap lines, PNG/SVG export, smart (obstacle-avoiding) edges, editable edges, flowchart shapes and a collapsible tree are free, as separate entry points: `flowinger/history`, `flowinger/clipboard`, `flowinger/snaplines`, `flowinger/export`, `flowinger/smart-edges`, `flowinger/editable-edge`, `flowinger/shapes`, `flowinger/tree`.
 - Neither library lays graphs out. Compute positions with `d3-hierarchy`, `dagre` or `elkjs`.

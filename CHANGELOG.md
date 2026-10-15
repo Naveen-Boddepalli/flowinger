@@ -1,8 +1,9 @@
 # Changelog
 
 All notable changes to Flowinger. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and versions follow [Semantic Versioning](https://semver.org) — with the usual caveat that while the version
-is `0.x`, a minor release may change the API; anything that does is listed under **Changed**.
+and versions follow [Semantic Versioning](https://semver.org): from 1.0.0 a breaking change is a major version
+([what that covers](docs/stability.md)). Before 1.0, while the version was `0.x`, a minor release could change the
+API; each change that did is listed under **Changed**.
 
 The design notes behind each release — what was measured, what was tried and dropped — are in
 [`plan.md`](plan.md).

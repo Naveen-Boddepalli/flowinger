@@ -4,6 +4,10 @@
 
 ## `FlowingerCanvas` props
 
+The defaults below are `<FlowingerCanvas>`'s and `<FlowingerCore>`'s. `<ReactFlow>` takes the same props with
+React Flow's defaults where they differ — interaction on, `minZoom` 0.5 and the rest of `reactFlowDefaults`, and a
+0.1 fit margin, `'smooth'` animated moves and `Controls`' lock ([migration guide](migrating-from-react-flow.md#2-set-the-defaults-you-were-relying-on)).
+
 | Prop | Default | |
 |---|---|---|
 | `nodes`, `edges`, `nodeTypes` | | The graph. `nodeTypes` maps `node.type` to your component. Give `onNodesChange` / `onEdgesChange` and the flow is [controlled](#controlled-flows). |

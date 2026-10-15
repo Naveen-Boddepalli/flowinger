@@ -1,10 +1,9 @@
 # What 1.0 promises
 
 From `1.0.0`, Flowinger follows [semantic versioning](https://semver.org): a change that breaks anything on this
-page waits for `2.0`. Until then the version is `0.x`, and a minor release may change the API — each change is
-listed under **Changed** in the [changelog](../CHANGELOG.md). This page says now what the contract will be, so you
-can see what you are building on before it is in force. [Upgrading to 1.0](upgrading.md) says what changes on the
-way there.
+page waits for `2.0`, and a minor or patch release only adds or fixes. Before 1.0 the version was `0.x`, when a
+minor release could change the API. [Upgrading to 1.0](upgrading.md) says what changed on the way, and the
+[changelog](../CHANGELOG.md) lists every release.
 
 ## Covered
 
@@ -16,7 +15,7 @@ way there.
 - **`useStore` and `useStoreApi`**, and the ten fields of the state they read (`FlowingerState`): `panZoom`,
   `isReady`, `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`.
 - **The defaults.** `<FlowingerCanvas>` and `<FlowingerCore>` have flowinger's (interaction off until asked for —
-  see the [API reference](api.md)); from 1.0, `<ReactFlow>` has React Flow's (`reactFlowDefaults`). Changing a
+  see the [API reference](api.md)); `<ReactFlow>` has React Flow's (`reactFlowDefaults`, and the three that are not props). Changing a
   default is a breaking change.
 - **What stylesheets and tests select on:** the `react-flow__*` class names on the engine's elements; the test ids
   `rf__wrapper`, `rf__node-<id>`, `rf__edge-<id>`, `rf__background`, `rf__controls` and `rf__minimap`; the

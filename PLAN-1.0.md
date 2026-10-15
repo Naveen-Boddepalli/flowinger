@@ -175,12 +175,14 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
 - **The registry checks** from the 0.4.0 release: installed from npm into an empty project, `require` and
   `import`, a server render from each, a strict `nodenext` consumer, `npm audit signatures`.
 
-### 4. Docs for 1.0
+### 4. Docs for 1.0 — **done on the branch** (2026-10-15)
 
 - README: the *Status* line, and the claim "migrating means changing an import" made exact by D1.
 - The migration guide and the upgrade guide say "from 1.0" in the present tense.
 - CHANGELOG: drop the `0.x` caveat from the header; the 1.0 entry links the upgrade guide.
-- The `0.x` docs stay readable at the `v0.9.0` tag on GitHub. A versioned docs site waits, as the roadmap says,
+- Also done: the stability page in the present tense, the API reference's note that `<ReactFlow>` has React Flow's
+  defaults, `Controls`' lock default, `llms.txt`, and the size figures (19.9 / 36.4 kB).
+- The `0.x` docs stay readable at the `v0.9.1` tag on GitHub (`v0.9.0` was tagged but never published). A versioned docs site waits, as the roadmap says,
   until a `1.x` has users on more than one version.
 
 ### 5. Release
