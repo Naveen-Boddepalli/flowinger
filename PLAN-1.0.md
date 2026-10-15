@@ -166,8 +166,11 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
   honestly in `docs/accessibility.md`: what works, what does not, what is planned. It also decides whether
   `<ReactFlow>` adds React Flow's `role="application"` and live region, which D1 left out.
 - **A real consumer on the candidate.** QueryLens moves to `1.0.0-rc.1` and runs on it for a week.
-- **The registry checks** from the 0.4.0 release: installed from npm into an empty project, `require` and
-  `import`, a server render from each, a strict `nodenext` consumer, `npm audit signatures`.
+- **The registry checks — scripted** (`pnpm check:registry <version>`, with `--react 18` for React 18):
+  installed from npm into an empty project, `npm audit signatures` and flowinger's SLSA provenance, `require`
+  and `import` with a server render from each, and a strict `nodenext` consumer (`.cts` and `.mts`,
+  `skipLibCheck` off) that resolves a pro subpath and React Flow's type names. 0.9.1 passes on React 18 and 19
+  (2026-10-16). To run on `1.0.0-rc.1` once it is published, and on `1.0.0`.
 
 ### 4. Docs for 1.0
 

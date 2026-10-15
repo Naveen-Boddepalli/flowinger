@@ -130,4 +130,7 @@ keeps working, and a leaked token no longer can publish. npm does not validate t
 the first tag push is the test, so make it a prerelease.
 
 Anyone can check a release: `npm audit signatures` verifies the registry signature and the provenance
-attestation, which names the workflow run and commit that built the tarball.
+attestation, which names the workflow run and commit that built the tarball. After each publish, run
+`pnpm check:registry <version>` (and again with `--react 18`): it installs the published package into an empty
+project and checks the signatures and flowinger's provenance, `require` and `import` with a server render from
+each, and a strict `nodenext` TypeScript consumer.

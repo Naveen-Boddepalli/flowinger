@@ -183,6 +183,7 @@
     "demo:build": "vite build --config vite.demo.config.ts",
     "site:build": "node scripts/build-site.mjs",
     "check:examples": "node scripts/check-examples.mjs",
+    "check:registry": "node scripts/check-registry.mjs",
     "e2e": "playwright test"
   },
   "peerDependencies": {
