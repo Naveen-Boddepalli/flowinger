@@ -72,12 +72,11 @@ test.describe('the rectangle round a box selection', () => {
     await page.mouse.move(pane.x + pane.width / 2, pane.y + pane.height / 2);
     await page.mouse.down();
     await page.mouse.move(pane.x + 4, pane.y + pane.height / 2, { steps: 6 });
-    await page.waitForTimeout(600);
-    const during = await view(page);
+    // Held at the left edge, the view moves right (it looks further left), for as long as it is held. How far it
+    // gets in a given time is how often the browser draws: WebKit on the CI runner draws a few frames a second.
+    await expect.poll(async () => (await view(page)).x - before.x, { timeout: 10_000 }).toBeGreaterThan(100);
     await page.mouse.up();
     await page.keyboard.up('Shift');
-    // Held at the left edge, the view moves right (it looks further left).
-    expect(during.x - before.x).toBeGreaterThan(100);
   });
 });
 
@@ -203,23 +202,18 @@ test.describe("interpolate: 'smooth'", () => {
     await page.locator('.react-flow').focus();
     for (let i = 0; i < 14; i++) await page.keyboard.press('Shift+ArrowRight');
     await expect.poll(async () => (await view(page)).x).toBeLessThan(-2000);
-    const samples = page.evaluate(
-      () =>
-        new Promise<number[]>((resolve) => {
-          const el = document.querySelector('.react-flow__viewport') as HTMLElement;
-          const out: number[] = [];
-          const t0 = performance.now();
-          const tick = () => {
-            const m = /scale\(([\d.e-]+)\)/.exec(el.style.transform);
-            if (m) out.push(Number(m[1]));
-            if (performance.now() - t0 < 1000) requestAnimationFrame(tick);
-            else resolve(out);
-          };
-          requestAnimationFrame(tick);
-        }),
-    );
+    // The move is watched a frame at a time on a clock the test steps, so how often the browser draws is not part
+    // of it: WebKit on the CI runner draws a few frames a second, and saw at most one frame of a 500 ms move.
+    // Installed, the page's clock still runs with real time; paused, it moves only when stepped.
+    await page.clock.install();
+    await page.clock.pauseAt(Date.now() + 1000);
+    const zooms = [(await view(page)).zoom];
     await page.getByRole('button', { name: 'Fit view' }).click();
-    return samples;
+    for (let i = 0; i < 60; i++) {
+      await page.clock.runFor(16);
+      zooms.push((await view(page)).zoom);
+    }
+    return zooms;
   }
 
   test('zooms out part-way along a long move and back in', async ({ page }) => {
