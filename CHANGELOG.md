@@ -9,6 +9,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-10-15
+
+The first candidate for 1.0, on the `next` dist-tag (`npm install flowinger@next`); `latest` stays on 0.9.1 until
+1.0.0. Two breaking changes, both described in [Upgrading to 1.0](https://naveen-boddepalli.github.io/flowinger/docs/upgrading/),
+and from 1.0.0 the contract in [What 1.0 promises](https://naveen-boddepalli.github.io/flowinger/docs/stability/).
+
 ### Changed
 
 - **Breaking: `<ReactFlow>` has React Flow's defaults.** It applies `reactFlowDefaults` under the props it is given
@@ -436,7 +442,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0-rc.1...HEAD
+[1.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0-rc.1
 [0.9.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.1
 [0.9.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...v0.8.0

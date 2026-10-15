@@ -185,7 +185,8 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
 
 ### 5. Release
 
-`1.0.0-rc.1` on the `next` dist-tag through `release.yml`, as `0.4.0-rc.1` was; a second candidate if the week
+`1.0.0-rc.1` on the `next` dist-tag through `release.yml`, as `0.4.0-rc.1` was — **versioned on `release/1.0`**
+(2026-10-15), tagged from the branch, since a candidate does not merge; a second candidate if the week
 on QueryLens or the proof finds anything. Then `1.0.0` on `latest`, tagged from `main` after the release PR has
 merged (CONTRIBUTING's *Releasing*). Tagging is the owner's.
 
