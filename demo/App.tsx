@@ -267,6 +267,8 @@ export function App() {
   const [boxSelect, setBoxSelect] = useState(false);
   const [snap, setSnap] = useState(false);
   const [many, setMany] = useState(false);
+  // On a phone the options would cover the graph: they start folded there, open on a wider screen.
+  const [optionsOpen, setOptionsOpen] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 768px)').matches);
   // The whole canvas, or the core with a few features: read once by a canvas, so a change remounts it.
   const [whole, setWhole] = useState(true);
   const [picks, setPicks] = useState<ReadonlySet<string>>(() => new Set(PICKABLE.map((p) => p.label)));
@@ -368,7 +370,13 @@ export function App() {
               </div>
             </ViewportPortal>
             <Panel position="top-right">
-              <div className="flex flex-col gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-2.5 text-xs text-slate-300 shadow-lg">
+              <details
+                open={optionsOpen}
+                onToggle={(e) => { setOptionsOpen(e.currentTarget.open); }}
+                className="rounded-lg border border-slate-700 bg-slate-900/95 text-xs text-slate-300 shadow-lg"
+              >
+                <summary className="cursor-pointer select-none px-2.5 py-1.5 font-medium text-slate-200">Options</summary>
+              <div className="flex flex-col gap-1.5 px-2.5 pb-2.5">
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={boxSelect} onChange={(e) => { setBoxSelect(e.target.checked); }} />
                   Drag to box-select
@@ -421,6 +429,7 @@ export function App() {
                   <DomCount />
                 </div>
               </div>
+              </details>
             </Panel>
           </Canvas>
           <MiniMap
