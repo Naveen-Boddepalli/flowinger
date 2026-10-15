@@ -20,7 +20,8 @@ const root = resolve(import.meta.dirname, '..');
 const args = process.argv.slice(2);
 const reactAt = args.indexOf('--react');
 const react = reactAt === -1 ? '19' : args[reactAt + 1];
-const version = args.find((a, i) => !a.startsWith('--') && i !== reactAt + 1) ?? 'latest';
+// The version is the argument that is neither a flag nor the value of `--react`.
+const version = args.find((a, i) => !a.startsWith('--') && (reactAt === -1 || i !== reactAt + 1)) ?? 'latest';
 const dir = mkdtempSync(join(tmpdir(), 'flowinger-registry-'));
 const tsc = join(root, 'node_modules', '.bin', 'tsc');
 

@@ -170,7 +170,7 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
   installed from npm into an empty project, `npm audit signatures` and flowinger's SLSA provenance, `require`
   and `import` with a server render from each, and a strict `nodenext` consumer (`.cts` and `.mts`,
   `skipLibCheck` off) that resolves a pro subpath and React Flow's type names. 0.9.1 passes on React 18 and 19
-  (2026-10-15). To run on `1.0.0-rc.1` once it is published, and on `1.0.0`.
+  (2026-10-15), and so does `1.0.0-rc.1` from the `next` tag, on both (2026-10-15). To run again on `1.0.0`.
 
 ### 4. Docs for 1.0
 
