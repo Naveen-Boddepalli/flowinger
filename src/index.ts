@@ -1,5 +1,6 @@
 // Core Canvas and Provider
-export { FlowingerCanvas, FlowingerCanvas as ReactFlow } from './FlowingerCanvas.tsx';
+export { FlowingerCanvas, ReactFlow } from './FlowingerCanvas.tsx';
+export { reactFlowDefaults } from './reactFlowDefaults.ts';
 export { FlowingerCore } from './FlowingerCore.tsx';
 export {
   allFeatures,
