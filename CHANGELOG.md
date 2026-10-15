@@ -9,6 +9,13 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **The whole canvas's size budget is 37 kB (was 36).** 0.9.0 measured 35.97 kB — inside 36 by 26 bytes on one
+  machine, and over it on CI's Linux runner, where the same build gzips a little larger; that stopped its release
+  before it published. The growth is 0.8.0's culled first render (a culled mount ten times faster). The core's
+  budget stays 20 kB.
+
 ### Added
 
 - **The browser suite runs in Firefox and WebKit as well as Chromium**, in `pnpm e2e` and in CI. Neither found

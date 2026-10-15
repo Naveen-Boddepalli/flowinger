@@ -143,8 +143,8 @@ code first, so nobody on `0.x` is surprised by `1.0`:
 D1 and D3, one commit each, each with its tests and its line in the upgrade guide: `ReactFlow` spreads
 `reactFlowDefaults` under its props (merging `fitViewOptions`) and tells the store its three non-prop defaults;
 `resolveHandlePosition` and its warning go. The size budgets are measured again at the end: after the bridge the
-whole canvas is 35.97 kB against its 36 kB budget, so D1 will need the budget raised (to 36.5, by the rule that a
-budget sits about half a kilobyte above what is measured), and the changelog says why.
+whole canvas is 35.97 kB, and its budget was raised to 37 kB after 0.9.0's release stopped on it (CI's Linux build
+measured over 36), so D1 fits unless it adds more than about a kilobyte; the changelog says why either way.
 
 ### 3. The proof — what 1.0 has to have been seen doing
 
