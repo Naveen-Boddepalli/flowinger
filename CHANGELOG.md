@@ -9,6 +9,40 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-10-15
+
+The first candidate for 1.0, on the `next` dist-tag (`npm install flowinger@next`); `latest` stays on 0.9.1 until
+1.0.0. Two breaking changes, both described in [Upgrading to 1.0](https://naveen-boddepalli.github.io/flowinger/docs/upgrading/),
+and from 1.0.0 the contract in [What 1.0 promises](https://naveen-boddepalli.github.io/flowinger/docs/stability/).
+
+### Changed
+
+- **Breaking: `<ReactFlow>` has React Flow's defaults.** It applies `reactFlowDefaults` under the props it is given
+  (a prop given as `undefined` takes the default, and a `fitViewOptions` is merged over React Flow's margin), and
+  three that are not props: a fit that names no margin uses 0.1 of the view (the instance's `fitView` and
+  `fitBounds`, and `Controls`' button), an animated move that names no path takes `'smooth'`, and `Controls` shows
+  its lock. So moving from React Flow is changing an import. `<FlowingerCanvas>` and `<FlowingerCore>` keep
+  flowinger's defaults. To keep what a `<ReactFlow>` did before, render `<FlowingerCanvas>`, which takes the same
+  props — [Upgrading to 1.0](docs/upgrading.md). The 0.9 warning that said this was coming is gone.
+- **Breaking: an edge that names a handle the node does not have meets the side it runs towards.** A few names
+  chose a side before — `in` / `top`, `out` / `bottom`, `prev` / `left`, `next` / `right` — a rule from before
+  handles were measured, which React Flow does not have. A `<Handle>` of that id, or an entry in the node's
+  `handles`, decides the side as before. Before a node mounts (on a server, and in the first paint) an edge to a
+  handle it has not registered yet meets the fallback side unless the node lists it in `handles`. The 0.9 warning
+  goes, and with it the store's `hasNodeElement`.
+
+### Fixed
+
+- **A two-finger pinch that starts on a node zooms.** The canvas counted fingers only once a press reached the
+  bare pane, and a node takes its own presses, so on a phone — where nodes fill the screen — a pinch on top of
+  them did nothing. Fingers are now counted on the way down, wherever they land; a second finger turns the first
+  one's drag into the pinch (the node stays where it was), and a finger is forgotten wherever it lifts.
+
+### Added
+
+- **Touch in the browser suite**: a tap selects, a finger drags a node or pans, two fingers zoom in and out about
+  the point between them — and on top of a node — sent as real touch through Chromium's DevTools protocol.
+
 ## [0.9.1] - 2026-10-15
 
 **The first published release of [0.9.0](#090---2026-10-15)'s changes** — the bridge to 1.0: `reactFlowDefaults`,
@@ -408,7 +442,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0-rc.1...HEAD
+[1.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0-rc.1
 [0.9.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.1
 [0.9.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...v0.8.0

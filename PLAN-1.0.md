@@ -138,11 +138,14 @@ code first, so nobody on `0.x` is surprised by `1.0`:
 - [docs/upgrading.md](docs/upgrading.md) and [docs/stability.md](docs/stability.md), on the site under
   *Reference*; the migration guide's defaults section leads with `reactFlowDefaults`.
 
-### 2. The breaking changes (`release/1.0` branch, one PR)
+### 2. The breaking changes (`release/1.0` branch, one PR) — **done on the branch** (2026-10-15)
 
 D1 and D3, one commit each, each with its tests and its line in the upgrade guide: `ReactFlow` spreads
 `reactFlowDefaults` under its props (merging `fitViewOptions`) and tells the store its three non-prop defaults;
-`resolveHandlePosition` and its warning go. The size budgets are measured again at the end: after the bridge the
+`resolveHandlePosition` and its warning go. Done: D1 sets the three non-prop defaults through a context the
+canvas and `Controls` read (`ViewDefaultsContext`), and D3 took the store's `hasNodeElement` with it. After both
+the whole canvas is 36.19 kB and the core 19.77 (D1 added 0.32 and 0.07; D3 took back 0.10 and 0.15). The size
+budgets were measured again at the end: after the bridge the
 whole canvas is 35.97 kB, and its budget was raised to 37 kB after 0.9.0's release stopped on it (CI's Linux build
 measured over 36), so D1 fits unless it adds more than about a kilobyte; the changelog says why either way.
 
@@ -159,8 +162,11 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
   the library only ever compares. One thing to undo: on macOS 27 Playwright 1.64's Firefox will not start on a
   Mac with Firefox installed (microsoft/playwright#42768), so the config gives it a home of its own there, to
   drop with Playwright 1.65.
-- **Touch.** A first pass in the iOS Simulator (two-finger pinch, pan and drag on the demo in Safari), then a real
-  iPhone and an Android phone. Written up in the browser-coverage notes, failures as issues.
+- **Touch — automated in Chromium; real phones to do.** `e2e/touch.spec.ts` sends real touch through Chromium's
+  DevTools protocol (tap, a finger dragging a node or panning, two fingers zooming in and out, and a pinch that
+  starts on a node). It found one bug, fixed: a pinch on top of a node did nothing, since the fingers were counted
+  only on the bare pane. Still by hand: Safari on an iPhone and Chrome on Android (the iOS Simulator needs a full
+  Xcode, not installed here). Also seen: at a phone's width the demo's options panel covers the graph.
 - **A screen reader and the keyboard alone.** VoiceOver on macOS and NVDA on Windows against the demo with
   `elementsSelectable` and `keyboardNavigation` on — and, after D1, against `<ReactFlow>`'s defaults. Written up
   honestly in `docs/accessibility.md`: what works, what does not, what is planned. It also decides whether
@@ -182,7 +188,8 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
 
 ### 5. Release
 
-`1.0.0-rc.1` on the `next` dist-tag through `release.yml`, as `0.4.0-rc.1` was; a second candidate if the week
+`1.0.0-rc.1` on the `next` dist-tag through `release.yml`, as `0.4.0-rc.1` was — **versioned on `release/1.0`**
+(2026-10-15), tagged from the branch, since a candidate does not merge; a second candidate if the week
 on QueryLens or the proof finds anything. Then `1.0.0` on `latest`, tagged from `main` after the release PR has
 merged (CONTRIBUTING's *Releasing*). Tagging is the owner's.
 

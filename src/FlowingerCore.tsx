@@ -8,12 +8,13 @@ import {
   useState,
   useSyncExternalStore,
   type CSSProperties,
+  type HTMLAttributes,
   type ComponentType,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore } from './context.ts';
+import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore, ViewDefaultsContext } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
 import { warnAboutIgnoredProps } from './devWarnings.ts';
 import { resolveFeatures, type Feature } from './features.ts';
@@ -193,6 +194,9 @@ function InnerCanvas(props: FlowingerProps) {
     disableKeyboardA11y,
   } = props;
   const store = useFlowingerStore();
+  // What `<ReactFlow>` provides for what is not a prop (its fit margin, its path for an animated move), or none:
+  // told to the store as this renders, before any child or fit reads it. Idempotent, like the features below.
+  store.setViewDefaults(useContext(ViewDefaultsContext));
   // Inside a caller's provider, the view starts where this canvas says on its first render, not in an effect:
   // a server runs none, and its HTML would be framed at the origin. (Once — a lazy initial state.)
   useState(() => {
@@ -549,21 +553,63 @@ function InnerCanvas(props: FlowingerProps) {
     return { mid: midpoint(local(a), local(b)), dist: distance(a, b) };
   };
 
+  // What the features add to the container — handlers among them; spread under the canvas's own below.
+  const bitProps: HTMLAttributes<HTMLDivElement> = Object.assign({}, ...bits.map((b) => b.props));
+
+  // The fingers are counted on the way down (the capture phase), before a node or a feature can take the press:
+  // a pinch is two fingers anywhere on the canvas, on a node as much as on the bare pane.
+  const onPointerDownCapture = (e: ReactPointerEvent<HTMLDivElement>) => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (!zoomOnPinch || pointers.current.size !== 2) return;
+    // A second finger turns whatever the first was doing — a pan, a node's drag — into a pinch.
+    const now = fingers(e.currentTarget);
+    if (!now) return;
+    pan.current = null;
+    pinch.current = { viewport: store.getViewport(), ...now };
+    store.setPinching(true);
+    store.beginGesture(e.nativeEvent);
+    capturePointer(e.currentTarget, e.pointerId);
+    // The second finger's press is the pinch's, not a node's (or the pan's) to begin anything with.
+    e.stopPropagation();
+  };
+
+  const onPointerMoveCapture = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // A feature's own (the events feature's `onPaneMouseMove`) first: the canvas's below takes the prop's place.
+    bitProps.onPointerMoveCapture?.(e);
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const start = pinch.current;
+    if (!start) return;
+    // Not stopped: a node whose drag the first finger began hears the move, sees the pinch, and ends its drag.
+    const now = fingers(e.currentTarget);
+    if (now) {
+      store.beginGesture(e.nativeEvent);
+      store.instance.setViewport(pinchViewport(start, now.mid, now.dist, minZoom, maxZoom));
+    }
+  };
+
+  // A finger is forgotten wherever it lifts — on the window, which hears every release, since a press the canvas
+  // counted may end where the canvas does not hear it (a reconnect, a drag out of the pane). One finger left is not
+  // a pinch, and does not carry on as a pan either; it would jump. A fresh touch starts one.
+  useEffect(() => {
+    const lift = (e: PointerEvent) => {
+      if (!pointers.current.delete(e.pointerId)) return;
+      if (pointers.current.size < 2 && pinch.current) {
+        pinch.current = null;
+        store.setPinching(false);
+        store.endGesture(e);
+      }
+    };
+    window.addEventListener('pointerup', lift, true);
+    window.addEventListener('pointercancel', lift, true);
+    return () => {
+      window.removeEventListener('pointerup', lift, true);
+      window.removeEventListener('pointercancel', lift, true);
+    };
+  }, [store]);
+
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     justPanned.current = false;
     pressedAt.current = { x: e.clientX, y: e.clientY };
-    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (zoomOnPinch && pointers.current.size === 2) {
-      // A second finger turns whatever the first was doing into a pinch.
-      const now = fingers(e.currentTarget);
-      if (now) {
-        pan.current = null;
-        pinch.current = { viewport: store.getViewport(), ...now };
-        store.beginGesture(e.nativeEvent);
-        capturePointer(e.currentTarget, e.pointerId);
-        return;
-      }
-    }
     // A feature may take the press — a selection box — before it becomes a pan.
     if (!store.isPanKeyHeld() && bits.some((b) => b.onPointerDown?.(e))) return;
     if (!canPan(e.button) || isInteractive(e.target, ignored)) return;
@@ -577,19 +623,6 @@ function InnerCanvas(props: FlowingerProps) {
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (pointers.current.has(e.pointerId)) {
-      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    }
-    const start = pinch.current;
-    if (start) {
-      const now = fingers(e.currentTarget);
-      if (now) {
-        store.beginGesture(e.nativeEvent);
-        store.instance.setViewport(pinchViewport(start, now.mid, now.dist, minZoom, maxZoom));
-      }
-      return;
-    }
-
     if (bits.some((b) => b.onPointerMove?.(e))) return;
 
     const p = pan.current;
@@ -613,14 +646,6 @@ function InnerCanvas(props: FlowingerProps) {
   };
 
   const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
-    pointers.current.delete(e.pointerId);
-    // One finger left is not a pinch — and does not carry on as a pan either;
-    // it would jump. A fresh touch starts one.
-    if (pointers.current.size < 2 && pinch.current) {
-      pinch.current = null;
-      store.endGesture(e.nativeEvent);
-    }
-
     if (bits.some((b) => b.onPointerEnd?.(e))) return;
 
     const p = pan.current;
@@ -724,12 +749,14 @@ function InnerCanvas(props: FlowingerProps) {
     <ViewportPortalHost.Provider value={portalHost}>
       <EdgeLabelHost.Provider value={labelHost}>
         <div
-        {...Object.assign({}, ...bits.map((b) => b.props))}
+        {...bitProps}
         ref={containerRef}
         id={id}
         data-testid="rf__wrapper"
         className={`flowinger react-flow ${bits.map((b) => b.className).filter(Boolean).join(' ')} ${className}`}
         style={containerStyle}
+        onPointerDownCapture={onPointerDownCapture}
+        onPointerMoveCapture={onPointerMoveCapture}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerEnd}

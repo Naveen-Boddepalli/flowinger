@@ -1,9 +1,16 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useSyncExternalStore } from 'react';
 import { NodeContext } from './nodeContext.ts';
 import type { FlowingerInstance, InternalNode, Viewport } from './types.ts';
-import type { FlowingerState, FlowingerStore } from './store.ts';
+import type { FlowingerState, FlowingerStore, ViewDefaults } from './store.ts';
 
 export const FlowingerContext = /*#__PURE__*/ createContext<FlowingerStore | null>(null);
+
+/**
+ * The defaults for what is not a canvas prop, from `<ReactFlow>` (React Flow's) to the canvas inside it and to
+ * `Controls`; none elsewhere. Context rather than store, so `Controls` has them on its first render — on a server
+ * too, where the markup must match.
+ */
+export const ViewDefaultsContext = /*#__PURE__*/ createContext<ViewDefaults | null>(null);
 
 /** The store itself, for the engine's own components. Not part of the public surface. */
 export function useFlowingerStore(): FlowingerStore {

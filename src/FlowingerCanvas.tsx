@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
-import { warnAboutReactFlowDefaults } from './devWarnings.ts';
+import { ViewDefaultsContext } from './context.ts';
 import { FlowingerCore } from './FlowingerCore.tsx';
 import { allFeatures } from './features/index.ts';
+import { reactFlowDefaults } from './reactFlowDefaults.ts';
+import type { ViewDefaults } from './store.ts';
 import type { Edge, EdgeChange, FlowingerProps, Node, NodeChange } from './types.ts';
 
 const NO_NODES: Node[] = [];
@@ -50,16 +52,29 @@ export function FlowingerCanvas(props: FlowingerProps) {
   );
 }
 
+/** React Flow's defaults for what is not a prop: a fit's margin, an animated move's path, `Controls`' lock. */
+const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: 0.1, interpolate: 'smooth', showInteractive: true };
+
 /**
- * `<FlowingerCanvas>` under React Flow's name — with flowinger's defaults until 1.0. From 1.0 it takes React
- * Flow's (`reactFlowDefaults`), so code moving from React Flow keeps its behaviour, and `<FlowingerCanvas>`
- * keeps flowinger's. Until then, in development, it says once a page which of those props it leaves out.
+ * `<FlowingerCanvas>` under React Flow's name, with React Flow's defaults: `reactFlowDefaults` under the props it is
+ * given, and React Flow's fit margin, animated-move path and `Controls` lock. So code moving from React Flow keeps
+ * its behaviour by changing an import, and `<FlowingerCanvas>` keeps flowinger's (interaction off until asked for).
  */
 export function ReactFlow(props: FlowingerProps) {
-  // What a canvas is given when it mounts is what it is judged by, as for the other warnings.
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') warnAboutReactFlowDefaults(props);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  return <FlowingerCanvas {...props} />;
+  return (
+    <ViewDefaultsContext.Provider value={REACT_FLOW_VIEW}>
+      <FlowingerCanvas {...withReactFlowDefaults(props)} />
+    </ViewDefaultsContext.Provider>
+  );
+}
+
+/**
+ * `reactFlowDefaults` under `props`. A prop given as `undefined` takes the default, as React Flow's do; a
+ * `fitViewOptions` of the caller's is merged over React Flow's margin rather than replacing it.
+ */
+function withReactFlowDefaults(props: FlowingerProps): FlowingerProps {
+  const out: Record<string, unknown> = { ...reactFlowDefaults };
+  for (const [name, value] of Object.entries(props)) if (value !== undefined) out[name] = value;
+  out.fitViewOptions = { ...reactFlowDefaults.fitViewOptions, ...props.fitViewOptions };
+  return out as FlowingerProps;
 }

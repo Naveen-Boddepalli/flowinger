@@ -293,6 +293,7 @@ export const dragFeature: Feature<DragApi> = {
 
     const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
       if (!draggable || e.button !== 0 || isInteractive(e.target, store.getOptions().ignored)) return;
+      if (store.isPinching()) return;
       // With a drag handle, only a press on it drags; elsewhere the canvas pans.
       if (node.dragHandle && !(e.target instanceof Element && e.target.closest(node.dragHandle))) return;
       // Claimed from the first press, so the canvas underneath does not start a
@@ -346,9 +347,23 @@ export const dragFeature: Feature<DragApi> = {
       d.session?.move(e, at.x - d.startGraph.x, at.y - d.startGraph.y);
     };
 
+    /** A second finger made this a pinch: the drag ends where the node is, and the pinch has the fingers. */
+    const giveWay = (d: DragState, e: ReactPointerEvent<HTMLDivElement>) => {
+      drag.current = null;
+      d.stopAutoPan?.();
+      if (!d.session) return;
+      releasePointer(e.currentTarget, e.pointerId);
+      setDragging(false);
+      d.session.end(e);
+    };
+
     const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
       const d = drag.current;
       if (d?.pointerId !== e.pointerId) return;
+      if (store.isPinching()) {
+        giveWay(d, e);
+        return;
+      }
       if (!d.session) {
         if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold()) return;
         d.session = beginNodeDrag(node, e, isMulti(e));

@@ -25,25 +25,27 @@ pnpm add flowinger
 - **Your own CSS keeps working** where it selects on `react-flow__*` class names — those are kept — but not
   where it relied on React Flow's *stylesheet* (the look of `.react-flow__handle`, the `--xy-*` variables,
   the default node's border). Restyle those, or set the `--flowinger-*` variables.
-- `ReactFlow` is `FlowingerCanvas` under React Flow's name — with Flowinger's defaults until 1.0, and React Flow's
-  from 1.0 (see §2) — and `ReactFlowProvider` is `FlowingerProvider`. `FlowingerCore` is the small build with only
+- `ReactFlow` is `FlowingerCanvas` under React Flow's name, with React Flow's defaults (see §2), and
+  `ReactFlowProvider` is `FlowingerProvider`. `FlowingerCore` is the small build with only
   the [features](features.md) you name.
 
 ## 2. Set the defaults you were relying on
 
-This is the one that bites. React Flow turns interaction on; Flowinger leaves it off until you ask. One line
-gives a canvas React Flow's defaults — `reactFlowDefaults`, React Flow's value for each prop where Flowinger's
-differs:
+React Flow turns interaction on; Flowinger's own canvas leaves it off until you ask, since a viewer wants none of
+it. **`<ReactFlow>` has React Flow's defaults**, so if you render `<ReactFlow>`, changing the import is the whole
+swap — there is nothing to set. They are `reactFlowDefaults`, React Flow's value for each prop where Flowinger's
+differs, plus three that are not props: a fit's margin (0.1 of the view), the path of an animated move
+(`'smooth'`), and `Controls`' lock (shown).
+
+`<FlowingerCanvas>` is the same canvas with Flowinger's defaults. To give it React Flow's, spread them:
 
 ```tsx
-import { ReactFlow, reactFlowDefaults } from 'flowinger';
+import { FlowingerCanvas, reactFlowDefaults } from 'flowinger';
 
-<ReactFlow {...reactFlowDefaults} nodes={nodes} edges={edges} /* … */ />
+<FlowingerCanvas {...reactFlowDefaults} nodes={nodes} edges={edges} /* … */ />
 ```
 
-From 1.0, `<ReactFlow>` applies them itself, so changing the import is the whole swap, and `<FlowingerCanvas>`
-keeps Flowinger's. Until then a `<ReactFlow>` that leaves any of them out says which, in development. See
-[Upgrading to 1.0](upgrading.md).
+Before 1.0, `<ReactFlow>` had Flowinger's defaults too; [Upgrading to 1.0](upgrading.md) says what changed.
 
 | | React Flow | Flowinger |
 |---|---|---|
@@ -60,10 +62,10 @@ keeps Flowinger's. Until then a `<ReactFlow>` that leaves any of them out says w
 | keyboard: nodes and edges as tab stops, with a `role` | on | **off** — opt in with `elementsSelectable` / `keyboardNavigation` |
 
 `reactFlowDefaults` also has the three key codes in §4 (`multiSelectionKeyCode`, `zoomActivationKeyCode`,
-`panActivationKeyCode`). Or set only what you rely on:
+`panActivationKeyCode`). On a `<FlowingerCanvas>` you can instead set only what you rely on:
 
 ```tsx
-<ReactFlow
+<FlowingerCanvas
   nodesDraggable
   nodesConnectable
   elementsSelectable
@@ -72,8 +74,8 @@ keeps Flowinger's. Until then a `<ReactFlow>` that leaves any of them out says w
 />
 ```
 
-An app that only *shows* a graph (a viewer) needs none of it, was probably already setting them to `false`, and
-can render `<FlowingerCanvas>`, which keeps these defaults in 1.0.
+An app that only *shows* a graph (a viewer) needs none of it: render `<FlowingerCanvas>`, whose defaults are
+already what a viewer wants.
 
 ## 3. Types
 
