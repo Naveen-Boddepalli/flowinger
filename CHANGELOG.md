@@ -9,6 +9,13 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-15
+
+**The first published release of [0.9.0](#090---2026-10-15)'s changes** — the bridge to 1.0: `reactFlowDefaults`,
+development warnings where 1.0 will be noticed, and [what 1.0 promises](docs/stability.md) and
+[how to upgrade](docs/upgrading.md). 0.9.0 was tagged but its release stopped at the size check before it reached
+npm. Nothing in the library changed since; what follows is why it stopped, and the browser suite.
+
 ### Changed
 
 - **The whole canvas's size budget is 37 kB (was 36).** 0.9.0 measured 35.97 kB — inside 36 by 26 bytes on one
@@ -31,6 +38,8 @@ The design notes behind each release — what was measured, what was tried and d
   pointer id 0 where the others give 1, which is safe because the library only ever compares pointer ids.
 
 ## [0.9.0] - 2026-10-15
+
+Tagged, but never published: its release stopped at the size check (see 0.9.1, which published these changes).
 
 The bridge to 1.0: nothing an app can see changes, and in development a canvas now says where 1.0 will be
 noticed. [Upgrading to 1.0](docs/upgrading.md) has the detail, and [what 1.0 promises](docs/stability.md) the
@@ -399,7 +408,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.1
 [0.9.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.6.0...v0.7.0
