@@ -25,6 +25,18 @@ The design notes behind each release — what was measured, what was tried and d
   handle it has not registered yet meets the fallback side unless the node lists it in `handles`. The 0.9 warning
   goes, and with it the store's `hasNodeElement`.
 
+### Fixed
+
+- **A two-finger pinch that starts on a node zooms.** The canvas counted fingers only once a press reached the
+  bare pane, and a node takes its own presses, so on a phone — where nodes fill the screen — a pinch on top of
+  them did nothing. Fingers are now counted on the way down, wherever they land; a second finger turns the first
+  one's drag into the pinch (the node stays where it was), and a finger is forgotten wherever it lifts.
+
+### Added
+
+- **Touch in the browser suite**: a tap selects, a finger drags a node or pans, two fingers zoom in and out about
+  the point between them — and on top of a node — sent as real touch through Chromium's DevTools protocol.
+
 ## [0.9.1] - 2026-10-15
 
 **The first published release of [0.9.0](#090---2026-10-15)'s changes** — the bridge to 1.0: `reactFlowDefaults`,

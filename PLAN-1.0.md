@@ -162,8 +162,11 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
   the library only ever compares. One thing to undo: on macOS 27 Playwright 1.64's Firefox will not start on a
   Mac with Firefox installed (microsoft/playwright#42768), so the config gives it a home of its own there, to
   drop with Playwright 1.65.
-- **Touch.** A first pass in the iOS Simulator (two-finger pinch, pan and drag on the demo in Safari), then a real
-  iPhone and an Android phone. Written up in the browser-coverage notes, failures as issues.
+- **Touch — automated in Chromium; real phones to do.** `e2e/touch.spec.ts` sends real touch through Chromium's
+  DevTools protocol (tap, a finger dragging a node or panning, two fingers zooming in and out, and a pinch that
+  starts on a node). It found one bug, fixed: a pinch on top of a node did nothing, since the fingers were counted
+  only on the bare pane. Still by hand: Safari on an iPhone and Chrome on Android (the iOS Simulator needs a full
+  Xcode, not installed here). Also seen: at a phone's width the demo's options panel covers the graph.
 - **A screen reader and the keyboard alone.** VoiceOver on macOS and NVDA on Windows against the demo with
   `elementsSelectable` and `keyboardNavigation` on — and, after D1, against `<ReactFlow>`'s defaults. Written up
   honestly in `docs/accessibility.md`: what works, what does not, what is planned. It also decides whether

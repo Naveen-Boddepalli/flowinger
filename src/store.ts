@@ -360,6 +360,8 @@ export function createFlowingerStore(
    */
   let dirty: Set<string> | 'all' = 'all';
   let viewDefaults: ViewDefaults = NO_VIEW_DEFAULTS;
+  /** Two fingers are on the canvas, zooming it: a node's drag, begun by the first, gives way. */
+  let pinching = false;
   const markDirty = (ids?: Iterable<string>) => {
     if (ids === undefined) dirty = 'all';
     else if (dirty !== 'all') for (const id of ids) dirty.add(id);
@@ -1450,6 +1452,10 @@ export function createFlowingerStore(
       viewDefaults = next ?? NO_VIEW_DEFAULTS;
     },
     getViewDefaults: (): ViewDefaults => viewDefaults,
+    isPinching: () => pinching,
+    setPinching: (next: boolean) => {
+      pinching = next;
+    },
 
     getViewport: () => viewport,
     getState,
