@@ -18,12 +18,17 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Added
 
-- **The browser suite runs in Firefox and WebKit as well as Chromium**, in `pnpm e2e` and in CI. Neither found
-  anything: the 29 tests passed in both on their first run, and run five times in all three browsers (435 tests)
-  none failed or was flaky — no fix in the library, and no test had assumed Chromium. Two differences are covered
-  outside it: Playwright's wheel arrives in pixels in every browser, so Firefox's wheel in lines (`deltaMode` 1)
-  is tested in jsdom; and Firefox gives the mouse pointer id 0 where the others give 1, which is safe because the
-  library only ever compares pointer ids.
+- **The browser suite runs in Firefox and WebKit as well as Chromium**, in `pnpm e2e` and in CI. Neither found a
+  bug in the library. On a Mac the 29 tests passed in both on their first run, and run five times in all three
+  browsers (435 tests) none failed or was flaky. On CI's Linux runner, WebKit found two tests that had assumed the
+  browser draws often: there it drew one or two frames in 600 ms. So a box held at the pane's edge had panned
+  13.5 px where the test wanted 100, and a 500 ms `'smooth'` move was over before a frame of it was seen. The first
+  test now waits until the view has moved; the second steps the move a frame at a time on a paused clock
+  (Playwright's `page.clock`). A third test, the lock's, dragged a node to within 40 px of the pane's bottom edge,
+  where auto-pan moves the view by as much as the drag is slow; on a busy machine it failed 9 runs in 20. It now
+  drags away from the edge. Two differences are covered outside the suite: Playwright's wheel arrives in pixels
+  in every browser, so Firefox's wheel in lines (`deltaMode` 1) is tested in jsdom; and Firefox gives the mouse
+  pointer id 0 where the others give 1, which is safe because the library only ever compares pointer ids.
 
 ## [0.9.0] - 2026-10-15
 

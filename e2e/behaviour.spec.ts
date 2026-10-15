@@ -161,9 +161,11 @@ test.describe('the lock', () => {
     await expect(lock).toBeVisible();
     // Where the node *is* — its place in the graph — not where it is on screen, which a pan also changes.
     const placed = () => node(page, '4').evaluate((el) => (el as HTMLElement).style.transform);
+    // Up, away from the pane's bottom edge, where Output sits: a drag that ends near an edge pans the view by
+    // itself (auto-pan), by as much as the drag is slow — and can take node 1 under the demo's header.
     const dragFour = async () => {
       const c = await centre(node(page, '4'));
-      await drag(page, c, { x: c.x + 50, y: c.y + 20 }, 5);
+      await drag(page, c, { x: c.x + 50, y: c.y - 20 }, 5);
     };
     const start = await placed();
     await dragFour();

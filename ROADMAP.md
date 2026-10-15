@@ -54,7 +54,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   dragging and by clicking, reconnecting, deleting, export, `nodeOrigin`, the selection rectangle and a box
   held at the pane's edge, stacking by what is on top, `colorMode: 'system'`, the lock, `'smooth'` moves, and
   `nodrag` / `nopan` / `nowheel` from a real press — in Chromium, Firefox and WebKit, locally and in CI (Firefox
-  and WebKit are done: they found nothing to fix). Still by hand: multi-touch pinch, and a screen reader.
+  and WebKit are done: they found no bug in the library, and two tests that assumed a browser draws often). Still
+  by hand: multi-touch pinch, and a screen reader.
 
 ## Next
 

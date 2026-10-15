@@ -151,8 +151,10 @@ measured over 36), so D1 fits unless it adds more than about a kilobyte; the cha
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 
 - **Firefox and WebKit in the browser suite — done.** `playwright.config.ts` has a project for each beside
-  Chromium, and CI and `release.yml` run all three. They found nothing to fix: the 29 tests passed in both on their
-  first run, and run five times in all three browsers (435 tests) none failed or was flaky. Playwright's wheel is
+  Chromium, and CI and `release.yml` run all three. They found no bug in the library. On a Mac the 29 tests passed in
+  both on their first run, and run five times in all three browsers (435 tests) none failed or was flaky. On CI's
+  Linux runner WebKit draws a frame or two in 600 ms, which two tests had not allowed for: a box held at the edge
+  is now waited on until the view moves, and a `'smooth'` move is stepped on a paused clock. Playwright's wheel is
   in pixels in every browser, so Firefox's wheel in lines stays a jsdom test; Firefox's mouse is pointer 0, which
   the library only ever compares. One thing to undo: on macOS 27 Playwright 1.64's Firefox will not start on a
   Mac with Firefox installed (microsoft/playwright#42768), so the config gives it a home of its own there, to
