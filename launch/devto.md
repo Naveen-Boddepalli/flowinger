@@ -31,14 +31,19 @@ declarations. For QueryLens the change was:
 There is no stylesheet: the built-in nodes, edges and controls are styled inline from `--flowinger-*` CSS
 variables, and the `react-flow__*` class names are kept, so existing CSS that selects on them still works.
 
-One thing a compiler will not tell you: **interaction is off by default.** React Flow makes nodes draggable,
-connectable and selectable unless you say otherwise; Flowinger does the reverse, because a viewer — the common
-case — wants none of it. An editor adds three props:
+One thing a compiler will not tell you: **some defaults differ.** React Flow makes nodes draggable, connectable
+and selectable unless you say otherwise; Flowinger's own canvas does the reverse, because a viewer — the common
+case — wants none of it. A few more differ too (`minZoom`, the `fitView` margin, some key codes). For code coming
+from React Flow, one spread gives a canvas React Flow's value for each of them:
 
 ```tsx
-<ReactFlow nodes={nodes} edges={edges} nodesDraggable nodesConnectable elementsSelectable />
+import { ReactFlow, reactFlowDefaults } from 'flowinger';
+
+<ReactFlow {...reactFlowDefaults} nodes={nodes} edges={edges} />
 ```
 
+In development, a `<ReactFlow>` that leaves any of them out says which. From 1.0, `<ReactFlow>` applies them
+itself — so changing the import really is the whole swap — while `FlowingerCanvas` keeps the viewer-first ones.
 The [migration guide](https://naveen-boddepalli.github.io/flowinger/docs/migrating-from-react-flow/) lists every
 default that differs, each read from React Flow's source rather than from memory.
 
@@ -95,7 +100,7 @@ Performance, at 10,000 nodes, Chrome on an Apple M4, median of 5 runs ([full tab
 Two honest notes on that table. First, the culled pan is a tie, not a win: across three runs on the same day
 React Flow's read between 2.6 and 4.2 ms, and Flowinger's 3.1 to 3.6. The culled zoom is about half React
 Flow's cost in every run, and a culled mount about a tenth: both libraries draw only what is in view in the end,
-but React Flow's first render draws every node first. Second, until this release React Flow was ahead on culled pan and zoom — the benchmark
+but React Flow's first render draws every node first. Second, until 0.7.0 React Flow was ahead on culled pan and zoom — the benchmark
 found why (Flowinger re-checked every node on every frame of a pan), and 0.7.0 fixed it: while the view stays
 inside the region last worked out, a frame costs nothing. That is the kind of thing a published benchmark is
 for.
