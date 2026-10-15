@@ -1,6 +1,6 @@
 import type { Feature } from './features.ts';
 import { reactFlowDefaults } from './reactFlowDefaults.ts';
-import type { FlowingerProps } from './types.ts';
+import type { FlowingerProps, Position } from './types.ts';
 
 /** The props only a feature acts on — given without it, they would be ignored without a word. */
 const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
@@ -173,4 +173,28 @@ export function warnAboutReactFlowDefaults(props: FlowingerProps): void {
 /** For tests: forget that the warning above was given. */
 export function resetReactFlowDefaultsWarning(): void {
   toldAboutReactFlowDefaults = false;
+}
+
+let toldAboutLegacyHandle = false;
+
+/**
+ * Says, once a page, that an edge is drawn at a side guessed from its handle's name (`in` / `top`, `out` /
+ * `bottom`, `prev` / `left`, `next` / `right`) because the node has no `<Handle>` of that id — a rule from before
+ * handles were measured, which React Flow does not have and 1.0 removes. Development only — see the caller.
+ */
+export function warnAboutLegacyHandle(nodeId: string, handleId: string, side: Position, fallback: Position): void {
+  if (toldAboutLegacyHandle) return;
+  toldAboutLegacyHandle = true;
+  const name = (p: Position) => `Position.${p.charAt(0).toUpperCase()}${p.slice(1)}`;
+  console.warn(
+    `flowinger: an edge names handle "${handleId}" on node "${nodeId}", which has no <Handle> of that id, so it ` +
+      `meets the node's ${side} side by an old rule that guesses a side from the name. 1.0 drops the rule, and ` +
+      `the edge will meet the ${fallback} side instead — add <Handle id="${handleId}" position={${name(side)}} />, ` +
+      'or list it in the node\'s `handles`. See docs/upgrading-to-1.0.md.',
+  );
+}
+
+/** For tests: forget that the warning above was given. */
+export function resetLegacyHandleWarning(): void {
+  toldAboutLegacyHandle = false;
 }
