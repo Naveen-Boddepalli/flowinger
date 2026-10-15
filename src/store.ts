@@ -1468,8 +1468,6 @@ export function createFlowingerStore(
     setNodePosition,
     setSize,
     registerNodeElement,
-    /** Whether a node has mounted — and with it, its handles, which register first. */
-    hasNodeElement: (id: string): boolean => nodeEls.has(id),
     registerHandle,
     measureHandles,
     remeasure,

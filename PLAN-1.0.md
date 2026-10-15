@@ -138,11 +138,14 @@ code first, so nobody on `0.x` is surprised by `1.0`:
 - [docs/upgrading.md](docs/upgrading.md) and [docs/stability.md](docs/stability.md), on the site under
   *Reference*; the migration guide's defaults section leads with `reactFlowDefaults`.
 
-### 2. The breaking changes (`release/1.0` branch, one PR)
+### 2. The breaking changes (`release/1.0` branch, one PR) — **done on the branch** (2026-10-15)
 
 D1 and D3, one commit each, each with its tests and its line in the upgrade guide: `ReactFlow` spreads
 `reactFlowDefaults` under its props (merging `fitViewOptions`) and tells the store its three non-prop defaults;
-`resolveHandlePosition` and its warning go. The size budgets are measured again at the end: after the bridge the
+`resolveHandlePosition` and its warning go. Done: D1 sets the three non-prop defaults through a context the
+canvas and `Controls` read (`ViewDefaultsContext`), and D3 took the store's `hasNodeElement` with it. After both
+the whole canvas is 36.19 kB and the core 19.77 (D1 added 0.32 and 0.07; D3 took back 0.10 and 0.15). The size
+budgets were measured again at the end: after the bridge the
 whole canvas is 35.97 kB, and its budget was raised to 37 kB after 0.9.0's release stopped on it (CI's Linux build
 measured over 36), so D1 fits unless it adds more than about a kilobyte; the changelog says why either way.
 

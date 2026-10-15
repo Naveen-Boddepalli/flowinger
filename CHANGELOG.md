@@ -18,6 +18,12 @@ The design notes behind each release — what was measured, what was tried and d
   its lock. So moving from React Flow is changing an import. `<FlowingerCanvas>` and `<FlowingerCore>` keep
   flowinger's defaults. To keep what a `<ReactFlow>` did before, render `<FlowingerCanvas>`, which takes the same
   props — [Upgrading to 1.0](docs/upgrading.md). The 0.9 warning that said this was coming is gone.
+- **Breaking: an edge that names a handle the node does not have meets the side it runs towards.** A few names
+  chose a side before — `in` / `top`, `out` / `bottom`, `prev` / `left`, `next` / `right` — a rule from before
+  handles were measured, which React Flow does not have. A `<Handle>` of that id, or an entry in the node's
+  `handles`, decides the side as before. Before a node mounts (on a server, and in the first paint) an edge to a
+  handle it has not registered yet meets the fallback side unless the node lists it in `handles`. The 0.9 warning
+  goes, and with it the store's `hasNodeElement`.
 
 ## [0.9.1] - 2026-10-15
 

@@ -10,7 +10,6 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { BaseEdge, DEFAULT_EDGE_COLOR } from './BaseEdge.tsx';
-import { warnAboutLegacyHandle } from './devWarnings.ts';
 import { EdgeContext } from './edgeContext.ts';
 import type { Feature } from './features.ts';
 import { handleCoordinates } from './handlePoint.ts';
@@ -135,38 +134,11 @@ function useEdgeChrome({ edge, selected, selectable, focusable, interactive, hoo
 }
 
 /**
- * The legacy fallback, for a handle id that no `<Handle>` registered under:
- * a handful of conventional names map to a side. A registered handle wins over
- * this outright, so an id is only ever a *name* once nodes declare handles.
- * React Flow has no such rule, and 1.0 removes it; until then, development says
- * when an edge is drawn by it.
- */
-function resolveHandlePosition(handleId: string | null | undefined, fallback: Position): Position {
-  if (!handleId) return fallback;
-  switch (handleId.toLowerCase()) {
-    case 'top':
-    case 'in':
-      return Position.Top;
-    case 'bottom':
-    case 'out':
-      return Position.Bottom;
-    case 'left':
-    case 'prev':
-      return Position.Left;
-    case 'right':
-    case 'next':
-      return Position.Right;
-    default:
-      return fallback;
-  }
-}
-
-/**
  * Where one end of an edge attaches, and which way it leaves.
  *
  * In order: the registered handle the edge names (or, naming none, the first of
  * that type) at its measured anchor; the same handle at its side's midpoint if
- * it could not be measured; the legacy id-to-side table; and finally the
+ * it could not be measured; one the node declares in `handles`; and finally the
  * direction the edge runs.
  */
 function endpoint(
@@ -203,12 +175,9 @@ function endpoint(
     };
     return { position, point };
   }
-  const position = resolveHandlePosition(handleId, fallback);
-  // Once the node has mounted, its handles have had their chance: a name still unmatched is the old rule at work.
-  if (process.env.NODE_ENV !== 'production' && position !== fallback && store.hasNodeElement(node.id)) {
-    warnAboutLegacyHandle(node.id, String(handleId), position, fallback);
-  }
-  return { position, point: handleCoordinates(at, position, store.getNodeSize(node)) };
+  // No such handle, drawn or declared: the side the edge runs towards. (Before 1.0 a few names — `in`, `out`,
+  // `prev`, `next`, `top`… — chose a side here; React Flow has no such rule, and neither does this.)
+  return { position: fallback, point: handleCoordinates(at, fallback, store.getNodeSize(node)) };
 }
 
 
