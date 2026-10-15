@@ -1,5 +1,5 @@
-import { memo, useSyncExternalStore, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
-import { useFlowinger, useFlowingerStore } from './context.ts';
+import { memo, useContext, useSyncExternalStore, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
+import { ViewDefaultsContext, useFlowinger, useFlowingerStore } from './context.ts';
 import { Panel, type PanelPosition } from './Panel.tsx';
 import type { FitViewOptions } from './types.ts';
 
@@ -13,7 +13,8 @@ export interface ControlsProps {
   /**
    * A lock button that switches interaction off and on — nodes dragged, connected and selected — over what the
    * canvas's `nodesDraggable`, `nodesConnectable` and `elementsSelectable` say. Pressed while all three are
-   * off it switches them on, as in React Flow. Default false (React Flow's is true).
+   * off it switches them on, as in React Flow. Left out, it is shown inside `<ReactFlow>` (React Flow's default) and
+   * not inside `<FlowingerCanvas>` or `<FlowingerCore>`.
    */
   showInteractive?: boolean;
   /** After the lock was pressed: `true` when the canvas is now interactive. */
@@ -95,6 +96,9 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
 }: ControlsProps) {
   const { zoomIn, zoomOut, fitView } = useFlowinger();
   const store = useFlowingerStore();
+  // Left out, the lock follows the canvas: shown under `<ReactFlow>` (React Flow's default), not otherwise.
+  const viewDefaults = useContext(ViewDefaultsContext) ?? store.getViewDefaults();
+  const showLock = showInteractive ?? viewDefaults.showInteractive ?? false;
   const labels = store.labels;
   // Whether anything can be done to the nodes right now: the canvas's props, or the lock over them.
   const interactive = useSyncExternalStore(
@@ -152,7 +156,7 @@ export const Controls = /*#__PURE__*/ memo(function Controls({
           Fit
         </button>
       )}
-      {showInteractive && (
+      {showLock && (
         <button
           type="button"
           onClick={() => {

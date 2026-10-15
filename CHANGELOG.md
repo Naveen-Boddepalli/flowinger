@@ -9,6 +9,16 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: `<ReactFlow>` has React Flow's defaults.** It applies `reactFlowDefaults` under the props it is given
+  (a prop given as `undefined` takes the default, and a `fitViewOptions` is merged over React Flow's margin), and
+  three that are not props: a fit that names no margin uses 0.1 of the view (the instance's `fitView` and
+  `fitBounds`, and `Controls`' button), an animated move that names no path takes `'smooth'`, and `Controls` shows
+  its lock. So moving from React Flow is changing an import. `<FlowingerCanvas>` and `<FlowingerCore>` keep
+  flowinger's defaults. To keep what a `<ReactFlow>` did before, render `<FlowingerCanvas>`, which takes the same
+  props — [Upgrading to 1.0](docs/upgrading.md). The 0.9 warning that said this was coming is gone.
+
 ## [0.9.1] - 2026-10-15
 
 **The first published release of [0.9.0](#090---2026-10-15)'s changes** — the bridge to 1.0: `reactFlowDefaults`,

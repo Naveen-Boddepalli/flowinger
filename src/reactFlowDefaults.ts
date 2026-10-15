@@ -11,20 +11,21 @@ const modifier = /* @__PURE__ */ platformModifier();
 
 /**
  * React Flow's defaults, for every canvas prop where flowinger's differ — read from React Flow 12.11.6's source.
- * Spread it under your own props to have them on a `<FlowingerCanvas>`:
+ * `<ReactFlow>` applies them itself, under the props it is given. `<FlowingerCanvas>` keeps flowinger's
+ * (interaction off until asked for, a deeper zoom-out, a 3 px drag threshold, a fit that leaves 40 px); spread
+ * this under your own props to have React Flow's there:
  *
  * ```tsx
  * <FlowingerCanvas {...reactFlowDefaults} nodes={nodes} edges={edges} />
  * ```
  *
- * From 1.0, `<ReactFlow>` applies these itself, and `<FlowingerCanvas>` keeps flowinger's (interaction off until
- * asked for, a deeper zoom-out, a 3 px drag threshold, a fit that leaves 40 px). A `fitViewOptions` of your own
- * replaces the one here, so give it a `padding` if you want React Flow's margin.
+ * Spread like that, a `fitViewOptions` of your own replaces the one here (`<ReactFlow>` merges them), so give it a
+ * `padding` if you want React Flow's margin.
  *
- * What is not a canvas prop is not here: the margin of the instance's `fitView()` and of `Controls`' fit button
- * (pass `padding: 0.1`), the path of an animated move (pass `interpolate: 'smooth'`), and `Controls`' lock
- * (`showInteractive`). Neither are colours (`colorMode`, `defaultMarkerColor`), which follow the
- * `--flowinger-*` theme. See docs/upgrading.md.
+ * What is not a canvas prop is not here, and `<ReactFlow>` sets it another way: the margin of the instance's
+ * `fitView()` and of `Controls`' fit button (elsewhere pass `padding: 0.1`), the path of an animated move
+ * (`interpolate: 'smooth'`), and `Controls`' lock (`showInteractive`). Neither are colours (`colorMode`,
+ * `defaultMarkerColor`), which follow the `--flowinger-*` theme. See docs/upgrading.md.
  *
  * On a `FlowingerCore`, each of these needs its feature (`dragFeature` for `nodesDraggable`…), and a core
  * without one says so in development.

@@ -13,7 +13,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore } from './context.ts';
+import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore, ViewDefaultsContext } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
 import { warnAboutIgnoredProps } from './devWarnings.ts';
 import { resolveFeatures, type Feature } from './features.ts';
@@ -193,6 +193,9 @@ function InnerCanvas(props: FlowingerProps) {
     disableKeyboardA11y,
   } = props;
   const store = useFlowingerStore();
+  // What `<ReactFlow>` provides for what is not a prop (its fit margin, its path for an animated move), or none:
+  // told to the store as this renders, before any child or fit reads it. Idempotent, like the features below.
+  store.setViewDefaults(useContext(ViewDefaultsContext));
   // Inside a caller's provider, the view starts where this canvas says on its first render, not in an effect:
   // a server runs none, and its HTML would be framed at the origin. (Once — a lazy initial state.)
   useState(() => {

@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { FlowingerCanvas, ReactFlow, reactFlowDefaults, type Node } from '../index.ts';
-import { resetReactFlowDefaultsWarning } from '../devWarnings.ts';
+import { Controls, FlowingerCanvas, ReactFlow, reactFlowDefaults, type Node } from '../index.ts';
+import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 
 const nodes = (): Node[] => [{ id: 'a', position: { x: 0, y: 0 }, data: { label: 'A' } }];
 
@@ -48,71 +48,102 @@ describe('reactFlowDefaults', () => {
   });
 });
 
-describe('<ReactFlow> before 1.0', () => {
-  const warned = () => vi.spyOn(console, 'warn').mockImplementation(() => {});
-  const about1 = (warn: ReturnType<typeof warned>) =>
-    warn.mock.calls.map((c) => String(c[0])).filter((s) => s.includes('in 1.0'));
-
+describe('<ReactFlow>', () => {
   afterEach(() => {
-    resetReactFlowDefaultsWarning();
     vi.restoreAllMocks();
   });
 
-  it("says once a page which of React Flow's defaults it leaves out, from what to what", () => {
-    const warn = warned();
+  it("has React Flow's defaults, where <FlowingerCanvas> keeps flowinger's", () => {
+    const { unmount } = render(<FlowingerCanvas defaultNodes={nodes()} />);
+    expect(screen.getByTestId('rf__node-a')).not.toHaveAttribute('tabindex');
+    unmount();
+
     render(<ReactFlow defaultNodes={nodes()} />);
-    render(<ReactFlow defaultNodes={nodes()} />);
-    const said = about1(warn);
-    expect(said).toHaveLength(1);
-    expect(said[0]).toContain('nodesDraggable (false → true)');
-    expect(said[0]).toContain('minZoom (0.05 → 0.5)');
-    expect(said[0]).toContain('nodeDragThreshold (3 → 1)');
-    expect(said[0]).toContain('panActivationKeyCode (none → Space)');
-    expect(said[0]).toContain('render <FlowingerCanvas>');
-    // The fit's margin is left out of it: this canvas does not fit itself.
-    expect(said[0]).not.toContain('fitViewOptions');
+    const node = screen.getByTestId('rf__node-a');
+    expect(node).toHaveAttribute('tabindex', '0');
+    fireEvent.click(node);
+    expect(node).toHaveClass('selected');
   });
 
-  it("names the fit's margin when the canvas fits itself without one", () => {
-    const warn = warned();
-    render(<ReactFlow defaultNodes={nodes()} fitView />);
-    expect(about1(warn)[0]).toContain('fitViewOptions.padding (40 px → 0.1)');
+  it('lets a prop it is given win — and gives the default to one given as undefined, as React Flow does', () => {
+    const { unmount } = render(<ReactFlow defaultNodes={nodes()} elementsSelectable={false} nodesFocusable={false} />);
+    const off = screen.getByTestId('rf__node-a');
+    expect(off).not.toHaveAttribute('tabindex');
+    fireEvent.click(off);
+    expect(off).not.toHaveClass('selected');
+    unmount();
+
+    render(<ReactFlow defaultNodes={nodes()} nodesFocusable={undefined} />);
+    expect(screen.getByTestId('rf__node-a')).toHaveAttribute('tabindex', '0');
   });
 
-  it('names only what is left out', () => {
-    const warn = warned();
-    const { minZoom: _left, ...rest } = reactFlowDefaults;
-    render(<ReactFlow {...rest} defaultNodes={nodes()} fitView />);
-    const said = about1(warn);
-    expect(said).toHaveLength(1);
-    expect(said[0]).toMatch(/leaves out minZoom \(0\.05 → 0\.5\)\. /);
-  });
-
-  it("says nothing to a canvas that sets them all, or spreads React Flow's", () => {
-    const warn = warned();
-    render(
-      <ReactFlow
-        defaultNodes={nodes()}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        nodesFocusable={false}
-        minZoom={0.05}
-        nodeDragThreshold={3}
-        paneClickDistance={Infinity}
-        nodeClickDistance={Infinity}
-        multiSelectionKeyCode={['Shift', 'Control', 'Meta']}
-        zoomActivationKeyCode={null}
-        panActivationKeyCode={null}
-      />,
+  it("shows Controls' lock, as React Flow does — and not under a FlowingerCanvas, or when told not to", () => {
+    const lock = () => screen.queryByRole('button', { name: 'Toggle interactivity' });
+    const { unmount } = render(
+      <ReactFlow defaultNodes={nodes()}>
+        <Controls />
+      </ReactFlow>,
     );
-    render(<ReactFlow {...reactFlowDefaults} defaultNodes={nodes()} fitView />);
-    expect(about1(warn)).toHaveLength(0);
+    expect(lock()).not.toBeNull();
+    unmount();
+
+    const canvas = render(
+      <FlowingerCanvas defaultNodes={nodes()}>
+        <Controls />
+      </FlowingerCanvas>,
+    );
+    expect(lock()).toBeNull();
+    canvas.unmount();
+
+    render(
+      <ReactFlow defaultNodes={nodes()}>
+        <Controls showInteractive={false} />
+      </ReactFlow>,
+    );
+    expect(lock()).toBeNull();
   });
 
-  it('says nothing for a FlowingerCanvas, which keeps flowinger’s defaults in 1.0', () => {
-    const warn = warned();
-    render(<FlowingerCanvas defaultNodes={nodes()} fitView />);
-    expect(about1(warn)).toHaveLength(0);
+  it('says nothing about defaults any more: 1.0 is when they changed', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<ReactFlow defaultNodes={nodes()} fitView />);
+    expect(warn.mock.calls.map((c) => String(c[0])).filter((s) => s.includes('defaults'))).toEqual([]);
+  });
+});
+
+describe("the view defaults <ReactFlow> gives its store", () => {
+  /** A store on an 800 × 600 pane with one 100 × 40 node at the origin. */
+  const sized = () => {
+    const store = createFlowingerStore();
+    const pane = document.createElement('div');
+    Object.defineProperty(pane, 'clientWidth', { value: 800 });
+    Object.defineProperty(pane, 'clientHeight', { value: 600 });
+    store.attach(document.createElement('div'), pane);
+    store.setOptions(DEFAULT_ENGINE_OPTIONS);
+    store.setNodes([{ id: 'a', position: { x: 0, y: 0 }, width: 100, height: 40, data: {} }]);
+    return store;
+  };
+
+  it("fit with React Flow's 0.1 margin when a fit names none, and flowinger's 40 px otherwise", async () => {
+    const flowinger = sized();
+    await flowinger.instance.fitView({ duration: 0 });
+    const reactFlow = sized();
+    reactFlow.setViewDefaults({ fitViewPadding: 0.1 });
+    await reactFlow.instance.fitView({ duration: 0 });
+    // A 100-wide node in 800 px fits at the zoom limit either way; a node far wider than the pane is decided by
+    // the margin.
+    const big = (store: ReturnType<typeof sized>) => {
+      store.setNodes([{ id: 'a', position: { x: 0, y: 0 }, width: 4000, height: 40, data: {} }]);
+      return store.instance.fitView({ duration: 0 }).then(() => store.instance.getViewport().zoom);
+    };
+    // 40 px a side: (800 - 80) / 4000 = 0.18. A 0.1 ratio, React Flow's formula: 800 / (4000 × 1.1) ≈ 0.1818.
+    expect(await big(flowinger)).toBeCloseTo(0.18, 3);
+    expect(await big(reactFlow)).toBeCloseTo(800 / (4000 * 1.1), 3);
+  });
+
+  it('are forgotten by a canvas rendered without <ReactFlow>', () => {
+    const store = sized();
+    store.setViewDefaults({ fitViewPadding: 0.1, interpolate: 'smooth', showInteractive: true });
+    store.setViewDefaults(null);
+    expect(store.getViewDefaults()).toEqual({});
   });
 });

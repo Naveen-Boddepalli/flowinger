@@ -187,6 +187,20 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
 };
 
 
+/**
+ * Defaults for what is not a canvas prop: the margin of a fit that names none (the instance's `fitView` and
+ * `fitBounds`, and `Controls`' button), the path of an animated move that names none, and whether `Controls`
+ * shows its lock. `<ReactFlow>` sets React Flow's; a `<FlowingerCanvas>` or `<FlowingerCore>` sets none, and has
+ * flowinger's (a 40 px margin, a straight path, no lock).
+ */
+export interface ViewDefaults {
+  fitViewPadding?: number;
+  interpolate?: 'smooth' | 'linear';
+  showInteractive?: boolean;
+}
+
+const NO_VIEW_DEFAULTS: ViewDefaults = {};
+
 /** What is worth drawing right now — null means everything. */
 export interface VisibleSet {
   nodes: ReadonlySet<string>;
@@ -345,6 +359,7 @@ export function createFlowingerStore(
    * that changes the layout says 'all': so a reader of it that is wrong is wrong in the safe direction.
    */
   let dirty: Set<string> | 'all' = 'all';
+  let viewDefaults: ViewDefaults = NO_VIEW_DEFAULTS;
   const markDirty = (ids?: Iterable<string>) => {
     if (ids === undefined) dirty = 'all';
     else if (dirty !== 'all') for (const id of ids) dirty.add(id);
@@ -570,7 +585,7 @@ export function createFlowingerStore(
       // `'smooth'` is a path through the zoom — out and back in over a long move — which needs the pane's size.
       const pane = containerEl ? { width: containerEl.clientWidth, height: containerEl.clientHeight } : null;
       const smooth =
-        options?.interpolate === 'smooth' && smoothFn && pane && pane.width > 0 && pane.height > 0
+        (options?.interpolate ?? viewDefaults.interpolate) === 'smooth' && smoothFn && pane && pane.width > 0 && pane.height > 0
           ? smoothFn(from, to, pane.width, pane.height)
           : null;
       const tick = (now: number) => {
@@ -1087,7 +1102,7 @@ export function createFlowingerStore(
         pane.height,
         opts?.minZoom ?? minZoom,
         opts?.maxZoom ?? maxZoom,
-        opts?.padding,
+        opts?.padding ?? viewDefaults.fitViewPadding,
       ),
       opts,
     );
@@ -1430,6 +1445,11 @@ export function createFlowingerStore(
     },
     getOptions: () => options,
     getCallbacks: () => callbacks,
+    /** See {@link ViewDefaults}. Set by the canvas as it renders, from what `<ReactFlow>` provides. */
+    setViewDefaults: (next: ViewDefaults | null) => {
+      viewDefaults = next ?? NO_VIEW_DEFAULTS;
+    },
+    getViewDefaults: (): ViewDefaults => viewDefaults,
 
     getViewport: () => viewport,
     getState,
