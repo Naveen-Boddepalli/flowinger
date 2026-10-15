@@ -9,6 +9,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-15
+
 ### Changed
 
 - **With `onlyRenderVisibleElements`, the first render is culled too.** The nodes and options reach the store in
@@ -17,7 +19,16 @@ The design notes behind each release — what was measured, what was tried and d
   starting view and an assumed 1920 × 1080 pane, with selected nodes always drawn. At 10,000 nodes a culled
   mount went from about 570 ms to about 70 in a profile. A **server** renders the same set (so hydration matches),
   where it rendered every node: a culled page no longer sends all its nodes as HTML. In a test environment
-  with no layout, everything is still drawn once the canvas has mounted.
+  with no layout, everything is still drawn once the canvas has mounted. In the benchmark a culled mount is
+  41 / 49 / 55 ms at 1,000 / 5,000 / 10,000 nodes, against React Flow's 83 / 302 / 594 —
+  [the benchmarks](docs/benchmarks.md).
+- **Size.** The core is 19.8 kB gzipped (was 19.7) and the whole canvas 35.9 (was 35.5), inside the 20 and
+  36 kB budgets.
+
+### Added
+
+- `Feature.firstVisible` for features: the visible set for a render before the store has one, judged from the
+  props. What `cullingFeature` uses for the first render.
 
 ## [0.7.0] - 2026-10-14
 
@@ -333,7 +344,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.4.0...v0.5.0

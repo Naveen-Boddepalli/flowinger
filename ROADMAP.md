@@ -39,6 +39,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   editable edges; a collapsible-tree example; benchmarks.
 - `0.7.0` (2026-10-14): culled pan and zoom level with or ahead of React Flow; a drag that costs what changed;
   a documentation site and guides; examples for Next.js, export, JSON, swimlanes, Yjs presence and a stepper.
+- `0.8.0` (2026-10-15): the first render is culled too — a culled mount at 10,000 nodes in 55 ms (React Flow
+  594), and a culled page's server HTML only the nodes near the view.
 
 ## Now — be easy to try and to trust
 
@@ -74,7 +76,7 @@ that compiles and does nothing apart, and there are none). What is left is bread
 4. **The culled gap is closed.** With `onlyRenderVisibleElements` on, a pan or zoom that stays inside the
    region last worked out costs nothing, and at 10,000 nodes a pan is 3.2 ms a frame (was 4.4; React Flow
    2.6–4.2 across runs) and a zoom 2.3 (was 5.0; React Flow 4.3–4.5) — [benchmarks](docs/benchmarks.md).
-   The first render is culled too (0.7.0 → next): a culled mount at 10,000 nodes is 55 ms against React Flow's
+   The first render is culled too (0.8.0): a culled mount at 10,000 nodes is 55 ms against React Flow's
    594. Still possible: a spatial index (a grid of node ids) so the pass that does run, when the view leaves the
    region, asks only the cells it enters.
 5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.

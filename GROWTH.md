@@ -11,7 +11,7 @@ displays a graph and bundle size, dependencies or SSR matter.
 | npm downloads, last 30 days | ~1,070 | ~55.6M (`@xyflow/react`) + ~9.9M (`reactflow`) |
 | GitHub stars | 0 | ~38,600 |
 | GitHub description / topics | **none / none** | set |
-| Age on npm | days (0.4.0 → 0.7.0 in Oct 2026) | years |
+| Age on npm | days (0.4.0 → 0.8.0 in Oct 2026) | years |
 
 The engineering is already ahead of the visibility. The library covers all 211 React Flow exports, has
 measured benchmarks, a migration guide, free "pro" modules and over 1,000 tests. Almost nobody can find
@@ -50,7 +50,7 @@ Done in this branch:
 - [x] A comparison table near the top of the README that includes the rows where React Flow wins.
 - [x] One-click StackBlitz links for each example.
 - [x] Demo page: a correct social card (`og:image`, Twitter card) and a fixed size claim (it said 16 kB).
-- [x] Examples moved to `^0.7.0` with each release. On a 0.x version `^0.6.0` does not match 0.7.0, so StackBlitz would run old code.
+- [x] Examples moved to `^0.8.0` with each release. On a 0.x version `^0.6.0` does not match 0.7.0, so StackBlitz would run old code.
 
 Needs you (GitHub settings and accounts):
 - [ ] **Repository description and topics.** Today they are empty, which hides the repo from GitHub topic
