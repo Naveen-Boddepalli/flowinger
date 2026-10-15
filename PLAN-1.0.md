@@ -17,7 +17,7 @@ working before it goes out, and in what order. Each section says what is decided
 So 1.0 is not a feature release. It is a **contract**: the point after which a breaking change costs a major
 version. That has two consequences for the plan. Anything worth breaking should break now, while one consumer
 has to follow. And 1.0 should wait for the proof that has only been done by hand or not at all — touch, a screen
-reader, browsers other than Chromium.
+reader, browsers other than Chromium (that last one since done: step 3).
 
 ## What 1.0 promises
 
@@ -150,8 +150,13 @@ budget sits about half a kilobyte above what is measured), and the changelog say
 
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 
-- **Firefox and WebKit in the browser suite.** `e2e/` runs in Chromium only (`playwright.config.ts`). Add the two
-  projects and fix what they find; wheel deltas and pointer capture are where browsers differ.
+- **Firefox and WebKit in the browser suite — done.** `playwright.config.ts` has a project for each beside
+  Chromium, and CI and `release.yml` run all three. They found nothing to fix: the 29 tests passed in both on their
+  first run, and run five times in all three browsers (435 tests) none failed or was flaky. Playwright's wheel is
+  in pixels in every browser, so Firefox's wheel in lines stays a jsdom test; Firefox's mouse is pointer 0, which
+  the library only ever compares. One thing to undo: on macOS 27 Playwright 1.64's Firefox will not start on a
+  Mac with Firefox installed (microsoft/playwright#42768), so the config gives it a home of its own there, to
+  drop with Playwright 1.65.
 - **Touch.** A first pass in the iOS Simulator (two-finger pinch, pan and drag on the demo in Safari), then a real
   iPhone and an Android phone. Written up in the browser-coverage notes, failures as issues.
 - **A screen reader and the keyboard alone.** VoiceOver on macOS and NVDA on Windows against the demo with

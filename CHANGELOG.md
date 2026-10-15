@@ -29,6 +29,12 @@ contract.
   React Flow does not have; the warning names the side 1.0 gives it and the `<Handle>` to add.
 - **[What 1.0 promises](docs/stability.md)** and **[Upgrading to 1.0](docs/upgrading.md)**, in the docs and on the
   site.
+- **The browser suite runs in Firefox and WebKit as well as Chromium**, in `pnpm e2e` and in CI. Neither found
+  anything: the 29 tests passed in both on their first run, and run five times in all three browsers (435 tests)
+  none failed or was flaky — no fix in the library, and no test had assumed Chromium. Two differences are covered
+  outside it: Playwright's wheel arrives in pixels in every browser, so Firefox's wheel in lines (`deltaMode` 1)
+  is tested in jsdom; and Firefox gives the mouse pointer id 0 where the others give 1, which is safe because the
+  library only ever compares pointer ids.
 
 ### Changed
 

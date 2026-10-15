@@ -246,7 +246,7 @@ covers the part of the API that apps like the one above use, and says plainly wh
 | **React** | 18 and 19, both tested in CI |
 | **Modules** | ESM and CommonJS, with TypeScript declarations for each (checked with publint and Are the Types Wrong) |
 | **Rendering** | Client, server and hydration (`react-dom/server`) |
-| **Browsers** | Current evergreen browsers — pointer events, `ResizeObserver`. The browser suite runs in Chromium; two-finger touch pinch is unit-tested but not yet seen on a physical device ([roadmap](ROADMAP.md)) |
+| **Browsers** | Current evergreen browsers — pointer events, `ResizeObserver`. The browser suite runs in Chromium, Firefox and WebKit; two-finger touch pinch is unit-tested but not yet seen on a physical device ([roadmap](ROADMAP.md)) |
 
 ## Contributing
 

@@ -79,8 +79,9 @@ bundle that did not ask for them.
   hand-written expectation.
 - **jsdom has no layout and no real pointer.** Anything that depends on measured sizes, pointer capture,
   wheel or touch needs a look in a real browser — say what you did in the pull request. `pnpm e2e` runs
-  [`e2e/smoke.spec.ts`](e2e/smoke.spec.ts) against the demo with Playwright: `pnpm exec playwright install
-  chromium` once, or `E2E_CHANNEL=chrome pnpm e2e` to use the Chrome you have. A behaviour that was only ever
+  [`e2e/`](e2e) against the demo with Playwright in Chromium, Firefox and WebKit: `pnpm exec playwright install
+  chromium firefox webkit` once, `--project=firefox` for one of them, or `E2E_CHANNEL=chrome pnpm e2e` to use the
+  Chrome you have. A behaviour that was only ever
   seen in a browser should get a test there. The bugs this project has found *only* that way are in
   `plan.md`.
 - **Server rendering is part of the contract.** `ssr.test.tsx` and `hydration.test.tsx` render without a
