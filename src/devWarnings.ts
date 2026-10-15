@@ -166,7 +166,7 @@ export function warnAboutReactFlowDefaults(props: FlowingerProps): void {
   console.warn(
     `flowinger: in 1.0, <ReactFlow> takes React Flow's defaults, and this canvas leaves out ${changes.join(', ')}. ` +
       'To keep what it does now, render <FlowingerCanvas>: the same canvas, with flowinger\'s defaults. To have ' +
-      "React Flow's now, spread `reactFlowDefaults` under your props, or set each. See docs/upgrading-to-1.0.md.",
+      "React Flow's now, spread `reactFlowDefaults` under your props, or set each. See docs/upgrading.md.",
   );
 }
 
@@ -190,7 +190,7 @@ export function warnAboutLegacyHandle(nodeId: string, handleId: string, side: Po
     `flowinger: an edge names handle "${handleId}" on node "${nodeId}", which has no <Handle> of that id, so it ` +
       `meets the node's ${side} side by an old rule that guesses a side from the name. 1.0 drops the rule, and ` +
       `the edge will meet the ${fallback} side instead — add <Handle id="${handleId}" position={${name(side)}} />, ` +
-      'or list it in the node\'s `handles`. See docs/upgrading-to-1.0.md.',
+      'or list it in the node\'s `handles`. See docs/upgrading.md.',
   );
 }
 

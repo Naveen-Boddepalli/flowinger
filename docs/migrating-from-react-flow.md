@@ -25,25 +25,42 @@ pnpm add flowinger
 - **Your own CSS keeps working** where it selects on `react-flow__*` class names — those are kept — but not
   where it relied on React Flow's *stylesheet* (the look of `.react-flow__handle`, the `--xy-*` variables,
   the default node's border). Restyle those, or set the `--flowinger-*` variables.
-- `ReactFlow` is `FlowingerCanvas` under React Flow's name, and `ReactFlowProvider` is `FlowingerProvider`.
-  `FlowingerCore` is the small build with only the [features](features.md) you name.
+- `ReactFlow` is `FlowingerCanvas` under React Flow's name — with Flowinger's defaults until 1.0, and React Flow's
+  from 1.0 (see §2) — and `ReactFlowProvider` is `FlowingerProvider`. `FlowingerCore` is the small build with only
+  the [features](features.md) you name.
 
 ## 2. Set the defaults you were relying on
 
-This is the one that bites. React Flow turns interaction on; Flowinger leaves it off until you ask.
+This is the one that bites. React Flow turns interaction on; Flowinger leaves it off until you ask. One line
+gives a canvas React Flow's defaults — `reactFlowDefaults`, React Flow's value for each prop where Flowinger's
+differs:
+
+```tsx
+import { ReactFlow, reactFlowDefaults } from 'flowinger';
+
+<ReactFlow {...reactFlowDefaults} nodes={nodes} edges={edges} /* … */ />
+```
+
+From 1.0, `<ReactFlow>` applies them itself, so changing the import is the whole swap, and `<FlowingerCanvas>`
+keeps Flowinger's. Until then a `<ReactFlow>` that leaves any of them out says which, in development. See
+[Upgrading to 1.0](upgrading.md).
 
 | | React Flow | Flowinger |
 |---|---|---|
 | `nodesDraggable` | `true` | **`false`** |
 | `nodesConnectable` | `true` | **`false`** |
 | `elementsSelectable` | `true` | **`false`** |
+| `nodesFocusable` | `true` | **as `elementsSelectable`** |
 | `minZoom` | `0.5` | **`0.05`** |
+| `nodeDragThreshold` | 1 px | **3 px** |
+| `paneClickDistance`, `nodeClickDistance` | 1 px, 0 px | **none: a press is a click however far it moved** |
 | `maxZoom` | `2` | `2` |
 | `fitView` margin | `padding` `0.1` — a ratio | **40 px**, unless you pass a `padding` ratio |
 | `deleteKeyCode` | `'Backspace'` | `'Backspace'` |
 | keyboard: nodes and edges as tab stops, with a `role` | on | **off** — opt in with `elementsSelectable` / `keyboardNavigation` |
 
-So an app that was relying on the defaults needs:
+`reactFlowDefaults` also has the three key codes in §4 (`multiSelectionKeyCode`, `zoomActivationKeyCode`,
+`panActivationKeyCode`). Or set only what you rely on:
 
 ```tsx
 <ReactFlow
@@ -55,8 +72,8 @@ So an app that was relying on the defaults needs:
 />
 ```
 
-An app that only *shows* a graph (a viewer) needs none of it, and was probably already setting them to
-`false`.
+An app that only *shows* a graph (a viewer) needs none of it, was probably already setting them to `false`, and
+can render `<FlowingerCanvas>`, which keeps these defaults in 1.0.
 
 ## 3. Types
 

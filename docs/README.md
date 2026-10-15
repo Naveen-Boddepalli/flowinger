@@ -31,6 +31,8 @@ These pages describe the current `main`. What is newer than the latest release o
 | [The "pro" modules](pro.md) | Undo/redo, copy and paste, snap guides, export, smart edges, flowchart shapes, a collapsible tree — free, separate entry points |
 | [Theming](theming.md) | The `--flowinger-*` CSS variables |
 | [Server rendering](server-rendering.md) | What renders on the server and what waits for the client |
+| [What 1.0 promises](stability.md) | What semantic versioning covers from 1.0, and what it does not |
+| [Upgrading to 1.0](upgrading.md) | `<ReactFlow>` takes React Flow's defaults, and the other changes — and how to be ready on 0.9 |
 
 ## Coming from React Flow
 

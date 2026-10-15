@@ -71,5 +71,8 @@ adds is *changing* it from the pointer and keyboard. `allFeatures` is the list t
 - Your own feature is a plain object — `install(ctx)` to add to the store, `useCanvas` / `useNode` to add to the
   canvas's and each node's handlers, `Layer`, `EdgesLayer` and `EdgeAdornment` to draw, and `needs` for the
   features it builds on. The type and its slots are documented in [`src/features.ts`](../src/features.ts).
+  Writing one is **experimental**: `Feature`, `EngineContext` and the types they are made of reach into the store,
+  which is still changing, so they may change in a minor release, and the changelog will say so. Using the
+  features above is covered by semantic versioning; see [what 1.0 promises](stability.md).
 - The development warnings read `process.env.NODE_ENV`, which a bundler replaces (as it does for React); a
   production build drops them.

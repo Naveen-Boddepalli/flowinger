@@ -47,6 +47,10 @@ import type {
  *
  * Every hook here is called on every render of what hosts it, in the order the features were given, so
  * the list of features must not change over a canvas's life (it is read once).
+ *
+ * @experimental Writing a feature is not covered by semantic versioning yet: this interface, {@link EngineContext}
+ * and the types they are made of reach into the store, which is still changing, and may change in a minor release
+ * (the changelog will say so). Using the built-in features — `dragFeature`, `allFeatures`… — is covered.
  */
 export interface Feature<Api = unknown> {
   /** Identifies it: a feature is installed once, however many times it is named. */
@@ -98,6 +102,8 @@ export type FeatureEvent =
 /**
  * The store's internals, as a feature sees them. What is here is read as of *now*: `ctx.nodes` is
  * whatever the canvas last handed over, not what it was when the feature was installed.
+ *
+ * @experimental Part of writing a feature, which semantic versioning does not cover yet — see {@link Feature}.
  */
 export interface EngineContext {
   readonly nodes: readonly Node[];
@@ -179,6 +185,7 @@ export interface EngineContext {
   api: <A>(feature: Feature<A>) => A;
 }
 
+/** @experimental Part of writing a feature — see {@link Feature}. */
 export interface CanvasArgs {
   store: FlowingerStore;
   /** As the canvas was given them: a default is the feature's to apply. */
@@ -187,7 +194,11 @@ export interface CanvasArgs {
   suppressPaneClick: () => void;
 }
 
-/** What a feature adds to the canvas's own handlers. Each returns whether it took the event. */
+/**
+ * What a feature adds to the canvas's own handlers. Each returns whether it took the event.
+ *
+ * @experimental Part of writing a feature — see {@link Feature}.
+ */
 export interface CanvasBits {
   /** A press on the pane. Taking it stops it becoming a pan. */
   onPointerDown?: (e: ReactPointerEvent<HTMLDivElement>) => boolean;
@@ -217,6 +228,7 @@ export interface CanvasBits {
   selectable?: boolean;
 }
 
+/** @experimental Part of writing a feature — see {@link Feature}. */
 export interface NodeArgs {
   store: FlowingerStore;
   node: Node;
@@ -229,7 +241,11 @@ export interface NodeArgs {
   justDragged: MutableRefObject<boolean>;
 }
 
-/** What a feature adds to a node's own handlers. */
+/**
+ * What a feature adds to a node's own handlers.
+ *
+ * @experimental Part of writing a feature — see {@link Feature}.
+ */
 export interface NodeBits {
   onPointerDown?: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove?: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -251,6 +267,7 @@ export interface NodeBits {
   props?: HTMLAttributes<HTMLDivElement>;
 }
 
+/** @experimental Part of writing a feature — see {@link Feature}. */
 export interface EdgeArgs {
   store: FlowingerStore;
   edge: Edge;
@@ -258,7 +275,11 @@ export interface EdgeArgs {
   selectable: boolean;
 }
 
-/** What a feature adds to an edge's own handlers. */
+/**
+ * What a feature adds to an edge's own handlers.
+ *
+ * @experimental Part of writing a feature — see {@link Feature}.
+ */
 export interface EdgeBits {
   /** After `onEdgeClick`. */
   onClick?: (e: ReactMouseEvent<SVGGElement>) => void;
@@ -273,6 +294,8 @@ export interface EdgeBits {
 /**
  * What draws the box behind a label, around the label's own `<text>` (its `children`): the box goes first, so
  * it is behind. It is the text's parent so that its layout effect runs when the text has been laid out.
+ *
+ * @experimental Part of writing a feature — see {@link Feature}.
  */
 export interface LabelBoxProps {
   children: ReactNode;
@@ -289,6 +312,7 @@ export interface LabelBoxProps {
   style: CSSProperties | undefined;
 }
 
+/** @experimental Part of writing a feature — see {@link Feature}. */
 export interface EdgeAdornmentProps {
   edge: Edge;
   selected: boolean;

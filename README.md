@@ -48,7 +48,8 @@
   types — all [211 of its exports](docs/react-flow-coverage.md), and **every one of the 302 members** of the props,
   instance and components you write against *does something* (the audit counts a name that compiles and does
   nothing apart, and there are none) — measured from its own type declarations, with a
-  [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ.
+  [migration guide](docs/migrating-from-react-flow.md) for the defaults that differ — or `reactFlowDefaults`, one
+  spread that sets React Flow's.
 - **The "pro" extras, free.** [Undo/redo, copy and paste, snap guides, export, smart edges, flowchart shapes
   and a collapsible tree](docs/pro.md), each its own entry point (`flowinger/history`…), so they cost the core
   nothing unless you import them.
@@ -129,7 +130,8 @@ export function Diagram() {
 ```
 
 That draws a diagram you can pan and zoom. **Nothing is draggable, connectable or selectable until you say
-so** — React Flow turns those on by default, Flowinger leaves them off — so an editor opts in:
+so** — React Flow turns those on by default, Flowinger leaves them off (`{...reactFlowDefaults}` gives a canvas
+React Flow's) — so an editor opts in:
 
 ```tsx
 const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);

@@ -24,7 +24,7 @@ const modifier = /* @__PURE__ */ platformModifier();
  * What is not a canvas prop is not here: the margin of the instance's `fitView()` and of `Controls`' fit button
  * (pass `padding: 0.1`), the path of an animated move (pass `interpolate: 'smooth'`), and `Controls`' lock
  * (`showInteractive`). Neither are colours (`colorMode`, `defaultMarkerColor`), which follow the
- * `--flowinger-*` theme. See docs/upgrading-to-1.0.md.
+ * `--flowinger-*` theme. See docs/upgrading.md.
  *
  * On a `FlowingerCore`, each of these needs its feature (`dragFeature` for `nodesDraggable`…), and a core
  * without one says so in development.

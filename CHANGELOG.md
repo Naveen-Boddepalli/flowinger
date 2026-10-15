@@ -9,6 +9,35 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+The bridge to 1.0: nothing an app can see changes, and in development a canvas now says where 1.0 will be
+noticed. [Upgrading to 1.0](docs/upgrading.md) has the detail, and [what 1.0 promises](docs/stability.md) the
+contract.
+
+### Added
+
+- **`reactFlowDefaults`** — React Flow's default for every canvas prop where Flowinger's differs, read from its
+  source: `nodesDraggable`, `nodesConnectable`, `elementsSelectable` and `nodesFocusable` on, `minZoom` 0.5, a 1 px
+  `nodeDragThreshold`, `paneClickDistance` 1 and `nodeClickDistance` 0, ⌘ (on a Mac) or Control for
+  `multiSelectionKeyCode` and `zoomActivationKeyCode`, Space for `panActivationKeyCode`, and a 0.1 fit margin.
+  `<FlowingerCanvas {...reactFlowDefaults}>` behaves like React Flow's canvas. From 1.0, `<ReactFlow>` applies
+  them itself and `<FlowingerCanvas>` keeps Flowinger's.
+- **In development, `<ReactFlow>` names the props it leaves out whose default 1.0 changes**, once a page, each with
+  today's value and 1.0's — `nodesDraggable (false → true)` — and how to keep either: render `<FlowingerCanvas>`, or
+  spread `reactFlowDefaults`. `<ReactFlow>` is therefore its own component now, rendering `<FlowingerCanvas>`.
+- **In development, an edge drawn at a side guessed from its handle's name says so**, once a page: an edge naming
+  a handle (`in`, `out`, `prev`, `next`, `top`…) that its node has no `<Handle>` of. 1.0 drops that rule, which
+  React Flow does not have; the warning names the side 1.0 gives it and the `<Handle>` to add.
+- **[What 1.0 promises](docs/stability.md)** and **[Upgrading to 1.0](docs/upgrading.md)**, in the docs and on the
+  site.
+
+### Changed
+
+- **Writing a feature is experimental.** `Feature`, `EngineContext` and the types they are made of are tagged
+  `@experimental`: they reach into the store, and may change in a minor release, with a line here. Using the
+  built-in features is unaffected.
+- The migration guide's table of defaults has the four it lacked: `nodesFocusable`, `nodeDragThreshold`,
+  `paneClickDistance` and `nodeClickDistance`.
+
 ## [0.8.0] - 2026-10-15
 
 ### Changed
