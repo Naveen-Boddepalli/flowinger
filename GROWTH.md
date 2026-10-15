@@ -11,7 +11,7 @@ displays a graph and bundle size, dependencies or SSR matter.
 | npm downloads, last 30 days | ~1,070 | ~55.6M (`@xyflow/react`) + ~9.9M (`reactflow`) |
 | GitHub stars | 0 | ~38,600 |
 | GitHub description / topics | **none / none** | set |
-| Age on npm | days (0.4.0 → 0.8.0 in Oct 2026) | years |
+| Age on npm | days (0.4.0 → 0.9.0 in Oct 2026) | years |
 
 The engineering is already ahead of the visibility. The library covers all 211 React Flow exports, has
 measured benchmarks, a migration guide, free "pro" modules and over 1,000 tests. Almost nobody can find

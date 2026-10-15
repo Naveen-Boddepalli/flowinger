@@ -125,7 +125,7 @@ next performance pass (the spatial index, below) a major version.
 
 ## The order of work
 
-### 1. `0.9.0` — the bridge (non-breaking) — **done on `main`, not yet released**
+### 1. `0.9.0` — the bridge (non-breaking) — **done** (versioned 2026-10-15)
 
 (`0.8.0` went to the culled first render, so the bridge is `0.9.0`.) Everything 1.0 changes is announced in the
 code first, so nobody on `0.x` is surprised by `1.0`:

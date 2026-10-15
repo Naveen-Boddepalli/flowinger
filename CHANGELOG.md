@@ -9,6 +9,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-15
+
 The bridge to 1.0: nothing an app can see changes, and in development a canvas now says where 1.0 will be
 noticed. [Upgrading to 1.0](docs/upgrading.md) has the detail, and [what 1.0 promises](docs/stability.md) the
 contract.
@@ -37,6 +39,9 @@ contract.
   built-in features is unaffected.
 - The migration guide's table of defaults has the four it lacked: `nodesFocusable`, `nodeDragThreshold`,
   `paneClickDistance` and `nodeClickDistance`.
+- **Size.** The core is 19.85 kB gzipped (was 19.83) and the whole canvas 35.97 (was 35.94): `<ReactFlow>` as its
+  own component, and the store's `hasNodeElement`. The warnings themselves are development-only and not in a
+  production build. Both are inside the 20 and 36 kB budgets, the whole canvas by 0.03 kB.
 
 ## [0.8.0] - 2026-10-15
 
@@ -373,7 +378,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.5.0...v0.6.0
