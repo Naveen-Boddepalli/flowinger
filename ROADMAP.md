@@ -41,6 +41,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   a documentation site and guides; examples for Next.js, export, JSON, swimlanes, Yjs presence and a stepper.
 - `0.8.0` (2026-10-15): the first render is culled too — a culled mount at 10,000 nodes in 55 ms (React Flow
   594), and a culled page's server HTML only the nodes near the view.
+- `0.9.0` (2026-10-15): the bridge to 1.0 — `reactFlowDefaults`, development warnings where 1.0 will be noticed,
+  and [what 1.0 promises](docs/stability.md) and [how to upgrade](docs/upgrading.md).
 
 ## Now — be easy to try and to trust
 
