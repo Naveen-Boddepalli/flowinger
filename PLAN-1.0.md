@@ -151,6 +151,12 @@ measured over 36), so D1 fits unless it adds more than about a kilobyte; the cha
 
 ### 3. The proof — what 1.0 has to have been seen doing
 
+**Decided 2026-10-17: 1.0.0 ships without the last three** (real phones, the screen reader, the QueryLens week).
+QueryLens put its trial off until after its own 2.0, and the owner took the risk rather than wait: the library is
+unchanged since `1.0.0-rc.1`, which passed the browser suite in three browsers, touch in Chromium and the registry
+checks. The phones and the screen-reader pass are still to do, in 1.0.x; anything they find is a patch release,
+or a minor one if it needs new API.
+
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 
 - **Firefox and WebKit in the browser suite — done.** `playwright.config.ts` has a project for each beside
@@ -189,7 +195,8 @@ These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is rea
 
 `1.0.0-rc.1` on the `next` dist-tag through `release.yml`, as `0.4.0-rc.1` was — **versioned on `release/1.0`**
 (2026-10-15), tagged from the branch, since a candidate does not merge; a second candidate if the week
-on QueryLens or the proof finds anything. Then `1.0.0` on `latest`, tagged from `main` after the release PR has
+on QueryLens or the proof finds anything (none was needed: see step 3). Then `1.0.0` on `latest`, versioned on
+the branch 2026-10-17, tagged from `main` after the release PR has
 merged (CONTRIBUTING's *Releasing*). Tagging is the owner's.
 
 ## Not in 1.0 (additive, so 1.x)
