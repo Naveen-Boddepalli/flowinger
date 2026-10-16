@@ -44,6 +44,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - `0.9.1` (2026-10-15): the bridge to 1.0 — `reactFlowDefaults`, development warnings where 1.0 will be noticed,
   and [what 1.0 promises](docs/stability.md) and [how to upgrade](docs/upgrading.md). (Tagged as `0.9.0`, whose
   release stopped at the size check before it published.)
+- `1.0.0` (2026-10-17): semantic versioning from here ([what it covers](docs/stability.md)); `<ReactFlow>` has
+  React Flow's defaults, so switching is an import change; touch in the browser suite, and a pinch on top of a
+  node zooms. Shipped without the real-phone and screen-reader passes, which are next under *Now*.
 
 ## Now — be easy to try and to trust
 
@@ -56,7 +59,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   held at the pane's edge, stacking by what is on top, `colorMode: 'system'`, the lock, `'smooth'` moves, and
   `nodrag` / `nopan` / `nowheel` from a real press — in Chromium, Firefox and WebKit, locally and in CI (Firefox
   and WebKit are done: they found no bug in the library, and two tests that assumed a browser draws often). Still
-  by hand: multi-touch pinch, and a screen reader.
+  by hand: touch is automated in Chromium (taps, drags, pinches), but Safari on an iPhone and Chrome on Android, and
+  a screen reader, still need a pass — for 1.0.x.
 
 ## Next
 
