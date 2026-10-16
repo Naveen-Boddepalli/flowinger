@@ -1,19 +1,22 @@
 # Changelog
 
 All notable changes to Flowinger. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and versions follow [Semantic Versioning](https://semver.org) — with the usual caveat that while the version
-is `0.x`, a minor release may change the API; anything that does is listed under **Changed**.
+and versions follow [Semantic Versioning](https://semver.org): from 1.0.0 a breaking change is a major version
+([what that covers](docs/stability.md)). Before 1.0, while the version was `0.x`, a minor release could change the
+API; each change that did is listed under **Changed**.
 
 The design notes behind each release — what was measured, what was tried and dropped — are in
 [`plan.md`](plan.md).
 
 ## [Unreleased]
 
-## [1.0.0-rc.1] - 2026-10-15
+## [1.0.0] - 2026-10-17
 
-The first candidate for 1.0, on the `next` dist-tag (`npm install flowinger@next`); `latest` stays on 0.9.1 until
-1.0.0. Two breaking changes, both described in [Upgrading to 1.0](https://naveen-boddepalli.github.io/flowinger/docs/upgrading/),
-and from 1.0.0 the contract in [What 1.0 promises](https://naveen-boddepalli.github.io/flowinger/docs/stability/).
+**The first stable release.** From here Flowinger follows semantic versioning: what
+[What 1.0 promises](https://naveen-boddepalli.github.io/flowinger/docs/stability/) covers changes only in a major
+version. Two breaking changes from 0.9, both described in
+[Upgrading to 1.0](https://naveen-boddepalli.github.io/flowinger/docs/upgrading/). The library is the same as
+`1.0.0-rc.1`; since then only the docs changed, to describe 1.0.
 
 ### Changed
 
@@ -42,6 +45,10 @@ and from 1.0.0 the contract in [What 1.0 promises](https://naveen-boddepalli.git
 
 - **Touch in the browser suite**: a tap selects, a finger drags a node or pans, two fingers zoom in and out about
   the point between them — and on top of a node — sent as real touch through Chromium's DevTools protocol.
+
+## [1.0.0-rc.1] - 2026-10-15
+
+A release candidate, published to the `next` dist-tag. It carried what became `1.0.0`, above.
 
 ## [0.9.1] - 2026-10-15
 
@@ -442,7 +449,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0-rc.1
 [0.9.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.1
 [0.9.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.0

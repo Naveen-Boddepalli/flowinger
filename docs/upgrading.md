@@ -1,15 +1,15 @@
 # Upgrading to 1.0
 
-What changes between `0.x` and `1.0`, and how to be ready for it now. `0.9` changes nothing an app can see; it
-adds `reactFlowDefaults`, and in development it says — once a page, in the console — where your app will notice
-1.0. Upgrade to 0.9 first, open your app in development, and read what it says.
+What changed between `0.x` and `1.0`, and how to upgrade. There are two changes an app can notice, both below.
+`0.9` changed nothing an app could see, and in development it named — once a page, in the console — where an app
+would notice 1.0; an app that went through 0.9 and did what it said needs nothing more.
 
 ## In short
 
-| If your app… | In 1.0 | To be ready |
+| If your app… | In 1.0 | To upgrade |
 |---|---|---|
 | renders `<FlowingerCanvas>` or `<FlowingerCore>` | nothing changes | nothing |
-| renders `<ReactFlow>` | it takes **React Flow's defaults** | rename it to `<FlowingerCanvas>` to keep what you have, or spread `reactFlowDefaults` to have React Flow's now |
+| renders `<ReactFlow>` | it takes **React Flow's defaults** | nothing, if you want React Flow's behaviour; rename it to `<FlowingerCanvas>` to keep what you had |
 | has an edge that names a handle `in`, `out`, `prev`, `next`, `top`, `bottom`, `left` or `right` that no `<Handle>` has | the edge no longer meets a side guessed from the name | add the `<Handle>` |
 | writes its own `Feature` | the feature API is `@experimental` | nothing; minor releases may change it |
 
@@ -17,13 +17,13 @@ What 1.0 promises from then on is on [its own page](stability.md).
 
 ## 1. `<ReactFlow>` takes React Flow's defaults
 
-`<ReactFlow>` and `<FlowingerCanvas>` are the same canvas under two names, and until 1.0 both have flowinger's
+`<ReactFlow>` and `<FlowingerCanvas>` are the same canvas under two names, and before 1.0 both had flowinger's
 defaults: interaction off until it is asked for. That is the one difference [the migration
 guide](migrating-from-react-flow.md#2-set-the-defaults-you-were-relying-on) warns about, and why moving from
-React Flow has been more than changing an import. In 1.0 the name decides: `<ReactFlow>` behaves like React Flow,
+React Flow was more than changing an import. In 1.0 the name decides: `<ReactFlow>` behaves like React Flow,
 and `<FlowingerCanvas>` keeps flowinger's defaults.
 
-| Prop | Today, and `<FlowingerCanvas>` in 1.0 | `<ReactFlow>` in 1.0 — React Flow's |
+| Prop | `<FlowingerCanvas>`, and `<ReactFlow>` before 1.0 | `<ReactFlow>` in 1.0 — React Flow's |
 |---|---|---|
 | `nodesDraggable` | `false` | `true` |
 | `nodesConnectable` | `false` | `true` |
@@ -38,7 +38,7 @@ and `<FlowingerCanvas>` keeps flowinger's defaults.
 | `panActivationKeyCode` | none | Space: held, a drag pans even with `panOnDrag` off |
 | `fitViewOptions.padding` | a 40 px margin | 0.1 of the view |
 
-Three more are not props, and change for `<ReactFlow>` too:
+Three more are not props, and changed for `<ReactFlow>` too:
 
 - **The margin of a fit** that names none — the instance's `fitView()` and `fitBounds()`, and `Controls`' fit
   button: 40 px → 0.1 of the view. Pass `padding` to choose.
@@ -48,9 +48,9 @@ Three more are not props, and change for `<ReactFlow>` too:
 
 What does not change, on either canvas: colours (`colorMode`, `defaultMarkerColor` and the
 [`--flowinger-*` theme](theming.md)), since flowinger has no stylesheet to bring React Flow's; and the ARIA
-attributes on the canvas, which the accessibility pass before 1.0 decides, and this page will say.
+attributes on the canvas, which the accessibility pass decides.
 
-**To keep what you have**, render `<FlowingerCanvas>`. It takes the same props.
+**To keep what you had**, render `<FlowingerCanvas>`. It takes the same props.
 
 ```tsx
 import { FlowingerCanvas } from 'flowinger';
@@ -58,17 +58,19 @@ import { FlowingerCanvas } from 'flowinger';
 <FlowingerCanvas nodes={nodes} edges={edges} onNodesChange={onNodesChange} />
 ```
 
-**To have React Flow's now**, so that 1.0 changes nothing, spread `reactFlowDefaults` under your props:
+**To have React Flow's on a `<FlowingerCanvas>`**, spread `reactFlowDefaults` under your props (a
+`<ReactFlow>` that already spreads it, as 0.9 suggested, keeps working and can drop the spread):
 
 ```tsx
-import { ReactFlow, reactFlowDefaults } from 'flowinger';
+import { FlowingerCanvas, reactFlowDefaults } from 'flowinger';
 
-<ReactFlow {...reactFlowDefaults} nodes={nodes} edges={edges} onNodesChange={onNodesChange} />
+<FlowingerCanvas {...reactFlowDefaults} nodes={nodes} edges={edges} onNodesChange={onNodesChange} />
 ```
 
-A `fitViewOptions` of your own replaces the one in `reactFlowDefaults`, so give it `padding: 0.1` if you want React
-Flow's margin. Either way, 0.9 stops warning: it warns about the props a `<ReactFlow>` leaves out, and with the
-spread there are none.
+Spread like that, a `fitViewOptions` of your own replaces the one in `reactFlowDefaults` (`<ReactFlow>` merges
+them), so give it `padding: 0.1` if you want React Flow's margin. The three defaults that are not props come with
+`<ReactFlow>` only; elsewhere pass them: `padding` to a fit, `interpolate: 'smooth'` to a move, `showInteractive`
+to `Controls`.
 
 On a `<FlowingerCore>`, most of these props need their feature (`dragFeature` for `nodesDraggable`, `panKeyFeature`
 for `panActivationKeyCode`…), and a core without one says so in development, as for any other prop.
@@ -78,10 +80,10 @@ for `panActivationKeyCode`…), and a core without one says so in development, a
 An edge can name the handle it meets (`sourceHandle`, `targetHandle`). When the node has no `<Handle>` of that id,
 flowinger has looked at the name: `top` or `in` is the top, `bottom` or `out` the bottom, `left` or `prev` the
 left, `right` or `next` the right. The rule is from before handles were measured, and React Flow has no such
-thing. In 1.0 it goes, and such an edge is drawn as one with no handle to go on: from the source's bottom to the
+thing. 1.0 removed it, and such an edge is drawn as one with no handle to go on: from the source's bottom to the
 target's top when the target sits lower, otherwise from the source's right to the target's left.
 
-In development, 0.9 names the edge's node and handle, the side the rule gives it and the side 1.0 will. Add the
+In development, 0.9 named the edge's node and handle, the side the rule gave it and the side 1.0 does. Add the
 handle where the rule put it:
 
 ```tsx
