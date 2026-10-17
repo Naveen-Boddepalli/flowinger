@@ -11,18 +11,30 @@ on a measurement. Decisions are the owner's; "proposed" means a recommendation n
   One known consumer, QueryLens, which put its trial of 1.0 off until after its own 2.0.
 - Size: the core is 19.91 kB gzipped against a 20 kB budget, and the whole canvas 37.01 against 38. The core has
   less than 0.1 kB of room.
-- React Flow: `latest` is 12.12.0 (2026-09-24) and `next` is **13.0.0-next.0** (2026-10-11). Checked today by
-  running `scripts/audit-react-flow.mjs` against each and by diffing their declarations with 12.11.6's. 12.12.0's
-  types are the same as 12.11.6's, and so are 13.0.0-next.0's public ones: 211 of 211 exports and 302 of 302
-  members, all still named and all doing something here, with no type changed. So far 13 changes only how React
-  Flow is shipped and built:
-  - ESM only: its `exports` has no `require` condition.
-  - `engines.node` is `>=20`, and React is `>=18` (was `>=17`).
-  - zustand 5, and `@xyflow/system` 1.0.
-  - It is compiled with the React Compiler, which adds `react-compiler-runtime` as a dependency.
+- React Flow: `latest` is 12.12.0 (2026-09-24), whose types are 12.11.6's. `next` is **13.0.0-next.0**
+  (2026-10-11), a real API major. *Measured on the `release/2.0` branch*, by running the unit suite (whose React
+  Flow oracles are in nine files), the defaults test and the coverage audit against it (D1 has the details):
+  - **Change events are objects, not arrays.** `onNodesChange` gets a `NodeChangeset`: iterable, with
+    `applyTo(nodes)`, `getByType`, `toArray`. `applyNodeChanges` and `applyEdgeChanges` are gone, and the change
+    types are renamed (`NodePositionChange` → `PositionChange`…).
+  - **One store becomes six.** `useStore` and `useStoreApi` are gone. `useOptionsStore` reads what is left of
+    `ReactFlowState`, and nodes, edges, the viewport, the connection and the selection each have a store and a
+    hook of their own (`useNodesStore`…), plus `useNode`, `useEdge`, `useInternalNodes` and `useShallow`.
+  - **The fit margin.** A number is now pixels, where 12 read it as a ratio, and the default is `'5%'` a side,
+    where 12's was 0.1. So `getViewportForBounds` returns a different view for the same arguments: 2 of 1,157
+    unit tests fail on it.
+  - **Colour mode.** `colorMode` becomes `forceColorMode`, and a canvas with none has no `light` class: pages theme
+    with `data-theme` on `<html>`.
+  - `changeParent` on the instance. `useHandleConnections` and `ColorModeClass` are gone.
+  - **Packaging:** ESM only (its `exports` has no `require` condition), `engines.node` `>=20`, React `>=18` (was
+    `>=17`), zustand 5, `@xyflow/system` 1.0, and compiled with the React Compiler, which adds
+    `react-compiler-runtime` as a dependency.
 
-  Defaults and behaviour are not in the types. They have to be read from 13's source, as the test behind
-  `reactFlowDefaults` does for 12.
+  Its package still carries an older build under `dist/esm/` that nothing loads. A first look at that folder, made
+  when this plan was first written, wrongly found 13's API unchanged.
+- Found along the way: React Flow 12.11.6 has **210** exports, not the 211 the docs said. The audit was counting
+  `CounterNode`, a code example inside a doc comment, and flowinger exports a matching type. Fixed in the audit and
+  the docs, and `CounterNode` is deprecated.
 
 So **2.0 is not now.** A major version in the same month as the first stable one would tell users the contract is
 cheap. Most of what is planned next can ship in a `1.x` minor anyway (see *Until then* below), and the one outside
@@ -33,8 +45,8 @@ event that would force a major, React Flow 13, has not shipped.
 2.0 has a trigger, not a date. Work on it starts when one of these is true:
 
 1. **React Flow 13.0.0 is on `latest`.** The stability page promises that `<ReactFlow>` follows a changed React
-   Flow default or behaviour only in a major release. If 13 changes any, that is 2.0 (D1). If it changes none, as
-   in next.0, 2.0 is mostly the packaging question (D2), which can wait for a better reason.
+   Flow default or behaviour only in a major release. next.0 already changes two (the fit margin and the colour
+   class), so this is very likely to be the trigger (D1).
 2. **Someone outside needs a change that cannot ship without breaking something covered.** They reported it in an
    issue, and there is no additive way round it.
 
@@ -60,8 +72,25 @@ kind of change it is:
 "Flowinger follows React Flow 12.11.6's API" becomes "13.x". The `@xyflow/react` dev dependency moves to 13, and
 the audit in CI runs against it.
 
-**Done so far:** next.0 checked; it has no differences in types. The test that reads defaults from React Flow's
-source has not been run against 13 yet. The upstream watch (step 0) does that.
+**What next.0 changes, sorted that way** (measured 2026-10-17; the weekly job keeps it current):
+
+| React Flow 13.0.0-next.0 | Lands in | How |
+|---|---|---|
+| `useOptionsStore`, `useNodesStore`, `useEdgesStore`, `useViewportStore`, `useConnectionStore`, `useSelectionStore`, `useReactFlowStoreApi`, `useNode`, `useEdge`, `useInternalNodes`, `useShallow`, and their types | 1.x | Added names, read from flowinger's one store. `useStore` and `useStoreApi` stay, covered as they are |
+| `onNodesChange` / `onEdgesChange` get a `NodeChangeset` / `EdgeChangeset` | 1.x, probably | Flowinger's change list becomes an array that is also a changeset (`applyTo`, `getByType`, `getForNode`, `toArray`…), so a handler written for 12 and one written for 13 both work. `applyNodeChanges` stays. To check: that the change types still accept every 12-style handler |
+| `PositionChange`, `DimensionChange`, `SelectionChange`, `AddChange`, `RemoveChange`, `ReplaceChange`, `HandleBounds` | 1.x | Added as aliases. The `Node*Change` / `Edge*Change` names stay |
+| `forceColorMode` | 1.x | Added. `colorMode` stays, deprecated once 13 is stable |
+| `changeParent` on the instance | 1.x | Added (`editingFeature`) |
+| `applyNodeChanges`, `applyEdgeChanges`, `useStore`, `useStoreApi`, `useHandleConnections`, `ColorModeClass` removed | — | Kept. Nothing is removed for following React Flow |
+| **The fit margin:** a number is pixels, not a ratio, and the default is `'5%'` a side, not 0.1 | **2.0** | The same number would fit differently, on every canvas, and in `getViewportForBounds`. The bridge warns, once a page, where a number margin is given, and says how to write the same margin as a string (`'5%'` and `'20px'` mean the same in 12 and 13) |
+| **No colour class without `forceColorMode`** (12's `<ReactFlow>` puts `light` on the container) | **2.0** | On `<ReactFlow>` only. A stylesheet that selects `.react-flow.light` notices |
+| Packaging (ESM only, React Compiler…) | D2 | |
+
+So next.0 alone makes 2.0 smaller than it looks. Every name 13 adds can be in flowinger before 2.0, and what has
+to wait is two defaults and what a number means as a margin. A React Flow 13 app could then switch to a flowinger
+1.x by changing its imports, once the 1.x minors land.
+
+**Also in 2.0:** removing `CounterNode`, deprecated in 1.x (see *Where it stands*).
 
 ### D2. Packaging: ESM only — **proposed; measure first**
 
@@ -156,20 +185,26 @@ Additive, so each can ship in a minor whenever it is ready. Mostly from the [roa
 - The codemod from [GROWTH.md](GROWTH.md) (`npx flowinger-migrate`).
 - The feature API covered by semver (see above).
 - React Flow 12.12 parity: nothing to add. Its types are 12.11.6's, checked today.
+- **React Flow 13's new names**, from D1's table: the split store hooks, change lists that are also changesets,
+  the renamed change types, `forceColorMode` and `changeParent`. Best done once 13 has a release candidate, so
+  the names have stopped moving.
 - The measurements for D2 (the toolchain matrix) and D3 (the lean-bundle map). They change nothing in the
   package.
 
 ## The order of work
 
-### 0. The upstream watch (1.x, additive) — **to do first**
+### 0. The upstream watch (1.x, additive) — **done** (2026-10-17, `release/2.0`)
 
-A scheduled CI job, weekly and on demand, runs two things against `@xyflow/react@next`:
+`.github/workflows/react-flow-next.yml`, weekly and on demand, runs against `@xyflow/react@next`:
 
-- the coverage audit;
-- the `reactFlowDefaults` test.
+- the whole unit suite, since nine of its files take React Flow as the oracle (names, geometry, defaults);
+- the coverage audit, with a new `--strict` that fails on a name flowinger lacks or ignores.
 
-It fails on any difference. Then 13's changes show up as each `next` lands, not on release day, and D1's table
-fills in as they arrive. It is the only part of this plan worth starting before the trigger.
+So 13's changes show up as each `next` lands, not on release day, and D1's table fills in as they arrive. It
+needed two fixes to be true. The defaults test and the audit now read the files React Flow's `exports` names, not
+`dist/esm/`. The audit also skips doc comments, which is how the 211 → 210 miscount turned up. Its first run, on
+next.0, fails as it should: 2 unit tests on the fit margin, `fitViewOptions` in the defaults test, and 28 names
+in the audit.
 
 ### 1. 1.x minors
 
@@ -231,8 +266,9 @@ measured again, and the changelog says why for either outcome.
 
 ## Risks
 
-- **React Flow 13's `next` series changes more than next.0 shows.** That is likely: next.0 is the first. The watch
-  job sees each change as it lands, and D1 is decided against 13.0.0 only.
+- **React Flow 13's `next` series changes more than next.0 shows.** That is likely: next.0 is the first, and it
+  already changes the change events and the store. The watch job sees each change as it lands, and D1 is decided
+  against 13.0.0 only.
 - **React Flow 13 takes months.** Then 2.0 waits, and nothing here is urgent. D2 could ship alone as an earlier
   major, but two majors close together cost more trust than one later.
 - **ESM-only breaks a toolchain someone uses.** That is why D2 is measured before it is decided. If Jest's CommonJS
