@@ -151,8 +151,10 @@ effect's dependencies; `onInit` hands you the same one.
 - **View**, each returning a `Promise<boolean>` — `true` when the move lands, `false` if another one cut it
   short: `setViewport`, `zoomIn`, `zoomOut`, `zoomTo(zoom)`, `setCenter(x, y, { zoom })`,
   `fitView({ padding, nodes, includeHiddenNodes, minZoom, maxZoom, duration })`, `fitBounds(rect, options)`;
-  and `getViewport()`, `getZoom()`. `padding` is a ratio, as in React Flow (`0.1` = a tenth of the diagram's
-  size on each side); left out, `fitView` keeps a 40 px margin.
+  and `getViewport()`, `getZoom()`. `padding` is the margin: `'20px'`, `'5%'` of the pane, or per side
+  (`{ top: '10px', x: '5%' }`), as in React Flow; a bare number is a ratio, as in React Flow 12 (`0.1` = a tenth
+  of the diagram's size), and becomes pixels in 2.0, as in React Flow 13 — so write margins with a unit. Left out,
+  `fitView` keeps a 40 px margin on a `FlowingerCanvas`, and React Flow's on a `ReactFlow`.
 - **Coordinates**: `screenToFlowPosition({ x, y }, { snapToGrid })` takes a pointer position (`clientX`,
   `clientY`) to graph units — for dropping a node where the pointer is — and `flowToScreenPosition` goes back.
 - **Read**: `getNodes()`, `getNode(id)`, `getEdges()`, `getEdge(id)`, `getNodesBounds(nodesOrIds)`,
@@ -160,7 +162,8 @@ effect's dependencies; `onInit` hands you the same one.
   `toObject()`. They report the nodes as they stand: a dragged position, a measured size and the selection
   included.
 - **Edit**: `setNodes`, `setEdges` (a list or an updater), `addNodes`, `addEdges`, `updateNode`,
-  `updateNodeData`, `updateEdge`, and `deleteElements({ nodes, edges })`. They are reported as changes, so they
+  `updateNodeData`, `changeParent(nodeId, parentId | null)` (into another node, or out of any, where it is on the
+  canvas), `updateEdge`, and `deleteElements({ nodes, edges })`. They are reported as changes, so they
   need a [controlled flow](#controlled-flows) or `defaultNodes`; on nodes you merely pass in, there is nobody to
   apply them and they do nothing. On a `FlowingerCore` they need `editingFeature` (and `deleteFeature` for
   `deleteElements`).
@@ -174,12 +177,23 @@ effect's dependencies; `onInit` hands you the same one.
 `width`, `height`, `minZoom`, `maxZoom` and `nodesInitialized`. The selector must return a stable value, or you
 pass an equality function.
 
+**React Flow 13's store hooks** read the same store, split as React Flow 13 splits its own:
+`useViewportStore` (`transform`, `width`, `height`, `paneDragging`), `useNodesStore` (`nodes`, `nodeLookup` —
+each node with its `internals` — `parentLookup` and `nodesInitialized`), `useEdgesStore` (`edges`, `edgeLookup`,
+`connectionLookup`), `useConnectionStore` (`connection`, `connectionClickStartHandle`), `useSelectionStore`
+(`userSelectionRect`) and `useOptionsStore` (what `useStore` reads). Each takes an optional selector; wrap one that
+builds a new array or object in `useShallow`. `useReactFlowStoreApi()` gives each store's `getState()` and
+`subscribe()` without re-rendering. Also `useNode(id)`, `useEdge(id)` and `useInternalNodes(ids)`. They read
+only: change things through the instance.
+
 A node with `hidden: true` is neither drawn nor listed on the minimap, and nor are its edges.
 
 ## Controlled flows
 
 Give the canvas `onNodesChange` and it stops keeping state for you: dragging, selecting and measuring
-are *reported* as a list of changes, and you apply them.
+are *reported* as a list of changes, and you apply them. The list is a `NodeChangeset` (`EdgeChangeset` for
+edges): an array, and React Flow 13's changeset, so `applyNodeChanges(changes, nodes)` and
+`changes.applyTo(nodes)` both work, and so do `getByType('position')`, `getForNode(id)` and `toArray()`.
 
 ```tsx
 const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);

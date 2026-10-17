@@ -2,7 +2,7 @@
 
 From `1.0.0`, Flowinger follows [semantic versioning](https://semver.org): a change that breaks anything on this
 page waits for `2.0`, and a minor or patch release only adds or fixes. Before 1.0 the version was `0.x`, when a
-minor release could change the API. [Upgrading to 1.0](upgrading.md) says what changed on the way, and the
+minor release could change the API. [Upgrading](upgrading.md) says what changed on the way, and what 2.0 changes, and the
 [changelog](../CHANGELOG.md) lists every release.
 
 ## Covered

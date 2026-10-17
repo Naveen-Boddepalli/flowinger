@@ -31,9 +31,10 @@
   <img src="docs/assets/demo.png" alt="Flowinger's demo: plan operators as HTML nodes joined by labelled SVG edges, a sub-flow group, a minimap and zoom controls" width="780" />
 </p>
 
-> **Status:** `1.0` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
+> **Status:** `1.1` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
 > for `2.0`. It is what [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) draws its diagrams with, and
-> its API follows React Flow's; coming from `0.x`, [Upgrading to 1.0](docs/upgrading.md) has the two changes. These docs describe `main`; what is newer than the latest npm
+> its API follows React Flow's — 12's, and 13's names as well; [Upgrading](docs/upgrading.md) says what 2.0, which
+> follows React Flow 13, will change, and what 1.0 did. These docs describe `main`; what is newer than the latest npm
 > release is listed under *Unreleased* there.
 
 ## Why Flowinger

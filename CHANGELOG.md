@@ -10,6 +10,13 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-17
+
+**The bridge to 2.0**, which follows React Flow 13. Everything React Flow 13.0.0-next.0 adds is here, without breaking
+anything — its store hooks, its changesets, `forceColorMode`, `changeParent`, margins with units — so code written for
+React Flow 13 runs on 1.1. What 2.0 will change is said in development, once a page each, and in
+[Upgrading to 2.0](docs/upgrading.md). And React Flow 12.11.6 has 210 exports, not 211.
+
 ### Changed
 
 - **`<ReactFlow>`'s fit margin is written with a unit**: `'4.545454545454546%'` a side, which is the same view to the

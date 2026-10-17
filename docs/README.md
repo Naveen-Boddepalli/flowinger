@@ -32,7 +32,7 @@ These pages describe the current `main`. What is newer than the latest release o
 | [Theming](theming.md) | The `--flowinger-*` CSS variables |
 | [Server rendering](server-rendering.md) | What renders on the server and what waits for the client |
 | [What 1.0 promises](stability.md) | What semantic versioning covers from 1.0, and what it does not |
-| [Upgrading to 1.0](upgrading.md) | `<ReactFlow>` takes React Flow's defaults, and the other changes — and how to be ready on 0.9 |
+| [Upgrading](upgrading.md) | To 2.0 (React Flow 13: margins, changesets, ES modules) and to 1.0, and how to be ready on 1.1 and 0.9 |
 
 ## Coming from React Flow
 
