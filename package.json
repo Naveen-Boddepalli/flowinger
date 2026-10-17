@@ -178,6 +178,7 @@
     "prepare": "npm run build",
     "size": "node scripts/size.mjs",
     "size:features": "node scripts/size-features.mjs",
+    "size:map": "node scripts/size-map.mjs",
     "bench": "node scripts/bench.mjs",
     "check:package": "publint --strict && attw --pack .",
     "demo:build": "vite build --config vite.demo.config.ts",
