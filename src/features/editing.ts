@@ -12,6 +12,7 @@ export type EditingApi = Pick<
   | 'addEdges'
   | 'updateNode'
   | 'updateNodeData'
+  | 'changeParent'
   | 'updateEdge'
   | 'updateEdgeData'
   | 'getNodeConnections'
@@ -41,7 +42,7 @@ export const editingFeature: Feature<EditingApi> = {
         if (!w) changes.push({ type: 'remove', id: n.id });
         else if (current[i] !== w) changes.push({ type: 'replace', id: n.id, item: w });
       });
-      for (const w of wanted) if (!ctx.nodeById.has(w.id)) changes.push({ type: 'add', item: w });
+      for (const w of wanted) if (!ctx.nodeById.has(w.id)) changes.push({ type: 'add', id: w.id, item: w });
       ctx.emitNodeChanges(changes);
     };
 
@@ -55,7 +56,7 @@ export const editingFeature: Feature<EditingApi> = {
         if (!w) changes.push({ type: 'remove', id: e.id });
         else if (current[i] !== w) changes.push({ type: 'replace', id: e.id, item: w });
       });
-      for (const w of wanted) if (!ctx.edgeById.has(w.id)) changes.push({ type: 'add', item: w });
+      for (const w of wanted) if (!ctx.edgeById.has(w.id)) changes.push({ type: 'add', id: w.id, item: w });
       ctx.emitEdgeChanges(changes);
     };
 
@@ -83,6 +84,22 @@ export const editingFeature: Feature<EditingApi> = {
       ctx.emitNodeChanges([
         { type: 'replace', id, item: opts?.replace === true ? ({ ...change, id } as Node) : { ...current, ...change } },
       ]);
+    };
+
+    const changeParent: EditingApi['changeParent'] = (id, parentId) => {
+      const node = ctx.nodeById.get(id);
+      const parent = parentId === null ? undefined : ctx.nodeById.get(parentId);
+      if (!node || parentId === id || (parentId !== null && !parent)) return;
+      // The node stays where it is on the canvas. Its `position` is from its parent's corner, so moving it from
+      // one parent to another moves its `position` by the difference between their corners.
+      const own = ctx.resolvePosition(id, node.position);
+      const was = node.parentId === undefined ? undefined : ctx.nodeById.get(node.parentId);
+      const wasCorner = was ? ctx.absolutePosition(was) : { x: 0, y: 0 };
+      const nowCorner = parent ? ctx.absolutePosition(parent) : { x: 0, y: 0 };
+      updateNode(id, {
+        parentId: parentId ?? undefined,
+        position: { x: own.x + wasCorner.x - nowCorner.x, y: own.y + wasCorner.y - nowCorner.y },
+      });
     };
 
     const updateNodeData: EditingApi['updateNodeData'] = (id, data, opts) => {
@@ -113,13 +130,14 @@ export const editingFeature: Feature<EditingApi> = {
       setNodes,
       setEdges,
       addNodes: (added) => {
-        ctx.emitNodeChanges(toList(added).map((item) => ({ type: 'add', item })));
+        ctx.emitNodeChanges(toList(added).map((item) => ({ type: 'add', id: item.id, item })));
       },
       addEdges: (added) => {
-        ctx.emitEdgeChanges(toList(added).map((item) => ({ type: 'add', item })));
+        ctx.emitEdgeChanges(toList(added).map((item) => ({ type: 'add', id: item.id, item })));
       },
       updateNode,
       updateNodeData,
+      changeParent,
       updateEdge,
       updateEdgeData,
       getNodeConnections: ({ type, nodeId, handleId }) =>

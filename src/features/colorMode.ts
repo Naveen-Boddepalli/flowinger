@@ -22,13 +22,14 @@ const LIGHT = {
 /**
  * `colorMode`: `'light'`, `'dark'` or `'system'` (the OS's, and following it). The canvas gets the class
  * `light` or `dark`, as React Flow's does, for your own CSS; `light` also sets the colours above. `dark` is the
- * library's default palette, so it adds only the class. Left out, nothing is added.
+ * library's default palette, so it adds only the class. Left out, nothing is added. `forceColorMode` is React Flow
+ * 13's name for it, and wins where both are given.
  */
 export const colorModeFeature: Feature = {
   name: 'colorMode',
 
   useCanvas({ props }) {
-    const mode = props.colorMode;
+    const mode = props.forceColorMode ?? props.colorMode;
     const system = mode === 'system';
     const osDark = useSyncExternalStore(
       system && typeof window !== 'undefined' && window.matchMedia

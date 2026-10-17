@@ -114,7 +114,7 @@ const sameSize = (a?: { width?: number; height?: number }, b?: { width?: number;
 // itself notices (`sameLayout` — position, width, height, hidden — is what decides a relayout; it does
 // not compare `parentId`, so a pure reparent that does not also move anything is not caught here either,
 // or upstream of it). Kept anyway: cheap, and correct for a case `sameLayout` does learn of.
-const sameInternalNode = (a: InternalNode | undefined, b: InternalNode | undefined): boolean =>
+export const sameInternalNode = (a: InternalNode | undefined, b: InternalNode | undefined): boolean =>
   a === b ||
   (a !== undefined &&
     b !== undefined &&

@@ -1,3 +1,4 @@
+import { EdgeChangeset, NodeChangeset } from './changes.ts';
 import { resolveFeatures, type EngineContext, type Feature, type FeatureEvent } from './features.ts';
 import { absolutePositionOf, treeInfo } from './parents.ts';
 import {
@@ -5,6 +6,7 @@ import {
   getNodesBounds,
   snapTo,
   viewportForBounds,
+  type Padding,
   type Size,
 } from './geometry.ts';
 import type { Modifiers } from './keys.ts';
@@ -194,7 +196,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
  * flowinger's (a 40 px margin, a straight path, no lock).
  */
 export interface ViewDefaults {
-  fitViewPadding?: number;
+  fitViewPadding?: Padding;
   interpolate?: 'smooth' | 'linear';
   showInteractive?: boolean;
 }
@@ -425,14 +427,19 @@ export function createFlowingerStore(
   };
   const beginGesture = (event: MouseEvent | TouchEvent, quietMs?: number) => {
     clearTimeout(gesture?.quiet);
+    const began = gesture === null;
     gesture = { event, ...(quietMs === undefined ? {} : { quiet: setTimeout(endGesture, quietMs) }) };
+    // Whether the pane is being dragged is state (React Flow 13's `paneDragging`).
+    if (began) emit(stateListeners);
   };
   /** `event` — what let go — is what the end reports, when given. */
   function endGesture(event?: MouseEvent | TouchEvent) {
     clearTimeout(gesture?.quiet);
     if (gesture && event) gesture.event = event;
     if (!tween) endMove();
+    const ended = gesture !== null;
     gesture = null;
+    if (ended) emit(stateListeners);
   }
 
   const emit = (listeners: Iterable<Listener>) => {
@@ -735,7 +742,7 @@ export function createFlowingerStore(
     for (const middleware of onNodesChangeMiddlewareMap.values()) {
       next = middleware(next);
     }
-    if (next.length > 0) callbacks.onNodesChange?.(next);
+    if (next.length > 0) callbacks.onNodesChange?.(new NodeChangeset(next));
   };
   const emitEdgeChanges = (changes: EdgeChange[]) => {
     if (changes.length === 0) return;
@@ -743,7 +750,7 @@ export function createFlowingerStore(
     for (const middleware of onEdgesChangeMiddlewareMap.values()) {
       next = middleware(next);
     }
-    if (next.length > 0) callbacks.onEdgesChange?.(next);
+    if (next.length > 0) callbacks.onEdgesChange?.(new EdgeChangeset(next));
   };
 
   /**
@@ -1374,6 +1381,7 @@ export function createFlowingerStore(
     addEdges: lend('editing', 'addEdges'),
     updateNode: lend('editing', 'updateNode'),
     updateNodeData: lend('editing', 'updateNodeData'),
+    changeParent: lend('editing', 'changeParent'),
     updateEdge: lend('editing', 'updateEdge'),
     updateEdgeData: lend('editing', 'updateEdgeData'),
     getIntersectingNodes: lend('editing', 'getIntersectingNodes'),
@@ -1393,6 +1401,10 @@ export function createFlowingerStore(
     instance,
     use,
     api,
+    /** An installed feature's methods by its name — `undefined` where it is not installed, rather than an error. */
+    apiOf: (name: string): unknown => installed.get(name),
+    /** Whether a pointer or a finger is moving the view (not the wheel, which has no drag). */
+    isPaneDragging: () => gesture !== null && gesture.event.type !== 'wheel',
     attach,
     detach,
     zoomAt,

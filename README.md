@@ -31,9 +31,10 @@
   <img src="docs/assets/demo.png" alt="Flowinger's demo: plan operators as HTML nodes joined by labelled SVG edges, a sub-flow group, a minimap and zoom controls" width="780" />
 </p>
 
-> **Status:** `1.0` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
+> **Status:** `1.1` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
 > for `2.0`. It is what [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) draws its diagrams with, and
-> its API follows React Flow's; coming from `0.x`, [Upgrading to 1.0](docs/upgrading.md) has the two changes. These docs describe `main`; what is newer than the latest npm
+> its API follows React Flow's — 12's, and 13's names as well; [Upgrading](docs/upgrading.md) says what 2.0, which
+> follows React Flow 13, will change, and what 1.0 did. These docs describe `main`; what is newer than the latest npm
 > release is listed under *Unreleased* there.
 
 ## Why Flowinger
@@ -45,7 +46,7 @@
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
   they are really drawn, so an edge follows a handle you moved with CSS.
 - **An API you already know.** React Flow's names for components, hooks, props, class names, `data-testid`s and
-  types — all [211 of its exports](docs/react-flow-coverage.md), and **every one of the 302 members** of the props,
+  types — all [210 of its exports](docs/react-flow-coverage.md), and **every one of the 302 members** of the props,
   instance and components you write against *does something* (the audit counts a name that compiles and does
   nothing apart, and there are none) — measured from its own type declarations, with a
   [migration guide](docs/migrating-from-react-flow.md). `<ReactFlow>` has React Flow's defaults, so moving from
@@ -72,7 +73,7 @@
 | Pan / zoom 10,000 nodes, culled | **3.6 / 2.5 ms** a frame | 4.2 / 4.7 ms a frame |
 | Drag at 10,000 nodes, culled | **4.0 ms** a move | 4.8 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
-| API | React Flow's names: 211 of 211 exports, 119 of 119 props | — |
+| API | React Flow's names: 210 of 210 exports, 119 of 119 props | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
 The culled pan is level within the noise (React Flow's read 2.6–4.2 ms across runs); the zoom is about half

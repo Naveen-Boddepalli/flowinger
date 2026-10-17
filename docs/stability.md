@@ -2,7 +2,7 @@
 
 From `1.0.0`, Flowinger follows [semantic versioning](https://semver.org): a change that breaks anything on this
 page waits for `2.0`, and a minor or patch release only adds or fixes. Before 1.0 the version was `0.x`, when a
-minor release could change the API. [Upgrading to 1.0](upgrading.md) says what changed on the way, and the
+minor release could change the API. [Upgrading](upgrading.md) says what changed on the way, and what 2.0 changes, and the
 [changelog](../CHANGELOG.md) lists every release.
 
 ## Covered
@@ -34,7 +34,7 @@ minor release could change the API. [Upgrading to 1.0](upgrading.md) says what c
 - **Anything not exported** — the files under `src/`, and the store object a feature is handed.
 - **The text of development warnings**, the elements inside a node or an edge beyond the class names and test ids
   above, and exact pixels: a fix to where an edge meets a handle may move it by one.
-- **Size.** The budgets (20 kB gzipped for the core, 38 for the whole canvas) are checks in CI, not a promise; a
+- **Size.** The budgets (21.5 kB gzipped for the core, 39 for the whole canvas) are checks in CI, not a promise; a
   release that grows either says so in the changelog.
 - **Bugs.** Fixing one is a patch, even when something relied on it; a fix that is likely to be noticed says so in
   the changelog.

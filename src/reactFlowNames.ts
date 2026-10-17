@@ -32,6 +32,7 @@ import type { ControlsProps } from './Controls.tsx';
 import type { NodeConnection } from './connections.ts';
 import type { UseNodeConnectionsOptions } from './dataHooks.ts';
 import type { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
+import type { Padding } from './geometry.ts';
 import type { MiniMapNodeProps as MiniMapNodePropsType, MiniMapProps } from './MiniMap.tsx';
 import type { NodeResizerProps, ResizeControlProps as ResizeControlPropsType, ResizeParams } from './NodeResizer.tsx';
 import type { useOnSelectionChange } from './selectionHooks.ts';
@@ -49,11 +50,16 @@ import type {
   EdgeProps,
   FlowingerInstance,
   FlowingerProps,
+  HandleType,
   InternalNode,
   Node,
   NodeChange,
+  NodeDimensionChange,
   NodeHandle,
   NodeOrigin,
+  NodePositionChange,
+  NodeRemoveChange,
+  NodeSelectionChange,
   PanOnScrollMode,
   Position,
   Rect,
@@ -175,6 +181,25 @@ export type OnError = (id: string, message: string) => void;
 export type OnSelectionDrag = (event: MouseEvent | TouchEvent, nodes: Node[]) => void;
 export type SelectionDragHandler<N extends Node = Node> = (event: ReactMouseEvent, nodes: N[]) => void;
 export type SelectionRect = Rect & { startX: number; startY: number };
+// React Flow 13's names for the kinds of change: one name for a node's and an edge's where they are the same.
+export type PositionChange = NodePositionChange;
+export type DimensionChange = NodeDimensionChange;
+export type SelectionChange = NodeSelectionChange;
+export type RemoveChange = NodeRemoveChange;
+/** In React Flow 13 `id` is required; the canvas gives it on every `add` it makes. */
+export type AddChange<T extends Node | Edge = Node | Edge> = { type: 'add'; id?: string; item: T; index?: number };
+export type ReplaceChange<T extends Node | Edge = Node | Edge> = { type: 'replace'; id: string; item: T };
+/** React Flow 13's `HandleBounds`: one handle, where it is on its node and how big. */
+export type HandleBounds = {
+  id?: string | null;
+  nodeId: string;
+  x: number;
+  y: number;
+  position: Position;
+  type: HandleType;
+  width: number;
+  height: number;
+};
 export type UnselectNodesAndEdgesParams<N extends Node = Node, E extends Edge = Edge> = { nodes?: N[]; edges?: E[] };
 export type UseNodesInitializedOptions = { includeHiddenNodes?: boolean };
 export type ViewportHelperFunctionOptions = { duration?: number };
@@ -199,6 +224,10 @@ export type BuiltInNode =
   | Node<{ label: string }, 'input' | 'output' | 'default'>
   | Node<Record<string, never>, 'group'>;
 export type BuiltInEdge = Edge;
+/**
+ * @deprecated React Flow does not export this: it is the example in a doc comment of its `Node` type, which the
+ * coverage audit used to count as an export. Write your own node type; this goes in 2.0.
+ */
 export type CounterNode = Node<{ initialCount?: number }, 'counter'>;
 export type MiniMapNodeProps = MiniMapNodePropsType;
 export type MiniMapNodes = Pick<
@@ -287,7 +316,7 @@ export type FitViewParams<N extends Node = Node> = {
   height?: number;
   minZoom?: number;
   maxZoom?: number;
-  padding?: number;
+  padding?: Padding;
 };
 export type ReactFlowStore<N extends Node = Node, E extends Edge = Edge> = {
   rfId: string;

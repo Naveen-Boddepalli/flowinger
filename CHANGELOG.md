@@ -10,6 +10,86 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-17
+
+**The bridge to 2.0**, which follows React Flow 13. Everything React Flow 13.0.0-next.0 adds is here, without breaking
+anything — its store hooks, its changesets, `forceColorMode`, `changeParent`, margins with units — so code written for
+React Flow 13 runs on 1.1. What 2.0 will change is said in development, once a page each, and in
+[Upgrading to 2.0](docs/upgrading.md). And React Flow 12.11.6 has 210 exports, not 211.
+
+### Changed
+
+- **`<ReactFlow>`'s fit margin is written with a unit**: `'4.545454545454546%'` a side, which is the same view to the
+  pixel as React Flow 12's `padding: 0.1`, so a number in a margin is always someone's own (see the warnings
+  below). `fitViewOptions` is now only what the caller gives; the margin of a fit that names none comes from the
+  same place for `fitView`, `fitViewOptions` without a `padding`, the instance and `Controls`.
+- **A fit's margin is React Flow's to the pixel.** `fitView`, `fitBounds`, `fitViewOptions` and `Controls`' fit
+  button work the margin out as React Flow does: in whole pixels a side, with the view moved where the fit leaves
+  less than that on one side. Before, a number was turned into a zoom without rounding, so a `padding: 0.1` fit
+  could sit a fraction of a pixel from React Flow's. Flowinger's own margin, 40 px when none is given, is
+  unchanged.
+- **The core's size budget is 21.5 kB (was 20).** The core goes from 19.91 to 21.25 kB gzipped: React Flow's
+  way of working out a fit's margin (0.34 kB), since a fit is part of the core, and changesets (0.94: the class,
+  and `applyNodeChanges` and `applyEdgeChanges`, which `applyTo` needs), since every canvas that reports changes
+  reports them as a changeset. 2.0 takes back 0.45 by moving the edge paths other than bezier into a feature
+  ([the 2.0 plan](PLAN-2.0.md), D3). The whole canvas's budget is 39 kB (was 38): it is 38.04.
+- **`onNodesChange` and `onEdgesChange` are given a `NodeChangeset` / `EdgeChangeset`** (below): still an array of
+  the same changes, so a handler that treats it as one is unaffected. A test that compares it with
+  `toStrictEqual` sees a different class. An `add` change the canvas makes now carries the item's `id`.
+
+### Added
+
+- **Margins with units and per side**, as React Flow writes them: `fitViewOptions={{ padding: '5%' }}`,
+  `fitView({ padding: '20px' })`, `{ top: '10px', x: '5%' }`, in every fit and in `getViewportForBounds` and
+  `viewportForBounds`. They mean the same in React Flow 12 and 13, and in flowinger 1.x and 2.0, which reads a
+  bare number as pixels where 1.x reads it as a ratio. Checked against React Flow's own `getViewportForBounds`.
+  `Padding` and `PaddingWithUnit` are exported.
+- **React Flow 13's store hooks**, read from flowinger's one store, so code written for React Flow 13 runs here:
+  `useOptionsStore` (what `useStore` reads), `useViewportStore` (with `paneDragging`), `useNodesStore` (with
+  `nodeLookup` and `parentLookup`), `useEdgesStore` (with `edgeLookup`, and `connectionLookup` keyed as React
+  Flow keys it — checked against React Flow's own), `useConnectionStore` (with `connectionClickStartHandle`),
+  `useSelectionStore` (`userSelectionRect`, with `boxSelectFeature`), `useReactFlowStoreApi`, and `useNode`,
+  `useEdge`, `useInternalNodes` and `useShallow`. Read only, like `useStoreApi`. Their types are exported, and
+  `HandleBounds`. `useStore` and `useStoreApi` stay as they are.
+- **`NodeChangeset` and `EdgeChangeset`**, React Flow 13's changesets, as arrays: what `onNodesChange` and
+  `onEdgesChange` are given, so a handler written for React Flow 13 — `setNodes((ns) => changes.applyTo(ns))` —
+  works, and one written for 12 does too. `applyTo`, `add`, `remove`, `getByType`, `getForNode` / `getForEdge`,
+  `removeForNode` / `removeForEdge`, `toArray`, `size` and `version`. And React Flow 13's names for the kinds of
+  change: `PositionChange`, `DimensionChange`, `SelectionChange`, `RemoveChange`, `AddChange`, `ReplaceChange`.
+- **`forceColorMode`**, React Flow 13's name for `colorMode`: the same values and classes, and it wins where both
+  are given (`colorModeFeature`).
+- **`changeParent(nodeId, parentId)`** on the instance, as in React Flow 13: moves a node into another, or out of
+  any (`null`), where it is on the canvas — its `position` made relative to the new parent — reported as a
+  `replace` (`editingFeature`).
+- **What 2.0 changes, said in development**, once a page each, as the stability page promises of the release before
+  a major one ([Upgrading to 2.0](docs/upgrading.md)): a fit given a bare number as its margin (pixels in 2.0); a
+  `<ReactFlow>` that fits itself with the margin it has by default (`'5%'` a side in 2.0); a `<FlowingerCore>`
+  drawing a `straight`, `smoothstep` or `step` edge without `edgePathsFeature`; and flowinger loaded through
+  `require` under Jest (2.0 ships ES modules only). Nothing in a production build.
+- **`reactFlow12Defaults`**: `reactFlowDefaults` with React Flow 12's margin written with a unit
+  (`'4.545454545454546%'` a side, the same view to the pixel as `padding: 0.1`), to spread where 2.0's `<ReactFlow>`
+  should keep 1.x's margin.
+- **`edgePathsFeature`**, which does nothing yet: in 2.0 the edge paths other than bezier come with it. Name it on a
+  `<FlowingerCore>` now and nothing changes when they move. `<FlowingerCanvas>` and `<ReactFlow>` have it.
+- With these, flowinger names all 220 exports of React Flow 13.0.0-next.0, and all 303 members the audit counts
+  do something; it still names all 210 of React Flow 12.11.6's.
+
+### Deprecated
+
+- **`CounterNode`**, a type React Flow does not export: it is the example in a doc comment of React Flow's `Node`
+  type, and the coverage audit read names in comments as exports. It goes in 2.0; write your own node type.
+
+### Fixed
+
+- **React Flow 12.11.6 has 210 exports, not 211**, and flowinger names all of them. The coverage audit now skips
+  comments; the README, the coverage page and the migration guide say 210.
+
+### Added
+
+- **A weekly job against React Flow's next major** (`@xyflow/react@next`): the unit tests that take React Flow as
+  their oracle, and the coverage audit with `--strict`, which fails on a name flowinger lacks or ignores. A failure
+  there is news about React Flow 13, for [the 2.0 plan](PLAN-2.0.md); CI stays on 12.11.6.
+
 ## [1.0.1] - 2026-10-17
 
 What a real phone and VoiceOver found, the first time either was tried: handles too small for a finger, and three

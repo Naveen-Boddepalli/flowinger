@@ -7,6 +7,7 @@ import type {
   ReactNode,
   SVGAttributes,
 } from 'react';
+import type { Padding } from './geometry.ts';
 import type { PassThroughHtml } from './attributes.ts';
 import type { NodeConnection } from './connections.ts';
 import type { Feature } from './features.ts';
@@ -409,10 +410,12 @@ export interface SetViewportOptions {
 
 export interface FitViewOptions extends SetViewportOptions {
   /**
-   * As in React Flow, a ratio: `0.1` leaves a tenth of the diagram's size around
-   * it. Left out, the margin is a fixed 40 px.
+   * The margin round what is fitted. A number is a ratio, as in React Flow 12: `0.1` leaves a tenth of the
+   * diagram's size around it (2.0 reads it as pixels, as React Flow 13 does). `'20px'`, `'5%'` of the pane, and
+   * per side (`{ top: '10px', x: '5%' }`) are React Flow's, and mean the same in 2.0. Left out, the margin is a
+   * fixed 40 px.
    */
-  padding?: number;
+  padding?: Padding;
   /** Fit only these nodes. */
   nodes?: { id: string }[];
   includeHiddenNodes?: boolean;
@@ -531,6 +534,11 @@ export interface FlowingerInstance {
     data: Record<string, unknown> | ((node: Node) => Record<string, unknown>),
     options?: { replace?: boolean },
   ) => void;
+  /**
+   * Moves a node into another (`parentId`), or out of any (`null`), where it is on the canvas: its `position`
+   * becomes relative to the new parent, as React Flow 13's does. Reported as a `replace`. Needs `editingFeature`.
+   */
+  changeParent: (nodeId: string, parentId: string | null) => void;
   updateEdge: (
     id: string,
     patch: Partial<Edge> | ((edge: Edge) => Partial<Edge>),
@@ -903,6 +911,12 @@ export interface FlowingerProps {
    */
   colorMode?: ColorMode;
   /**
+   * React Flow 13's name for `colorMode`, which it takes the place of: the same values and the same classes. Given
+   * both, this one wins. Left out (both), the canvas adds no class and draws the library's own palette, as in
+   * React Flow 13. Needs `colorModeFeature`.
+   */
+  forceColorMode?: ColorMode;
+  /**
    * Raise a selected node (and what is inside it) by 1000, above its overlapping neighbours (default true, as in React Flow). Needs `stackingFeature`.
    */
   elevateNodesOnSelect?: boolean;
@@ -995,6 +1009,8 @@ export interface NodeRemoveChange {
 
 export interface NodeAddChange<N extends Node = Node> {
   type: 'add';
+  /** The item's id: on every change the canvas makes, so `getForNode` finds it (React Flow 13 requires it). */
+  id?: string;
   item: N;
   /** Where in the list; the end by default. */
   index?: number;
@@ -1027,6 +1043,8 @@ export interface EdgeRemoveChange {
 
 export interface EdgeAddChange<E extends Edge = Edge> {
   type: 'add';
+  /** The item's id: on every change the canvas makes, so `getForEdge` finds it (React Flow 13 requires it). */
+  id?: string;
   item: E;
   index?: number;
 }

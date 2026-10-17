@@ -48,7 +48,7 @@ export interface ConnectionInProgress {
  */
 export type ConnectionState = NoConnection | ConnectionInProgress;
 
-const NO_CONNECTION: NoConnection = {
+export const NO_CONNECTION: NoConnection = {
   inProgress: false,
   isValid: null,
   from: null,
@@ -61,7 +61,8 @@ const NO_CONNECTION: NoConnection = {
   toHandle: null,
 };
 
-function toPublic(store: FlowingerStore, raw: DragConnection | null): ConnectionState {
+/** The engine's connection in its public shape. Not part of the public surface: `useConnection` is. */
+export function toPublic(store: FlowingerStore, raw: DragConnection | null): ConnectionState {
   if (!raw) return NO_CONNECTION;
   // The dragged-from node went (deleted mid-drag): nothing sensible to report.
   const fromNode = store.getInternalNode(raw.fromNodeId);

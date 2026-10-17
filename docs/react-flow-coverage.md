@@ -17,7 +17,7 @@ Measured against `@xyflow/react` 12.11.6's own type declarations
 
 | | React Flow has | Flowinger **names** | …and **does** |
 |---|---|---|---|
-| Exports (components, hooks, functions, types) | 211 | **211** | — |
+| Exports (components, hooks, functions, types) | 210 | **210** | — |
 | `ReactFlow` props | 119 | **119** | **119** |
 | Instance (`useReactFlow()`) | 32 | **32** | 32 |
 | `Node`, `Edge`, `NodeProps`, `EdgeProps` fields | 22 / 20 / 13 / 20 | **all** | all |
@@ -25,6 +25,12 @@ Measured against `@xyflow/react` 12.11.6's own type declarations
 | `MiniMap`, `Controls`, `NodeResizer`, `NodeToolbar` props | 18 / 9 / 16 / 4 | **all** | all |
 | `fitView` options | 8 | **8** | 8 |
 | **All members counted** | 302 | **302** | **302** |
+
+And against React Flow 13's first pre-release, `13.0.0-next.0` (the same script, given its `dist/index.d.ts`): **220
+of 220 exports** — its store hooks, its changesets and its names for the kinds of change among them — and **303 of
+303 members**, `forceColorMode` and the instance's `changeParent` the new ones, each doing something. A weekly job
+(`.github/workflows/react-flow-next.yml`) runs the audit with `--strict` against `@xyflow/react@next`, so a name
+13 adds is seen when it lands.
 
 A name that compiles and does nothing is worse than a missing one — it fails silently, in production, in someone
 else's app — so the audit counts the two apart: a member whose doc comment says `@unimplemented` is *named*, not

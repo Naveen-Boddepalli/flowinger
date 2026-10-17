@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Controls, FlowingerCanvas, ReactFlow, reactFlowDefaults, type Node } from '../index.ts';
@@ -7,9 +7,30 @@ import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 
 const nodes = (): Node[] => [{ id: 'a', position: { x: 0, y: 0 }, data: { label: 'A' } }];
 
+/**
+ * The code `import '@xyflow/react'` loads, as its `exports` names it — not a path written down here: 13's package
+ * still carries an older build under `dist/esm/` that nothing loads. Where that code is minified (13 ships it so,
+ * with its TypeScript source beside it), the source.
+ */
+function reactFlowCode(dir: string): string {
+  const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { exports: Record<string, unknown> };
+  let entry: unknown = pkg.exports['.'];
+  while (entry !== null && typeof entry === 'object') {
+    const conditions = entry as Record<string, unknown>;
+    entry = conditions.node ?? conditions.import ?? conditions.default;
+  }
+  const code = readFileSync(join(dir, String(entry)), 'utf8');
+  const src = join(dir, 'src');
+  if (code.split('\n').length > 100 || !existsSync(src)) return code;
+  return readdirSync(src, { recursive: true, encoding: 'utf8' })
+    .filter((file) => /\.tsx?$/.test(file))
+    .map((file) => readFileSync(join(src, file), 'utf8'))
+    .join('\n');
+}
+
 // React Flow's own source is the oracle: each value is what its `ReactFlow` (or, where the component leaves a
 // prop undefined, its store) starts with.
-const reactFlowSource = readFileSync(resolve('node_modules/@xyflow/react/dist/esm/index.js'), 'utf8');
+const reactFlowSource = reactFlowCode(resolve('node_modules/@xyflow/react'));
 // Each prop: what React Flow's source says, and the value that is (in jsdom, whose user agent names no Mac).
 const SAID_BY_REACT_FLOW: Record<keyof typeof reactFlowDefaults, [said: string, value: unknown]> = {
   nodesDraggable: ['nodesDraggable: true,', true],
@@ -29,7 +50,7 @@ const SAID_BY_REACT_FLOW: Record<keyof typeof reactFlowDefaults, [said: string, 
 describe('reactFlowDefaults', () => {
   it("is React Flow's own default for each prop, as its source says", () => {
     for (const [name, [said, value]] of Object.entries(SAID_BY_REACT_FLOW)) {
-      expect(reactFlowSource, name).toContain(said);
+      expect(reactFlowSource.includes(said), `${name}: React Flow's source no longer says ${said}`).toBe(true);
       expect(reactFlowDefaults[name as keyof typeof reactFlowDefaults], name).toEqual(value);
     }
     expect(Object.keys(reactFlowDefaults).sort()).toEqual(Object.keys(SAID_BY_REACT_FLOW).sort());

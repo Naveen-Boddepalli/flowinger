@@ -1,6 +1,6 @@
 {
   "name": "flowinger",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A small, dependency-free React Flow alternative: a node-graph and flowchart renderer for React with React Flow's API, ~20 kB gzipped core, SSR, and free undo/redo, export and smart edges",
   "keywords": [
     "react",
@@ -178,12 +178,14 @@
     "prepare": "npm run build",
     "size": "node scripts/size.mjs",
     "size:features": "node scripts/size-features.mjs",
+    "size:map": "node scripts/size-map.mjs",
     "bench": "node scripts/bench.mjs",
     "check:package": "publint --strict && attw --pack .",
     "demo:build": "vite build --config vite.demo.config.ts",
     "site:build": "node scripts/build-site.mjs",
     "check:examples": "node scripts/check-examples.mjs",
     "check:registry": "node scripts/check-registry.mjs",
+    "check:toolchains": "node scripts/check-toolchains.mjs",
     "e2e": "playwright test"
   },
   "peerDependencies": {

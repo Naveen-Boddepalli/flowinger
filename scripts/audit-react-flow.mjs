@@ -6,6 +6,7 @@
 //   pnpm build                                   # it reads dist/index.d.ts
 //   node scripts/audit-react-flow.mjs <path to @xyflow/react/dist/esm/index.d.ts>
 //   node scripts/audit-react-flow.mjs <path> --json   # the same, as data
+//   node scripts/audit-react-flow.mjs <path> --strict # and exit 1 if any React Flow name is missing or does nothing
 //
 // Members that are plain DOM/SVG attributes (`id`, `role`, `aria-*`, `onClick`, …) are counted apart from
 // React Flow's own: flowinger's components take few of them.
@@ -25,6 +26,7 @@ if (!rfEntry || rfEntry.startsWith('--') || !existsSync(rfEntry)) {
   process.exit(2);
 }
 const asJson = process.argv.includes('--json');
+const strict = process.argv.includes('--strict');
 const ROOT = resolve(import.meta.dirname, '..');
 const FL = join(ROOT, 'dist/index.d.ts');
 if (!existsSync(FL)) {
@@ -43,7 +45,9 @@ function exportedNames(entry) {
     const f = find(normalize(file));
     if (!f || seen.has(f)) return;
     seen.add(f);
-    const src = readFileSync(f, 'utf8');
+    // Without comments: a bundled declaration file (React Flow 13's) carries its doc comments' examples, and
+    // `export function CustomNode` in one is not an export.
+    const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     for (const m of src.matchAll(/export\s*(?:type\s*)?\{([^}]*)\}/gs)) {
       for (const raw of m[1].split(',')) {
         const n = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop();
@@ -174,5 +178,15 @@ if (asJson) {
       (t.domAttributesMissing > 0 ? ` (+${String(t.domAttributesMissing)} DOM attributes not accepted)` : ''));
     if (t.acceptedOnly.length > 0) console.log(`  accepted, not implemented: ${t.acceptedOnly.join(', ')}`);
     if (t.missing.length > 0) console.log(`  missing: ${t.missing.join(', ')}`);
+  }
+}
+
+// For a React Flow that is not the one flowinger was written against (the weekly job against `@xyflow/react@next`):
+// a name it has that flowinger lacks, or names and ignores, is the news.
+if (strict) {
+  const gaps = report.exports.missing.length + report.types.reduce((n, t) => n + t.missing.length + t.acceptedOnly.length, 0);
+  if (gaps > 0) {
+    console.error(`\n--strict: ${String(gaps)} React Flow name(s) missing or accepted only`);
+    process.exit(1);
   }
 }

@@ -58,6 +58,9 @@ export interface ConnectApi {
    * it — made if valid, and `onClickConnectEnd` either way. Does nothing with `connectOnClick` off.
    */
   clickConnect: (nodeId: string, handleEl: HTMLElement, at: MouseEvent) => void;
+  /** The handle a first click began a connection from (`connectOnClick`), until the second click or Escape. */
+  getClickStart: () => { nodeId: string; id: string | null; type: HandleType } | null;
+  subscribeClickStart: (listener: () => void) => () => void;
   /**
    * The handle a finger at a screen point is on, give or take {@link TOUCH_REACH}: the nearest that may start
    * a connection. Given the node the finger is on, only its handles and those of the nodes inside it; and on a
@@ -147,6 +150,13 @@ export const connectFeature: Feature<ConnectApi> = {
     };
     /** The handle a first click was made on, waiting for a second. */
     let pending: { nodeId: string; record: HandleRecord } | null = null;
+    // What a first click began from, in React Flow's shape (13's `connectionClickStartHandle`).
+    let clickStart: ReturnType<ConnectApi['getClickStart']> = null;
+    const clickStartListeners = new Set<() => void>();
+    const setClickStart = (next: typeof clickStart) => {
+      clickStart = next;
+      for (const listener of clickStartListeners) listener();
+    };
     /** The handle a drag just ended on: the click that follows it is not the start of a click connection. */
     let afterDrag: HTMLElement | null = null;
 
@@ -438,6 +448,7 @@ export const connectFeature: Feature<ConnectApi> = {
     const clearPending = () => {
       pending?.record.el.classList.remove('clickconnecting');
       pending = null;
+      if (clickStart) setClickStart(null);
     };
     ctx.on('detach', clearPending);
 
@@ -452,6 +463,7 @@ export const connectFeature: Feature<ConnectApi> = {
       if (!pending) {
         if (record.options?.current.isConnectableStart === false) return;
         pending = { nodeId, record };
+        setClickStart({ nodeId, id: record.id, type: record.type });
         record.el.classList.add('clickconnecting');
         config.onClickStart?.(e, { nodeId, handleId: record.id, handleType: record.type });
         return;
@@ -473,7 +485,20 @@ export const connectFeature: Feature<ConnectApi> = {
       config.onClickEnd?.(e, { connection: c, isValid: valid });
     };
 
-    return { startConnection, beginConnection, clickConnect, handleNearTouch, config };
+    return {
+      startConnection,
+      beginConnection,
+      clickConnect,
+      handleNearTouch,
+      config,
+      getClickStart: () => clickStart,
+      subscribeClickStart: (listener) => {
+        clickStartListeners.add(listener);
+        return () => {
+          clickStartListeners.delete(listener);
+        };
+      },
+    };
   },
 
   useCanvas({ store, props }) {

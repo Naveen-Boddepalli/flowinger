@@ -96,12 +96,13 @@ describe('fitView and fitBounds', () => {
     expect(store.getViewport().zoom).toBeCloseTo((800 - 80) / 200);
   });
 
-  it('takes a padding ratio as React Flow does', () => {
+  it('takes a padding ratio as React Flow does, in whole pixels a side', () => {
     const { store } = mounted(800, 600);
     store.setBounds(0.1, 10);
     store.setNodes(nodes);
     void store.instance.fitView({ padding: 0.1 });
-    const zoom = 800 / (200 * 1.1);
+    // React Flow 12's arithmetic: floor((800 - 800 / 1.1) / 2) = 36 px a side, so 728 px for 200 of graph.
+    const zoom = (800 - 2 * 36) / 200;
     const vp = store.getViewport();
     expect(vp.zoom).toBeCloseTo(zoom);
     expect(vp.x).toBeCloseTo(400 - 100 * zoom); // centred on the bounds' middle
@@ -264,7 +265,7 @@ describe('editing the graph reports changes', () => {
     expect(nodeChanges).toEqual([
       { type: 'replace', id: 'a', item: { ...a, data: { hi: true } } },
       { type: 'remove', id: 'b' },
-      { type: 'add', item: node('z', 5, 5) },
+      { type: 'add', id: 'z', item: node('z', 5, 5) },
     ]);
   });
 
@@ -274,13 +275,30 @@ describe('editing the graph reports changes', () => {
     expect(nodeChanges).toEqual([]);
   });
 
+  it('changeParent moves a node into another, or out of any, keeping it where it is on the canvas', () => {
+    const { store, nodeChanges } = controlled();
+    // b at 100,0 into a at 0,0: 100 from a's corner.
+    store.instance.changeParent('b', 'a');
+    expect(nodeChanges.at(-1)).toMatchObject({ type: 'replace', id: 'b', item: { parentId: 'a', position: { x: 100, y: 0 } } });
+    const inside = { ...node('b', 100, 0), parentId: 'a', position: { x: 30, y: 40 } };
+    store.setNodes([node('a', 10, 20), inside]);
+    // Out of any: its place on the canvas, a's corner plus its own.
+    store.instance.changeParent('b', null);
+    expect(nodeChanges.at(-1)).toMatchObject({ type: 'replace', id: 'b', item: { parentId: undefined, position: { x: 40, y: 60 } } });
+    const count = nodeChanges.length;
+    store.instance.changeParent('b', 'b');
+    store.instance.changeParent('b', 'nope');
+    store.instance.changeParent('nope', 'a');
+    expect(nodeChanges).toHaveLength(count);
+  });
+
   it('adds nodes and edges, one or several', () => {
     const { store, nodeChanges, edgeChanges } = controlled();
     store.instance.addNodes(node('n', 0, 0));
     store.instance.addNodes([node('m', 0, 0), node('o', 0, 0)]);
     expect(nodeChanges.map((c) => c.type)).toEqual(['add', 'add', 'add']);
     store.instance.addEdges({ id: 'x', source: 'a', target: 'b' });
-    expect(edgeChanges).toEqual([{ type: 'add', item: { id: 'x', source: 'a', target: 'b' } }]);
+    expect(edgeChanges).toEqual([{ type: 'add', id: 'x', item: { id: 'x', source: 'a', target: 'b' } }]);
   });
 
   it('setEdges works the same way', () => {
@@ -288,7 +306,7 @@ describe('editing the graph reports changes', () => {
     store.instance.setEdges([{ id: 'e2', source: 'b', target: 'a' }]);
     expect(edgeChanges).toEqual([
       { type: 'remove', id: 'e' },
-      { type: 'add', item: { id: 'e2', source: 'b', target: 'a' } },
+      { type: 'add', id: 'e2', item: { id: 'e2', source: 'b', target: 'a' } },
     ]);
   });
 

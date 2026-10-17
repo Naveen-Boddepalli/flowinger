@@ -3,16 +3,18 @@ import { act, fireEvent, render } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { getViewportForBounds as reactFlowsFit } from '@xyflow/react';
 import { FlowingerContext } from '../context.ts';
-import { createFlowingerStore } from '../store.ts';
+import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 import {
   FlowingerCanvas,
   FlowingerCore,
   FlowingerProvider,
   getViewportForBounds,
   useOnViewportChange,
+  viewportForBounds,
   type FlowingerInstance,
   type FlowingerProps,
   type Node,
+  type Padding,
   type Viewport,
 } from '../index.ts';
 
@@ -537,5 +539,50 @@ describe('getViewportForBounds', () => {
     const bounds = { x: 0, y: 0, width: 800, height: 600 };
     expect(getViewportForBounds(bounds, 800, 600, 0.05, 2).zoom).toBe(1);
     expect(reactFlowsFit(bounds, 800, 600, 0.05, 2, 0).zoom).toBe(1);
+  });
+
+  // The forms of a margin that mean the same in React Flow 12 and 13 — and in flowinger 1.x and 2.0.
+  const unitPaddings: Padding[] = [
+    '20px',
+    '5%',
+    '0px',
+    '12.5%',
+    { top: '10px', bottom: '30px', x: '5%' },
+    { left: '50px', right: '2%', y: '25px' },
+    { top: '40px' },
+    { x: 0.1, y: '15px' },
+  ];
+
+  it("is React Flow's own for margins in pixels, in percent and per side", () => {
+    for (const bounds of boundsList) {
+      for (const [w, h] of panes) {
+        for (const padding of unitPaddings) {
+          const ours = getViewportForBounds(bounds, w, h, 0.05, 2, padding);
+          const theirs = reactFlowsFit(bounds, w, h, 0.05, 2, padding);
+          const at = JSON.stringify({ bounds, w, h, padding });
+          expect(ours.zoom, `zoom ${at}`).toBeCloseTo(theirs.zoom, 9);
+          expect(ours.x, `x ${at}`).toBeCloseTo(theirs.x, 6);
+          expect(ours.y, `y ${at}`).toBeCloseTo(theirs.y, 6);
+        }
+      }
+    }
+  });
+
+  it('is what viewportForBounds gives for a margin with a unit, and what a fit uses', async () => {
+    const bounds = { x: -250, y: 80, width: 900, height: 600 };
+    expect(viewportForBounds(bounds, 800, 600, 0.05, 2, '5%')).toEqual(getViewportForBounds(bounds, 800, 600, 0.05, 2, '5%'));
+    const store = createFlowingerStore();
+    const pane = document.createElement('div');
+    Object.defineProperty(pane, 'clientWidth', { value: 800 });
+    Object.defineProperty(pane, 'clientHeight', { value: 600 });
+    store.attach(document.createElement('div'), pane);
+    store.setOptions(DEFAULT_ENGINE_OPTIONS);
+    store.setNodes([{ id: 'a', position: { x: 0, y: 0 }, width: 4000, height: 40, data: {} }]);
+    await store.instance.fitView({ duration: 0, padding: '50px' });
+    // 50 px a side: (800 - 100) / 4000.
+    expect(store.instance.getViewport().zoom).toBeCloseTo(700 / 4000, 9);
+    await store.instance.fitView({ duration: 0, padding: { left: '100px', right: '0px' } });
+    expect(store.instance.getViewport().zoom).toBeCloseTo(700 / 4000, 9);
+    expect(store.instance.getViewport().x).toBeCloseTo(100, 6);
   });
 });

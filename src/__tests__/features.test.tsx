@@ -239,7 +239,7 @@ describe('instance methods a feature supplies', () => {
       </FlowingerProvider>,
     );
     rf?.addNodes(box('c', 0, 100));
-    expect(changes.at(-1)).toEqual([{ type: 'add', item: expect.objectContaining({ id: 'c' }) }]);
+    expect(changes.at(-1)).toEqual([{ type: 'add', id: 'c', item: expect.objectContaining({ id: 'c' }) }]);
   });
 });
 

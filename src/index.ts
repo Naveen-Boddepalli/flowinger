@@ -1,6 +1,6 @@
 // Core Canvas and Provider
 export { FlowingerCanvas, ReactFlow } from './FlowingerCanvas.tsx';
-export { reactFlowDefaults } from './reactFlowDefaults.ts';
+export { reactFlow12Defaults, reactFlowDefaults } from './reactFlowDefaults.ts';
 export { FlowingerCore } from './FlowingerCore.tsx';
 export {
   allFeatures,
@@ -10,6 +10,7 @@ export {
   deleteFeature,
   dragFeature,
   edgeLabelsFeature,
+  edgePathsFeature,
   editingFeature,
   eventsFeature,
   panKeyFeature,
@@ -48,9 +49,32 @@ export {
   useInternalNode,
   type FlowingerStoreApi,
 } from './context.ts';
+// React Flow 13's store hooks, read from flowinger's one store.
+export {
+  useConnectionStore,
+  useEdge,
+  useEdgesStore,
+  useInternalNodes,
+  useNode,
+  useNodesStore,
+  useOptionsStore,
+  useReactFlowStoreApi,
+  useSelectionStore,
+  useShallow,
+  useViewportStore,
+  type ConnectionStore,
+  type EdgesStore,
+  type NodesStore,
+  type ReactFlowStoreApi,
+  type ReadonlyStoreApi,
+  type SelectionStore,
+  type ViewportStore,
+} from './storeHooks.ts';
 
 // Controlled flows
 export {
+  NodeChangeset,
+  EdgeChangeset,
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
@@ -84,7 +108,14 @@ export {
 export { useKeyPress, type UseKeyPressOptions } from './useKeyPress.ts';
 
 // Geometry
-export { getNodesBounds, getViewportForBounds, isRectIntersecting, viewportForBounds } from './geometry.ts';
+export {
+  getNodesBounds,
+  getViewportForBounds,
+  isRectIntersecting,
+  viewportForBounds,
+  type Padding,
+  type PaddingWithUnit,
+} from './geometry.ts';
 
 // Handles & Ports
 export { Handle } from './Handle.tsx';
@@ -218,7 +249,14 @@ export type {
   FitViewParams,
   GeneralHelpers,
   GetMiniMapNodeAttribute,
+  AddChange,
+  DimensionChange,
+  HandleBounds,
   HandleConnection,
+  PositionChange,
+  RemoveChange,
+  ReplaceChange,
+  SelectionChange,
   IsValidConnection,
   KeyCode,
   MiniMapNodes,

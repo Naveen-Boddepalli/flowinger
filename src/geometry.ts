@@ -1,3 +1,4 @@
+import { warnAboutNumberMargin } from './devWarnings.ts';
 import type { Node, NodeOrigin, Rect, TranslateExtent, Viewport, XYPosition } from './types.ts';
 
 export interface Size {
@@ -72,13 +73,63 @@ export function isRectIntersecting(rect: Rect, area: Rect, partially = true): bo
   return (partially && overlap > 0) || overlap >= rect.width * rect.height;
 }
 
-const FIT_PADDING_PX = 40;
+/** Flowinger's margin round a fit that names none. */
+const FIT_PADDING = '40px';
+
+/** One side of a fit's margin: a number, `'20px'`, or `'5%'` of the pane. */
+export type PaddingWithUnit = `${number}${'px' | '%'}` | number;
+/** A fit's margin, as React Flow writes it: one for every side, or each side (or each axis) apart. */
+export type Padding =
+  | PaddingWithUnit
+  | {
+      top?: PaddingWithUnit;
+      right?: PaddingWithUnit;
+      bottom?: PaddingWithUnit;
+      left?: PaddingWithUnit;
+      x?: PaddingWithUnit;
+      y?: PaddingWithUnit;
+    };
+
+interface Sides {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
 
 /**
- * The viewport that shows `bounds` in a `width` × `height` pane, centred.
+ * One side's margin in whole pixels, across a pane `size` pixels long. `'20px'` and `'5%'` are as in React Flow.
+ * A number is a ratio, as in React Flow 12 — `0.1` leaves a tenth of the bounds' size, split between the two
+ * sides; React Flow 13, and flowinger 2.0, read it as pixels.
+ */
+function sidePadding(padding: PaddingWithUnit, size: number): number {
+  if (typeof padding === 'number') return Math.floor((size - size / (1 + padding)) * 0.5);
+  const value = parseFloat(padding);
+  if (Number.isNaN(value)) return 0;
+  if (padding.endsWith('%')) return Math.floor(size * value * 0.01);
+  return padding.endsWith('px') ? Math.floor(value) : 0;
+}
+
+function sidesOf(padding: Padding, width: number, height: number): Sides {
+  if (typeof padding !== 'object') {
+    const x = sidePadding(padding, width);
+    const y = sidePadding(padding, height);
+    return { top: y, right: x, bottom: y, left: x };
+  }
+  return {
+    top: sidePadding(padding.top ?? padding.y ?? 0, height),
+    right: sidePadding(padding.right ?? padding.x ?? 0, width),
+    bottom: sidePadding(padding.bottom ?? padding.y ?? 0, height),
+    left: sidePadding(padding.left ?? padding.x ?? 0, width),
+  };
+}
+
+/**
+ * The viewport that shows `bounds` in a `width` × `height` pane, centred: `getViewportForBounds`, with flowinger's
+ * margin — a fixed 40 px on every side — where none is given, and never dividing by a zero-sized box.
  *
- * `padding` is a ratio, as in React Flow: `0.1` leaves a tenth of the bounds'
- * size around them. Left out, the margin is a fixed 40 px on every side.
+ * A number is a ratio, as in React Flow 12: `0.1` leaves a tenth of the bounds' size around them. `'20px'`, `'5%'`
+ * and per-side margins are React Flow's, and mean the same in 2.0.
  */
 export function viewportForBounds(
   bounds: Rect,
@@ -86,27 +137,17 @@ export function viewportForBounds(
   height: number,
   minZoom: number,
   maxZoom: number,
-  padding?: number,
+  padding: Padding = FIT_PADDING,
 ): Viewport {
-  const bw = Math.max(bounds.width, 1);
-  const bh = Math.max(bounds.height, 1);
-  const raw =
-    padding === undefined
-      ? Math.min((width - FIT_PADDING_PX * 2) / bw, (height - FIT_PADDING_PX * 2) / bh)
-      : Math.min(width / (bw * (1 + padding)), height / (bh * (1 + padding)));
-  const zoom = Math.max(minZoom, Math.min(maxZoom, raw));
-  return {
-    x: width / 2 - (bounds.x + bounds.width / 2) * zoom,
-    y: height / 2 - (bounds.y + bounds.height / 2) * zoom,
-    zoom,
-  };
+  const sized = { ...bounds, width: Math.max(bounds.width, 1), height: Math.max(bounds.height, 1) };
+  return getViewportForBounds(sized, width, height, minZoom, maxZoom, padding);
 }
 
 /**
- * React Flow's `getViewportForBounds`, for the numeric `padding` it shares with this library — a ratio, so
- * `0.1` leaves a tenth around the bounds — and the same view to the pixel: it too works in whole pixels of
- * padding, and nudges the view where the fit leaves less than that. With none there is no margin at all
- * (`viewportForBounds` leaves 40 px). React Flow's `'10px'`, `'5%'` and per-side paddings are not taken.
+ * React Flow's `getViewportForBounds`, to the pixel: the margin in whole pixels on each side, and the view
+ * nudged where the fit leaves less than that. A number is a ratio here, as in React Flow 12 (`0.1` leaves a tenth
+ * around the bounds); `'20px'`, `'5%'` and per-side margins are as in React Flow. With none there is no margin at
+ * all (`viewportForBounds` leaves 40 px).
  */
 export function getViewportForBounds(
   bounds: Rect,
@@ -114,11 +155,11 @@ export function getViewportForBounds(
   height: number,
   minZoom: number,
   maxZoom: number,
-  padding = 0,
+  padding: Padding = 0,
 ): Viewport {
-  const padX = Math.floor((width - width / (1 + padding)) * 0.5);
-  const padY = Math.floor((height - height / (1 + padding)) * 0.5);
-  const raw = Math.min((width - padX * 2) / bounds.width, (height - padY * 2) / bounds.height);
+  if (process.env.NODE_ENV !== 'production') warnAboutNumberMargin(padding);
+  const p = sidesOf(padding, width, height);
+  const raw = Math.min((width - p.left - p.right) / bounds.width, (height - p.top - p.bottom) / bounds.height);
   const zoom = Math.max(minZoom, Math.min(maxZoom, raw));
   const x = width / 2 - (bounds.x + bounds.width / 2) * zoom;
   const y = height / 2 - (bounds.y + bounds.height / 2) * zoom;
@@ -128,8 +169,8 @@ export function getViewportForBounds(
   const right = Math.floor(width - ((bounds.x + bounds.width) * zoom + x));
   const bottom = Math.floor(height - ((bounds.y + bounds.height) * zoom + y));
   return {
-    x: x - Math.min(left - padX, 0) + Math.min(right - padX, 0),
-    y: y - Math.min(top - padY, 0) + Math.min(bottom - padY, 0),
+    x: x - Math.min(left - p.left, 0) + Math.min(right - p.right, 0),
+    y: y - Math.min(top - p.top, 0) + Math.min(bottom - p.bottom, 0),
     zoom,
   };
 }
