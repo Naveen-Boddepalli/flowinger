@@ -21,7 +21,7 @@ const ONLY_WITH: Record<string, readonly (keyof FlowingerProps)[]> = {
   a11y: ['nodesFocusable', 'disableKeyboardA11y', 'ariaLabelConfig', 'autoPanOnNodeFocus'],
   debug: ['debug'],
   stacking: ['elevateNodesOnSelect', 'elevateEdgesOnSelect', 'zIndexMode'],
-  colorMode: ['colorMode'],
+  colorMode: ['colorMode', 'forceColorMode'],
   selectionRect: ['onSelectionDragStart', 'onSelectionDrag', 'onSelectionDragStop', 'onSelectionContextMenu'],
   panKey: ['panActivationKeyCode'],
   connect: [

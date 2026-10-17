@@ -275,6 +275,23 @@ describe('editing the graph reports changes', () => {
     expect(nodeChanges).toEqual([]);
   });
 
+  it('changeParent moves a node into another, or out of any, keeping it where it is on the canvas', () => {
+    const { store, nodeChanges } = controlled();
+    // b at 100,0 into a at 0,0: 100 from a's corner.
+    store.instance.changeParent('b', 'a');
+    expect(nodeChanges.at(-1)).toMatchObject({ type: 'replace', id: 'b', item: { parentId: 'a', position: { x: 100, y: 0 } } });
+    const inside = { ...node('b', 100, 0), parentId: 'a', position: { x: 30, y: 40 } };
+    store.setNodes([node('a', 10, 20), inside]);
+    // Out of any: its place on the canvas, a's corner plus its own.
+    store.instance.changeParent('b', null);
+    expect(nodeChanges.at(-1)).toMatchObject({ type: 'replace', id: 'b', item: { parentId: undefined, position: { x: 40, y: 60 } } });
+    const count = nodeChanges.length;
+    store.instance.changeParent('b', 'b');
+    store.instance.changeParent('b', 'nope');
+    store.instance.changeParent('nope', 'a');
+    expect(nodeChanges).toHaveLength(count);
+  });
+
   it('adds nodes and edges, one or several', () => {
     const { store, nodeChanges, edgeChanges } = controlled();
     store.instance.addNodes(node('n', 0, 0));

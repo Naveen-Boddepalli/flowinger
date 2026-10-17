@@ -5,6 +5,7 @@ import {
   FlowingerCore,
   Handle,
   Position,
+  ReactFlow,
   type Edge,
   type FlowingerProps,
   type Node,
@@ -186,6 +187,18 @@ describe('colorMode', () => {
     expect(wrapper(container).classList.contains('light')).toBe(false);
     expect(wrapper(container).classList.contains('dark')).toBe(false);
     expect(wrapper(container).style.getPropertyValue('--flowinger-surface')).toBe('');
+  });
+
+  it("forceColorMode is React Flow 13's name for it, and wins where both are given", () => {
+    const { container } = render(canvas({ nodes: [n('a', 0, 0)], forceColorMode: 'light', colorMode: 'dark' }));
+    expect(wrapper(container).classList.contains('light')).toBe(true);
+    expect(wrapper(container).classList.contains('dark')).toBe(false);
+  });
+
+  it('is nothing on a <ReactFlow> given neither: no class, as in React Flow 13', () => {
+    const { container } = render(<ReactFlow nodes={[n('a', 0, 0)]} />);
+    expect(wrapper(container).classList.contains('light')).toBe(false);
+    expect(wrapper(container).classList.contains('dark')).toBe(false);
   });
 
   it('dark is a class, and the default palette', () => {

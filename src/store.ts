@@ -1381,6 +1381,7 @@ export function createFlowingerStore(
     addEdges: lend('editing', 'addEdges'),
     updateNode: lend('editing', 'updateNode'),
     updateNodeData: lend('editing', 'updateNodeData'),
+    changeParent: lend('editing', 'changeParent'),
     updateEdge: lend('editing', 'updateEdge'),
     updateEdgeData: lend('editing', 'updateEdgeData'),
     getIntersectingNodes: lend('editing', 'getIntersectingNodes'),

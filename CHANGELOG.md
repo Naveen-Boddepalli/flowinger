@@ -21,7 +21,7 @@ The design notes behind each release — what was measured, what was tried and d
   way of working out a fit's margin (0.34 kB), since a fit is part of the core, and changesets (0.94: the class,
   and `applyNodeChanges` and `applyEdgeChanges`, which `applyTo` needs), since every canvas that reports changes
   reports them as a changeset. 2.0 takes back 0.45 by moving the edge paths other than bezier into a feature
-  ([the 2.0 plan](PLAN-2.0.md), D3).
+  ([the 2.0 plan](PLAN-2.0.md), D3). The whole canvas's budget is 39 kB (was 38): it is 38.04.
 - **`onNodesChange` and `onEdgesChange` are given a `NodeChangeset` / `EdgeChangeset`** (below): still an array of
   the same changes, so a handler that treats it as one is unaffected. A test that compares it with
   `toStrictEqual` sees a different class. An `add` change the canvas makes now carries the item's `id`.
@@ -45,6 +45,13 @@ The design notes behind each release — what was measured, what was tried and d
   works, and one written for 12 does too. `applyTo`, `add`, `remove`, `getByType`, `getForNode` / `getForEdge`,
   `removeForNode` / `removeForEdge`, `toArray`, `size` and `version`. And React Flow 13's names for the kinds of
   change: `PositionChange`, `DimensionChange`, `SelectionChange`, `RemoveChange`, `AddChange`, `ReplaceChange`.
+- **`forceColorMode`**, React Flow 13's name for `colorMode`: the same values and classes, and it wins where both
+  are given (`colorModeFeature`).
+- **`changeParent(nodeId, parentId)`** on the instance, as in React Flow 13: moves a node into another, or out of
+  any (`null`), where it is on the canvas — its `position` made relative to the new parent — reported as a
+  `replace` (`editingFeature`).
+- With these, flowinger names all 220 exports of React Flow 13.0.0-next.0, and all 303 members the audit counts
+  do something; it still names all 210 of React Flow 12.11.6's.
 
 ### Deprecated
 

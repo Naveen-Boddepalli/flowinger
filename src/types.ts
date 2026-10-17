@@ -534,6 +534,11 @@ export interface FlowingerInstance {
     data: Record<string, unknown> | ((node: Node) => Record<string, unknown>),
     options?: { replace?: boolean },
   ) => void;
+  /**
+   * Moves a node into another (`parentId`), or out of any (`null`), where it is on the canvas: its `position`
+   * becomes relative to the new parent, as React Flow 13's does. Reported as a `replace`. Needs `editingFeature`.
+   */
+  changeParent: (nodeId: string, parentId: string | null) => void;
   updateEdge: (
     id: string,
     patch: Partial<Edge> | ((edge: Edge) => Partial<Edge>),
@@ -905,6 +910,12 @@ export interface FlowingerProps {
    * `'light'`, `'dark'` or `'system'` (the OS's setting, followed as it changes). The canvas gets the class `light` or `dark`, as in React Flow; `light` also sets the `--flowinger-*` colours to a light palette for what is drawn inside the canvas (`dark` is the library's default). Needs `colorModeFeature`.
    */
   colorMode?: ColorMode;
+  /**
+   * React Flow 13's name for `colorMode`, which it takes the place of: the same values and the same classes. Given
+   * both, this one wins. Left out (both), the canvas adds no class and draws the library's own palette, as in
+   * React Flow 13. Needs `colorModeFeature`.
+   */
+  forceColorMode?: ColorMode;
   /**
    * Raise a selected node (and what is inside it) by 1000, above its overlapping neighbours (default true, as in React Flow). Needs `stackingFeature`.
    */

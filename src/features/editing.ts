@@ -12,6 +12,7 @@ export type EditingApi = Pick<
   | 'addEdges'
   | 'updateNode'
   | 'updateNodeData'
+  | 'changeParent'
   | 'updateEdge'
   | 'updateEdgeData'
   | 'getNodeConnections'
@@ -85,6 +86,22 @@ export const editingFeature: Feature<EditingApi> = {
       ]);
     };
 
+    const changeParent: EditingApi['changeParent'] = (id, parentId) => {
+      const node = ctx.nodeById.get(id);
+      const parent = parentId === null ? undefined : ctx.nodeById.get(parentId);
+      if (!node || parentId === id || (parentId !== null && !parent)) return;
+      // The node stays where it is on the canvas. Its `position` is from its parent's corner, so moving it from
+      // one parent to another moves its `position` by the difference between their corners.
+      const own = ctx.resolvePosition(id, node.position);
+      const was = node.parentId === undefined ? undefined : ctx.nodeById.get(node.parentId);
+      const wasCorner = was ? ctx.absolutePosition(was) : { x: 0, y: 0 };
+      const nowCorner = parent ? ctx.absolutePosition(parent) : { x: 0, y: 0 };
+      updateNode(id, {
+        parentId: parentId ?? undefined,
+        position: { x: own.x + wasCorner.x - nowCorner.x, y: own.y + wasCorner.y - nowCorner.y },
+      });
+    };
+
     const updateNodeData: EditingApi['updateNodeData'] = (id, data, opts) => {
       updateNode(id, (node) => {
         const next = typeof data === 'function' ? data(node) : data;
@@ -120,6 +137,7 @@ export const editingFeature: Feature<EditingApi> = {
       },
       updateNode,
       updateNodeData,
+      changeParent,
       updateEdge,
       updateEdgeData,
       getNodeConnections: ({ type, nodeId, handleId }) =>
