@@ -47,6 +47,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - `1.0.0` (2026-10-17): semantic versioning from here ([what it covers](docs/stability.md)); `<ReactFlow>` has
   React Flow's defaults, so switching is an import change; touch in the browser suite, and a pinch on top of a
   node zooms. Shipped without the real-phone and screen-reader passes, which are next under *Now*.
+- `1.0.1` (2026-10-17): what those passes found, on a real phone and with VoiceOver — a finger near a handle is on
+  it, each keyboard move is announced, Escape lets go of a focused node, and the canvas is an `application` when
+  it takes keys. Written up in [Accessibility](docs/accessibility.md).
 
 ## Now — be easy to try and to trust
 
@@ -59,8 +62,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   held at the pane's edge, stacking by what is on top, `colorMode: 'system'`, the lock, `'smooth'` moves, and
   `nodrag` / `nopan` / `nowheel` from a real press — in Chromium, Firefox and WebKit, locally and in CI (Firefox
   and WebKit are done: they found no bug in the library, and two tests that assumed a browser draws often). Still
-  by hand: touch is automated in Chromium (taps, drags, pinches), but Safari on an iPhone and Chrome on Android, and
-  a screen reader, still need a pass — for 1.0.x.
+  by hand: touch is automated in Chromium (taps, drags, pinches) and was checked on a real phone, and VoiceOver on
+  macOS was checked for 1.0.1; NVDA on Windows has not been tried.
 
 ## Next
 
