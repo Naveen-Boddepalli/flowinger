@@ -10,7 +10,14 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
-Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md).
+## [2.0.0-rc.1] - 2026-10-17
+
+**Flowinger 2.0, following React Flow 13** — a release candidate, published to the `next` dist-tag. React Flow 13 is
+itself at `13.0.0-next.0`, and `<ReactFlow>` follows a changed React Flow default only in a major version, so 2.0
+stays a candidate until React Flow 13.0.0 is out and nothing more has moved. What changes, and how 1.1 prepares an
+app for each: [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20). In short: a bare number as a fit's margin is
+pixels, `<ReactFlow>` fits with `'5%'`, change handlers are typed as changesets, the edge paths other than bezier
+come with `edgePathsFeature`, and the package is ES modules only.
 
 ### Changed
 
@@ -41,6 +48,12 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
 - **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
   run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
   declarations.
+
+### Added
+
+- **1.x after 2.0**: fixes for security problems, crashes and regressions for six months after `2.0.0`, from a `v1`
+  branch. A release of an older major than npm's `latest` goes to that major's dist-tag (`v1`), and is not the latest
+  GitHub release (`release.yml`, and *Releasing* in CONTRIBUTING.md).
 
 ### Removed
 
