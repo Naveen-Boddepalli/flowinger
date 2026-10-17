@@ -229,7 +229,6 @@ export type {
   ControlPosition,
   ControlProps,
   CoordinateExtent,
-  CounterNode,
   DefaultEdgeOptions,
   DeleteElementsOptions,
   Dimensions,

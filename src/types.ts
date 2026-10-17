@@ -7,6 +7,7 @@ import type {
   ReactNode,
   SVGAttributes,
 } from 'react';
+import type { EdgeChangeset, NodeChangeset } from './changes.ts';
 import type { Padding } from './geometry.ts';
 import type { PassThroughHtml } from './attributes.ts';
 import type { NodeConnection } from './connections.ts';
@@ -604,9 +605,9 @@ export interface FlowingerProps {
   defaultNodes?: Node[];
   defaultEdges?: Edge[];
   /** Given, the nodes are controlled: what happens to them is reported here, not done. */
-  onNodesChange?(changes: NodeChange[]): void;
+  onNodesChange?(changes: NodeChangeset): void;
   /** Given, the edges are controlled — selection and removal are reported here, not done. */
-  onEdgesChange?(changes: EdgeChange[]): void;
+  onEdgesChange?(changes: EdgeChangeset): void;
   nodeTypes?: NodeTypes;
   /** Custom edge components, by `Edge.type`. A key overrides a built-in of the same name. */
   edgeTypes?: EdgeTypes;
@@ -907,6 +908,8 @@ export interface FlowingerProps {
   onSelectionContextMenu?: (event: React.MouseEvent, nodes: Node[]) => void;
   /**
    * `'light'`, `'dark'` or `'system'` (the OS's setting, followed as it changes). The canvas gets the class `light` or `dark`, as in React Flow; `light` also sets the `--flowinger-*` colours to a light palette for what is drawn inside the canvas (`dark` is the library's default). Needs `colorModeFeature`.
+   *
+   * @deprecated React Flow 13 calls it `forceColorMode`, which does the same. This name stays and works.
    */
   colorMode?: ColorMode;
   /**

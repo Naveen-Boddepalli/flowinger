@@ -22,13 +22,25 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
   wherever a fit names none: `fitView`, the instance's `fitView()`, `Controls`' button. `reactFlowDefaults` is React
   Flow 13's (`fitViewOptions: { padding: '5%' }`); `reactFlow12Defaults` keeps 1.x's margin.
   `<FlowingerCanvas>` and `<FlowingerCore>` keep their 40 px.
+- **Breaking: `OnNodesChange` and `OnEdgesChange` take a `NodeChangeset` / `EdgeChangeset`**, as React Flow 13's do —
+  what the canvas has given them since 1.1. A handler written for an array still fits, since a changeset is one;
+  code that *calls* a handler with a plain array needs `new NodeChangeset(list)`. `useNodesState`' handler takes
+  either.
 - **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
   run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
   declarations.
 
 ### Removed
 
+- **Breaking: `CounterNode`**, a type React Flow never exported (the example in a doc comment of its `Node`),
+  deprecated in 1.1.
 - The two development warnings about margins that 1.1 gave: what they warned of has happened.
+
+### Deprecated
+
+- **`colorMode`**: React Flow 13 calls it `forceColorMode`, which flowinger has had since 1.1. It stays and works.
+  So do the names React Flow 13 dropped — `useStore`, `useStoreApi`, `applyNodeChanges`, `applyEdgeChanges`,
+  `useHandleConnections`, `ColorModeClass`: nothing is removed for following React Flow.
 
 ## [1.1.0] - 2026-10-17
 

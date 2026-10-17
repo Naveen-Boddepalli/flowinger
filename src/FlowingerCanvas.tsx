@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
+import { applyEdgeChanges, applyNodeChanges, type EdgeChangeset, type NodeChangeset } from './changes.ts';
 import { ViewDefaultsContext } from './context.ts';
 import { FlowingerCore } from './FlowingerCore.tsx';
 import { allFeatures } from './features/index.ts';
 import { REACT_FLOW_MARGIN, reactFlowDefaults } from './reactFlowDefaults.ts';
 import type { ViewDefaults } from './store.ts';
-import type { Edge, EdgeChange, FlowingerProps, Node, NodeChange } from './types.ts';
+import type { Edge, FlowingerProps, Node } from './types.ts';
 
 const NO_NODES: Node[] = [];
 const NO_EDGES: Edge[] = [];
@@ -26,14 +26,14 @@ export function FlowingerCanvas(props: FlowingerProps) {
   const [ownNodes, setOwnNodes] = useState<Node[]>(() => defaultNodes ?? NO_NODES);
   const [ownEdges, setOwnEdges] = useState<Edge[]>(() => defaultEdges ?? NO_EDGES);
   const changeNodes = useCallback(
-    (changes: NodeChange[]) => {
+    (changes: NodeChangeset) => {
       if (ownsNodes) setOwnNodes((current) => applyNodeChanges(changes, current));
       onNodesChange?.(changes);
     },
     [ownsNodes, onNodesChange],
   );
   const changeEdges = useCallback(
-    (changes: EdgeChange[]) => {
+    (changes: EdgeChangeset) => {
       if (ownsEdges) setOwnEdges((current) => applyEdgeChanges(changes, current));
       onEdgesChange?.(changes);
     },

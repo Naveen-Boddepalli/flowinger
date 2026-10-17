@@ -31,6 +31,7 @@ import type { BezierEdge, SmoothStepEdge, StepEdge, StraightEdge } from './built
 import type { ControlsProps } from './Controls.tsx';
 import type { NodeConnection } from './connections.ts';
 import type { UseNodeConnectionsOptions } from './dataHooks.ts';
+import type { EdgeChangeset, NodeChangeset } from './changes.ts';
 import type { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
 import type { Padding } from './geometry.ts';
 import type { MiniMapNodeProps as MiniMapNodePropsType, MiniMapProps } from './MiniMap.tsx';
@@ -46,14 +47,12 @@ import type {
   ConnectStartParams,
   ConnectionLineProps,
   Edge,
-  EdgeChange,
   EdgeProps,
   FlowingerInstance,
   FlowingerProps,
   HandleType,
   InternalNode,
   Node,
-  NodeChange,
   NodeDimensionChange,
   NodeHandle,
   NodeOrigin,
@@ -86,8 +85,9 @@ export type DefaultEdgeOptions = NonNullable<FlowingerProps['defaultEdgeOptions'
 
 // --- callbacks ------------------------------------------------------------------------------------------
 
-export type OnNodesChange<N extends Node = Node> = (changes: NodeChange<N>[]) => void;
-export type OnEdgesChange<E extends Edge = Edge> = (changes: EdgeChange<E>[]) => void;
+/** As in React Flow 13, a changeset: an array of changes with `applyTo` and the rest (see `NodeChangeset`). */
+export type OnNodesChange<N extends Node = Node> = (changes: NodeChangeset<N>) => void;
+export type OnEdgesChange<E extends Edge = Edge> = (changes: EdgeChangeset<E>) => void;
 
 export type OnConnect = (connection: Connection) => void;
 /** Which handle a drag began at — narrower than React Flow's (no `null` node or handle type). */
@@ -224,11 +224,6 @@ export type BuiltInNode =
   | Node<{ label: string }, 'input' | 'output' | 'default'>
   | Node<Record<string, never>, 'group'>;
 export type BuiltInEdge = Edge;
-/**
- * @deprecated React Flow does not export this: it is the example in a doc comment of its `Node` type, which the
- * coverage audit used to count as an export. Write your own node type; this goes in 2.0.
- */
-export type CounterNode = Node<{ initialCount?: number }, 'counter'>;
 export type MiniMapNodeProps = MiniMapNodePropsType;
 export type MiniMapNodes = Pick<
   MiniMapProps,
