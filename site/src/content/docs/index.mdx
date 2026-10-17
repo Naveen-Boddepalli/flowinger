@@ -86,8 +86,8 @@ and TypeScript declarations.
     [Server rendering →](docs/server-rendering/)
   </Card>
   <Card title="Fast at 10,000 nodes" icon="analytics">
-    Mounts 10,000 nodes in 0.6 s against React Flow’s 1.3 s, and pans them in a quarter of the time without
-    culling. [Benchmarks →](docs/benchmarks/)
+    Mounts 10,000 nodes in 0.8 s against React Flow 13’s 1.45 s, and culled in 55 ms against 541; pans and zooms
+    for less. React Flow 13 drags faster without culling. [Benchmarks →](docs/benchmarks/)
   </Card>
 </CardGrid>
 
@@ -95,13 +95,14 @@ and TypeScript declarations.
 
 <div class="flowinger-compare">
 
-| | Flowinger | React Flow (`@xyflow/react` 12) |
+| | Flowinger 2 | React Flow 13 |
 |---|---|---|
-| Runtime dependencies | **0** | 3 direct, plus `d3-zoom`, `d3-drag`, `d3-selection`… |
+| Runtime dependencies | **0** | 4 direct, plus `d3-zoom`, `d3-drag`, `d3-selection`… |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)) | **19.0 kB** gzipped | 60.5 kB gzipped |
-| Mount 10,000 nodes | **0.6 s** | 1.2 s |
-| Mount 10,000 nodes, culled | **55 ms** | 594 ms |
+| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens), against React Flow 12) | **19.0 kB** gzipped | 60.5 kB gzipped |
+| Mount 10,000 nodes | **0.8 s** | 1.45 s |
+| Mount 10,000 nodes, culled | **55 ms** | 541 ms |
+| Drag at 10,000 nodes, no culling | 86 ms a move | **57 ms** a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) (paid) |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 

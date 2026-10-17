@@ -62,22 +62,24 @@
 
 ## At a glance: Flowinger and React Flow
 
-| | Flowinger | React Flow (`@xyflow/react` 12) |
+| | Flowinger 2 | React Flow 13 (`@xyflow/react` 13.0.0-next.0) |
 |---|---|---|
-| Runtime dependencies | **0** | 3 direct (`@xyflow/system`, `zustand`, `classcat`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
+| Runtime dependencies | **0** | 4 direct (`@xyflow/system`, `zustand`, `classcat`, `react-compiler-runtime`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)) | **19.0 kB** gzipped | 60.5 kB gzipped |
-| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.2 s |
-| Mount 10,000 nodes, culled | **55 ms** | 594 ms |
-| Pan / zoom 10,000 nodes, no culling | **8.5 / 10.7 ms** a frame | 32.6 / 33.0 ms a frame |
-| Pan / zoom 10,000 nodes, culled | **3.6 / 2.5 ms** a frame | 4.2 / 4.7 ms a frame |
-| Drag at 10,000 nodes, culled | **4.0 ms** a move | 4.8 ms a move |
+| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens), against React Flow 12) | **19.0 kB** gzipped | 60.5 kB gzipped |
+| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.8 s** | 1.45 s |
+| Mount 10,000 nodes, culled | **55 ms** | 541 ms |
+| Pan / zoom 10,000 nodes, no culling | **8.9 / 10.4 ms** a frame | 14.8 / 13.9 ms a frame |
+| Pan / zoom 10,000 nodes, culled | **1.8 / 1.4 ms** a frame | 4.1 / 4.6 ms a frame |
+| Drag at 10,000 nodes, no culling | 86 ms a move | **57 ms** a move |
+| Drag at 10,000 nodes, culled | **3.9 ms** a move | 5.1 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
 | API | React Flow 13's names: 220 of 220 exports, 119 of 119 props — and every one of 12's | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
-The culled pan is level within the noise (React Flow's read 2.6–4.2 ms across runs); the zoom is about half
-React Flow's cost, and a culled mount a tenth, because Flowinger's first render is culled too. Where React Flow is still ahead is the last row: its ecosystem.
+A culled mount is a tenth of React Flow's, because Flowinger's first render is culled too. Where React Flow is
+ahead: dragging a node without culling, which React Flow 13 does 1.2–1.8× cheaper (it was level against 12) — and
+the last row, its ecosystem.
 
 ## Install
 

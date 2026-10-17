@@ -3,11 +3,10 @@
 Flowinger and React Flow (`@xyflow/react`) drawing the same graph, in the same page, in a real browser — what
 it costs to put 1,000, 5,000 and 10,000 nodes on the screen, to pan and zoom over them, and to drag one.
 
-**In short.** Without culling Flowinger mounts 1.6–1.9× as fast, costs 1.4–3.3× less to pan and zoom, and
-holds about a third less memory; dragging a node costs the same or a little less. With
-`onlyRenderVisibleElements` on, both libraries stay inside a 60 Hz frame at 10,000 nodes: mounting and dragging
-are level, and React Flow is ahead at panning and zooming — by 1.1–1.6×, 0.2–1.8 ms a frame — which is the part
-Flowinger has yet to close.
+**In short** (Flowinger 2.0 against React Flow 13.0.0-next.0). Without culling Flowinger mounts 1.6–1.8× as fast,
+costs 1.1–1.7× less to pan and zoom, and holds about a third less memory; **React Flow 13 drags a node 1.2–1.8×
+faster**, where 12 was level or slower. With `onlyRenderVisibleElements` on, Flowinger mounts 2–10× as fast, pans
+and zooms for 1.4–3.3× less, and drags level or cheaper, all well inside a 60 Hz frame at 10,000 nodes.
 
 The numbers are from one machine and are meant to be **compared with each other, not quoted on their own**:
 read [what this does not show](#what-this-does-not-show) before you do. Everything here is reproducible —
@@ -18,52 +17,55 @@ from.
 
 <!-- bench:table -->
 
-Measured 2026-10-14 on Apple M4 (10 cores, 17 GB), darwin 27.0.0, Chrome 155.0.8059.40, Node v24.16.0. Flowinger 0.7.0 @ 27d3b2e; React Flow (`@xyflow/react`) 12.11.6. Median of 5 runs each.
+Measured 2026-10-17 on Apple M4 (10 cores, 17 GB), darwin 27.0.0, Chrome 156.0.8078.4, Node v24.16.0. Flowinger 2.0.0-rc.1 @ 8cd4cb3; React Flow (`@xyflow/react`) 13.0.0-next.0. Median of 5 runs each.
 
 | Library | Nodes | Culling | Mount (ms) | Nodes in DOM | DOM elements | Pan (ms/frame) | Zoom (ms/frame) | Drag (ms/move) | JS heap (MB) |
 |---|---|---|---|---|---|---|---|---|---|
-| Flowinger | 1,000 | off | 82 | 1000 | 5955 | 3.7 | 3.1 | 6.8 | 20 |
-| React Flow | 1,000 | off | 130 | 1000 | 7892 | 4.6 | 4.4 | 7.0 | 28 |
-| Flowinger | 1,000 | on | 41 | 135 | 829 | 2.6 | 2.6 | 3.4 | 6 |
-| React Flow | 1,000 | on | 83 | 96 | 788 | 3.4 | 3.6 | 3.1 | 7 |
-| Flowinger | 5,000 | off | 309 | 5000 | 29877 | 6.1 | 7.3 | 37.8 | 86 |
-| React Flow | 5,000 | off | 575 | 5000 | 39736 | 15.9 | 15.9 | 45.5 | 129 |
-| Flowinger | 5,000 | on | 49 | 135 | 829 | 2.7 | 1.7 | 3.8 | 7 |
-| React Flow | 5,000 | on | 302 | 96 | 788 | 3.5 | 3.8 | 4.0 | 12 |
-| Flowinger | 10,000 | off | 617 | 10000 | 59819 | 8.5 | 10.7 | 71.3 | 169 |
-| React Flow | 10,000 | off | 1242 | 10000 | 79620 | 32.6 | 33.0 | 91.7 | 254 |
-| Flowinger | 10,000 | on | 55 | 135 | 829 | 3.6 | 2.5 | 4.0 | 8 |
-| React Flow | 10,000 | on | 594 | 96 | 788 | 4.2 | 4.7 | 4.8 | 18 |
+| Flowinger | 1,000 | off | 80 | 1000 | 5956 | 3.3 | 3.2 | 5.3 | 20 |
+| React Flow | 1,000 | off | 126 | 1000 | 7892 | 3.7 | 3.3 | 4.4 | 28 |
+| Flowinger | 1,000 | on | 39 | 135 | 830 | 1.7 | 1.4 | 3.4 | 6 |
+| React Flow | 1,000 | on | 86 | 96 | 788 | 2.3 | 3.5 | 2.9 | 7 |
+| Flowinger | 5,000 | off | 351 | 5000 | 29878 | 4.8 | 5.6 | 46.7 | 88 |
+| React Flow | 5,000 | off | 640 | 5000 | 39736 | 6.7 | 6.1 | 25.5 | 127 |
+| Flowinger | 5,000 | on | 46 | 135 | 830 | 1.7 | 1.4 | 3.6 | 7 |
+| React Flow | 5,000 | on | 291 | 96 | 788 | 3.1 | 3.2 | 4.1 | 12 |
+| Flowinger | 10,000 | off | 799 | 10000 | 59820 | 8.9 | 10.4 | 86.3 | 173 |
+| React Flow | 10,000 | off | 1450 | 10000 | 79620 | 14.8 | 13.9 | 57.4 | 251 |
+| Flowinger | 10,000 | on | 55 | 135 | 830 | 1.8 | 1.4 | 3.9 | 8 |
+| React Flow | 10,000 | on | 541 | 96 | 788 | 4.1 | 4.6 | 5.1 | 17 |
 
 <!-- /bench:table -->
 
 ### Reading it
 
-**Without culling, Flowinger is the cheaper of the two.** At 10,000 nodes it mounts in 0.6 s against 1.2 s;
-a pan or a pinch costs 8.5 and 10.7 ms a frame against 33 — Flowinger is inside a 60 Hz frame, React Flow is
-down to 30 frames a second; it holds 169 MB of JS heap against 254 and 60,000 elements against 80,000, because
-a node and an edge are made of fewer parts. Dragging one node is about the same cost up to 5,000 nodes and a
-fifth cheaper at 10,000 — and heavy in both: 71 and 92 ms a mouse move is a stutter. Drawing everything is what
-an unculled canvas does, and it is the reason culling exists.
+**Without culling, Flowinger mounts, pans and zooms for less, and React Flow 13 drags for less.** At 10,000 nodes
+Flowinger mounts in 0.8 s against 1.45 s; a pan or a pinch costs 8.9 and 10.4 ms a frame against 14.8 and 13.9 —
+both inside a 60 Hz frame now; it holds 173 MB of JS heap against 251 and 60,000 elements against 80,000, because a
+node and an edge are made of fewer parts. Dragging one node is where React Flow 13 leads: 57 ms a mouse move
+against 86 at 10,000 nodes, 26 against 47 at 5,000, 4.4 against 5.3 at 1,000 — and heavy in both at the large sizes,
+which stutter. Drawing everything is what an unculled canvas does, and it is the reason culling exists.
 
-**With culling, a mount no longer grows with the graph.** Flowinger mounts 1,000, 5,000 and 10,000 nodes in 41,
-49 and 55 ms; React Flow in 83, 302 and 594. Both draw only what is in view in the end, but React Flow's first
-render draws every node and then drops them, and until this change Flowinger's did too: the nodes and options
-reach its store in layout effects, after that render. Now the culling feature judges the first render from the
-props — the starting view and an assumed 1920 × 1080 pane — so a 10,000-node mount draws about 135 nodes from
-the start. (A server renders the same set, which keeps hydration exact.) The JS heap follows: 8 MB against 18.
+**React Flow 13 is much faster than 12 without culling.** Against React Flow 12.11.6 (the table this one replaced,
+2026-10-14, Chrome 155), its pan and zoom at 10,000 nodes went from 33 ms a frame to 14–15, and its drag from 92 to
+57; its mounts did not change much. Flowinger's numbers are where they were: its drag at 10,000 nodes read 71 then,
+86 here, and 71 in a three-run check the same day as this table — the noise below. So the drag lead is React Flow
+13's own, and the next thing for Flowinger to close.
 
-**Panning, zooming and dragging with culling are inside a frame in both, and level or cheaper here.** At 10,000
-nodes a pan costs 3.6 and 4.2 ms, a zoom 2.5 and 4.7, a drag 4.0 and 4.8; at 5,000, 2.7 and 3.5, 1.7 and 3.8,
-3.8 and 4.0. While the view stays inside the region last worked out (the view and a quarter-view margin) a frame
-asks nothing again, which is why the zoom costs about half. At 1,000 nodes the numbers are small enough that
-the noise below decides them — a drag there read 3.4 against 3.1 — and across three runs on one day React Flow's
-culled pan at 10,000 nodes read between 2.6 and 4.2 ms: call the pan level and the zoom and mount ahead.
+**With culling, a mount does not grow with the graph.** Flowinger mounts 1,000, 5,000 and 10,000 nodes in 39, 46 and
+55 ms; React Flow 13 in 86, 291 and 541. Both draw only what is in view in the end, but React Flow's first render
+draws every node and then drops them; Flowinger's culling feature judges the first render from the props — the
+starting view and an assumed 1920 × 1080 pane — so a 10,000-node mount draws about 135 nodes from the start. (A
+server renders the same set, which keeps hydration exact.) The JS heap follows: 8 MB against 17.
 
-**Noise.** The same configuration, run again, moved by a few tenths of a millisecond — and by up to a third on
-the smallest numbers (a pan at 1,000 nodes read 2.7 and 4.4 ms in two runs of the same build), and
-the largest ones moved by more when the machine was busy. Read the large differences; do not read a table
-cell against its neighbour at 1,000 nodes.
+**Panning, zooming and dragging with culling are inside a frame in both, and cheaper here.** At 10,000 nodes a pan
+costs 1.8 and 4.1 ms, a zoom 1.4 and 4.6, a drag 3.9 and 5.1; at 5,000, 1.7 and 3.1, 1.4 and 3.2, 3.6 and 4.1. While
+the view stays inside the region last worked out (the view and a quarter-view margin) a frame asks nothing again.
+At 1,000 nodes the numbers are small enough that the noise below decides them — a drag there read 3.4 against 2.9.
+
+**Noise.** The same configuration, run again, moved by a few tenths of a millisecond on the small numbers — and by up
+to a third on the largest: a full run of this matrix earlier the same day, with the machine less quiet, read
+Flowinger's unculled mount at 10,000 nodes as 1.06 s and its drag as 116 ms. Read the large differences; do not
+read a table cell against its neighbour at 1,000 nodes.
 
 ### What the benchmark found in Flowinger
 
