@@ -108,12 +108,15 @@ export const a11yFeature: Feature<A11yApi> = {
     config.disabled = props.disableKeyboardA11y === true;
     config.panOnFocus = props.autoPanOnNodeFocus ?? true;
     config.labels = props.ariaLabelConfig ?? {};
+    // Nodes that take keys make the canvas an application, as with `keyboardNavigation` — a screen reader then
+    // hands them the arrows. One with nothing to operate stays a plain region.
+    const takesKeys = !config.disabled && (props.elementsSelectable === true || props.nodesFocusable === true);
     // What the controls, the minimap and a handle read.
     for (const key of Object.keys(store.labels)) Reflect.deleteProperty(store.labels, key);
     for (const [key, value] of Object.entries(config.labels)) {
       if (typeof value === 'string') store.labels[key] = value;
     }
-    return undefined;
+    return takesKeys ? { props: { role: 'application', 'aria-label': props.ariaLabel ?? 'Diagram' } } : undefined;
   },
 
   useNode({ store, node, selectable, selected, draggable }) {
