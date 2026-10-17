@@ -10,6 +10,22 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Deprecated
+
+- **`CounterNode`**, a type React Flow does not export: it is the example in a doc comment of React Flow's `Node`
+  type, and the coverage audit read names in comments as exports. It goes in 2.0; write your own node type.
+
+### Fixed
+
+- **React Flow 12.11.6 has 210 exports, not 211**, and flowinger names all of them. The coverage audit now skips
+  comments; the README, the coverage page and the migration guide say 210.
+
+### Added
+
+- **A weekly job against React Flow's next major** (`@xyflow/react@next`): the unit tests that take React Flow as
+  their oracle, and the coverage audit with `--strict`, which fails on a name flowinger lacks or ignores. A failure
+  there is news about React Flow 13, for [the 2.0 plan](PLAN-2.0.md); CI stays on 12.11.6.
+
 ## [1.0.1] - 2026-10-17
 
 What a real phone and VoiceOver found, the first time either was tried: handles too small for a finger, and three

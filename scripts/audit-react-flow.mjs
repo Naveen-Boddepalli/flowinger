@@ -45,7 +45,9 @@ function exportedNames(entry) {
     const f = find(normalize(file));
     if (!f || seen.has(f)) return;
     seen.add(f);
-    const src = readFileSync(f, 'utf8');
+    // Without comments: a bundled declaration file (React Flow 13's) carries its doc comments' examples, and
+    // `export function CustomNode` in one is not an export.
+    const src = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     for (const m of src.matchAll(/export\s*(?:type\s*)?\{([^}]*)\}/gs)) {
       for (const raw of m[1].split(',')) {
         const n = raw.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop();

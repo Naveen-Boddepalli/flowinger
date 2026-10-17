@@ -17,7 +17,7 @@ Measured against `@xyflow/react` 12.11.6's own type declarations
 
 | | React Flow has | Flowinger **names** | …and **does** |
 |---|---|---|---|
-| Exports (components, hooks, functions, types) | 211 | **211** | — |
+| Exports (components, hooks, functions, types) | 210 | **210** | — |
 | `ReactFlow` props | 119 | **119** | **119** |
 | Instance (`useReactFlow()`) | 32 | **32** | 32 |
 | `Node`, `Edge`, `NodeProps`, `EdgeProps` fields | 22 / 20 / 13 / 20 | **all** | all |

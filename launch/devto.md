@@ -18,7 +18,7 @@ are all reproducible, and the commands are below.)
 
 ## The swap was an import change
 
-The point of keeping React Flow's API was that switching should not be a rewrite. Flowinger names all 211 of
+The point of keeping React Flow's API was that switching should not be a rewrite. Flowinger names all 210 of
 `@xyflow/react`'s exports and implements all 119 of its `ReactFlow` props, measured from React Flow's own type
 declarations. For QueryLens the change was:
 

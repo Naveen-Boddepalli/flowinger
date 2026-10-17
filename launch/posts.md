@@ -5,7 +5,7 @@ spacing are in [GROWTH.md](../GROWTH.md#phase-2-launch-one-week-staggered-not-al
 article ([`devto.md`](devto.md)) first, then these over a week. Replace `<article>` with its URL once it is up.
 
 Numbers used below, so they stay the same everywhere: diagram chunk 60.5 → 19.0 kB (QueryLens); core ~19.7 kB,
-whole canvas ~35.5 kB gzipped; 0 dependencies; 211/211 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
+whole canvas ~35.5 kB gzipped; 0 dependencies; 210/210 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
 1.2 s (culled: 55 ms vs 594), unculled pan 8.5 vs 32.6 ms a frame, culled zoom 2.5 vs 4.7 ms (culled pan level within noise).
 
 ---
@@ -18,7 +18,7 @@ Read the subreddit's rules first; self-promotion is allowed in moderation and on
 **Title:** I rebuilt React Flow's API in ~20 kB with no dependencies — and the "Pro" features are free
 
 > I maintain QueryLens, which draws SQL query plans. React Flow was most of its bundle for a view that mostly
-> *shows* a graph, so I wrote Flowinger: React Flow's API (all 211 exports, all 119 `ReactFlow` props), built
+> *shows* a graph, so I wrote Flowinger: React Flow's API (all 210 exports, all 119 `ReactFlow` props), built
 > as a small core plus opt-in features, with no dependencies and no stylesheet. Our diagram chunk went from
 > 60.5 kB to 19 kB gzipped; switching was an import change plus three props, since interaction is off by default.
 >

@@ -79,7 +79,7 @@ already what a viewer wants.
 
 ## 3. Types
 
-Flowinger exports every one of React Flow's 211 names (`OnNodesChange`, `OnConnect`, `ReactFlowProps`,
+Flowinger exports every one of React Flow's 210 names (`OnNodesChange`, `OnConnect`, `ReactFlowProps`,
 `ReactFlowInstance`, `NodeMouseHandler`, `DefaultEdgeOptions`…), so a type import needs only the package name
 changed. Two differences are on purpose:
 

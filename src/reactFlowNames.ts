@@ -199,6 +199,10 @@ export type BuiltInNode =
   | Node<{ label: string }, 'input' | 'output' | 'default'>
   | Node<Record<string, never>, 'group'>;
 export type BuiltInEdge = Edge;
+/**
+ * @deprecated React Flow does not export this: it is the example in a doc comment of its `Node` type, which the
+ * coverage audit used to count as an export. Write your own node type; this goes in 2.0.
+ */
 export type CounterNode = Node<{ initialCount?: number }, 'counter'>;
 export type MiniMapNodeProps = MiniMapNodePropsType;
 export type MiniMapNodes = Pick<

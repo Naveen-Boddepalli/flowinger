@@ -13,7 +13,7 @@ displays a graph and bundle size, dependencies or SSR matter.
 | GitHub description / topics | **none / none** | set |
 | Age on npm | days (0.4.0 → 0.9.0 in Oct 2026) | years |
 
-The engineering is already ahead of the visibility. The library covers all 211 React Flow exports, has
+The engineering is already ahead of the visibility. The library covers all 210 React Flow exports, has
 measured benchmarks, a migration guide, free "pro" modules and over 1,000 tests. Almost nobody can find
 any of it. So the work below is mostly distribution, not code.
 
@@ -131,7 +131,7 @@ only after a training cycle.
 
 > I built Flowinger for QueryLens, a tool that draws SQL query plans. React Flow was most of its bundle, and
 > it only needed the viewer part. Flowinger keeps React Flow's API (same component, hook, prop and type names,
-> all 211 exports), but it is a small core plus opt-in features. A viewer pays about 20 kB gzipped and the
+> all 210 exports), but it is a small core plus opt-in features. A viewer pays about 20 kB gzipped and the
 > full editor about 35 kB, with no dependencies and no stylesheet. In QueryLens the diagram chunk went from
 > 60.5 kB to 19 kB.
 >

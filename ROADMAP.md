@@ -67,7 +67,7 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 ## Next
 
-Flowinger *names* every export and prop of React Flow 12.11.6 (211 of 211 exports, 119 of 119 props) and **every
+Flowinger *names* every export and prop of React Flow 12.11.6 (210 of 210 exports, 119 of 119 props) and **every
 one does something** (302 of 302 members counted by `node scripts/audit-react-flow.mjs`; the audit counts a name
 that compiles and does nothing apart, and there are none). What is left is breadth and proof:
 
