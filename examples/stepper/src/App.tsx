@@ -147,7 +147,7 @@ function Stepper() {
   return (
     <div className="layout">
       <div className="canvas">
-        <FlowingerCore nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.12 }}>
+        <FlowingerCore nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: '5.5%' }}>
           <Background />
           <Controls position="bottom-left" showInteractive={false} />
         </FlowingerCore>

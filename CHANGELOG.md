@@ -36,6 +36,8 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
   needs `NODE_OPTIONS=--experimental-vm-modules` (Node 22.21+ or 24.9+) or a transform; a TypeScript `.cts` file
   needs `module: nodenext`; `moduleResolution: node10` finds no subpath. 1.1 said so under Jest.
   `pnpm check:toolchains` checks all of it, and runs in CI on Node 22 and 24.
+- **The examples and the site's live editor write their fit margins with a unit** (`'6.5%'` where they had `0.15`,
+  the same margin), and ask for `flowinger` `^1.1.0`, the first release that takes one.
 - **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
   run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
   declarations.

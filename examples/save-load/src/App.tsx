@@ -141,7 +141,7 @@ function Editor() {
 
   const reset = () => {
     load(sample, 'Back to the sample (not saved until you save).');
-    void fitView({ padding: 0.3 });
+    void fitView({ padding: '11.5%' });
   };
 
   return (
@@ -162,7 +162,7 @@ function Editor() {
           // A saved graph comes back at the view it was saved with; the sample is framed.
           defaultViewport={stored?.viewport}
           fitView={!stored}
-          fitViewOptions={{ padding: 0.3 }}
+          fitViewOptions={{ padding: '11.5%' }}
         >
           <Background />
           <Panel position="top-left">
