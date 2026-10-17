@@ -212,3 +212,100 @@ export function getOutgoers<N extends Node = Node>(node: Node, nodes: readonly N
   const to = new Set(edges.filter((e) => e.source === node.id).map((e) => e.target));
   return nodes.filter((n) => to.has(n.id));
 }
+
+type ElementChange = { type: string; id?: string; item?: { id: string } };
+/** The element a change is to: its `id`, or for an `add` written before changes carried one, its item's. */
+const idOf = (change: ElementChange): string | undefined => change.id ?? change.item?.id;
+
+/**
+ * A list of changes that is also React Flow 13's changeset: an array, so code written for React Flow 12 (and
+ * `applyNodeChanges`) takes it as before, with the methods React Flow 13's `onNodesChange` handlers call —
+ * `applyTo(nodes)`, `getByType`, `getForNode`, `add`, `toArray`…
+ */
+class Changeset<T, C extends ElementChange> extends Array<C> {
+  /** What `filter`, `map`, `slice` and the rest return: plain arrays. */
+  static override get [Symbol.species](): ArrayConstructor {
+    return Array;
+  }
+  #version = 0;
+  readonly #apply: (changes: C[], elements: T[]) => T[];
+
+  constructor(apply: (changes: C[], elements: T[]) => T[], changes?: readonly C[]) {
+    super();
+    this.#apply = apply;
+    if (changes) for (const change of changes) this.push(change);
+  }
+
+  /**
+   * Queues a change, or several. As in React Flow 13, an element's `remove`, then its `add`, go before its other
+   * changes, so what follows applies to the element as added.
+   */
+  add(change: C | readonly C[]): void {
+    for (const c of Array.isArray(change) ? (change as readonly C[]) : [change as C]) {
+      this.#version += 1;
+      const first = c.type === 'remove' || c.type === 'add' ? this.findIndex((x) => idOf(x) === idOf(c)) : -1;
+      if (first >= 0 && (c.type === 'remove' || this[first]!.type !== 'remove')) this.splice(first, 0, c);
+      else this.push(c);
+    }
+  }
+  /** Takes this change (this object) out. */
+  remove(change: C): void {
+    const at = this.indexOf(change);
+    if (at < 0) return;
+    this.splice(at, 1);
+    this.#version += 1;
+  }
+  getForElement(id: string): C[] {
+    return this.filter((c) => idOf(c) === id);
+  }
+  removeForElement(id: string): void {
+    let kept = 0;
+    for (const c of this) if (idOf(c) !== id) this[kept++] = c;
+    this.length = kept;
+    this.#version += 1;
+  }
+  toArray(): C[] {
+    return [...this];
+  }
+  getByType<K extends C['type']>(type: K): Extract<C, { type: K }>[] {
+    return this.filter((c): c is Extract<C, { type: K }> => c.type === type);
+  }
+  /** The elements with these changes applied: `applyNodeChanges(changes, nodes)`. */
+  applyTo(elements: T[]): T[] {
+    return this.#apply(this, elements);
+  }
+  /** How many elements the changes are to. */
+  get size(): number {
+    return new Set(this.map(idOf)).size;
+  }
+  /** Goes up with each `add`, `remove` and `removeForElement`. */
+  get version(): number {
+    return this.#version;
+  }
+}
+
+/** The changes `onNodesChange` is given: an array of `NodeChange`, and React Flow 13's `NodeChangeset`. */
+export class NodeChangeset<N extends Node = Node> extends Changeset<N, NodeChange<N>> {
+  constructor(changes?: readonly NodeChange<N>[]) {
+    super(applyNodeChanges, changes);
+  }
+  getForNode(id: string): NodeChange<N>[] {
+    return this.getForElement(id);
+  }
+  removeForNode(id: string): void {
+    this.removeForElement(id);
+  }
+}
+
+/** The changes `onEdgesChange` is given: an array of `EdgeChange`, and React Flow 13's `EdgeChangeset`. */
+export class EdgeChangeset<E extends Edge = Edge> extends Changeset<E, EdgeChange<E>> {
+  constructor(changes?: readonly EdgeChange<E>[]) {
+    super(applyEdgeChanges, changes);
+  }
+  getForEdge(id: string): EdgeChange<E>[] {
+    return this.getForElement(id);
+  }
+  removeForEdge(id: string): void {
+    this.removeForElement(id);
+  }
+}

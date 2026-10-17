@@ -72,6 +72,8 @@ export {
 
 // Controlled flows
 export {
+  NodeChangeset,
+  EdgeChangeset,
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
@@ -246,8 +248,14 @@ export type {
   FitViewParams,
   GeneralHelpers,
   GetMiniMapNodeAttribute,
+  AddChange,
+  DimensionChange,
   HandleBounds,
   HandleConnection,
+  PositionChange,
+  RemoveChange,
+  ReplaceChange,
+  SelectionChange,
   IsValidConnection,
   KeyCode,
   MiniMapNodes,

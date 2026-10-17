@@ -53,8 +53,8 @@ A change is ready when all of these pass; CI runs them on React 18 and 19.
 pnpm typecheck
 pnpm test                       # vitest, jsdom — `pnpm test edges` runs the files matching "edges"
 pnpm build                      # dist/: ESM, CJS and declarations for both
-pnpm size --max-full 38 --max-lean 20.5   # gzip kB: the whole canvas, and the core with no features
-node scripts/size-dist.mjs --max-lean 20.5 # the core again, from the built package
+pnpm size --max-full 38 --max-lean 21.5   # gzip kB: the whole canvas, and the core with no features
+node scripts/size-dist.mjs --max-lean 21.5 # the core again, from the built package
 pnpm check:package              # publint + Are the Types Wrong, on the packed tarball
 pnpm check:examples             # each app in examples/ installed against that tarball, type-checked and built
 pnpm e2e                        # Playwright, a real browser against the demo (see below)

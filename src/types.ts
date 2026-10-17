@@ -998,6 +998,8 @@ export interface NodeRemoveChange {
 
 export interface NodeAddChange<N extends Node = Node> {
   type: 'add';
+  /** The item's id: on every change the canvas makes, so `getForNode` finds it (React Flow 13 requires it). */
+  id?: string;
   item: N;
   /** Where in the list; the end by default. */
   index?: number;
@@ -1030,6 +1032,8 @@ export interface EdgeRemoveChange {
 
 export interface EdgeAddChange<E extends Edge = Edge> {
   type: 'add';
+  /** The item's id: on every change the canvas makes, so `getForEdge` finds it (React Flow 13 requires it). */
+  id?: string;
   item: E;
   index?: number;
 }

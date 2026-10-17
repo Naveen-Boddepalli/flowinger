@@ -54,8 +54,12 @@ import type {
   InternalNode,
   Node,
   NodeChange,
+  NodeDimensionChange,
   NodeHandle,
   NodeOrigin,
+  NodePositionChange,
+  NodeRemoveChange,
+  NodeSelectionChange,
   PanOnScrollMode,
   Position,
   Rect,
@@ -177,6 +181,14 @@ export type OnError = (id: string, message: string) => void;
 export type OnSelectionDrag = (event: MouseEvent | TouchEvent, nodes: Node[]) => void;
 export type SelectionDragHandler<N extends Node = Node> = (event: ReactMouseEvent, nodes: N[]) => void;
 export type SelectionRect = Rect & { startX: number; startY: number };
+// React Flow 13's names for the kinds of change: one name for a node's and an edge's where they are the same.
+export type PositionChange = NodePositionChange;
+export type DimensionChange = NodeDimensionChange;
+export type SelectionChange = NodeSelectionChange;
+export type RemoveChange = NodeRemoveChange;
+/** In React Flow 13 `id` is required; the canvas gives it on every `add` it makes. */
+export type AddChange<T extends Node | Edge = Node | Edge> = { type: 'add'; id?: string; item: T; index?: number };
+export type ReplaceChange<T extends Node | Edge = Node | Edge> = { type: 'replace'; id: string; item: T };
 /** React Flow 13's `HandleBounds`: one handle, where it is on its node and how big. */
 export type HandleBounds = {
   id?: string | null;

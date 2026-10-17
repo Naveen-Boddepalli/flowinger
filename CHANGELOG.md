@@ -17,9 +17,14 @@ The design notes behind each release — what was measured, what was tried and d
   less than that on one side. Before, a number was turned into a zoom without rounding, so a `padding: 0.1` fit
   could sit a fraction of a pixel from React Flow's. Flowinger's own margin, 40 px when none is given, is
   unchanged.
-- **The core's size budget is 20.5 kB (was 20).** Margins with units (below) and React Flow's way of working
-  them out take the core from 19.91 to 20.25 kB gzipped, because a fit is part of the core. 2.0 takes it back
-  under 20 by moving the edge paths other than bezier into a feature ([the 2.0 plan](PLAN-2.0.md), D3).
+- **The core's size budget is 21.5 kB (was 20).** The core goes from 19.91 to 21.25 kB gzipped: React Flow's
+  way of working out a fit's margin (0.34 kB), since a fit is part of the core, and changesets (0.94: the class,
+  and `applyNodeChanges` and `applyEdgeChanges`, which `applyTo` needs), since every canvas that reports changes
+  reports them as a changeset. 2.0 takes back 0.45 by moving the edge paths other than bezier into a feature
+  ([the 2.0 plan](PLAN-2.0.md), D3).
+- **`onNodesChange` and `onEdgesChange` are given a `NodeChangeset` / `EdgeChangeset`** (below): still an array of
+  the same changes, so a handler that treats it as one is unaffected. A test that compares it with
+  `toStrictEqual` sees a different class. An `add` change the canvas makes now carries the item's `id`.
 
 ### Added
 
@@ -35,6 +40,11 @@ The design notes behind each release — what was measured, what was tried and d
   `useSelectionStore` (`userSelectionRect`, with `boxSelectFeature`), `useReactFlowStoreApi`, and `useNode`,
   `useEdge`, `useInternalNodes` and `useShallow`. Read only, like `useStoreApi`. Their types are exported, and
   `HandleBounds`. `useStore` and `useStoreApi` stay as they are.
+- **`NodeChangeset` and `EdgeChangeset`**, React Flow 13's changesets, as arrays: what `onNodesChange` and
+  `onEdgesChange` are given, so a handler written for React Flow 13 — `setNodes((ns) => changes.applyTo(ns))` —
+  works, and one written for 12 does too. `applyTo`, `add`, `remove`, `getByType`, `getForNode` / `getForEdge`,
+  `removeForNode` / `removeForEdge`, `toArray`, `size` and `version`. And React Flow 13's names for the kinds of
+  change: `PositionChange`, `DimensionChange`, `SelectionChange`, `RemoveChange`, `AddChange`, `ReplaceChange`.
 
 ### Deprecated
 

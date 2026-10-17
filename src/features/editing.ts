@@ -41,7 +41,7 @@ export const editingFeature: Feature<EditingApi> = {
         if (!w) changes.push({ type: 'remove', id: n.id });
         else if (current[i] !== w) changes.push({ type: 'replace', id: n.id, item: w });
       });
-      for (const w of wanted) if (!ctx.nodeById.has(w.id)) changes.push({ type: 'add', item: w });
+      for (const w of wanted) if (!ctx.nodeById.has(w.id)) changes.push({ type: 'add', id: w.id, item: w });
       ctx.emitNodeChanges(changes);
     };
 
@@ -55,7 +55,7 @@ export const editingFeature: Feature<EditingApi> = {
         if (!w) changes.push({ type: 'remove', id: e.id });
         else if (current[i] !== w) changes.push({ type: 'replace', id: e.id, item: w });
       });
-      for (const w of wanted) if (!ctx.edgeById.has(w.id)) changes.push({ type: 'add', item: w });
+      for (const w of wanted) if (!ctx.edgeById.has(w.id)) changes.push({ type: 'add', id: w.id, item: w });
       ctx.emitEdgeChanges(changes);
     };
 
@@ -113,10 +113,10 @@ export const editingFeature: Feature<EditingApi> = {
       setNodes,
       setEdges,
       addNodes: (added) => {
-        ctx.emitNodeChanges(toList(added).map((item) => ({ type: 'add', item })));
+        ctx.emitNodeChanges(toList(added).map((item) => ({ type: 'add', id: item.id, item })));
       },
       addEdges: (added) => {
-        ctx.emitEdgeChanges(toList(added).map((item) => ({ type: 'add', item })));
+        ctx.emitEdgeChanges(toList(added).map((item) => ({ type: 'add', id: item.id, item })));
       },
       updateNode,
       updateNodeData,

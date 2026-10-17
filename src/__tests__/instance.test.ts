@@ -265,7 +265,7 @@ describe('editing the graph reports changes', () => {
     expect(nodeChanges).toEqual([
       { type: 'replace', id: 'a', item: { ...a, data: { hi: true } } },
       { type: 'remove', id: 'b' },
-      { type: 'add', item: node('z', 5, 5) },
+      { type: 'add', id: 'z', item: node('z', 5, 5) },
     ]);
   });
 
@@ -281,7 +281,7 @@ describe('editing the graph reports changes', () => {
     store.instance.addNodes([node('m', 0, 0), node('o', 0, 0)]);
     expect(nodeChanges.map((c) => c.type)).toEqual(['add', 'add', 'add']);
     store.instance.addEdges({ id: 'x', source: 'a', target: 'b' });
-    expect(edgeChanges).toEqual([{ type: 'add', item: { id: 'x', source: 'a', target: 'b' } }]);
+    expect(edgeChanges).toEqual([{ type: 'add', id: 'x', item: { id: 'x', source: 'a', target: 'b' } }]);
   });
 
   it('setEdges works the same way', () => {
@@ -289,7 +289,7 @@ describe('editing the graph reports changes', () => {
     store.instance.setEdges([{ id: 'e2', source: 'b', target: 'a' }]);
     expect(edgeChanges).toEqual([
       { type: 'remove', id: 'e' },
-      { type: 'add', item: { id: 'e2', source: 'b', target: 'a' } },
+      { type: 'add', id: 'e2', item: { id: 'e2', source: 'b', target: 'a' } },
     ]);
   });
 

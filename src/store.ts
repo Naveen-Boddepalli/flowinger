@@ -1,3 +1,4 @@
+import { EdgeChangeset, NodeChangeset } from './changes.ts';
 import { resolveFeatures, type EngineContext, type Feature, type FeatureEvent } from './features.ts';
 import { absolutePositionOf, treeInfo } from './parents.ts';
 import {
@@ -741,7 +742,7 @@ export function createFlowingerStore(
     for (const middleware of onNodesChangeMiddlewareMap.values()) {
       next = middleware(next);
     }
-    if (next.length > 0) callbacks.onNodesChange?.(next);
+    if (next.length > 0) callbacks.onNodesChange?.(new NodeChangeset(next));
   };
   const emitEdgeChanges = (changes: EdgeChange[]) => {
     if (changes.length === 0) return;
@@ -749,7 +750,7 @@ export function createFlowingerStore(
     for (const middleware of onEdgesChangeMiddlewareMap.values()) {
       next = middleware(next);
     }
-    if (next.length > 0) callbacks.onEdgesChange?.(next);
+    if (next.length > 0) callbacks.onEdgesChange?.(new EdgeChangeset(next));
   };
 
   /**
