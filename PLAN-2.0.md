@@ -92,7 +92,7 @@ to wait is two defaults and what a number means as a margin. A React Flow 13 app
 
 **Also in 2.0:** removing `CounterNode`, deprecated in 1.x (see *Where it stands*).
 
-### D2. Packaging: ESM only — **proposed; measure first**
+### D2. Packaging: ESM only — **measured: not before React Flow 13 does it**
 
 Today flowinger ships three things for `require`:
 
@@ -119,19 +119,36 @@ test runners and toolchains, for nothing at this size". Three things have change
 | B. ESM only | Drop the CJS build and `dist/cjs/`. `exports` keeps `types` and `default`, so `require` still works through Node's `require(esm)`. Add `engines.node` `>=20.19` | Tools with their own module loader that cannot load ESM through `require`: Jest in its default CommonJS mode is the one to measure. Also Node older than 20.19 |
 | **C. B, and drop `typesVersions`, the stub directories and `main` / `module`** | `exports` is the whole entry map | As B, plus TypeScript ≤5 on `node10`, and bundlers that ignore `exports` (webpack 4) |
 
-**Proposed: C, if the measurement passes.** That means one build, one set of declarations and a smaller tarball,
-the same shape as React Flow 13. The measurement extends `pnpm check:registry` to a toolchain matrix, all run from
-an empty project against the packed tarball:
+**Measured (2026-10-17) with `pnpm check:toolchains`.** It installs the packed package into empty projects and
+loads, renders or type-checks it in each tool. `--esm-only` runs the same checks on the package with option C
+applied:
 
-- `require` and `import` on Node 22 and 24;
-- Jest (current, default config) rendering a `<ReactFlow>`;
-- Vitest;
-- Next.js with the app router and with the pages router;
-- TypeScript 5.x on `bundler` and `node16`;
-- Are the Types Wrong with its ESM-only profile.
+| Check | As published | ESM only (C) |
+|---|---|---|
+| Node 24.16 and 22.19: `require` and `import`, a server render from each | ok | ok |
+| Jest 30.5, default config | ok | **fails**: "Must use import to load ES Module" |
+| Jest 30.5, `NODE_OPTIONS=--experimental-vm-modules` | ok | ok on Node 24.16; fails on 22.19 (Jest needs 22.21+ or 24.9+) |
+| Vitest 5 | ok | ok |
+| TypeScript 5.9, `node16`: a `.cts` and an `.mts` | ok | **fails** in the `.cts` (TS1479: an ES module cannot be `require`d) |
+| TypeScript 5.9, `bundler` | ok | ok |
+| TypeScript 5.9, `node10` | ok | **fails** for a subpath (`flowinger/history`), as C means |
+| TypeScript 7.0, `nodenext`: `.cts` and `.mts` | ok | ok |
+| Next.js 16.4, `next build`, pages router and app router, the graph in the prerendered HTML | ok | ok |
+| Are the Types Wrong (`esm-only` profile for C), `publint --strict` | ok | ok |
 
-If something in common use breaks and has no one-line fix, the answer is A until 3.0, and the design record says
-why again.
+So the old reason still holds, but it is narrower than it was: **Jest**, the one tool most React apps test with,
+cannot load an ESM-only flowinger unless the app turns on an experimental Node flag (on a new enough Node) or
+compiles flowinger with a transform. Everything that runs on Node's own loader, any bundler, Vitest and current
+TypeScript is fine.
+
+**Proposed: follow React Flow 13.** React Flow 13.0.0-next.0 is ESM only too, so an app moving to React Flow 13
+has to solve Jest anyway. Then flowinger going ESM only costs it nothing more.
+- If 13.0.0 ships ESM only, 2.0 does C, and the upgrade guide gives the Jest settings that work, tested by
+  `check:toolchains`.
+- If 13.0.0 ships a `require` build after all, flowinger keeps A until 3.0, and the design record says why again.
+
+Either way nothing changes in 1.x. Run the matrix again on the release candidate, with whatever Jest and Node are
+current then.
 
 ### D3. The core's size — **to measure, same rule as 1.0's D2**
 
@@ -188,8 +205,8 @@ Additive, so each can ship in a minor whenever it is ready. Mostly from the [roa
 - **React Flow 13's new names**, from D1's table: the split store hooks, change lists that are also changesets,
   the renamed change types, `forceColorMode` and `changeParent`. Best done once 13 has a release candidate, so
   the names have stopped moving.
-- The measurements for D2 (the toolchain matrix) and D3 (the lean-bundle map). They change nothing in the
-  package.
+- The measurement for D3 (the lean-bundle map). It changes nothing in the package. D2's is done
+  (`pnpm check:toolchains`).
 
 ## The order of work
 
@@ -224,8 +241,9 @@ As 0.9 did for 1.0, everything 2.0 changes is announced in the code first:
 - A development warning, once a page, for a `<ReactFlow>` that leaves out a prop whose default 13 changed. It
   names the prop, today's value and 2.0's. The bridge also exports `reactFlow12Defaults`, so the fix works before
   the upgrade as well as after it.
-- If D2 is C or B, a development warning from the CJS build, where it can tell that `require` will stop working.
-  The upgrade guide names the tools.
+- If D2 is C, a development warning from the CJS build when it runs under Jest (`JEST_WORKER_ID` is set), the one
+  runtime the matrix found breaking, naming the Jest settings that work. The TypeScript cases (`node16` from a
+  `.cts`, subpaths on `node10`) are compile errors, which no warning can reach, so the upgrade guide names them.
 - `@deprecated` on any name 13 renamed, pointing at the new one.
 - *Upgrading to 2.0* added to [docs/upgrading.md](docs/upgrading.md), and a 2.0 draft of
   [docs/stability.md](docs/stability.md).
@@ -271,8 +289,8 @@ measured again, and the changelog says why for either outcome.
   against 13.0.0 only.
 - **React Flow 13 takes months.** Then 2.0 waits, and nothing here is urgent. D2 could ship alone as an earlier
   major, but two majors close together cost more trust than one later.
-- **ESM-only breaks a toolchain someone uses.** That is why D2 is measured before it is decided. If Jest's CommonJS
-  mode breaks and is common among React Flow users, the answer is A.
+- **ESM-only breaks a toolchain someone uses.** Measured: it breaks Jest's default config. D2 therefore waits for
+  React Flow 13 to make the same move first, and the upgrade guide carries the Jest fix.
 - **The benchmark lead shrinks against a compiled React Flow 13.** Then the README and GROWTH.md say so, as the
   *Reach for React Flow instead when…* section already does for other trade-offs.
 - **Two stable lines, one maintainer.** D5 keeps 1.x support short and limited to fixes.
