@@ -10,6 +10,13 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **The whole canvas's size budget is 38 kB (was 37).** The fixes below take it from 36.36 to 36.99 kB gzipped —
+  the reach for a finger near a handle 0.45, the screen-reader fixes 0.18 — which leaves no room for CI's Linux
+  build, where the same code gzips a little larger. The core is 19.94 kB (budget 20): none of this is
+  in it but the canvas's role, 0.03.
+
 ### Fixed
 
 - **A finger near a handle is on it.** Fitted to a phone, a 10 px handle is drawn at about 5, and a fingertip
@@ -18,8 +25,26 @@ The design notes behind each release — what was measured, what was tried and d
   finger drags drops on a handle that near. On the handle's own node the reach stops halfway to the node's
   centre, so the middle of even a small node still drags it; a press on a button or a `nodrag` element inside a
   node stays that element's. A mouse or a pen still has to hit the handle.
+- **Each keyboard move is announced, with where the node is now.** Safari with VoiceOver announced only the first
+  move: the live region's text was changed in place, which it reads only once, so each announcement is now an
+  element of its own. The message also said where the node *was* (copied from React Flow) under "New
+  position"; it now says where the node is, once the move is made.
+- **Escape lets go of a focused node or edge**, as React Flow's does. It acted only while the canvas itself had
+  focus, so the hint every node reads out — "escape to cancel" — did nothing. Escape on the canvas still clears
+  the whole selection (with `keyboardNavigation`).
+- **A canvas that takes keys is `role="application"`**, as React Flow's always is, so a screen reader hands it the
+  arrow keys: with VoiceOver's Quick Nav on, they moved through the page instead of moving the node. That is a
+  canvas with `keyboardNavigation`, or with selectable or focusable nodes — so every `<ReactFlow>`. It was a
+  `group` with `keyboardNavigation`, and had no role otherwise; one with nothing to operate still has none. Likely
+  to be noticed by a test that looks the canvas up by its role.
 - **A connection gives way to a pinch.** A second finger while a line is being dragged drops the line, as it
   ends a node's drag, and the line follows only the finger that began it.
+
+### Added
+
+- **[Accessibility](https://naveen-boddepalli.github.io/flowinger/docs/accessibility/)**, a page: what a keyboard
+  and a screen reader can do with a canvas, how to turn it on, what was checked with VoiceOver, and what is not
+  done yet.
 
 ## [1.0.0] - 2026-10-17
 

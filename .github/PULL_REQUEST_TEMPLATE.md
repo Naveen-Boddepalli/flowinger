@@ -9,7 +9,7 @@
 ## Checked
 
 - [ ] `pnpm typecheck`, `pnpm test`, `pnpm build`
-- [ ] `pnpm size --max-full 37 --max-lean 20` — the core did not grow, or the description says why
+- [ ] `pnpm size --max-full 38 --max-lean 20` — the core did not grow, or the description says why
 - [ ] `pnpm check:package` if `package.json`, `exports` or the build changed
 - [ ] New behaviour has a test; a new guard has a test that fails without it
 - [ ] Looked at in a real browser (`pnpm dev`) if it depends on layout, pointer capture, wheel or touch — what I did:
