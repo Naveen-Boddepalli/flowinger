@@ -278,17 +278,36 @@ describe('ariaLabelConfig', () => {
     expect(text.length).toBeGreaterThan(0);
   });
 
-  it('announces a move made with the keyboard in a live region', () => {
+  /** The announcement is made once the move is: by the next task. */
+  const settle = () => act(() => new Promise((done) => setTimeout(done, 0)));
+
+  it('announces a move made with the keyboard in a live region, with where the node is now', async () => {
     const { container } = render(
       canvas({ nodes: [n('a', 10, 20)], elementsSelectable: true, nodesDraggable: true }),
     );
     fireEvent.click(node(container, 'a'));
     fireEvent.keyDown(node(container, 'a'), { key: 'ArrowRight' });
+    await settle();
     const live = container.querySelector('[aria-live]');
-    expect(live?.textContent).toBe('Moved selected node right. New position, x: 10, y: 20');
+    expect(live?.textContent).toBe('Moved selected node right. New position, x: 15, y: 20');
   });
 
-  it('the live message is the config\'s when it gives one', () => {
+  it('says each move in an element of its own, so a screen reader that misses a text changed in place hears it', async () => {
+    const { container } = render(
+      canvas({ nodes: [n('a', 10, 20)], elementsSelectable: true, nodesDraggable: true }),
+    );
+    fireEvent.click(node(container, 'a'));
+    fireEvent.keyDown(node(container, 'a'), { key: 'ArrowRight' });
+    await settle();
+    const first = container.querySelector('[aria-live] > *');
+    fireEvent.keyDown(node(container, 'a'), { key: 'ArrowRight' });
+    await settle();
+    const second = container.querySelector('[aria-live] > *');
+    expect(second?.textContent).toBe('Moved selected node right. New position, x: 20, y: 20');
+    expect(second).not.toBe(first);
+  });
+
+  it('the live message is the config\'s when it gives one', async () => {
     const { container } = render(
       canvas({
         nodes: [n('a', 10, 20)],
@@ -301,7 +320,8 @@ describe('ariaLabelConfig', () => {
     );
     fireEvent.click(node(container, 'a'));
     fireEvent.keyDown(node(container, 'a'), { key: 'ArrowDown' });
-    expect(container.querySelector('[aria-live]')?.textContent).toBe('down 10,20');
+    await settle();
+    expect(container.querySelector('[aria-live]')?.textContent).toBe('down 10,25');
   });
 
   it('labels the controls, the minimap and a handle', () => {

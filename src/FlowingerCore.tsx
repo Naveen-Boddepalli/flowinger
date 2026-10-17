@@ -735,6 +735,9 @@ function InnerCanvas(props: FlowingerProps) {
 
   // Focusable, but not a tab stop, so a click on empty canvas leaves focus somewhere a key reaches.
   const focusableForKeys = !keyboardNavigation && bits.some((b) => b.focusable);
+  // A canvas that takes keys is an application, as React Flow's always is: a screen reader then hands the arrows to
+  // it rather than reading on with them. One with nothing to operate stays a plain region.
+  const takesKeys = keyboardNavigation || (!disableKeyboardA11y && (selectable || props.nodesFocusable === true));
 
   const containerStyle: CSSProperties = {
     position: 'relative',
@@ -768,11 +771,8 @@ function InnerCanvas(props: FlowingerProps) {
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onKeyDown={onKeyDown}
-        {...(keyboardNavigation
-          ? { tabIndex: 0, role: 'group', 'aria-label': ariaLabel }
-          : focusableForKeys
-            ? { tabIndex: -1 }
-            : {})}
+        {...(takesKeys ? { role: 'application', 'aria-label': ariaLabel } : {})}
+        {...(keyboardNavigation ? { tabIndex: 0 } : focusableForKeys ? { tabIndex: -1 } : {})}
         // An escape hatch, last: it may set an attribute this element already has (a `data-*`, another
         // `aria-*`), never a handler, or `id` / `style` / `className` / `children` / `role` / `tabIndex`.
         {...domAttributes}

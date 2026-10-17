@@ -70,6 +70,7 @@ export default defineConfig({
             { label: 'The "pro" modules', link: '/docs/pro/' },
             { label: 'Theming', link: '/docs/theming/' },
             { label: 'Server rendering', link: '/docs/server-rendering/' },
+            { label: 'Accessibility', link: '/docs/accessibility/' },
             { label: 'What 1.0 promises', link: '/docs/stability/' },
             { label: 'Upgrading to 1.0', link: '/docs/upgrading/' },
           ],

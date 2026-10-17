@@ -28,6 +28,8 @@ const HIDDEN: CSSProperties = {
   clipPath: 'inset(100%)',
 };
 
+const SILENT = { text: '', count: 0 };
+
 const ARROWS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
 export interface A11yApi {
@@ -40,7 +42,8 @@ export interface A11yApi {
     labels: AriaLabelConfig;
   };
   subscribe: (listener: () => void) => () => void;
-  getMessage: () => string;
+  /** The last thing said, and how many things have been: each is a new element, so each is announced. */
+  getMessage: () => { text: string; count: number };
   say: (message: string) => void;
 }
 
@@ -48,7 +51,7 @@ export interface A11yApi {
 function Descriptions() {
   const store = useFlowingerStore();
   const a = store.api(a11yFeature);
-  const message = useSyncExternalStore(a.subscribe, a.getMessage, () => '');
+  const message = useSyncExternalStore(a.subscribe, a.getMessage, () => SILENT);
   const { id, disabled, labels } = a.config;
   return (
     <>
@@ -62,7 +65,8 @@ function Descriptions() {
       </div>
       {!disabled && (
         <div aria-live="assertive" aria-atomic="true" style={HIDDEN}>
-          {message}
+          {/* A fresh element each time: Safari with VoiceOver announces a text changed in place only once. */}
+          <span key={message.count}>{message.text}</span>
         </div>
       )}
     </>
@@ -73,12 +77,12 @@ function Descriptions() {
  * Keyboard and screen-reader behaviour: which nodes and edges are tab stops (`nodesFocusable`, a node's or
  * edge's own `focusable`, `disableKeyboardA11y`), what they are described as and the live announcement of a
  * move made with the arrow keys (`ariaLabelConfig`), and panning to a node that takes focus out of view
- * (`autoPanOnNodeFocus`). Put it before `dragFeature`: the announcement is of where the node was.
+ * (`autoPanOnNodeFocus`).
  */
 export const a11yFeature: Feature<A11yApi> = {
   name: 'a11y',
   install() {
-    let message = '';
+    let message = SILENT;
     const listeners = new Set<() => void>();
     return {
       config: { nodesFocusable: undefined, disabled: false, panOnFocus: true, id: 'flowinger', labels: {} },
@@ -89,8 +93,8 @@ export const a11yFeature: Feature<A11yApi> = {
         };
       },
       getMessage: () => message,
-      say: (next) => {
-        message = next;
+      say: (text) => {
+        message = { text, count: message.count + 1 };
         for (const fn of listeners) fn();
       },
     };
@@ -146,13 +150,19 @@ export const a11yFeature: Feature<A11yApi> = {
         ...(focusable ? { 'aria-describedby': `${config.id}-node-desc` } : {}),
         onFocus,
       },
-      // Said before the move is made — where the node was, as React Flow's own message does.
+      // Said once the move is made, with where the node is now. (React Flow's says where it was, which a
+      // "New position" is not.) The move is the drag feature's, after this, and a controlled node's comes back
+      // through its owner: both are done by the next task.
       onKeyDown: (e) => {
         if (config.disabled || !ARROWS.has(e.key) || !selected || !draggable) return;
-        const at = store.absolutePosition(node);
-        const make =
-          config.labels['node.a11yDescription.ariaLiveMessage'] ?? DEFAULTS['node.a11yDescription.ariaLiveMessage'];
-        say(make({ direction: e.key.replace('Arrow', '').toLowerCase(), x: Math.trunc(at.x), y: Math.trunc(at.y) }));
+        const direction = e.key.replace('Arrow', '').toLowerCase();
+        setTimeout(() => {
+          const at = store.getInternalNode(node.id)?.internals.positionAbsolute;
+          if (!at) return;
+          const make =
+            config.labels['node.a11yDescription.ariaLiveMessage'] ?? DEFAULTS['node.a11yDescription.ariaLiveMessage'];
+          say(make({ direction, x: Math.trunc(at.x), y: Math.trunc(at.y) }));
+        }, 0);
       },
     };
   },

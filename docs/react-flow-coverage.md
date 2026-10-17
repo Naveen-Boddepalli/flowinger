@@ -76,8 +76,11 @@ says which, once, in development ([Features](features.md)). New ones: `a11yFeatu
   selectable until you say so (`nodesDraggable`, `nodesConnectable`, `elementsSelectable` — React Flow's are
   on), `minZoom` is `0.05` (React Flow's `0.5`), `fitView` keeps a 40 px margin unless you pass a `padding`
   ratio (React Flow's is `0.1`), and `panActivationKeyCode` is off unless given (React Flow's is `'Space'`) and
-  needs `panKeyFeature`, which `FlowingerCanvas` has. Nodes and edges do not get React Flow's `role`,
-  `aria-roledescription` or live region.
+  needs `panKeyFeature`, which `FlowingerCanvas` has. Nodes and edges do not get React Flow's
+  `aria-roledescription`, and a canvas with nothing to operate is not `role="application"`, which React Flow's
+  always is ([accessibility](accessibility.md)).
+- **A move made with the arrow keys is announced with where the node is now.** React Flow's says where it was,
+  under "New position".
 
 [**docs/migrating-from-react-flow.md**](migrating-from-react-flow.md) is the checklist, with each default
 read from React Flow's source.

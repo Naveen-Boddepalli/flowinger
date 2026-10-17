@@ -5,6 +5,7 @@ import {
   Background,
   BaseEdge,
   FlowingerCanvas,
+  ReactFlow,
   FlowingerProvider,
   Controls,
   MiniMap,
@@ -938,15 +939,28 @@ describe('Flowinger keyboard navigation', () => {
     expect(pane.hasAttribute('aria-label')).toBe(false);
   });
 
-  it('becomes a focusable, named group when asked to', () => {
+  it('becomes a focusable, named application when asked to', () => {
     const { container } = render(<FlowingerCanvas nodes={nodes} keyboardNavigation />);
     const pane = must(container, '.flowinger');
     expect(pane.getAttribute('tabindex')).toBe('0');
-    expect(pane.getAttribute('role')).toBe('group');
+    expect(pane.getAttribute('role')).toBe('application');
     expect(pane.getAttribute('aria-label')).toBe('Diagram');
 
     const named = render(<FlowingerCanvas nodes={nodes} keyboardNavigation ariaLabel="Query plan" />);
     expect(must(named.container, '.flowinger').getAttribute('aria-label')).toBe('Query plan');
+  });
+
+  it('is an application — a screen reader hands it the arrows — whenever something in it takes keys', () => {
+    // Selectable nodes are focusable, and a selected one moves with the arrows: React Flow's canvas is always one.
+    const selectable = render(<FlowingerCanvas nodes={nodes} elementsSelectable />);
+    const pane = must(selectable.container, '.flowinger');
+    expect(pane.getAttribute('role')).toBe('application');
+    expect(pane.hasAttribute('tabindex') && pane.getAttribute('tabindex') !== '-1').toBe(false); // not a tab stop
+    const reactFlow = render(<ReactFlow nodes={nodes} />);
+    expect(must(reactFlow.container, '.flowinger').getAttribute('role')).toBe('application');
+    // With keyboard handling turned off, nothing takes keys.
+    const off = render(<FlowingerCanvas nodes={nodes} elementsSelectable disableKeyboardA11y />);
+    expect(must(off.container, '.flowinger').hasAttribute('role')).toBe(false);
   });
 
   it('pans with the arrow keys the way they scroll a page, and larger with Shift', () => {

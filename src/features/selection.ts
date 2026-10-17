@@ -21,6 +21,8 @@ export interface SelectionApi {
   /** Selects an edge, replacing the selection or — `additive` — toggling it in or out. */
   selectEdge: (id: string, additive?: boolean) => void;
   clearSelection: () => void;
+  /** Takes one node — or, with `edge`, one edge — out of the selection; false if it was not in it. */
+  unselect: (id: string, edge?: boolean) => boolean;
   /**
    * Whether a press adds to the selection rather than replacing it: `multiSelectionKeyCode` where it is given,
    * else Shift, Control or ⌘. A box (`box`) keeps what is selected only with Control or ⌘ by default, because
@@ -33,7 +35,8 @@ export interface SelectionApi {
 
 /**
  * Selecting by interaction: a click (Shift, Ctrl or ⌘ adds or removes), Enter and Space on a focused node
- * or edge, a click on the empty canvas clearing it, and Escape (with `keyboardNavigation`) — all of it
+ * or edge and Escape letting go of it, a click on the empty canvas clearing it, and Escape on the canvas
+ * itself (with `keyboardNavigation`) — all of it
  * behind `elementsSelectable`, and a node's or edge's own `selectable: false` opts it out.
  *
  * What is *selected* is not this feature's: a controlled node's `selected` is drawn, `onSelectionChange`
@@ -98,11 +101,19 @@ export const selectionFeature: Feature<SelectionApi> = {
       setSelection(new Set(), new Set());
     };
 
+    const unselect: SelectionApi['unselect'] = (id, edge = false) => {
+      const nodeIds = new Set(ctx.selectedNodeIds());
+      const edgeIds = new Set(ctx.selectedEdgeIds());
+      if (!(edge ? edgeIds : nodeIds).delete(id)) return false;
+      setSelection(nodeIds, edgeIds);
+      return true;
+    };
+
     const keys: SelectionApi['keys'] = { multi: undefined };
     const isMulti: SelectionApi['isMulti'] = (e, box = false) =>
       keys.multi === undefined ? e.ctrlKey || e.metaKey || (!box && e.shiftKey) : isKeyHeld(keys.multi, e);
 
-    return { isSelectable, setSelection, selectNode, selectEdge, clearSelection, isMulti, keys };
+    return { isSelectable, setSelection, selectNode, selectEdge, clearSelection, unselect, isMulti, keys };
   },
 
   useCanvas({ store, props }) {
@@ -130,7 +141,7 @@ export const selectionFeature: Feature<SelectionApi> = {
   },
 
   useNode({ store, node, selectable }) {
-    const { selectNode, isMulti } = store.api(selectionFeature);
+    const { selectNode, unselect, isMulti } = store.api(selectionFeature);
     return {
       // Selectable means reachable from the keyboard too. (Not selectable is not a refusal: `false` is
       // for a feature that says so outright.)
@@ -140,6 +151,11 @@ export const selectionFeature: Feature<SelectionApi> = {
         if (selectable && !isInteractive(e.target, store.getOptions().ignored)) selectNode(node.id, isMulti(e));
       },
       onKeyDown: (e) => {
+        // Escape lets go of it, as React Flow's does; when it was not selected, Escape is someone else's.
+        if (e.key === 'Escape') {
+          if (selectable && unselect(node.id)) e.preventDefault();
+          return;
+        }
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault(); // Space would otherwise scroll the page
         selectNode(node.id, e.shiftKey);
@@ -148,12 +164,16 @@ export const selectionFeature: Feature<SelectionApi> = {
   },
 
   useEdge({ store, edge, selectable }) {
-    const { selectEdge, isMulti } = store.api(selectionFeature);
+    const { selectEdge, unselect, isMulti } = store.api(selectionFeature);
     return {
       onClick: (e) => {
         if (selectable) selectEdge(edge.id, isMulti(e));
       },
       onKeyDown: (e) => {
+        if (e.key === 'Escape') {
+          if (selectable && unselect(edge.id, true)) e.preventDefault();
+          return;
+        }
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
         selectEdge(edge.id, e.shiftKey);

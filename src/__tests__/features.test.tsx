@@ -731,17 +731,34 @@ describe('selection as a feature', () => {
     expect(isSelected(b.container, 'a')).toBe(true);
   });
 
-  it('clears on Escape alone — no other key, no modifier, and not from inside a node', () => {
+  it('clears on Escape alone — no other key, no modifier', () => {
     const { container } = render(<Controlled elementsSelectable keyboardNavigation features={[selectionFeature]} />);
     fireEvent.click(node(container, 'a'));
     fireEvent.keyDown(pane(container), { key: 'a' });
     fireEvent.keyDown(pane(container), { key: 'Escape', ctrlKey: true });
     fireEvent.keyDown(pane(container), { key: 'Escape', metaKey: true });
     fireEvent.keyDown(pane(container), { key: 'Escape', altKey: true });
-    fireEvent.keyDown(node(container, 'a'), { key: 'Escape' }); // a key pressed inside a node is that node's
     expect(isSelected(container, 'a')).toBe(true);
     fireEvent.keyDown(pane(container), { key: 'Escape' });
     expect(isSelected(container, 'a')).toBe(false);
+  });
+
+  it('Escape on a focused node lets go of that node, and only it — as React Flow does', () => {
+    const { container } = render(<Controlled elementsSelectable features={[selectionFeature]} />);
+    fireEvent.click(node(container, 'a'));
+    fireEvent.click(node(container, 'b'), { shiftKey: true });
+    fireEvent.keyDown(node(container, 'a'), { key: 'Escape' });
+    expect(isSelected(container, 'a')).toBe(false);
+    expect(isSelected(container, 'b')).toBe(true);
+  });
+
+  it('Escape on a node that is not selected is left for others', () => {
+    const { container } = render(<Controlled elementsSelectable features={[selectionFeature]} />);
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    act(() => {
+      node(container, 'a').dispatchEvent(escape);
+    });
+    expect(escape.defaultPrevented).toBe(false);
   });
 
   it('says it took the Escape it acted on, so nothing else acts on it too — and lets go of one it did not', () => {

@@ -200,6 +200,15 @@ describe('a custom edge with something of its own inside', () => {
     fireEvent.keyDown(edgeG(container, 'ab'), { key: 'Enter' });
     expect(edgeG(container, 'ab').classList.contains('selected')).toBe(true);
   });
+
+  it('Escape on a focused edge lets go of it', () => {
+    const edges: Edge[] = [{ id: 'ab', source: 'a', target: 'b' }];
+    const { container } = render(<FlowingerCanvas nodes={abc()} edges={edges} elementsSelectable />);
+    fireEvent.keyDown(edgeG(container, 'ab'), { key: 'Enter' });
+    expect(edgeG(container, 'ab').classList.contains('selected')).toBe(true);
+    fireEvent.keyDown(edgeG(container, 'ab'), { key: 'Escape' });
+    expect(edgeG(container, 'ab').classList.contains('selected')).toBe(false);
+  });
 });
 
 describe('animated edges', () => {

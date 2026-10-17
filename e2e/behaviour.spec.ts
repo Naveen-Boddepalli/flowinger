@@ -380,3 +380,37 @@ test.describe('onlyRenderVisibleElements', () => {
     expect(Math.abs(to.y - (from.y + 40))).toBeLessThan(3);
   });
 });
+
+test.describe('the keyboard, as a screen reader user has it', () => {
+  test('a selected node moved with the arrows is announced each time, with where it is now', async ({ page }) => {
+    await open(page);
+    const n = node(page, '4');
+    await n.focus();
+    await page.keyboard.press('Space');
+    await expect(n).toHaveClass(/(^|\s)selected(\s|$)/);
+    const said = page.locator('[aria-live="assertive"] > *');
+    await page.keyboard.press('ArrowRight');
+    await expect(said).toHaveText(/right\. New position, x: 285, y: 500/);
+    const first = await said.elementHandle();
+    await page.keyboard.press('ArrowRight');
+    await expect(said).toHaveText(/x: 290, y: 500/);
+    // A new element, not the same one's text changed: Safari with VoiceOver announced only the first of those.
+    expect(await said.evaluate((el, before) => el !== before, first)).toBe(true);
+  });
+
+  test('Escape on a focused node lets go of it', async ({ page }) => {
+    await open(page);
+    const n = node(page, '4');
+    await n.focus();
+    await page.keyboard.press('Space');
+    await expect(n).toHaveClass(/(^|\s)selected(\s|$)/);
+    await page.keyboard.press('Escape');
+    await expect(n).not.toHaveClass(/(^|\s)selected(\s|$)/);
+  });
+
+  test('the canvas is an application, so a screen reader hands it the arrow keys', async ({ page }) => {
+    await open(page);
+    await expect(page.locator('.react-flow')).toHaveAttribute('role', 'application');
+    await expect(page.locator('.react-flow')).toHaveAttribute('aria-label', 'Query plan');
+  });
+});

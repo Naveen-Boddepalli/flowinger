@@ -157,6 +157,14 @@ unchanged since `1.0.0-rc.1`, which passed the browser suite in three browsers, 
 checks. The phones and the screen-reader pass are still to do, in 1.0.x; anything they find is a patch release,
 or a minor one if it needs new API.
 
+**Done after 1.0.0 (2026-10-17), on a phone and with VoiceOver in Safari on macOS**, by the owner, from a
+checklist. On the phone: the handles were too small to hit (one try in three or four), and the demo's page ran
+under the browser's toolbar, hiding the controls. With VoiceOver: only the first keyboard move was announced,
+Escape did not let go of a focused node, and with Quick Nav on VoiceOver kept the arrow keys. All fixed for
+1.0.1 — a finger near a handle is on it, a fresh element for each announcement, Escape on a node or edge, and the
+canvas `role="application"` when it takes keys (React Flow's always is; this settles the question below). Written
+up in `docs/accessibility.md`. Still not tried: NVDA on Windows.
+
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 
 - **Firefox and WebKit in the browser suite — done.** `playwright.config.ts` has a project for each beside
