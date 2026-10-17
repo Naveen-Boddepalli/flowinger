@@ -16,6 +16,7 @@ import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { absolutePositionOf, createNodeIndex } from './parents.ts';
 import { pathFor } from './paths.ts';
+import { warnAboutEdgePath } from './devWarnings.ts';
 import type { ConnectionLineProps, ConnectionLineType } from './types.ts';
 import {
   type Edge,
@@ -559,6 +560,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
       return;
     }
 
+    if (process.env.NODE_ENV !== 'production' && store.apiOf('edgePaths') === undefined) warnAboutEdgePath(edge.type);
     const path = pathFor(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
     place(
       <EdgePath

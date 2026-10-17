@@ -30,6 +30,12 @@ const modifier = /* @__PURE__ */ platformModifier();
  * On a `FlowingerCore`, each of these needs its feature (`dragFeature` for `nodesDraggable`…), and a core
  * without one says so in development.
  */
+/**
+ * React Flow 12's fit margin, 0.1 of the view, written with a unit: `(1 - 1 / 1.1) / 2` of the pane a side, which is
+ * what React Flow 12 leaves for `padding: 0.1` — and which means the same in 2.0, where a bare number is pixels.
+ */
+export const REACT_FLOW_12_MARGIN = '4.545454545454546%';
+
 export const reactFlowDefaults = {
   nodesDraggable: true,
   nodesConnectable: true,
@@ -43,4 +49,20 @@ export const reactFlowDefaults = {
   zoomActivationKeyCode: modifier,
   panActivationKeyCode: 'Space',
   fitViewOptions: { padding: 0.1 },
+} as const satisfies Partial<FlowingerProps>;
+
+/**
+ * React Flow 12's defaults, which `<ReactFlow>` has in 1.x: `reactFlowDefaults` with the fit margin written with a
+ * unit (0.1 of the view, as `'4.545454545454546%'` a side). In 2.0 `reactFlowDefaults` is React Flow 13's, whose margin
+ * is `'5%'`; spread this to keep 1.x's:
+ *
+ * ```tsx
+ * <ReactFlow {...reactFlow12Defaults} nodes={nodes} edges={edges} fitView />
+ * ```
+ *
+ * The instance's `fitView()` and `Controls`' fit button take their own margin: pass the same `padding` there.
+ */
+export const reactFlow12Defaults = {
+  ...reactFlowDefaults,
+  fitViewOptions: { padding: REACT_FLOW_12_MARGIN },
 } as const satisfies Partial<FlowingerProps>;

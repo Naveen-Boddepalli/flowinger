@@ -123,3 +123,64 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
     );
   }
 }
+
+// What 2.0 changes, said in development — once a page each — by the release before it, as the stability page
+// promises (docs/upgrading.md, "Upgrading to 2.0").
+const told = new Set<string>();
+function tellOnce(key: string, message: string): void {
+  if (told.has(key)) return;
+  told.add(key);
+  console.warn(`flowinger: ${message} See "Upgrading to 2.0" in docs/upgrading.md.`);
+}
+
+/** For tests: forget which of the 2.0 warnings were given. */
+export function resetUpgradeWarnings(): void {
+  told.clear();
+}
+
+/**
+ * A margin with a bare number in it: a ratio in 1.x and React Flow 12, pixels in 2.0 and React Flow 13. Zero is the
+ * same in both. The canvases' own defaults are written with units, so this hears only a margin someone gave.
+ */
+export function warnAboutNumberMargin(padding: unknown): void {
+  const sides = typeof padding === 'object' && padding !== null ? Object.values(padding) : [padding];
+  const number = sides.find((side) => typeof side === 'number' && side !== 0);
+  if (number === undefined) return;
+  tellOnce(
+    'number-margin',
+    `a number as a fit's margin (${String(number)}) is a ratio of the fitted size now, and pixels in 2.0, as in ` +
+      "React Flow 13. Write it with a unit, which means the same in both: '5%' of the pane, or '20px'.",
+  );
+}
+
+/** A `<ReactFlow>` that fits itself with the margin it has by default: 0.1 of the view now, `'5%'` a side in 2.0. */
+export function warnAboutReactFlowMargin(props: FlowingerProps): void {
+  if (props.fitView !== true || props.fitViewOptions?.padding !== undefined) return;
+  tellOnce(
+    'react-flow-margin',
+    "in 2.0, <ReactFlow>'s fit leaves React Flow 13's margin, '5%' a side, where it leaves 0.1 of the view now " +
+      "(about 4.5% a side). To choose, give fitViewOptions={{ padding: '5%' }}, or spread reactFlow12Defaults " +
+      'to keep the margin it has now.',
+  );
+}
+
+/** A `<FlowingerCore>` drawing an edge whose path will come with `edgePathsFeature` in 2.0. */
+export function warnAboutEdgePath(type: string | undefined): void {
+  if (type !== 'straight' && type !== 'smoothstep' && type !== 'step') return;
+  tellOnce(
+    'edge-paths',
+    `in 2.0 the straight, smoothstep and step paths come with edgePathsFeature, and a <FlowingerCore> ` +
+      `without it draws a '${type}' edge as a bezier. Add edgePathsFeature to \`features\` (<FlowingerCanvas> ` +
+      'and <ReactFlow> have it).',
+  );
+}
+
+/** Flowinger loaded through `require` by Jest, which cannot load the ES modules 2.0 ships without a setting. */
+export function warnAboutJest(): void {
+  if (typeof process === 'undefined' || process.env.JEST_WORKER_ID === undefined || typeof __filename === 'undefined') return;
+  tellOnce(
+    'jest',
+    'flowinger 2.0 ships ES modules only, as React Flow 13 does. Jest loads them through `require` with ' +
+      'NODE_OPTIONS=--experimental-vm-modules, on Node 22.21+ or 24.9+, or with a transform for flowinger.',
+  );
+}

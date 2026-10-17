@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
 import { ViewDefaultsContext } from './context.ts';
 import { FlowingerCore } from './FlowingerCore.tsx';
 import { allFeatures } from './features/index.ts';
-import { reactFlowDefaults } from './reactFlowDefaults.ts';
+import { warnAboutReactFlowMargin } from './devWarnings.ts';
+import { REACT_FLOW_12_MARGIN, reactFlowDefaults } from './reactFlowDefaults.ts';
 import type { ViewDefaults } from './store.ts';
 import type { Edge, EdgeChange, FlowingerProps, Node, NodeChange } from './types.ts';
 
@@ -53,7 +54,7 @@ export function FlowingerCanvas(props: FlowingerProps) {
 }
 
 /** React Flow's defaults for what is not a prop: a fit's margin, an animated move's path, `Controls`' lock. */
-const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: 0.1, interpolate: 'smooth', showInteractive: true };
+const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: REACT_FLOW_12_MARGIN, interpolate: 'smooth', showInteractive: true };
 
 /**
  * `<FlowingerCanvas>` under React Flow's name, with React Flow's defaults: `reactFlowDefaults` under the props it is
@@ -61,6 +62,11 @@ const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: 0.1, interpolate: 'smoot
  * its behaviour by changing an import, and `<FlowingerCanvas>` keeps flowinger's (interaction off until asked for).
  */
 export function ReactFlow(props: FlowingerProps) {
+  // What a canvas is given when it mounts is what it is judged by, as for the other warnings.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') warnAboutReactFlowMargin(props);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return (
     <ViewDefaultsContext.Provider value={REACT_FLOW_VIEW}>
       <FlowingerCanvas {...withReactFlowDefaults(props)} />
@@ -69,12 +75,12 @@ export function ReactFlow(props: FlowingerProps) {
 }
 
 /**
- * `reactFlowDefaults` under `props`. A prop given as `undefined` takes the default, as React Flow's do; a
- * `fitViewOptions` of the caller's is merged over React Flow's margin rather than replacing it.
+ * `reactFlowDefaults` under `props`. A prop given as `undefined` takes the default, as React Flow's do. The fit's
+ * margin is not taken from there but from the view defaults above, which every fit that names none uses — so
+ * `fitViewOptions` is only ever the caller's.
  */
 function withReactFlowDefaults(props: FlowingerProps): FlowingerProps {
-  const out: Record<string, unknown> = { ...reactFlowDefaults };
+  const out: Record<string, unknown> = { ...reactFlowDefaults, fitViewOptions: undefined };
   for (const [name, value] of Object.entries(props)) if (value !== undefined) out[name] = value;
-  out.fitViewOptions = { ...reactFlowDefaults.fitViewOptions, ...props.fitViewOptions };
   return out as FlowingerProps;
 }

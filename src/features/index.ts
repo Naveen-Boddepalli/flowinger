@@ -8,6 +8,7 @@ import { debugFeature } from './debug.ts';
 import { deleteFeature } from './delete.ts';
 import { dragFeature } from './drag.ts';
 import { edgeLabelsFeature } from './edgeLabels.tsx';
+import { edgePathsFeature } from './edgePaths.ts';
 import { editingFeature } from './editing.ts';
 import { eventsFeature } from './events.ts';
 import { panKeyFeature } from './panKey.ts';
@@ -28,6 +29,7 @@ export {
   deleteFeature,
   dragFeature,
   edgeLabelsFeature,
+  edgePathsFeature,
   editingFeature,
   eventsFeature,
   panKeyFeature,
@@ -50,6 +52,7 @@ export const allFeatures: readonly Feature[] = [
   editingFeature,
   eventsFeature,
   edgeLabelsFeature,
+  edgePathsFeature,
   dragFeature,
   connectFeature,
   reconnectFeature,

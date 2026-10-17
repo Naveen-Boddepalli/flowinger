@@ -1,3 +1,4 @@
+import { warnAboutNumberMargin } from './devWarnings.ts';
 import type { Node, NodeOrigin, Rect, TranslateExtent, Viewport, XYPosition } from './types.ts';
 
 export interface Size {
@@ -156,6 +157,7 @@ export function getViewportForBounds(
   maxZoom: number,
   padding: Padding = 0,
 ): Viewport {
+  if (process.env.NODE_ENV !== 'production') warnAboutNumberMargin(padding);
   const p = sidesOf(padding, width, height);
   const raw = Math.min((width - p.left - p.right) / bounds.width, (height - p.top - p.bottom) / bounds.height);
   const zoom = Math.max(minZoom, Math.min(maxZoom, raw));

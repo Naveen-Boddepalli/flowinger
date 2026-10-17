@@ -1,6 +1,6 @@
 // Core Canvas and Provider
 export { FlowingerCanvas, ReactFlow } from './FlowingerCanvas.tsx';
-export { reactFlowDefaults } from './reactFlowDefaults.ts';
+export { reactFlow12Defaults, reactFlowDefaults } from './reactFlowDefaults.ts';
 export { FlowingerCore } from './FlowingerCore.tsx';
 export {
   allFeatures,
@@ -10,6 +10,7 @@ export {
   deleteFeature,
   dragFeature,
   edgeLabelsFeature,
+  edgePathsFeature,
   editingFeature,
   eventsFeature,
   panKeyFeature,

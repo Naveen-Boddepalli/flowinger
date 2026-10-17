@@ -12,6 +12,10 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Changed
 
+- **`<ReactFlow>`'s fit margin is written with a unit**: `'4.545454545454546%'` a side, which is the same view to the
+  pixel as React Flow 12's `padding: 0.1`, so a number in a margin is always someone's own (see the warnings
+  below). `fitViewOptions` is now only what the caller gives; the margin of a fit that names none comes from the
+  same place for `fitView`, `fitViewOptions` without a `padding`, the instance and `Controls`.
 - **A fit's margin is React Flow's to the pixel.** `fitView`, `fitBounds`, `fitViewOptions` and `Controls`' fit
   button work the margin out as React Flow does: in whole pixels a side, with the view moved where the fit leaves
   less than that on one side. Before, a number was turned into a zoom without rounding, so a `padding: 0.1` fit
@@ -50,6 +54,16 @@ The design notes behind each release — what was measured, what was tried and d
 - **`changeParent(nodeId, parentId)`** on the instance, as in React Flow 13: moves a node into another, or out of
   any (`null`), where it is on the canvas — its `position` made relative to the new parent — reported as a
   `replace` (`editingFeature`).
+- **What 2.0 changes, said in development**, once a page each, as the stability page promises of the release before
+  a major one ([Upgrading to 2.0](docs/upgrading.md)): a fit given a bare number as its margin (pixels in 2.0); a
+  `<ReactFlow>` that fits itself with the margin it has by default (`'5%'` a side in 2.0); a `<FlowingerCore>`
+  drawing a `straight`, `smoothstep` or `step` edge without `edgePathsFeature`; and flowinger loaded through
+  `require` under Jest (2.0 ships ES modules only). Nothing in a production build.
+- **`reactFlow12Defaults`**: `reactFlowDefaults` with React Flow 12's margin written with a unit
+  (`'4.545454545454546%'` a side, the same view to the pixel as `padding: 0.1`), to spread where 2.0's `<ReactFlow>`
+  should keep 1.x's margin.
+- **`edgePathsFeature`**, which does nothing yet: in 2.0 the edge paths other than bezier come with it. Name it on a
+  `<FlowingerCore>` now and nothing changes when they move. `<FlowingerCanvas>` and `<ReactFlow>` have it.
 - With these, flowinger names all 220 exports of React Flow 13.0.0-next.0, and all 303 members the audit counts
   do something; it still names all 210 of React Flow 12.11.6's.
 
