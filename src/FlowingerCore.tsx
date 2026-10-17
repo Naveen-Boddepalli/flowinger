@@ -560,7 +560,11 @@ function InnerCanvas(props: FlowingerProps) {
   // a pinch is two fingers anywhere on the canvas, on a node as much as on the bare pane.
   const onPointerDownCapture = (e: ReactPointerEvent<HTMLDivElement>) => {
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (!zoomOnPinch || pointers.current.size !== 2) return;
+    if (!zoomOnPinch || pointers.current.size !== 2) {
+      // A feature's own (the connect feature's reach for a finger near a handle), once the finger is counted.
+      bitProps.onPointerDownCapture?.(e);
+      return;
+    }
     // A second finger turns whatever the first was doing — a pan, a node's drag — into a pinch.
     const now = fingers(e.currentTarget);
     if (!now) return;

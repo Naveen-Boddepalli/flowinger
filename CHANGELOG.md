@@ -10,6 +10,17 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **A finger near a handle is on it.** Fitted to a phone, a 10 px handle is drawn at about 5, and a fingertip
+  mostly missed it (found on a real phone: one try in three or four). A touch within 20 screen pixels of a
+  connectable handle now starts a connection from it, or, as a tap, clicks it (`connectOnClick`), and a line a
+  finger drags drops on a handle that near. On the handle's own node the reach stops halfway to the node's
+  centre, so the middle of even a small node still drags it; a press on a button or a `nodrag` element inside a
+  node stays that element's. A mouse or a pen still has to hit the handle.
+- **A connection gives way to a pinch.** A second finger while a line is being dragged drops the line, as it
+  ends a node's drag, and the line follows only the finger that began it.
+
 ## [1.0.0] - 2026-10-17
 
 **The first stable release.** From here Flowinger follows semantic versioning: what

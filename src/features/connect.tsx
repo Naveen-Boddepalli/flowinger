@@ -1,9 +1,10 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import type { FlowingerEdgesProps } from '../FlowingerEdges.tsx';
 import { handleCoordinates } from '../handlePoint.ts';
 import { pathFor } from '../paths.ts';
+import { isInteractive } from '../pointer.ts';
 import type { HandleRecord } from '../store.ts';
 import {
   ConnectionLineType,
@@ -22,6 +23,14 @@ interface Endpoint {
   id: string | null;
   type: HandleType;
 }
+
+/**
+ * How far from a handle, in screen pixels, a finger may land and still be on it. A fingertip is not a 10 px dot,
+ * and a graph fitted to a phone draws the dot smaller still.
+ */
+const TOUCH_REACH = 20;
+/** How far a tap may drift, in screen pixels, and still be the tap that pressed near a handle. */
+const TAP_SLOP = 10;
 
 const OPPOSITE: Record<Position, Position> = {
   top: 'bottom',
@@ -49,6 +58,13 @@ export interface ConnectApi {
    * it — made if valid, and `onClickConnectEnd` either way. Does nothing with `connectOnClick` off.
    */
   clickConnect: (nodeId: string, handleEl: HTMLElement, at: MouseEvent) => void;
+  /**
+   * The handle a finger at a screen point is on, give or take {@link TOUCH_REACH}: the nearest that may start
+   * a connection. Given the node the finger is on, only its handles and those of the nodes inside it; and on a
+   * node the reach stops halfway to its centre — so a node smaller than a finger's reach is still dragged from
+   * its middle.
+   */
+  handleNearTouch: (clientX: number, clientY: number, onNode: string | null) => { nodeId: string; record: HandleRecord } | null;
   /** What the canvas was last given for the props that shape a connection; written by `useCanvas`. */
   readonly config: {
     dragThreshold: number;
@@ -57,6 +73,8 @@ export interface ConnectApi {
     connectOnClick: boolean;
     onClickStart: FlowingerProps['onClickConnectStart'];
     onClickEnd: FlowingerProps['onClickConnectEnd'];
+    /** Whether two fingers are pinching, which a connection gives way to. */
+    isPinching: () => boolean;
   };
 }
 
@@ -125,6 +143,7 @@ export const connectFeature: Feature<ConnectApi> = {
       connectOnClick: true,
       onClickStart: undefined,
       onClickEnd: undefined,
+      isPinching: () => false,
     };
     /** The handle a first click was made on, waiting for a second. */
     let pending: { nodeId: string; record: HandleRecord } | null = null;
@@ -146,12 +165,18 @@ export const connectFeature: Feature<ConnectApi> = {
      * `data-connectable`; browsers also skip `pointer-events: none` in
      * `elementFromPoint`, but this does not lean on that.
      */
-    /** The handle nearest a screen point within `radius` graph units, not the one a drag began at. */
+    /**
+     * The connectable handle nearest a screen point within `radius` graph units that `take` accepts; of several
+     * at one distance (overlapping handles), one of type `prefer`. With `halfway`, on a node the reach stops
+     * halfway from its handle to its centre — a finger on the middle is dragging the node.
+     */
     const nearestHandle = (
       clientX: number,
       clientY: number,
-      from: Endpoint,
       radius: number,
+      take: (nodeId: string, record: HandleRecord) => boolean,
+      prefer: HandleType | null,
+      halfway = false,
     ): { nodeId: string; record: HandleRecord } | null => {
       if (radius <= 0) return null;
       const p = ctx.toGraph(clientX, clientY);
@@ -165,17 +190,17 @@ export const connectFeature: Feature<ConnectApi> = {
         const margin = radius + 50;
         if (p.x < at.x - margin || p.x > at.x + size.width + margin) continue;
         if (p.y < at.y - margin || p.y > at.y + size.height + margin) continue;
+        const inside = halfway && p.x >= at.x && p.x <= at.x + size.width && p.y >= at.y && p.y <= at.y + size.height;
         for (const record of ctx.handlesOf(node.id)) {
-          if (node.id === from.nodeId && record.id === from.id && record.type === from.type) continue;
-          if (!record.el.hasAttribute('data-connectable') || record.options?.current.isConnectableEnd === false) {
-            continue;
-          }
+          if (!record.el.hasAttribute('data-connectable') || !take(node.id, record)) continue;
           const point = pointOfHandle(node.id, record);
           if (!point) continue;
           const distance = Math.hypot(point.x - p.x, point.y - p.y);
-          // Several at one distance (overlapping handles): the opposite kind is the one to end at.
-          if (distance > radius || distance > bestDistance) continue;
-          if (distance < bestDistance || record.type !== from.type) {
+          const limit = inside
+            ? Math.min(radius, Math.hypot(at.x + size.width / 2 - point.x, at.y + size.height / 2 - point.y) / 2)
+            : radius;
+          if (distance > limit || distance > bestDistance) continue;
+          if (distance < bestDistance || record.type === prefer) {
             best = { nodeId: node.id, record };
             bestDistance = distance;
           }
@@ -183,6 +208,34 @@ export const connectFeature: Feature<ConnectApi> = {
       }
       return best;
     };
+
+    /** Where a drag may end: not the handle it began at, nor one that cannot end a connection. */
+    const dropNear = (clientX: number, clientY: number, from: Endpoint, radius: number) =>
+      nearestHandle(
+        clientX,
+        clientY,
+        radius,
+        (nodeId, record) =>
+          !(nodeId === from.nodeId && record.id === from.id && record.type === from.type) &&
+          record.options?.current.isConnectableEnd !== false,
+        // The opposite kind is the one to end at.
+        from.type === 'source' ? 'target' : 'source',
+      );
+
+    /** Whether a node is `root` or inside it, at any depth. */
+    const within = (id: string | undefined, root: string): boolean =>
+      id !== undefined && (id === root || within(ctx.nodeById.get(id)?.parentId, root));
+
+    const handleNearTouch: ConnectApi['handleNearTouch'] = (clientX, clientY, onNode) =>
+      nearestHandle(
+        clientX,
+        clientY,
+        TOUCH_REACH / ctx.viewport.zoom,
+        (nodeId, record) =>
+          (onNode === null || within(nodeId, onNode)) && record.options?.current.isConnectableStart !== false,
+        null,
+        true,
+      );
 
     const handleAt = (
       clientX: number,
@@ -200,13 +253,13 @@ export const connectFeature: Feature<ConnectApi> = {
           // A handle that cannot end a connection is not there, as far as a drop is concerned.
           if (record.el === el) {
             return record.options?.current.isConnectableEnd === false
-              ? nearestHandle(clientX, clientY, from, radius)
+              ? dropNear(clientX, clientY, from, radius)
               : { nodeId, record };
           }
         }
       }
       // Not over one: the nearest within reach, as React Flow's `connectionRadius`.
-      return nearestHandle(clientX, clientY, from, radius);
+      return dropNear(clientX, clientY, from, radius);
     };
 
     /**
@@ -242,10 +295,11 @@ export const connectFeature: Feature<ConnectApi> = {
       from: Endpoint,
       start: HandleRecord,
       reconnecting: boolean,
+      radius: number,
       clientX: number,
       clientY: number,
     ) => {
-      const hit = handleAt(clientX, clientY, from, reconnecting ? config.reconnectRadius : config.radius);
+      const hit = handleAt(clientX, clientY, from, radius);
       // The handle under the pointer, whether or not dropping there would actually connect — so a
       // consumer of `useConnection` can colour it as a target either way, as React Flow's own does.
       const to = hit
@@ -277,7 +331,10 @@ export const connectFeature: Feature<ConnectApi> = {
       cancelConnection();
 
       const from: Endpoint = { nodeId, id: record.id, type: record.type };
-      const radius = reconnect ? config.reconnectRadius : config.radius;
+      const base = reconnect ? config.reconnectRadius : config.radius;
+      // A finger drops near a handle as it presses near one: at least its reach, in screen pixels, at this zoom.
+      const radius =
+        at.pointerType === 'touch' && base > 0 ? Math.max(base, TOUCH_REACH / ctx.viewport.zoom) : base;
       const follow = (clientX: number, clientY: number) => {
         connecting = true;
         ctx.setConnection({
@@ -286,7 +343,7 @@ export const connectFeature: Feature<ConnectApi> = {
           fromNodeId: nodeId,
           fromHandleId: record.id,
           fromHandleType: record.type,
-          ...connectionEnd(from, record, reconnect !== null, clientX, clientY),
+          ...connectionEnd(from, record, reconnect !== null, radius, clientX, clientY),
           reconnecting: reconnect?.edge.id ?? null,
         });
       };
@@ -314,6 +371,12 @@ export const connectFeature: Feature<ConnectApi> = {
       if (config.dragThreshold <= 0) begin();
 
       const onMove = (e: PointerEvent) => {
+        // Another finger is not this gesture's; two of them are a pinch, which this gives way to.
+        if (e.pointerId !== at.pointerId) return;
+        if (config.isPinching()) {
+          cancelConnection();
+          return;
+        }
         pointer = { x: e.clientX, y: e.clientY };
         if (!started) {
           if (Math.hypot(e.clientX - at.clientX, e.clientY - at.clientY) <= config.dragThreshold) return;
@@ -322,6 +385,7 @@ export const connectFeature: Feature<ConnectApi> = {
         follow(e.clientX, e.clientY);
       };
       const onUp = (e: PointerEvent) => {
+        if (e.pointerId !== at.pointerId) return;
         // A flick: released far from the press with no move between (a touch, a fast mouse) — it travelled.
         if (!started && Math.hypot(e.clientX - at.clientX, e.clientY - at.clientY) > config.dragThreshold) begin();
         const hit = started ? handleAt(e.clientX, e.clientY, from, radius) : null;
@@ -409,18 +473,48 @@ export const connectFeature: Feature<ConnectApi> = {
       config.onClickEnd?.(e, { connection: c, isValid: valid });
     };
 
-    return { startConnection, beginConnection, clickConnect, config };
+    return { startConnection, beginConnection, clickConnect, handleNearTouch, config };
   },
 
   useCanvas({ store, props }) {
-    const { config } = store.api(connectFeature);
+    const { config, handleNearTouch, beginConnection, clickConnect } = store.api(connectFeature);
     config.dragThreshold = props.connectionDragThreshold ?? 1;
     config.radius = props.connectionRadius ?? 20;
     config.reconnectRadius = props.reconnectRadius ?? 10;
     config.connectOnClick = props.connectOnClick ?? true;
     config.onClickStart = props.onClickConnectStart;
     config.onClickEnd = props.onClickConnectEnd;
-    return undefined;
+    config.isPinching = store.isPinching;
+    // A press near a handle, waiting for the click a tap ends with.
+    const tap = useRef<{ nodeId: string; el: HTMLElement; x: number; y: number } | null>(null);
+    return {
+      props: {
+        // A finger that lands near a handle is on it: the press starts a connection from it, as a press on the
+        // handle would, and the click a tap ends with is the handle's (`connectOnClick`). Only on the bare pane
+        // or a node — not on an edge, a control, or what a node keeps for itself (`nodrag`, a button…).
+        onPointerDownCapture: (e) => {
+          tap.current = null;
+          if (e.pointerType !== 'touch' || !e.isPrimary || !(e.target instanceof Element)) return;
+          if (e.target.closest('[data-handletype]')) return; // on a handle already: its own
+          const nodeEl = e.target.closest<HTMLElement>('.react-flow__node');
+          const onPane = e.target === e.currentTarget;
+          if (!onPane && (!nodeEl || isInteractive(e.target, store.getOptions().ignored))) return;
+          const hit = handleNearTouch(e.clientX, e.clientY, onPane ? null : (nodeEl?.dataset.id ?? null));
+          if (!hit) return;
+          e.stopPropagation();
+          e.preventDefault();
+          tap.current = { nodeId: hit.nodeId, el: hit.record.el, x: e.clientX, y: e.clientY };
+          beginConnection(hit.nodeId, hit.record, e.nativeEvent, null);
+        },
+        onClickCapture: (e) => {
+          const near = tap.current;
+          tap.current = null;
+          if (!near || e.target === near.el || Math.hypot(e.clientX - near.x, e.clientY - near.y) > TAP_SLOP) return;
+          e.stopPropagation();
+          clickConnect(near.nodeId, near.el, e.nativeEvent);
+        },
+      },
+    };
   },
 
   useNode({ store, node }) {

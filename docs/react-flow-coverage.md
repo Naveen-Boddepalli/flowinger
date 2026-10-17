@@ -61,6 +61,11 @@ says which, once, in development ([Features](features.md)). New ones: `a11yFeatu
   `title`, `role`, `aria-*`, `tabIndex`, `data-*` — but not its event handlers, which the canvas's own pointer
   and keyboard handling would lose to; a handle's `id` stays its handle id, and on `BaseEdge` they land on the
   path. The engine's own classes, positioning and handlers win over yours.
+- **A finger near a handle is on it.** A touch within 20 screen pixels of a connectable handle starts a connection
+  from it, or, as a tap, clicks it (`connectOnClick`); and a line a finger drags drops on a handle that near
+  (or within `connectionRadius`, if that is further). On the handle's own node the reach stops halfway to the
+  node's centre, so the middle still drags the node. React Flow needs the press on the dot itself, which a
+  fingertip mostly misses once a graph is fitted to a phone. A mouse or a pen still has to hit it.
 - **Where a prop's default is not React Flow's, on purpose:** `multiSelectionKeyCode` left out lets Shift add to a
   selection as well as Control and ⌘; `zoomActivationKeyCode` left out leaves `zoomOnScroll` off meaning no zoom;
   `interpolate` is `'linear'` (React Flow's is `'smooth'`; `smoothFeature` has it when asked); `Controls`'

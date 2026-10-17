@@ -3,7 +3,7 @@
 // not a mouse. Playwright has no multi-touch of its own, and the protocol is Chromium's, so this runs there
 // only; Safari on an iPhone and Chrome on Android are checked by hand (see PLAN-1.0.md, step 3).
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { centre, node, open, paneBox, view } from './helpers.ts';
+import { centre, handle, node, open, paneBox, view } from './helpers.ts';
 
 test.skip(({ browserName }) => browserName !== 'chromium', 'multi-touch goes through the Chromium DevTools protocol');
 // A tablet's size: at a phone's, the demo's options panel covers the graph (the gestures would land on it).
@@ -136,4 +136,27 @@ test('a pinch that starts on a node zooms, and does not drag the node', async ({
   const spot = await emptySpot(page);
   await touch(cdp, line(spot, { x: spot.x + 40, y: spot.y }));
   expect((await view(page)).x - v.x).toBeCloseTo(40, 0);
+});
+
+test.describe('at a phone’s size', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('a finger that lands near a handle, not on it, drags out a connection', async ({ page }) => {
+    // Fitted to a phone, a 10 px handle is drawn at about 6: a fingertip mostly misses it. 12 px off is on it.
+    const before = await page.locator('.react-flow__edge').count();
+    const from = await centre(handle(page, '2', 'out'));
+    const to = await centre(handle(page, '4', 'in'));
+    await touch(cdp, line({ x: from.x + 4, y: from.y + 12 }, { x: to.x - 4, y: to.y - 12 }, 12));
+    await expect(page.locator('.react-flow__edge')).toHaveCount(before + 1);
+  });
+
+  test('a tap on the bare canvas puts the options away', async ({ page }) => {
+    const options = page.locator('details');
+    await expect(options).not.toHaveAttribute('open');
+    await touch(cdp, [[await centre(page.locator('summary'))]]);
+    await expect(options).toHaveAttribute('open');
+    const pane = await paneBox(page);
+    await touch(cdp, [[{ x: pane.x + 15, y: pane.y + 15 }]]);
+    await expect(options).not.toHaveAttribute('open');
+  });
 });
