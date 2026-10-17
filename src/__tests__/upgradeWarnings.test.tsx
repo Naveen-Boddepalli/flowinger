@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { resetUpgradeWarnings } from '../devWarnings.ts';
 import {
-  FlowingerCanvas,
   FlowingerCore,
-  edgePathsFeature,
-  type Edge,
   type Node,
 } from '../index.ts';
 
@@ -26,25 +23,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   Reflect.deleteProperty(process.env, 'JEST_WORKER_ID');
-});
-
-describe('the edge paths', () => {
-  const edges = (type: string): Edge[] => [{ id: 'e', source: 'a', target: 'b', type }];
-
-  it('are said once for a <FlowingerCore> drawing a straight, smoothstep or step edge without edgePathsFeature', () => {
-    render(<FlowingerCore nodes={nodes} edges={edges('smoothstep')} />);
-    render(<FlowingerCore nodes={nodes} edges={edges('step')} />);
-    expect(about('edgePathsFeature')).toHaveLength(1);
-    expect(about('edgePathsFeature')[0]).toMatch(/draws a 'smoothstep' edge as a bezier/);
-  });
-
-  it('are not said with the feature, on a <FlowingerCanvas>, or for a bezier', () => {
-    render(<FlowingerCore nodes={nodes} edges={edges('step')} features={[edgePathsFeature]} />);
-    render(<FlowingerCanvas nodes={nodes} edges={edges('straight')} />);
-    render(<FlowingerCore nodes={nodes} edges={edges('default')} />);
-    render(<FlowingerCore nodes={nodes} edges={[{ id: 'e', source: 'a', target: 'b' }]} />);
-    expect(about('edgePathsFeature')).toEqual([]);
-  });
 });
 
 describe('Jest', () => {

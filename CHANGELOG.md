@@ -26,6 +26,10 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
   what the canvas has given them since 1.1. A handler written for an array still fits, since a changeset is one;
   code that *calls* a handler with a plain array needs `new NodeChangeset(list)`. `useNodesState`' handler takes
   either.
+- **Breaking: on a `<FlowingerCore>`, `straight`, `smoothstep` and `step` edges need `edgePathsFeature`**, and are
+  beziers without it. It takes 0.45 kB out of a core whose edges are beziers: the core is 20.81 kB gzipped (21.26 in
+  1.1), and its budget 21 kB. `<FlowingerCanvas>` and `<ReactFlow>` have the feature; 1.1 had it as a feature that
+  did nothing, and said so in development. The path functions and the edge components are unchanged.
 - **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
   run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
   declarations.
@@ -34,7 +38,7 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
 
 - **Breaking: `CounterNode`**, a type React Flow never exported (the example in a doc comment of its `Node`),
   deprecated in 1.1.
-- The two development warnings about margins that 1.1 gave: what they warned of has happened.
+- The development warnings 1.1 gave about margins and edge paths: what they warned of has happened.
 
 ### Deprecated
 

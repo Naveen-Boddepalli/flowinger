@@ -138,17 +138,6 @@ export function resetUpgradeWarnings(): void {
   told.clear();
 }
 
-/** A `<FlowingerCore>` drawing an edge whose path will come with `edgePathsFeature` in 2.0. */
-export function warnAboutEdgePath(type: string | undefined): void {
-  if (type !== 'straight' && type !== 'smoothstep' && type !== 'step') return;
-  tellOnce(
-    'edge-paths',
-    `in 2.0 the straight, smoothstep and step paths come with edgePathsFeature, and a <FlowingerCore> ` +
-      `without it draws a '${type}' edge as a bezier. Add edgePathsFeature to \`features\` (<FlowingerCanvas> ` +
-      'and <ReactFlow> have it).',
-  );
-}
-
 /** Flowinger loaded through `require` by Jest, which cannot load the ES modules 2.0 ships without a setting. */
 export function warnAboutJest(): void {
   if (typeof process === 'undefined' || process.env.JEST_WORKER_ID === undefined || typeof __filename === 'undefined') return;

@@ -15,8 +15,8 @@ import type { Feature } from './features.ts';
 import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { absolutePositionOf, createNodeIndex } from './parents.ts';
-import { pathFor } from './paths.ts';
-import { warnAboutEdgePath } from './devWarnings.ts';
+import type { EdgePathsApi } from './features/edgePaths.ts';
+import { bezierPathFor } from './paths.ts';
 import type { ConnectionLineProps, ConnectionLineType } from './types.ts';
 import {
   type Edge,
@@ -421,6 +421,8 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     connectionLineContainerStyle,
   } = props;
   const store = useFlowingerStore();
+  // The path of each edge: the bezier, or with edgePathsFeature whatever its type names.
+  const drawPath = (store.apiOf('edgePaths') as EdgePathsApi | undefined)?.pathFor ?? bezierPathFor;
   // Stable, so the memoised edges below are not remade by a new array each render.
   const adornments = useMemo(() => features.filter((f) => f.EdgeAdornment), [features]);
   const hooks = useMemo(() => features.filter((f) => f.useEdge), [features]);
@@ -560,8 +562,7 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
       return;
     }
 
-    if (process.env.NODE_ENV !== 'production' && store.apiOf('edgePaths') === undefined) warnAboutEdgePath(edge.type);
-    const path = pathFor(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
+    const path = drawPath(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
     place(
       <EdgePath
         key={edge.id}

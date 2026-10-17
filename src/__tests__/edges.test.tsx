@@ -3,6 +3,7 @@ import { act, render } from '@testing-library/react';
 import * as ReactFlowLib from '@xyflow/react';
 import {
   FlowingerCanvas,
+  edgePathsFeature,
   FlowingerCore,
   BaseEdge,
   BezierEdge,
@@ -238,10 +239,34 @@ describe('pathOptions on an edge', () => {
     expect(pathFor('step', s, Position.Right, t, Position.Left, { borderRadius: 30 }).d).not.toContain('Q');
   });
   it('reach the drawn edge', () => {
-    const plain = withEdge({ type: 'smoothstep' });
-    const square = withEdge({ type: 'smoothstep', pathOptions: { borderRadius: 0 } });
+    const paths = { features: [edgePathsFeature] };
+    const plain = withEdge({ type: 'smoothstep' }, paths);
+    const square = withEdge({ type: 'smoothstep', pathOptions: { borderRadius: 0 } }, paths);
     expect(must(plain.container, '.react-flow__edge-path').getAttribute('d')).toContain('Q');
     expect(must(square.container, '.react-flow__edge-path').getAttribute('d')).not.toContain('Q');
+  });
+});
+
+describe('edgePathsFeature', () => {
+  const d = (c: ParentNode) => must(c, '.react-flow__edge-path').getAttribute('d') ?? '';
+  const bezier = (c: ParentNode) => d(c).includes('C');
+
+  it('draws straight, smoothstep and step edges; without it a <FlowingerCore> draws each as a bezier', () => {
+    for (const type of ['straight', 'smoothstep', 'step']) {
+      expect(bezier(withEdge({ type }, { features: [edgePathsFeature] }).container), type).toBe(false);
+      expect(bezier(withEdge({ type }).container), type).toBe(true);
+    }
+  });
+
+  it('is on <FlowingerCanvas>, and a bezier needs nothing', () => {
+    const canvas = render(
+      <div style={{ width: 800, height: 600 }}>
+        <FlowingerCanvas nodes={nodes} edges={[{ id: 'e', source: 'a', target: 'b', type: 'step' }]} />
+      </div>,
+    );
+    expect(bezier(canvas.container)).toBe(false);
+    expect(bezier(withEdge({}).container)).toBe(true);
+    expect(d(withEdge({ type: 'default' }).container)).toBe(d(withEdge({ type: 'bezier' }).container));
   });
 });
 
