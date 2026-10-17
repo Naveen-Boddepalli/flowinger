@@ -150,17 +150,38 @@ has to solve Jest anyway. Then flowinger going ESM only costs it nothing more.
 Either way nothing changes in 1.x. Run the matrix again on the release candidate, with whatever Jest and Node are
 current then.
 
-### D3. The core's size — **to measure, same rule as 1.0's D2**
+### D3. The core's size — **measured: one candidate**
 
 At 19.91 of 20 kB, the next thing the core needs breaks the budget. Taking behaviour out of the core and putting it
 into a feature is a breaking change only for `<FlowingerCore>` users, who would lose behaviour they had without
 naming a feature. `<ReactFlow>` and `<FlowingerCanvas>` carry every feature, so for them nothing changes.
 
-The rule is 1.0's: map the lean bundle (which module each byte comes from), measure what each part a
-display-only viewer does not use costs, and move only what saves at least 0.1 kB gzip. The measurement changes
-nothing, so it runs in 1.x. If nothing reaches the bar, as with 1.0's instance methods, 2.0 moves nothing and the
-core's budget goes up in a minor release, with the reason in the changelog. The stability page already says
-budgets are CI gates, not a promise.
+The rule is 1.0's: map the lean bundle, measure what each part a display-only viewer does not use costs, and move
+only what saves at least 0.1 kB gzip.
+
+**Measured (2026-10-17) with `pnpm size:map`.** By file, the lean entry is:
+
+| Part | Share | ~kB gzip |
+|---|---|---|
+| `store.ts` | 34% | 6.8 |
+| `FlowingerCore.tsx` | 23% | 4.5 |
+| `FlowingerEdges.tsx` | 14% | 2.7 |
+| Edge paths | 6% | 1.2 |
+| The node wrapper | 5% | 1.1 |
+| Nesting | 5% | 0.9 |
+| Everything else | 13% | 2.7 |
+
+Two parts are worth taking out, measured by building without each (`pnpm size:map --candidates`):
+
+| Candidate | Saves | Verdict |
+|---|---|---|
+| **The edge paths other than bezier** (`straight`, `smoothstep`, `step`), which `pathFor` picks by `edge.type` | **0.45 kB** | **Proposed for 2.0**, behind an `edgePathsFeature`. A core with only default edges never draws them, and an edge's `type` is data, so no bundler can drop them today. Without the feature, such an edge would draw as a bezier. The bridge warns, once a page, when a `<FlowingerCore>` draws one, naming the feature. The exported path functions (`getSmoothStepPath`…) stay where they are |
+| The canvas's nesting pass (where a child's parent is, its depth, hiding with a parent) | 0.19 kB | **Stays.** It passes the bar, but without it a viewer that draws groups puts every child in the wrong place, which is a wrong picture rather than a plainer one. And it is only part of the nesting code: the store's half stays either way |
+
+With the paths out, the core is about 19.45 kB, which gives the next addition room. Until 2.0, a change that
+needs more room raises the core's budget in a minor release, with the reason in the changelog, as the stability
+page allows. Nothing else in the map is something a viewer that only shows a graph does without. The store is the
+viewport, the nodes and their measuring, and 1.0's D2 already found its instance methods too small to move.
 
 ### D4. React 18 — **decided: kept**
 
@@ -205,8 +226,8 @@ Additive, so each can ship in a minor whenever it is ready. Mostly from the [roa
 - **React Flow 13's new names**, from D1's table: the split store hooks, change lists that are also changesets,
   the renamed change types, `forceColorMode` and `changeParent`. Best done once 13 has a release candidate, so
   the names have stopped moving.
-- The measurement for D3 (the lean-bundle map). It changes nothing in the package. D2's is done
-  (`pnpm check:toolchains`).
+- The measurements for D2 and D3 are done (`pnpm check:toolchains`, `pnpm size:map --candidates`). Run them again
+  when 2.0's scope is decided.
 
 ## The order of work
 
@@ -244,7 +265,9 @@ As 0.9 did for 1.0, everything 2.0 changes is announced in the code first:
 - If D2 is C, a development warning from the CJS build when it runs under Jest (`JEST_WORKER_ID` is set), the one
   runtime the matrix found breaking, naming the Jest settings that work. The TypeScript cases (`node16` from a
   `.cts`, subpaths on `node10`) are compile errors, which no warning can reach, so the upgrade guide names them.
-- `@deprecated` on any name 13 renamed, pointing at the new one.
+- If D3's paths move, `edgePathsFeature` exported, and a development warning, once a page, when a `<FlowingerCore>`
+  without it draws a `straight`, `smoothstep` or `step` edge.
+- `@deprecated` on any name 13 renamed, pointing at the new one. `CounterNode` already is.
 - *Upgrading to 2.0* added to [docs/upgrading.md](docs/upgrading.md), and a 2.0 draft of
   [docs/stability.md](docs/stability.md).
 
@@ -294,5 +317,5 @@ measured again, and the changelog says why for either outcome.
 - **The benchmark lead shrinks against a compiled React Flow 13.** Then the README and GROWTH.md say so, as the
   *Reach for React Flow instead when…* section already does for other trade-offs.
 - **Two stable lines, one maintainer.** D5 keeps 1.x support short and limited to fixes.
-- **The core is at its budget now, before any of this.** D3's measurement is a 1.x task. Until it is done, the next
+- **The core is at its budget now, before any of this.** D3 found 0.45 kB to take out in 2.0. Until then, the next
   change that touches the core either finds the bytes or raises the budget in the open.
