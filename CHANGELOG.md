@@ -10,12 +10,16 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-17
+
+What a real phone and VoiceOver found, the first time either was tried: handles too small for a finger, and three
+things a screen reader user could not do. Each was checked again on the device after the fix.
+
 ### Changed
 
-- **The whole canvas's size budget is 38 kB (was 37).** The fixes below take it from 36.36 to 36.99 kB gzipped —
-  the reach for a finger near a handle 0.45, the screen-reader fixes 0.18 — which leaves no room for CI's Linux
-  build, where the same code gzips a little larger. The core is 19.94 kB (budget 20): none of this is
-  in it but the canvas's role, 0.03.
+- **The whole canvas's size budget is 38 kB (was 37).** The fixes below take it from 36.36 to 37.01 kB gzipped —
+  the reach for a finger near a handle 0.45, the screen-reader fixes 0.2 — over the old budget. The core is
+  19.91 kB (budget 20): the fixes are in features, not in it.
 
 ### Fixed
 
@@ -485,7 +489,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0-rc.1
 [0.9.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.8.0...v0.9.1

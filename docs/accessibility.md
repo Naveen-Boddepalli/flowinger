@@ -41,7 +41,7 @@ without asking.
 
 On 1.0.0, in Safari on macOS: tabbing onto the canvas, onto each node and edge and onto the controls; selecting
 with Space; moving with the arrows; deleting with Backspace; the focus ring; and the view panning to a node that
-takes focus out of sight. Three things did not work and are fixed in 1.0.1:
+takes focus out of sight. Three things did not work; they are fixed in 1.0.1, and passed when checked again:
 
 - **Only the first keyboard move was announced.** The live region's text was changed in place, which Safari with
   VoiceOver announces only once; each announcement is now an element of its own. It also said where the node

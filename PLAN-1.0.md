@@ -163,7 +163,8 @@ under the browser's toolbar, hiding the controls. With VoiceOver: only the first
 Escape did not let go of a focused node, and with Quick Nav on VoiceOver kept the arrow keys. All fixed for
 1.0.1 — a finger near a handle is on it, a fresh element for each announcement, Escape on a node or edge, and the
 canvas `role="application"` when it takes keys (React Flow's always is; this settles the question below). Written
-up in `docs/accessibility.md`. Still not tried: NVDA on Windows.
+up in `docs/accessibility.md`. Each was checked again on the phone and with VoiceOver after the fix, and passed;
+released as 1.0.1. Still not tried: NVDA on Windows.
 
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 
