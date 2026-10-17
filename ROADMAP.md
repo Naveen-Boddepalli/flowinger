@@ -95,6 +95,9 @@ that compiles and does nothing apart, and there are none). What is left is bread
 
 ## Later
 
+- **2.0.** Not before React Flow 13 is stable (it is at `13.0.0-next.0`, with the same API as 12 so far): `<ReactFlow>`
+  follows React Flow's defaults only in a major. [The 2.0 plan](PLAN-2.0.md) says what would start it, what it
+  would break (following 13, and perhaps shipping ESM only) and what stays in 1.x until then.
 - **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
   release only once a `1.x` has users on more than one version.
 - **An accessibility pass** with a screen reader and the keyboard alone, written up honestly. The canvas is
