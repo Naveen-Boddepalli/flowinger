@@ -30,6 +30,12 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
   beziers without it. It takes 0.45 kB out of a core whose edges are beziers: the core is 20.81 kB gzipped (21.26 in
   1.1), and its budget 21 kB. `<FlowingerCanvas>` and `<ReactFlow>` have the feature; 1.1 had it as a feature that
   did nothing, and said so in development. The path functions and the edge components are unchanged.
+- **Breaking: ES modules only**, as React Flow 13 ships. No CommonJS build, no second set of declarations for
+  `require`, no `typesVersions` or stub folders; `exports` is the entry map, and `engines.node` is `>=20.19`. Node's
+  `require` loads the package on Node 20.19+ and 22.12+; bundlers, Vite, Next.js and Vitest are unaffected. Jest
+  needs `NODE_OPTIONS=--experimental-vm-modules` (Node 22.21+ or 24.9+) or a transform; a TypeScript `.cts` file
+  needs `module: nodenext`; `moduleResolution: node10` finds no subpath. 1.1 said so under Jest.
+  `pnpm check:toolchains` checks all of it, and runs in CI on Node 22 and 24.
 - **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
   run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
   declarations.
@@ -38,7 +44,7 @@ Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md)
 
 - **Breaking: `CounterNode`**, a type React Flow never exported (the example in a doc comment of its `Node`),
   deprecated in 1.1.
-- The development warnings 1.1 gave about margins and edge paths: what they warned of has happened.
+- The development warnings 1.1 gave about margins, edge paths and Jest: what they warned of has happened.
 
 ### Deprecated
 

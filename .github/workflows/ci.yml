@@ -83,6 +83,25 @@ jobs:
       - run: pnpm build
       - run: node scripts/check-examples.mjs
 
+  toolchains:
+    # The packed package in the tools a consumer loads it with — Node's require and import, Jest, Vitest, TypeScript 5
+    # and 7, Next.js — since it is ES modules only (scripts/check-toolchains.mjs; three known failures are reported,
+    # not failed). On both Node lines in support.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/check-toolchains.mjs
+
   e2e:
     # Real browsers against the demo — Chromium, Firefox and WebKit: layout, pointer capture, the wheel — what
     # jsdom cannot see (e2e/). The first place a drag that "works in the tests" shows it does not.

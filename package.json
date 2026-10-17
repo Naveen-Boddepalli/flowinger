@@ -38,141 +38,62 @@
   "type": "module",
   "sideEffects": false,
   "packageManager": "pnpm@11.1.2",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/cjs/index.d.ts",
-        "default": "./dist/index.cjs"
-      }
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./history": {
-      "import": {
-        "types": "./dist/pro/history.d.ts",
-        "default": "./dist/pro/history.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/history.d.ts",
-        "default": "./dist/pro/history.cjs"
-      }
+      "types": "./dist/pro/history.d.ts",
+      "default": "./dist/pro/history.js"
     },
     "./clipboard": {
-      "import": {
-        "types": "./dist/pro/clipboard.d.ts",
-        "default": "./dist/pro/clipboard.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/clipboard.d.ts",
-        "default": "./dist/pro/clipboard.cjs"
-      }
+      "types": "./dist/pro/clipboard.d.ts",
+      "default": "./dist/pro/clipboard.js"
     },
     "./snaplines": {
-      "import": {
-        "types": "./dist/pro/snaplines.d.ts",
-        "default": "./dist/pro/snaplines.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/snaplines.d.ts",
-        "default": "./dist/pro/snaplines.cjs"
-      }
+      "types": "./dist/pro/snaplines.d.ts",
+      "default": "./dist/pro/snaplines.js"
     },
     "./export": {
-      "import": {
-        "types": "./dist/pro/export.d.ts",
-        "default": "./dist/pro/export.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/export.d.ts",
-        "default": "./dist/pro/export.cjs"
-      }
+      "types": "./dist/pro/export.d.ts",
+      "default": "./dist/pro/export.js"
     },
     "./smart-edges": {
-      "import": {
-        "types": "./dist/pro/smartEdges.d.ts",
-        "default": "./dist/pro/smartEdges.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/smartEdges.d.ts",
-        "default": "./dist/pro/smartEdges.cjs"
-      }
+      "types": "./dist/pro/smartEdges.d.ts",
+      "default": "./dist/pro/smartEdges.js"
     },
     "./editable-edge": {
-      "import": {
-        "types": "./dist/pro/editableEdge.d.ts",
-        "default": "./dist/pro/editableEdge.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/editableEdge.d.ts",
-        "default": "./dist/pro/editableEdge.cjs"
-      }
+      "types": "./dist/pro/editableEdge.d.ts",
+      "default": "./dist/pro/editableEdge.js"
     },
     "./shapes": {
-      "import": {
-        "types": "./dist/pro/shapes.d.ts",
-        "default": "./dist/pro/shapes.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/shapes.d.ts",
-        "default": "./dist/pro/shapes.cjs"
-      }
+      "types": "./dist/pro/shapes.d.ts",
+      "default": "./dist/pro/shapes.js"
     },
     "./tree": {
-      "import": {
-        "types": "./dist/pro/tree.d.ts",
-        "default": "./dist/pro/tree.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/tree.d.ts",
-        "default": "./dist/pro/tree.cjs"
-      }
+      "types": "./dist/pro/tree.d.ts",
+      "default": "./dist/pro/tree.js"
     },
     "./pro": {
-      "import": {
-        "types": "./dist/pro/index.d.ts",
-        "default": "./dist/pro/index.js"
-      },
-      "require": {
-        "types": "./dist/cjs/pro/index.d.ts",
-        "default": "./dist/pro/index.cjs"
-      }
+      "types": "./dist/pro/index.d.ts",
+      "default": "./dist/pro/index.js"
     },
     "./package.json": "./package.json"
   },
-  "typesVersions": {
-    "*": {
-      "history": ["dist/pro/history.d.ts"],
-      "clipboard": ["dist/pro/clipboard.d.ts"],
-      "snaplines": ["dist/pro/snaplines.d.ts"],
-      "export": ["dist/pro/export.d.ts"],
-      "smart-edges": ["dist/pro/smartEdges.d.ts"],
-      "editable-edge": ["dist/pro/editableEdge.d.ts"],
-      "shapes": ["dist/pro/shapes.d.ts"],
-      "tree": ["dist/pro/tree.d.ts"],
-      "pro": ["dist/pro/index.d.ts"]
-    }
+  "engines": {
+    "node": ">=20.19"
   },
   "files": [
     "dist",
-    "NOTICE.md",
-    "history",
-    "clipboard",
-    "snaplines",
-    "export",
-    "smart-edges",
-    "editable-edge",
-    "shapes",
-    "tree",
-    "pro"
+    "NOTICE.md"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p tsconfig.build.json && node scripts/cjs-types.mjs",
+    "build": "vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepare": "npm run build",
@@ -180,7 +101,7 @@
     "size:features": "node scripts/size-features.mjs",
     "size:map": "node scripts/size-map.mjs",
     "bench": "node scripts/bench.mjs",
-    "check:package": "publint --strict && attw --pack .",
+    "check:package": "publint --strict && attw --pack . --profile esm-only",
     "demo:build": "vite build --config vite.demo.config.ts",
     "site:build": "node scripts/build-site.mjs",
     "check:examples": "node scripts/check-examples.mjs",

@@ -21,8 +21,8 @@ minor release could change the API. [Upgrading](upgrading.md) says what changed 
   `rf__wrapper`, `rf__node-<id>`, `rf__edge-<id>`, `rf__background`, `rf__controls` and `rf__minimap`; the
   viewport's `translate(Xpx, Ypx) scale(Z)` transform; and the `--flowinger-*` CSS variables of the
   [theme](theming.md).
-- **Where it runs:** React 18 and 19; `import` and `require`, each with its own types; server rendering and
-  hydration ([server rendering](server-rendering.md)).
+- **Where it runs:** React 18 and 19; `import`, and `require` where Node loads ES modules with it (20.19+, 22.12+),
+  with one set of types; server rendering and hydration ([server rendering](server-rendering.md)).
 
 ## Not covered
 

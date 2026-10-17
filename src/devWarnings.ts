@@ -123,27 +123,3 @@ export function warnAboutIgnoredProps(props: FlowingerProps, features: readonly 
     );
   }
 }
-
-// What 2.0 changes, said in development — once a page each — by the release before it, as the stability page
-// promises (docs/upgrading.md, "Upgrading to 2.0").
-const told = new Set<string>();
-function tellOnce(key: string, message: string): void {
-  if (told.has(key)) return;
-  told.add(key);
-  console.warn(`flowinger: ${message} See "Upgrading to 2.0" in docs/upgrading.md.`);
-}
-
-/** For tests: forget which of the 2.0 warnings were given. */
-export function resetUpgradeWarnings(): void {
-  told.clear();
-}
-
-/** Flowinger loaded through `require` by Jest, which cannot load the ES modules 2.0 ships without a setting. */
-export function warnAboutJest(): void {
-  if (typeof process === 'undefined' || process.env.JEST_WORKER_ID === undefined || typeof __filename === 'undefined') return;
-  tellOnce(
-    'jest',
-    'flowinger 2.0 ships ES modules only, as React Flow 13 does. Jest loads them through `require` with ' +
-      'NODE_OPTIONS=--experimental-vm-modules, on Node 22.21+ or 24.9+, or with a transform for flowinger.',
-  );
-}

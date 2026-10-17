@@ -85,7 +85,8 @@ React Flow's cost, and a culled mount a tenth, because Flowinger's first render 
 npm install flowinger      # or: pnpm add flowinger · yarn add flowinger
 ```
 
-React 18 or 19 is a peer dependency. The package ships ESM, CommonJS and TypeScript declarations for both.
+React 18 or 19 is a peer dependency. The package is ES modules with TypeScript declarations, as React Flow 13 is;
+Node's `require` loads it too (Node 20.19+ or 22.12+).
 
 ## Quick start
 
@@ -245,7 +246,7 @@ covers the part of the API that apps like the one above use, and says plainly wh
 | | |
 |---|---|
 | **React** | 18 and 19, both tested in CI |
-| **Modules** | ESM and CommonJS, with TypeScript declarations for each (checked with publint and Are the Types Wrong) |
+| **Modules** | ES modules with TypeScript declarations, as React Flow 13 ships; `require` loads them on Node 20.19+ (checked with publint, Are the Types Wrong and `pnpm check:toolchains`) |
 | **Rendering** | Client, server and hydration (`react-dom/server`) |
 | **Browsers** | Current evergreen browsers — pointer events, `ResizeObserver`. The browser suite runs in Chromium, Firefox and WebKit; two-finger touch pinch is unit-tested but not yet seen on a physical device ([roadmap](ROADMAP.md)) |
 
