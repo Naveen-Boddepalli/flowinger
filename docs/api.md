@@ -151,10 +151,9 @@ effect's dependencies; `onInit` hands you the same one.
 - **View**, each returning a `Promise<boolean>` — `true` when the move lands, `false` if another one cut it
   short: `setViewport`, `zoomIn`, `zoomOut`, `zoomTo(zoom)`, `setCenter(x, y, { zoom })`,
   `fitView({ padding, nodes, includeHiddenNodes, minZoom, maxZoom, duration })`, `fitBounds(rect, options)`;
-  and `getViewport()`, `getZoom()`. `padding` is the margin: `'20px'`, `'5%'` of the pane, or per side
-  (`{ top: '10px', x: '5%' }`), as in React Flow; a bare number is a ratio, as in React Flow 12 (`0.1` = a tenth
-  of the diagram's size), and becomes pixels in 2.0, as in React Flow 13 — so write margins with a unit. Left out,
-  `fitView` keeps a 40 px margin on a `FlowingerCanvas`, and React Flow's on a `ReactFlow`.
+  and `getViewport()`, `getZoom()`. `padding` is the margin, as React Flow 13 writes it: pixels (`20`, `'20px'`),
+  `'5%'` of the pane, or per side (`{ top: '10px', x: '5%' }`). Left out, `fitView` keeps a 40 px margin on a
+  `FlowingerCanvas`, and React Flow's `'5%'` on a `ReactFlow`. (In 1.x a bare number was a ratio.)
 - **Coordinates**: `screenToFlowPosition({ x, y }, { snapToGrid })` takes a pointer position (`clientX`,
   `clientY`) to graph units — for dropping a node where the pointer is — and `flowToScreenPosition` goes back.
 - **Read**: `getNodes()`, `getNode(id)`, `getEdges()`, `getEdge(id)`, `getNodesBounds(nodesOrIds)`,

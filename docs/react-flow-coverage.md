@@ -12,25 +12,25 @@ geometry and its whole end-to-end suite passing), and has since grown to name al
 
 ## The numbers
 
-Measured against `@xyflow/react` 12.11.6's own type declarations
-(`node scripts/audit-react-flow.mjs <path to its dist/esm/index.d.ts>`, after `pnpm build`):
+Measured against `@xyflow/react` 13.0.0-next.0's own type declarations
+(`node scripts/audit-react-flow.mjs <path to its dist/index.d.ts> --strict`, after `pnpm build`; CI runs it):
 
 | | React Flow has | Flowinger **names** | …and **does** |
 |---|---|---|---|
-| Exports (components, hooks, functions, types) | 210 | **210** | — |
+| Exports (components, hooks, functions, types) | 220 | **220** | — |
 | `ReactFlow` props | 119 | **119** | **119** |
-| Instance (`useReactFlow()`) | 32 | **32** | 32 |
+| Instance (`useReactFlow()`) | 33 | **33** | 33 |
 | `Node`, `Edge`, `NodeProps`, `EdgeProps` fields | 22 / 20 / 13 / 20 | **all** | all |
 | `Handle`, `Background`, `BaseEdge` props | 6 / 6 / 9 | **all** | all |
 | `MiniMap`, `Controls`, `NodeResizer`, `NodeToolbar` props | 18 / 9 / 16 / 4 | **all** | all |
 | `fitView` options | 8 | **8** | 8 |
-| **All members counted** | 302 | **302** | **302** |
+| **All members counted** | 303 | **303** | **303** |
 
-And against React Flow 13's first pre-release, `13.0.0-next.0` (the same script, given its `dist/index.d.ts`): **220
-of 220 exports** — its store hooks, its changesets and its names for the kinds of change among them — and **303 of
-303 members**, `forceColorMode` and the instance's `changeParent` the new ones, each doing something. A weekly job
-(`.github/workflows/react-flow-next.yml`) runs the audit with `--strict` against `@xyflow/react@next`, so a name
-13 adds is seen when it lands.
+React Flow 13 added its split store hooks, its changesets, its names for the kinds of change, `forceColorMode` and
+the instance's `changeParent`, and dropped a few of 12's names (`useStore`, `applyNodeChanges`, `colorMode`…).
+Flowinger keeps those too, so against **React Flow 12.11.6** it still names **210 of 210 exports** and **302 of
+302 members**, each doing something. A weekly job (`.github/workflows/react-flow-next.yml`) runs the audit against
+`@xyflow/react@next`, so what 13 changes before its release is seen when it lands.
 
 A name that compiles and does nothing is worse than a missing one — it fails silently, in production, in someone
 else's app — so the audit counts the two apart: a member whose doc comment says `@unimplemented` is *named*, not

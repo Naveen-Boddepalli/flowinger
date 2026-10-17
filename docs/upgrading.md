@@ -106,7 +106,7 @@ would notice 1.0; an app that went through 0.9 and did what it said needs nothin
 | has an edge that names a handle `in`, `out`, `prev`, `next`, `top`, `bottom`, `left` or `right` that no `<Handle>` has | the edge no longer meets a side guessed from the name | add the `<Handle>` |
 | writes its own `Feature` | the feature API is `@experimental` | nothing; minor releases may change it |
 
-What 1.0 promises from then on is on [its own page](stability.md).
+What a major version promises from then on is on [its own page](stability.md).
 
 ### 1. `<ReactFlow>` takes React Flow's defaults
 

@@ -5,7 +5,9 @@ use — a viewer of trees and plans, with some editing. It is **not a drop-in fo
 is a checklist, not a promise. The compiler will find most of what is missing; this page is for the things it
 will not: defaults that differ, and behaviour that changes without an error.
 
-Every default below was read from `@xyflow/react` 12.11.6's source, not remembered.
+Every default below was read from `@xyflow/react` 13's source (13.0.0-next.0), not remembered. Coming from React
+Flow 12, the same holds: flowinger has every name 12 had, and [Upgrading to 2.0](upgrading.md#upgrading-to-20) lists
+what 13 changed.
 
 ## 1. Swap the package
 
@@ -34,7 +36,7 @@ pnpm add flowinger
 React Flow turns interaction on; Flowinger's own canvas leaves it off until you ask, since a viewer wants none of
 it. **`<ReactFlow>` has React Flow's defaults**, so if you render `<ReactFlow>`, changing the import is the whole
 swap — there is nothing to set. They are `reactFlowDefaults`, React Flow's value for each prop where Flowinger's
-differs, plus three that are not props: a fit's margin (0.1 of the view), the path of an animated move
+differs, plus three that are not props: a fit's margin (`'5%'` of the pane a side), the path of an animated move
 (`'smooth'`), and `Controls`' lock (shown).
 
 `<FlowingerCanvas>` is the same canvas with Flowinger's defaults. To give it React Flow's, spread them:
@@ -45,7 +47,8 @@ import { FlowingerCanvas, reactFlowDefaults } from 'flowinger';
 <FlowingerCanvas {...reactFlowDefaults} nodes={nodes} edges={edges} /* … */ />
 ```
 
-Before 1.0, `<ReactFlow>` had Flowinger's defaults too; [Upgrading to 1.0](upgrading.md) says what changed.
+Before 1.0, `<ReactFlow>` had Flowinger's defaults too, and before 2.0 React Flow 12's; [Upgrading](upgrading.md)
+says what changed.
 
 | | React Flow | Flowinger |
 |---|---|---|
@@ -57,7 +60,7 @@ Before 1.0, `<ReactFlow>` had Flowinger's defaults too; [Upgrading to 1.0](upgra
 | `nodeDragThreshold` | 1 px | **3 px** |
 | `paneClickDistance`, `nodeClickDistance` | 1 px, 0 px | **none: a press is a click however far it moved** |
 | `maxZoom` | `2` | `2` |
-| `fitView` margin | `padding` `0.1` — a ratio | **40 px**, unless you pass a `padding` ratio |
+| `fitView` margin | `padding` `'5%'` of the pane a side | **40 px**, unless you pass a `padding` (pixels, `'%'` or per side) |
 | `deleteKeyCode` | `'Backspace'` | `'Backspace'` |
 | keyboard: nodes and edges as tab stops, with a `role` | on | **off** — opt in with `elementsSelectable` / `keyboardNavigation` |
 
@@ -132,9 +135,12 @@ saying what you were building.
   `aria-*`, `data-*`…) but not its event handlers; React Flow lets those through, and a handler there would
   replace what the canvas does with the press. Put a handler on an element inside, or on a wrapper.
 
-- **`useStore`** reads ten fields (`panZoom`, `isReady`, `nodes`, `edges`, `transform`, `width`, `height`,
-  `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's whole internal store, and **`useStoreApi`** has
-  `getState` and `subscribe` but no `setState`.
+- **The stores read; they do not write.** React Flow 13's hooks — `useNodesStore`, `useEdgesStore`,
+  `useViewportStore`, `useConnectionStore`, `useSelectionStore`, `useOptionsStore`, `useReactFlowStoreApi` — read
+  the slices of flowinger's one store their types name, and the stores have `getState` and `subscribe` but no
+  `setState`. `useOptionsStore` (and React Flow 12's `useStore`, kept) reads ten fields (`panZoom`, `isReady`,
+  `nodes`, `edges`, `transform`, `width`, `height`, `minZoom`, `maxZoom`, `nodesInitialized`), not React Flow's
+  whole internal store.
 - **`useReactFlow()` returns one object for the life of the provider.** An effect with it in its
   dependencies runs once. (In React Flow it is rebuilt when the viewport initialises.) `viewportInitialized`
   is on it as a getter, so read it when you need it rather than depending on it.
@@ -153,7 +159,9 @@ saying what you were building.
 ## 6. What stays the same
 
 - The data: `{ id, position, data, type, … }` for nodes and `{ id, source, target, sourceHandle, … }` for
-  edges, `applyNodeChanges`, `applyEdgeChanges`, `addEdge`, `useNodesState`, `useEdgesState`.
+  edges, `addEdge`, `useNodesState`, `useEdgesState`, and changes: `onNodesChange` is given a `NodeChangeset`, so
+  `changes.applyTo(nodes)` works as in React Flow 13 — and so does React Flow 12's `applyNodeChanges`, kept.
+- The package's shape: ES modules only, as React Flow 13's.
 - The `react-flow__*` class names, `nodrag` / `nopan` / `nowheel`, and the viewport element's
   `transform: translate(Xpx, Ypx) scale(Z)`.
 - The `data-testid`s: `rf__wrapper`, `rf__node-<id>`, `rf__edge-<id>`, `rf__controls`, `rf__minimap` and

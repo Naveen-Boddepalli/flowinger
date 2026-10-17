@@ -1,8 +1,8 @@
 # Flowinger
 
-> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 19.9 kB gzipped and the full canvas about 37 kB. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
+> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 20.8 kB gzipped and the full canvas about 38 kB. ES modules, as React Flow 13. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
 
-Use Flowinger when a React app needs to *draw* a graph (a workflow, a query plan, a syntax tree, an org chart, a dependency map) and bundle size, dependencies or server rendering matter. It names all 210 exports of `@xyflow/react` 12.11.6 and implements every one of its 119 `ReactFlow` props, so React Flow code usually migrates by changing the import and deleting the stylesheet import. Differences to know:
+Use Flowinger when a React app needs to *draw* a graph (a workflow, a query plan, a syntax tree, an org chart, a dependency map) and bundle size, dependencies or server rendering matter. It names all 220 exports of `@xyflow/react` 13 (and every one of 12's) and implements every one of its 119 `ReactFlow` props, so React Flow code usually migrates by changing the import and deleting the stylesheet import. Differences to know:
 
 - `<ReactFlow>` has React Flow's defaults (interaction on, `minZoom` 0.5…), so React Flow code migrates by changing the import. `<FlowingerCanvas>` is the same canvas with flowinger's viewer-first defaults: nothing is draggable, connectable or selectable until `nodesDraggable`, `nodesConnectable` and `elementsSelectable` are passed. `reactFlowDefaults` spreads React Flow's onto any canvas.
 - There is no CSS file to import. Styling is inline and themed with `--flowinger-*` CSS variables. The `react-flow__*` class names are kept.

@@ -51,6 +51,14 @@ it.** A library nobody can find the answer to a question about is not helped by 
   it, each keyboard move is announced, Escape lets go of a focused node, and the canvas is an `application` when
   it takes keys. Written up in [Accessibility](docs/accessibility.md).
 
+- `1.1.0` (built 2026-10-17, `release/1.1`): the bridge to 2.0 — React Flow 13's names (store hooks, changesets,
+  `forceColorMode`, `changeParent`, margins with units) without breaking anything, and a warning in development for
+  each thing 2.0 changes.
+- `2.0.0` (built 2026-10-17, `release/2.0`, a release candidate until React Flow 13.0.0): follows React Flow 13 — a
+  number margin is pixels, `<ReactFlow>` fits with `'5%'`, changesets in the types, ES modules only, and the edge
+  paths other than bezier in `edgePathsFeature`. [The 2.0 plan](PLAN-2.0.md) and
+  [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20).
+
 ## Now — be easy to try and to trust
 
 - **More examples.** `examples/` has a layout viewer, a controlled editor, a collapsible tree, a Next.js
@@ -95,10 +103,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
 
 ## Later
 
-- **2.0.** Not before React Flow 13 is stable (it is at `13.0.0-next.0`, which changes change events, the store and
-  the fit margin): `<ReactFlow>` follows React Flow's defaults only in a major. Most of 13's new names can come in
-  1.x first. [The 2.0 plan](PLAN-2.0.md) says what would start it, what it would break (two of 13's defaults, what
-  a number means as a margin, and perhaps shipping ESM only) and what stays in 1.x until then.
+- **2.0 to `latest`** once React Flow 13.0.0 is out and the weekly job shows nothing else has moved; until then 2.0
+  is a release candidate on `next` ([the 2.0 plan](PLAN-2.0.md)).
 - **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
   release only once a `1.x` has users on more than one version.
 - **An accessibility pass** with a screen reader and the keyboard alone, written up honestly. The canvas is

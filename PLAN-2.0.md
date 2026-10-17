@@ -5,7 +5,29 @@ covers waits for it. This page is the plan for that release: when it starts, wha
 what has to be seen working first, and in what order. Each section says whether it is decided, proposed, or waiting
 on a measurement. Decisions are the owner's; "proposed" means a recommendation not yet taken.
 
-## Where it stands (2026-10-17)
+## Status (2026-10-17): built on `release/2.0`, ahead of the trigger
+
+The owner chose to build 2.0 now rather than wait for React Flow 13.0.0 (*When 2.0 starts*, below). It is done on
+the branch, in two releases:
+
+- **1.1.0** (`release/1.1`): the bridge. Everything React Flow 13.0.0-next.0 adds, without breaking anything —
+  margins with units, the six store hooks, changesets, `forceColorMode`, `changeParent` — and a development warning,
+  once a page, for each thing 2.0 changes. The core's budget went to 21.5 kB (21.26: changesets 0.94, React Flow's
+  margin arithmetic 0.34), and the whole canvas's to 39.
+- **2.0.0** (`release/2.0`): D1 — `<ReactFlow>` fits with `'5%'`, a number margin is pixels, change handlers are typed
+  as changesets, React Flow 13 is the tests' oracle and CI's audit runs `--strict` against it; D2 — ES modules only
+  (option C), `check:toolchains` in CI on Node 22 and 24; D3 — the edge paths in `edgePathsFeature`, the core 20.81
+  kB (budget 21); `CounterNode` removed; `colorMode` deprecated for `forceColorMode`; D5 — a 1.x release after 2.0
+  publishes to npm's `v1` tag.
+- **One item of D1 was not needed.** React Flow 13 drops 12's `light` class on a canvas with no colour mode, but
+  flowinger's `<ReactFlow>` never added it (1.0's D1 left colours out), so nothing changed.
+
+**What waiting would have bought, and still can:** React Flow 13 is at `next.0`. If its `13.0.0` changes a default
+or a behaviour again, the stability page says `<ReactFlow>` follows only in a major — 3.0. So 2.0 is released as a
+candidate on `next` until React Flow 13.0.0 is out, and promoted to `latest` only once the weekly job shows nothing
+more has moved.
+
+## Where it stood when this plan was written (2026-10-17)
 
 - `1.0.1` on npm, a day after `1.0.0`. About 1,260 downloads in the 30 days to 2026-10-12 (557 in its last week).
   One known consumer, QueryLens, which put its trial of 1.0 off until after its own 2.0.

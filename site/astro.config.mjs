@@ -71,7 +71,7 @@ export default defineConfig({
             { label: 'Theming', link: '/docs/theming/' },
             { label: 'Server rendering', link: '/docs/server-rendering/' },
             { label: 'Accessibility', link: '/docs/accessibility/' },
-            { label: 'What 1.0 promises', link: '/docs/stability/' },
+            { label: 'What 2.0 promises', link: '/docs/stability/' },
             { label: 'Upgrading', link: '/docs/upgrading/' },
           ],
         },
