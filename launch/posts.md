@@ -4,8 +4,9 @@ Everything here is to be posted by the author, from their own accounts, saying t
 spacing are in [GROWTH.md](../GROWTH.md#phase-2-launch-one-week-staggered-not-all-in-one-day): the dev.to
 article ([`devto.md`](devto.md)) first, then these over a week. Replace `<article>` with its URL once it is up.
 
-Numbers used below, so they stay the same everywhere: diagram chunk 60.5 → 19.0 kB (QueryLens); core ~19.7 kB,
-whole canvas ~35.5 kB gzipped; 0 dependencies; 210/210 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
+Numbers used below, so they stay the same everywhere — measured on 1.0.1, what `npm install flowinger` gives
+today (1.1.0 grows the core to about 21.3 kB and the canvas to 38: measure again if it is out when these are
+posted): diagram chunk 60.5 → 22.9 kB (QueryLens); core ~19.9 kB, whole canvas ~37 kB gzipped; 0 dependencies; 210/210 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
 1.2 s (culled: 55 ms vs 594), unculled pan 8.5 vs 32.6 ms a frame, culled zoom 2.5 vs 4.7 ms (culled pan level within noise).
 
 ---
@@ -20,13 +21,13 @@ Read the subreddit's rules first; self-promotion is allowed in moderation and on
 > I maintain QueryLens, which draws SQL query plans. React Flow was most of its bundle for a view that mostly
 > *shows* a graph, so I wrote Flowinger: React Flow's API (all 210 exports, all 119 `ReactFlow` props), built
 > as a small core plus opt-in features, with no dependencies and no stylesheet. Our diagram chunk went from
-> 60.5 kB to 19 kB gzipped; switching was an import change plus three props, since interaction is off by default.
+> 60.5 kB to 22.9 kB gzipped; switching was an import change plus three props, since interaction is off by default.
 >
 > Undo/redo, copy-paste, snap lines, PNG/SVG export and obstacle-avoiding edges are included, as separate
 > entry points. Benchmarks against React Flow at 1k–10k nodes are reproducible (`pnpm bench`), including the
 > rows where it was behind until this release.
 >
-> It's 0.x with one maintainer (me), and React Flow's ecosystem is far bigger — the README says when to stay on
+> It's 1.0 but young, with one maintainer (me), and React Flow's ecosystem is far bigger — the README says when to stay on
 > React Flow. What would you need to see before switching?
 >
 > Write-up: <article> · Docs + live editor: https://naveen-boddepalli.github.io/flowinger/ · Code: https://github.com/Naveen-Boddepalli/flowinger
@@ -41,7 +42,7 @@ the bundle number ("A React node-graph library in 20 kB with zero dependencies")
 A thread. Attach a 20-second screen recording to the first post: open the site's live editor, drag a node,
 connect two, undo, export a PNG.
 
-> 1/ We cut our React diagram bundle from 60 kB to 19 kB by rebuilding React Flow's API from scratch.
+> 1/ We cut our React diagram bundle from 60 kB to 23 kB by rebuilding React Flow's API from scratch.
 >
 > Flowinger: React Flow's components, hooks and props — 0 dependencies, no stylesheet, ~20 kB for a viewer.
 > https://naveen-boddepalli.github.io/flowinger/
@@ -55,14 +56,14 @@ connect two, undo, export a PNG.
 > 4/ Benchmarked against React Flow at 10k nodes: with culling it mounts in 55 ms vs 594, because its first
 > render is culled too; unculled it pans at 8.5 vs 33 ms a frame. The culled pan is a tie. Reproducible: `pnpm bench`.
 
-> 5/ It's 0.x and new; React Flow's ecosystem is much bigger, and the docs say when to stay on it. Write-up with
+> 5/ It's 1.0 but new, with one maintainer; React Flow's ecosystem is much bigger, and the docs say when to stay on it. Write-up with
 > the trade-offs: <article>
 
 ---
 
 ## LinkedIn
 
-> I rewrote the diagram layer of QueryLens and cut its bundle from 60.5 kB to 19 kB gzipped.
+> I rewrote the diagram layer of QueryLens and cut its bundle from 60.5 kB to 22.9 kB gzipped.
 >
 > The result is Flowinger, an open-source React library with React Flow's API — so switching was an import
 > change — built as a small core plus opt-in features, with no dependencies. Undo/redo, export and smart edges
@@ -84,7 +85,7 @@ One accepted newsletter often outweighs every social post. Submit the article UR
 Blurb, under 50 words:
 
 > **Flowinger** — React Flow's API in ~20 kB with no dependencies: a small core plus opt-in features, free
-> undo/redo, export and smart edges, and server rendering. The write-up covers a 60 → 19 kB bundle cut,
+> undo/redo, export and smart edges, and server rendering. The write-up covers a 60 → 23 kB bundle cut,
 > benchmarks against React Flow at 10k nodes, and when not to switch.
 
 ---
