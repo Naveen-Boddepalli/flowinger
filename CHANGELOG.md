@@ -10,6 +10,25 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **A fit's margin is React Flow's to the pixel.** `fitView`, `fitBounds`, `fitViewOptions` and `Controls`' fit
+  button work the margin out as React Flow does: in whole pixels a side, with the view moved where the fit leaves
+  less than that on one side. Before, a number was turned into a zoom without rounding, so a `padding: 0.1` fit
+  could sit a fraction of a pixel from React Flow's. Flowinger's own margin, 40 px when none is given, is
+  unchanged.
+- **The core's size budget is 20.5 kB (was 20).** Margins with units (below) and React Flow's way of working
+  them out take the core from 19.91 to 20.25 kB gzipped, because a fit is part of the core. 2.0 takes it back
+  under 20 by moving the edge paths other than bezier into a feature ([the 2.0 plan](PLAN-2.0.md), D3).
+
+### Added
+
+- **Margins with units and per side**, as React Flow writes them: `fitViewOptions={{ padding: '5%' }}`,
+  `fitView({ padding: '20px' })`, `{ top: '10px', x: '5%' }`, in every fit and in `getViewportForBounds` and
+  `viewportForBounds`. They mean the same in React Flow 12 and 13, and in flowinger 1.x and 2.0, which reads a
+  bare number as pixels where 1.x reads it as a ratio. Checked against React Flow's own `getViewportForBounds`.
+  `Padding` and `PaddingWithUnit` are exported.
+
 ### Deprecated
 
 - **`CounterNode`**, a type React Flow does not export: it is the example in a doc comment of React Flow's `Node`

@@ -32,6 +32,7 @@ import type { ControlsProps } from './Controls.tsx';
 import type { NodeConnection } from './connections.ts';
 import type { UseNodeConnectionsOptions } from './dataHooks.ts';
 import type { EdgeLabelRenderer } from './EdgeLabelRenderer.tsx';
+import type { Padding } from './geometry.ts';
 import type { MiniMapNodeProps as MiniMapNodePropsType, MiniMapProps } from './MiniMap.tsx';
 import type { NodeResizerProps, ResizeControlProps as ResizeControlPropsType, ResizeParams } from './NodeResizer.tsx';
 import type { useOnSelectionChange } from './selectionHooks.ts';
@@ -291,7 +292,7 @@ export type FitViewParams<N extends Node = Node> = {
   height?: number;
   minZoom?: number;
   maxZoom?: number;
-  padding?: number;
+  padding?: Padding;
 };
 export type ReactFlowStore<N extends Node = Node, E extends Edge = Edge> = {
   rfId: string;

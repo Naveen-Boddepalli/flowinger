@@ -5,6 +5,7 @@ import {
   getNodesBounds,
   snapTo,
   viewportForBounds,
+  type Padding,
   type Size,
 } from './geometry.ts';
 import type { Modifiers } from './keys.ts';
@@ -194,7 +195,7 @@ export const DEFAULT_ENGINE_OPTIONS: EngineOptions = {
  * flowinger's (a 40 px margin, a straight path, no lock).
  */
 export interface ViewDefaults {
-  fitViewPadding?: number;
+  fitViewPadding?: Padding;
   interpolate?: 'smooth' | 'linear';
   showInteractive?: boolean;
 }

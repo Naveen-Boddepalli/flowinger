@@ -7,6 +7,7 @@ import type {
   ReactNode,
   SVGAttributes,
 } from 'react';
+import type { Padding } from './geometry.ts';
 import type { PassThroughHtml } from './attributes.ts';
 import type { NodeConnection } from './connections.ts';
 import type { Feature } from './features.ts';
@@ -409,10 +410,12 @@ export interface SetViewportOptions {
 
 export interface FitViewOptions extends SetViewportOptions {
   /**
-   * As in React Flow, a ratio: `0.1` leaves a tenth of the diagram's size around
-   * it. Left out, the margin is a fixed 40 px.
+   * The margin round what is fitted. A number is a ratio, as in React Flow 12: `0.1` leaves a tenth of the
+   * diagram's size around it (2.0 reads it as pixels, as React Flow 13 does). `'20px'`, `'5%'` of the pane, and
+   * per side (`{ top: '10px', x: '5%' }`) are React Flow's, and mean the same in 2.0. Left out, the margin is a
+   * fixed 40 px.
    */
-  padding?: number;
+  padding?: Padding;
   /** Fit only these nodes. */
   nodes?: { id: string }[];
   includeHiddenNodes?: boolean;

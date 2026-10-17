@@ -84,7 +84,14 @@ export {
 export { useKeyPress, type UseKeyPressOptions } from './useKeyPress.ts';
 
 // Geometry
-export { getNodesBounds, getViewportForBounds, isRectIntersecting, viewportForBounds } from './geometry.ts';
+export {
+  getNodesBounds,
+  getViewportForBounds,
+  isRectIntersecting,
+  viewportForBounds,
+  type Padding,
+  type PaddingWithUnit,
+} from './geometry.ts';
 
 // Handles & Ports
 export { Handle } from './Handle.tsx';
