@@ -184,6 +184,7 @@
     "site:build": "node scripts/build-site.mjs",
     "check:examples": "node scripts/check-examples.mjs",
     "check:registry": "node scripts/check-registry.mjs",
+    "check:toolchains": "node scripts/check-toolchains.mjs",
     "e2e": "playwright test"
   },
   "peerDependencies": {
