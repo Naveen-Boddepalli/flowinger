@@ -65,10 +65,20 @@ jobs:
 
       - name: Publish
         run: |
-          # A prerelease (v0.5.0-rc.1) goes to the `next` tag, so `npm install flowinger` stays on a release.
+          # A prerelease (v2.0.0-rc.1) goes to the `next` tag, so `npm install flowinger` stays on a release. A release
+          # of an older major than `latest` — a 1.x fix after 2.0, from the v1 branch — goes to that major's own tag
+          # (`v1`), so it does not move `latest` back.
+          version="${GITHUB_REF_NAME#v}"
+          latest="$(npm view flowinger dist-tags.latest 2>/dev/null || echo 0.0.0)"
           case "${GITHUB_REF_NAME}" in
             *-*) npm publish --access public --tag next ;;
-            *)   npm publish --access public ;;
+            *)
+              if [ "${version%%.*}" -lt "${latest%%.*}" ]; then
+                npm publish --access public --tag "v${version%%.*}"
+              else
+                npm publish --access public
+              fi
+              ;;
           esac
 
   release:
@@ -78,6 +88,8 @@ jobs:
       contents: write # create the GitHub release
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the tags, to tell whether this is the newest major
       - name: Release notes from the changelog
         run: |
           version="${GITHUB_REF_NAME#v}"
@@ -96,6 +108,12 @@ jobs:
         run: |
           flags=""
           case "${GITHUB_REF_NAME}" in *-*) flags="--prerelease" ;; esac
+          # A fix to an older major is not the latest release on GitHub either.
+          version="${GITHUB_REF_NAME#v}"
+          newest="$(git tag --list 'v*' --sort=-version:refname | grep -v -- - | head -1)"
+          if [ -n "$newest" ] && [ "${version%%.*}" -lt "$(echo "${newest#v}" | cut -d. -f1)" ]; then
+            flags="${flags} --latest=false"
+          fi
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file notes.md ${flags}
           else
