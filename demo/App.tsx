@@ -353,6 +353,8 @@ export function App() {
             onNodeDoubleClick={(_e, n) => { setLastEvent(`double-clicked ${n.id}`); }}
             onNodeContextMenu={(e, n) => { e.preventDefault(); setLastEvent(`right-clicked ${n.id}`); }}
             onPaneContextMenu={(e) => { e.preventDefault(); setLastEvent('right-clicked the pane'); }}
+            // On a phone the options cover the graph: a tap on the bare canvas puts them away.
+            onPaneClick={() => { if (!window.matchMedia('(min-width: 768px)').matches) setOptionsOpen(false); }}
             keyboardNavigation
             ariaLabel="Query plan"
             minZoom={0.05}

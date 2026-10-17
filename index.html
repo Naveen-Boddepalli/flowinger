@@ -24,6 +24,11 @@
     <link rel="alternate" type="text/plain" title="llms.txt" href="llms.txt" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+      /* The screen as it can be seen: a phone's 100vh reaches under its browser's toolbar, hiding the controls. */
+      body {
+        height: 100vh;
+        height: 100dvh;
+      }
       @keyframes ql-flow-dash {
         from {
           stroke-dashoffset: 24;
@@ -38,7 +43,7 @@
       }
     </style>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased overflow-hidden m-0 p-0 w-screen h-screen">
+  <body class="bg-slate-950 text-slate-100 antialiased overflow-hidden m-0 p-0 w-screen">
     <div id="root" class="w-full h-full"></div>
     <script type="module" src="/demo/main.tsx"></script>
   </body>
