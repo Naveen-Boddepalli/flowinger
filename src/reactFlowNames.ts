@@ -50,6 +50,7 @@ import type {
   EdgeProps,
   FlowingerInstance,
   FlowingerProps,
+  HandleType,
   InternalNode,
   Node,
   NodeChange,
@@ -176,6 +177,17 @@ export type OnError = (id: string, message: string) => void;
 export type OnSelectionDrag = (event: MouseEvent | TouchEvent, nodes: Node[]) => void;
 export type SelectionDragHandler<N extends Node = Node> = (event: ReactMouseEvent, nodes: N[]) => void;
 export type SelectionRect = Rect & { startX: number; startY: number };
+/** React Flow 13's `HandleBounds`: one handle, where it is on its node and how big. */
+export type HandleBounds = {
+  id?: string | null;
+  nodeId: string;
+  x: number;
+  y: number;
+  position: Position;
+  type: HandleType;
+  width: number;
+  height: number;
+};
 export type UnselectNodesAndEdgesParams<N extends Node = Node, E extends Edge = Edge> = { nodes?: N[]; edges?: E[] };
 export type UseNodesInitializedOptions = { includeHiddenNodes?: boolean };
 export type ViewportHelperFunctionOptions = { duration?: number };

@@ -48,6 +48,27 @@ export {
   useInternalNode,
   type FlowingerStoreApi,
 } from './context.ts';
+// React Flow 13's store hooks, read from flowinger's one store.
+export {
+  useConnectionStore,
+  useEdge,
+  useEdgesStore,
+  useInternalNodes,
+  useNode,
+  useNodesStore,
+  useOptionsStore,
+  useReactFlowStoreApi,
+  useSelectionStore,
+  useShallow,
+  useViewportStore,
+  type ConnectionStore,
+  type EdgesStore,
+  type NodesStore,
+  type ReactFlowStoreApi,
+  type ReadonlyStoreApi,
+  type SelectionStore,
+  type ViewportStore,
+} from './storeHooks.ts';
 
 // Controlled flows
 export {
@@ -225,6 +246,7 @@ export type {
   FitViewParams,
   GeneralHelpers,
   GetMiniMapNodeAttribute,
+  HandleBounds,
   HandleConnection,
   IsValidConnection,
   KeyCode,

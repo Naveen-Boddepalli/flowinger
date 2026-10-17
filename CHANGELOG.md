@@ -28,6 +28,13 @@ The design notes behind each release — what was measured, what was tried and d
   `viewportForBounds`. They mean the same in React Flow 12 and 13, and in flowinger 1.x and 2.0, which reads a
   bare number as pixels where 1.x reads it as a ratio. Checked against React Flow's own `getViewportForBounds`.
   `Padding` and `PaddingWithUnit` are exported.
+- **React Flow 13's store hooks**, read from flowinger's one store, so code written for React Flow 13 runs here:
+  `useOptionsStore` (what `useStore` reads), `useViewportStore` (with `paneDragging`), `useNodesStore` (with
+  `nodeLookup` and `parentLookup`), `useEdgesStore` (with `edgeLookup`, and `connectionLookup` keyed as React
+  Flow keys it — checked against React Flow's own), `useConnectionStore` (with `connectionClickStartHandle`),
+  `useSelectionStore` (`userSelectionRect`, with `boxSelectFeature`), `useReactFlowStoreApi`, and `useNode`,
+  `useEdge`, `useInternalNodes` and `useShallow`. Read only, like `useStoreApi`. Their types are exported, and
+  `HandleBounds`. `useStore` and `useStoreApi` stay as they are.
 
 ### Deprecated
 

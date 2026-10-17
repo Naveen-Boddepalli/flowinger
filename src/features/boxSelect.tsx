@@ -16,14 +16,15 @@ export interface BoxSelectApi {
    * of it would select things it does not visibly contain.
    */
   boxSelect: (
-    rect: Rect,
+    /** In pane pixels; `startX` and `startY`, where given, are the corner the box was dragged from. */
+    rect: Rect & { startX?: number; startY?: number },
     mode: SelectionMode,
     base: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> } | null,
   ) => void;
   endBoxSelect: () => void;
   /** Runs `fn` each time a box selection ends (a press that began one and was let go). Returns its cleanup. */
   onBoxEnd: (fn: () => void) => () => void;
-  getSelectionRect: () => Rect | null;
+  getSelectionRect: () => (Rect & { startX?: number; startY?: number }) | null;
   subscribeSelectionRect: (listener: () => void) => () => void;
 }
 
@@ -78,7 +79,7 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
   install(ctx) {
     const { isSelectable, setSelection } = ctx.api(selectionFeature);
     /** The box being dragged, in pane pixels — null when there is none. */
-    let selectionRect: Rect | null = null;
+    let selectionRect: (Rect & { startX?: number; startY?: number }) | null = null;
     const listeners = new Set<() => void>();
     const emit = () => {
       for (const listener of listeners) listener();
@@ -189,6 +190,8 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
               y: Math.min(b.startY, b.pointer.y) - b.top,
               width: Math.abs(b.pointer.x - b.startX),
               height: Math.abs(b.pointer.y - b.startY),
+              startX: b.startX - b.left,
+              startY: b.startY - b.top,
             },
             selectionMode,
             b.base,

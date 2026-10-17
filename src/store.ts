@@ -426,14 +426,19 @@ export function createFlowingerStore(
   };
   const beginGesture = (event: MouseEvent | TouchEvent, quietMs?: number) => {
     clearTimeout(gesture?.quiet);
+    const began = gesture === null;
     gesture = { event, ...(quietMs === undefined ? {} : { quiet: setTimeout(endGesture, quietMs) }) };
+    // Whether the pane is being dragged is state (React Flow 13's `paneDragging`).
+    if (began) emit(stateListeners);
   };
   /** `event` — what let go — is what the end reports, when given. */
   function endGesture(event?: MouseEvent | TouchEvent) {
     clearTimeout(gesture?.quiet);
     if (gesture && event) gesture.event = event;
     if (!tween) endMove();
+    const ended = gesture !== null;
     gesture = null;
+    if (ended) emit(stateListeners);
   }
 
   const emit = (listeners: Iterable<Listener>) => {
@@ -1394,6 +1399,10 @@ export function createFlowingerStore(
     instance,
     use,
     api,
+    /** An installed feature's methods by its name — `undefined` where it is not installed, rather than an error. */
+    apiOf: (name: string): unknown => installed.get(name),
+    /** Whether a pointer or a finger is moving the view (not the wheel, which has no drag). */
+    isPaneDragging: () => gesture !== null && gesture.event.type !== 'wheel',
     attach,
     detach,
     zoomAt,
