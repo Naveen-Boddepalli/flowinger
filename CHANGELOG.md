@@ -10,6 +10,26 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+Flowinger 2.0, following React Flow 13 — [Upgrading to 2.0](docs/upgrading.md).
+
+### Changed
+
+- **Breaking: a bare number as a fit's margin is pixels**, as in React Flow 13: `padding: 20` leaves 20 px a side,
+  in `fitViewOptions`, `fitView()`, `fitBounds()`, `getViewportForBounds()` and `viewportForBounds()`. In 1.x it was
+  a ratio of the fitted size, as in React Flow 12, so `padding: 0.1` now leaves none. A margin with a unit (`'5%'`,
+  `'20px'`, per side) means what it did. 1.1 said so in development.
+- **Breaking: `<ReactFlow>` fits with React Flow 13's margin, `'5%'` a side** (it was 0.1 of the view, about 4.5%),
+  wherever a fit names none: `fitView`, the instance's `fitView()`, `Controls`' button. `reactFlowDefaults` is React
+  Flow 13's (`fitViewOptions: { padding: '5%' }`); `reactFlow12Defaults` keeps 1.x's margin.
+  `<FlowingerCanvas>` and `<FlowingerCore>` keep their 40 px.
+- **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
+  run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
+  declarations.
+
+### Removed
+
+- The two development warnings about margins that 1.1 gave: what they warned of has happened.
+
 ## [1.1.0] - 2026-10-17
 
 **The bridge to 2.0**, which follows React Flow 13. Everything React Flow 13.0.0-next.0 adds is here, without breaking

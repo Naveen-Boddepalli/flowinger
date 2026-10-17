@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { applyEdgeChanges, applyNodeChanges } from './changes.ts';
 import { ViewDefaultsContext } from './context.ts';
 import { FlowingerCore } from './FlowingerCore.tsx';
 import { allFeatures } from './features/index.ts';
-import { warnAboutReactFlowMargin } from './devWarnings.ts';
-import { REACT_FLOW_12_MARGIN, reactFlowDefaults } from './reactFlowDefaults.ts';
+import { REACT_FLOW_MARGIN, reactFlowDefaults } from './reactFlowDefaults.ts';
 import type { ViewDefaults } from './store.ts';
 import type { Edge, EdgeChange, FlowingerProps, Node, NodeChange } from './types.ts';
 
@@ -54,7 +53,7 @@ export function FlowingerCanvas(props: FlowingerProps) {
 }
 
 /** React Flow's defaults for what is not a prop: a fit's margin, an animated move's path, `Controls`' lock. */
-const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: REACT_FLOW_12_MARGIN, interpolate: 'smooth', showInteractive: true };
+const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: REACT_FLOW_MARGIN, interpolate: 'smooth', showInteractive: true };
 
 /**
  * `<FlowingerCanvas>` under React Flow's name, with React Flow's defaults: `reactFlowDefaults` under the props it is
@@ -62,11 +61,6 @@ const REACT_FLOW_VIEW: ViewDefaults = { fitViewPadding: REACT_FLOW_12_MARGIN, in
  * its behaviour by changing an import, and `<FlowingerCanvas>` keeps flowinger's (interaction off until asked for).
  */
 export function ReactFlow(props: FlowingerProps) {
-  // What a canvas is given when it mounts is what it is judged by, as for the other warnings.
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') warnAboutReactFlowMargin(props);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   return (
     <ViewDefaultsContext.Provider value={REACT_FLOW_VIEW}>
       <FlowingerCanvas {...withReactFlowDefaults(props)} />

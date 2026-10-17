@@ -1,4 +1,3 @@
-import { warnAboutNumberMargin } from './devWarnings.ts';
 import type { Node, NodeOrigin, Rect, TranslateExtent, Viewport, XYPosition } from './types.ts';
 
 export interface Size {
@@ -98,12 +97,11 @@ interface Sides {
 }
 
 /**
- * One side's margin in whole pixels, across a pane `size` pixels long. `'20px'` and `'5%'` are as in React Flow.
- * A number is a ratio, as in React Flow 12 — `0.1` leaves a tenth of the bounds' size, split between the two
- * sides; React Flow 13, and flowinger 2.0, read it as pixels.
+ * One side's margin in whole pixels, across a pane `size` pixels long: a number, or `'20px'`, is pixels, and `'5%'`
+ * is of the pane — as in React Flow 13. (In 1.x and React Flow 12 a bare number was a ratio of the fitted size.)
  */
 function sidePadding(padding: PaddingWithUnit, size: number): number {
-  if (typeof padding === 'number') return Math.floor((size - size / (1 + padding)) * 0.5);
+  if (typeof padding === 'number') return Math.floor(padding);
   const value = parseFloat(padding);
   if (Number.isNaN(value)) return 0;
   if (padding.endsWith('%')) return Math.floor(size * value * 0.01);
@@ -126,10 +124,8 @@ function sidesOf(padding: Padding, width: number, height: number): Sides {
 
 /**
  * The viewport that shows `bounds` in a `width` × `height` pane, centred: `getViewportForBounds`, with flowinger's
- * margin — a fixed 40 px on every side — where none is given, and never dividing by a zero-sized box.
- *
- * A number is a ratio, as in React Flow 12: `0.1` leaves a tenth of the bounds' size around them. `'20px'`, `'5%'`
- * and per-side margins are React Flow's, and mean the same in 2.0.
+ * margin — 40 px on every side — where none is given, and never dividing by a zero-sized box. A margin is as React
+ * Flow 13 writes it: pixels (`20`, `'20px'`), `'5%'` of the pane, or per side.
  */
 export function viewportForBounds(
   bounds: Rect,
@@ -144,10 +140,9 @@ export function viewportForBounds(
 }
 
 /**
- * React Flow's `getViewportForBounds`, to the pixel: the margin in whole pixels on each side, and the view
- * nudged where the fit leaves less than that. A number is a ratio here, as in React Flow 12 (`0.1` leaves a tenth
- * around the bounds); `'20px'`, `'5%'` and per-side margins are as in React Flow. With none there is no margin at
- * all (`viewportForBounds` leaves 40 px).
+ * React Flow 13's `getViewportForBounds`, to the pixel: the margin in whole pixels on each side — a number or
+ * `'20px'` is pixels, `'5%'` is of the pane, and each side may differ — and the view nudged where the fit leaves
+ * less than that. With none there is no margin at all (`viewportForBounds` leaves 40 px).
  */
 export function getViewportForBounds(
   bounds: Rect,
@@ -157,7 +152,6 @@ export function getViewportForBounds(
   maxZoom: number,
   padding: Padding = 0,
 ): Viewport {
-  if (process.env.NODE_ENV !== 'production') warnAboutNumberMargin(padding);
   const p = sidesOf(padding, width, height);
   const raw = Math.min((width - p.left - p.right) / bounds.width, (height - p.top - p.bottom) / bounds.height);
   const zoom = Math.max(minZoom, Math.min(maxZoom, raw));

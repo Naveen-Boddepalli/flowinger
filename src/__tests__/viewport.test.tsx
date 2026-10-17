@@ -503,10 +503,10 @@ describe('getViewportForBounds', () => {
     [1920, 400],
   ];
 
-  it('is React Flow\'s own, for the padding they share: same view, over a grid of inputs', () => {
+  it("is React Flow's own for a margin in pixels given as a number: same view, over a grid of inputs", () => {
     for (const bounds of boundsList) {
       for (const [w, h] of panes) {
-        for (const padding of [0, 0.1, 0.25, 0.5]) {
+        for (const padding of [0, 10, 25.5, 50, 120]) {
           const ours = getViewportForBounds(bounds, w, h, 0.05, 2, padding);
           const theirs = reactFlowsFit(bounds, w, h, 0.05, 2, padding);
           expect(ours.zoom, `zoom ${JSON.stringify({ bounds, w, h, padding })}`).toBeCloseTo(theirs.zoom, 9);
@@ -519,8 +519,8 @@ describe('getViewportForBounds', () => {
 
   it('is React Flow\'s exactly on a case where left and right underflow by different amounts', () => {
     const bounds = { x: 41, y: 10, width: 85, height: 80 };
-    const ours = getViewportForBounds(bounds, 200, 600, 0.05, 2, 0.33);
-    const theirs = reactFlowsFit(bounds, 200, 600, 0.05, 2, 0.33);
+    const ours = getViewportForBounds(bounds, 200, 600, 0.05, 2, 33);
+    const theirs = reactFlowsFit(bounds, 200, 600, 0.05, 2, 33);
     expect(ours.x).toBeCloseTo(theirs.x, 9);
     expect(ours.y).toBeCloseTo(theirs.y, 9);
     expect(ours.zoom).toBeCloseTo(theirs.zoom, 9);
@@ -541,7 +541,7 @@ describe('getViewportForBounds', () => {
     expect(reactFlowsFit(bounds, 800, 600, 0.05, 2, 0).zoom).toBe(1);
   });
 
-  // The forms of a margin that mean the same in React Flow 12 and 13 — and in flowinger 1.x and 2.0.
+  // The forms of a margin that meant the same in React Flow 12 and 13 — and in flowinger 1.x and 2.0.
   const unitPaddings: Padding[] = [
     '20px',
     '5%',
@@ -550,7 +550,7 @@ describe('getViewportForBounds', () => {
     { top: '10px', bottom: '30px', x: '5%' },
     { left: '50px', right: '2%', y: '25px' },
     { top: '40px' },
-    { x: 0.1, y: '15px' },
+    { x: 12, y: '15px' },
   ];
 
   it("is React Flow's own for margins in pixels, in percent and per side", () => {

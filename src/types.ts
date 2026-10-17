@@ -410,10 +410,9 @@ export interface SetViewportOptions {
 
 export interface FitViewOptions extends SetViewportOptions {
   /**
-   * The margin round what is fitted. A number is a ratio, as in React Flow 12: `0.1` leaves a tenth of the
-   * diagram's size around it (2.0 reads it as pixels, as React Flow 13 does). `'20px'`, `'5%'` of the pane, and
-   * per side (`{ top: '10px', x: '5%' }`) are React Flow's, and mean the same in 2.0. Left out, the margin is a
-   * fixed 40 px.
+   * The margin round what is fitted, as React Flow 13 writes it: pixels (`20`, `'20px'`), `'5%'` of the pane, or per
+   * side (`{ top: '10px', x: '5%' }`). Left out, it is 40 px on a `FlowingerCanvas` and `'5%'` on a `ReactFlow`.
+   * (In 1.x a bare number was a ratio of the fitted size, as in React Flow 12.)
    */
   padding?: Padding;
   /** Fit only these nodes. */

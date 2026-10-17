@@ -202,7 +202,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.1",
-    "@xyflow/react": "12.11.6",
+    "@xyflow/react": "13.0.0-next.0",
     "jsdom": "^30.0.1",
     "publint": "^0.3.25",
     "react": "^19.2.8",

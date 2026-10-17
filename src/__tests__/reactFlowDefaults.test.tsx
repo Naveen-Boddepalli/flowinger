@@ -1,8 +1,9 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { Controls, FlowingerCanvas, ReactFlow, reactFlowDefaults, type Node } from '../index.ts';
+import { Controls, FlowingerCanvas, ReactFlow, getViewportForBounds, reactFlow12Defaults, reactFlowDefaults, type Node } from '../index.ts';
+import { REACT_FLOW_12_MARGIN, REACT_FLOW_MARGIN } from '../reactFlowDefaults.ts';
 import { DEFAULT_ENGINE_OPTIONS, createFlowingerStore } from '../store.ts';
 
 const nodes = (): Node[] => [{ id: 'a', position: { x: 0, y: 0 }, data: { label: 'A' } }];
@@ -44,8 +45,12 @@ const SAID_BY_REACT_FLOW: Record<keyof typeof reactFlowDefaults, [said: string, 
   multiSelectionKeyCode: ["multiSelectionKeyCode = isMacOs() ? 'Meta' : 'Control'", 'Control'],
   zoomActivationKeyCode: ["zoomActivationKeyCode = isMacOs() ? 'Meta' : 'Control'", 'Control'],
   panActivationKeyCode: ["panActivationKeyCode = 'Space'", 'Space'],
-  fitViewOptions: ['fitViewOptions?.padding ?? 0.1', { padding: 0.1 }],
+  // React Flow 13's margin is a constant of its system package, read below.
+  fitViewOptions: ['fitViewOptions?.padding ?? defaultFitViewPadding', { padding: '5%' }],
 };
+
+// Where React Flow keeps its fit margin: `defaultFitViewPadding`, in the system package installed beside it.
+const systemSource = reactFlowCode(join(realpathSync(resolve('node_modules/@xyflow/react')), '..', 'system'));
 
 describe('reactFlowDefaults', () => {
   it("is React Flow's own default for each prop, as its source says", () => {
@@ -54,6 +59,8 @@ describe('reactFlowDefaults', () => {
       expect(reactFlowDefaults[name as keyof typeof reactFlowDefaults], name).toEqual(value);
     }
     expect(Object.keys(reactFlowDefaults).sort()).toEqual(Object.keys(SAID_BY_REACT_FLOW).sort());
+    expect(systemSource).toMatch(/defaultFitViewPadding = ["']5%["']/);
+    expect(REACT_FLOW_MARGIN).toBe('5%');
   });
 
   it('turns on what a React Flow canvas has on, spread under a FlowingerCanvas', () => {
@@ -132,11 +139,11 @@ describe('<ReactFlow>', () => {
 });
 
 describe("the view defaults <ReactFlow> gives its store", () => {
-  /** A store on an 800 × 600 pane with one 100 × 40 node at the origin. */
+  /** A store on a 1000 × 600 pane with one 100 × 40 node at the origin. */
   const sized = () => {
     const store = createFlowingerStore();
     const pane = document.createElement('div');
-    Object.defineProperty(pane, 'clientWidth', { value: 800 });
+    Object.defineProperty(pane, 'clientWidth', { value: 1000 });
     Object.defineProperty(pane, 'clientHeight', { value: 600 });
     store.attach(document.createElement('div'), pane);
     store.setOptions(DEFAULT_ENGINE_OPTIONS);
@@ -144,11 +151,11 @@ describe("the view defaults <ReactFlow> gives its store", () => {
     return store;
   };
 
-  it("fit with React Flow's 0.1 margin when a fit names none, and flowinger's 40 px otherwise", async () => {
+  it("fit with React Flow 13's '5%' margin when a fit names none, and flowinger's 40 px otherwise", async () => {
     const flowinger = sized();
     await flowinger.instance.fitView({ duration: 0 });
     const reactFlow = sized();
-    reactFlow.setViewDefaults({ fitViewPadding: 0.1 });
+    reactFlow.setViewDefaults({ fitViewPadding: REACT_FLOW_MARGIN });
     await reactFlow.instance.fitView({ duration: 0 });
     // A 100-wide node in 800 px fits at the zoom limit either way; a node far wider than the pane is decided by
     // the margin.
@@ -156,15 +163,43 @@ describe("the view defaults <ReactFlow> gives its store", () => {
       store.setNodes([{ id: 'a', position: { x: 0, y: 0 }, width: 4000, height: 40, data: {} }]);
       return store.instance.fitView({ duration: 0 }).then(() => store.instance.getViewport().zoom);
     };
-    // 40 px a side: (800 - 80) / 4000 = 0.18. A 0.1 ratio, React Flow's formula: 800 / (4000 × 1.1) ≈ 0.1818.
-    expect(await big(flowinger)).toBeCloseTo(0.18, 3);
-    expect(await big(reactFlow)).toBeCloseTo(800 / (4000 * 1.1), 3);
+    // 40 px a side: (1000 - 80) / 4000 = 0.23. 5% of 1000 a side, 50 px: (1000 - 100) / 4000 = 0.225.
+    expect(await big(flowinger)).toBeCloseTo(0.23, 9);
+    expect(await big(reactFlow)).toBeCloseTo(0.225, 9);
   });
 
   it('are forgotten by a canvas rendered without <ReactFlow>', () => {
     const store = sized();
-    store.setViewDefaults({ fitViewPadding: 0.1, interpolate: 'smooth', showInteractive: true });
+    store.setViewDefaults({ fitViewPadding: '5%', interpolate: 'smooth', showInteractive: true });
     store.setViewDefaults(null);
     expect(store.getViewDefaults()).toEqual({});
+  });
+});
+
+describe('reactFlow12Defaults', () => {
+  it("is reactFlowDefaults with React Flow 12's margin, written with a unit", () => {
+    const { fitViewOptions, ...rest } = reactFlow12Defaults;
+    const { fitViewOptions: thirteen, ...same } = reactFlowDefaults;
+    expect(rest).toEqual(same);
+    expect(thirteen).toEqual({ padding: '5%' });
+    expect(fitViewOptions).toEqual({ padding: REACT_FLOW_12_MARGIN });
+  });
+
+  it("gives the view React Flow 12's padding: 0.1 gave, to the pixel, on panes of every size", () => {
+    const bounds = { x: -250, y: 80, width: 900, height: 600 };
+    // React Flow 12: floor((size - size / 1.1) / 2) pixels a side — a number, which is pixels now.
+    const twelve = (size: number) => Math.floor((size - size / 1.1) * 0.5);
+    for (const [w, h] of [
+      [800, 600],
+      [1024, 768],
+      [375, 812],
+      [1920, 400],
+      [1100, 2200],
+      [333, 777],
+    ] as const) {
+      expect(getViewportForBounds(bounds, w, h, 0.05, 2, REACT_FLOW_12_MARGIN)).toEqual(
+        getViewportForBounds(bounds, w, h, 0.05, 2, { x: twelve(w), y: twelve(h) }),
+      );
+    }
   });
 });

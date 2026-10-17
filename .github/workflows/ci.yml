@@ -47,9 +47,13 @@ jobs:
         run: pnpm check:package
       # The coverage numbers in the docs come from this script, which reads TypeScript's in-process API — gone
       # in TypeScript 7, so it uses a 6.x alias. It broke once without a test failing; now it is run.
-      - name: The React Flow coverage audit still runs
+      # Against the declarations React Flow's `exports` names (13's package still carries an older build under
+      # dist/esm/), and --strict: a React Flow name flowinger lacks or ignores fails the build.
+      - name: Every React Flow name is here and does something
         if: matrix.react == '19'
-        run: node scripts/audit-react-flow.mjs node_modules/@xyflow/react/dist/esm/index.d.ts
+        run: |
+          types=$(node -p "const p = require('@xyflow/react/package.json'), e = p.exports['.']; e.types ?? e.node?.types ?? p.types")
+          node scripts/audit-react-flow.mjs "node_modules/@xyflow/react/$types" --strict
 
   demo:
     # The demo and the docs site are built from source (and docs/), so a change that breaks either should fail
