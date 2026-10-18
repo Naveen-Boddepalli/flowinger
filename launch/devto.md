@@ -6,7 +6,7 @@ tags: react, javascript, webdev, opensource
 cover_image: https://raw.githubusercontent.com/Naveen-Boddepalli/flowinger/main/docs/assets/demo.png
 ---
 
-[QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) draws SQL query plans: scans, joins and filters as
+[QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) draws SQL query plans: scans, joins and filters as
 boxes, joined by arrows. It used [React Flow](https://reactflow.dev), which is excellent — and which was also
 most of the page's JavaScript. The diagram chunk was **59.1 kB gzipped**, plus a stylesheet, for a view that
 mostly *shows* a graph.
@@ -67,7 +67,7 @@ import { FlowingerCore, dragFeature, connectFeature } from 'flowinger';
 />
 ```
 
-`FlowingerCanvas` (alias `ReactFlow`) includes every feature, at about 38 kB. A read-only viewer like
+`FlowingerCanvas` and `<ReactFlow>` include every feature, at about 38 kB. A read-only viewer like
 QueryLens's uses the core and pays for nothing it doesn't do.
 
 **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Pan and zoom are plain pointer and
@@ -116,7 +116,7 @@ Small and fast is easy if you skip the hard parts. The tests use **React Flow as
 behaviour, the expected answer is what React Flow produces for the same input. There are 1,179 unit tests; a real-browser suite of 41 tests run in Chromium, Firefox and WebKit, covering
 dragging, connecting, wheel zoom about the pointer, export and real multi-touch (pinches, and a finger near a
 handle); and CI installs the *packed* package and builds nine example apps against it — so a broken export map
-fails a pull request, not your build. Before 1.0 shipped it was also tried by hand on a real phone and with
+fails a pull request, not your build. After 1.0 shipped it was also tried by hand on a real phone and with
 VoiceOver; what they found is fixed in 1.0.1.
 
 ## The "Pro" features are free

@@ -1,6 +1,6 @@
 # Migrating from React Flow
 
-Flowinger follows React Flow's API for the part of it that apps like [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)
+Flowinger follows React Flow's API for the part of it that apps like [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev)
 use — a viewer of trees and plans, with some editing. It is **not a drop-in for all of React Flow**, so this
 is a checklist, not a promise. The compiler will find most of what is missing; this page is for the things it
 will not: defaults that differ, and behaviour that changes without an error.

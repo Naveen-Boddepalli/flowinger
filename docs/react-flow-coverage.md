@@ -5,7 +5,7 @@
 Flowinger keeps React Flow's shape and names — `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`,
 `Handle`, `Position`, `Background`, `MarkerType`, `useNodesState`, `applyNodeChanges`, `addEdge`, the `Node` /
 `Edge` / `NodeProps` types — and the `react-flow__*` class names on the elements it draws. It began as the part of the
-API an app like [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) uses (which it replaced, with identical
+API an app like [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) uses (which it replaced, with identical
 geometry and its whole end-to-end suite passing), and has since grown to name all of the rest.
 
 **Naming something is not the same as doing it**, and this page counts the two apart.

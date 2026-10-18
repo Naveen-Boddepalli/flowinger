@@ -3,7 +3,7 @@
 [← Documentation](README.md) · The canvas is a small core plus opt-in features, so an app that only shows a graph does not carry the code for editing one.
 
 
-`FlowingerCanvas` (alias `ReactFlow`) does everything documented in these pages, and is what most apps want. An app that only
+`FlowingerCanvas` (and `<ReactFlow>`, the same canvas with React Flow's defaults) does everything documented in these pages, and is what most apps want. An app that only
 *shows* a graph — pan, zoom, nodes, edges, handles, `fitView` — needs far less, so the canvas is a small core
 plus **features**, and you import the ones you use:
 

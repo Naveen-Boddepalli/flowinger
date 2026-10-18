@@ -32,7 +32,7 @@
 </p>
 
 > **Status:** `1.1` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
-> for `2.0`. It is what [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) draws its diagrams with, and
+> for `2.0`. It is what [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) draws its diagrams with, and
 > its API follows React Flow's — 12's, and 13's names as well; [Upgrading](docs/upgrading.md) says what 2.0, which
 > follows React Flow 13, will change, and what 1.0 did. These docs describe `main`; what is newer than the latest npm
 > release is listed under *Unreleased* there.
@@ -66,7 +66,7 @@
 |---|---|---|
 | Runtime dependencies | **0** | 3 direct (`@xyflow/system`, `zustand`, `classcat`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens)) | **20.2 kB** gzipped | 59.1 kB gzipped |
+| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev)) | **20.2 kB** gzipped | 59.1 kB gzipped |
 | Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.2 s |
 | Mount 10,000 nodes, culled | **53 ms** | 559 ms |
 | Pan / zoom 10,000 nodes, no culling | **8.1 / 9.4 ms** a frame | 32.7 / 32.4 ms a frame |
