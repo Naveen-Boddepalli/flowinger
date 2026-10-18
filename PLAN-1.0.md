@@ -169,10 +169,11 @@ released as 1.0.1. Still not tried: NVDA on Windows.
 **QueryLens on 1.0.1 (2026-10-17)**, in production from its commit 7946cda, up from 0.3.0: nothing broke. The
 upgrade guide was accurate. QueryLens renders `<FlowingerCore>`, so D1 did not reach it; for D3 it lists each
 node's four handles in `handles`, so the first paint draws the same sides. Its 2,783 unit tests and 609 Playwright
-tests pass, edges meet the same handles as on 0.3.0, and the development build logs no warnings. Its diagram chunk
-(flowinger with d3-hierarchy) grew from 19.9 to 22.9 kB gzipped since 0.3.0: the core's growth over the 0.x
-releases, with the features it does not use still left out. This is the consumer check, done in production rather
-than as a week on the candidate.
+tests pass, edges meet the same handles as on 0.3.0, and the development build logs no warnings. This is the
+consumer check, done in production rather than as a week on the candidate. Its report that the diagram chunk grew
+from 19.9 to 22.9 kB was measured with React's own modules inside that chunk, pulled in by QueryLens's chunk
+configuration; with that fixed (QueryLens 259b549) the chunk is 19.0 kB on 1.0.1. Measured the same way on
+2026-10-18, in one build of QueryLens: React Flow 12.11.6 59.1 kB, flowinger 1.0.1 19.0, flowinger 1.1.0 20.2.
 
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 

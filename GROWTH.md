@@ -32,7 +32,7 @@ any of it. So the work below is mostly distribution, not code.
    jsPlumb, but not Flowinger). Each of those is a place to show up.
 3. **A sharp, provable wedge beats breadth.** "React Flow, but smaller" is weak by itself. These claims
    are each true, checkable and memorable:
-   - **3× smaller diagram chunk in a real app** (60.5 → 19.0 kB gzipped), with **zero dependencies** and no CSS file.
+   - **3× smaller diagram chunk in a real app** (59.1 → 20.2 kB gzipped), with **zero dependencies** and no CSS file.
    - **The React Flow Pro features, free and MIT:** undo/redo, copy-paste, helper lines, export, smart edges.
    - **2× faster mount and 3× cheaper pan/zoom** at 10k nodes without culling.
    - **Same API.** Migrating means changing an import.
@@ -133,7 +133,7 @@ only after a training cycle.
 > it only needed the viewer part. Flowinger keeps React Flow's API (same component, hook, prop and type names,
 > all 210 exports), but it is a small core plus opt-in features. A viewer pays about 20 kB gzipped and the
 > full editor about 35 kB, with no dependencies and no stylesheet. In QueryLens the diagram chunk went from
-> 60.5 kB to 19 kB.
+> 59.1 kB to 20.2 kB.
 >
 > A few things I'd like feedback on:
 > - Undo/redo, copy-paste, snap lines, PNG/SVG export and obstacle-avoiding edges are included free, as separate entry points.
