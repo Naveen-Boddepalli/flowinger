@@ -408,6 +408,25 @@ test.describe('the keyboard, as a screen reader user has it', () => {
     await expect(n).not.toHaveClass(/(^|\s)selected(\s|$)/);
   });
 
+  test('two nodes are connected from the keyboard alone: Tab into a handle, Enter, and again on another', async ({ page }) => {
+    await open(page);
+    const before = await page.locator('.react-flow__edge').count();
+    const said = page.locator('[aria-live="assertive"] > *');
+    // From node 2, Tab goes into its handles (in, prev, out, next), and only while focus is inside it.
+    await node(page, '2').focus();
+    const focusedHandle = () => page.evaluate(() => document.activeElement?.getAttribute('data-handleid') ?? null);
+    for (let i = 0; i < 4 && (await focusedHandle()) !== 'out'; i++) await page.keyboard.press('Tab');
+    expect(await focusedHandle()).toBe('out');
+    await page.keyboard.press('Enter');
+    await expect(said).toHaveText(/^Connecting from source handle out of Filter/);
+    await node(page, '4').focus();
+    await page.keyboard.press('Tab');
+    expect(await focusedHandle()).toBe('in');
+    await page.keyboard.press('Enter');
+    await expect(said).toHaveText(/^Connected source handle out of Filter.* to target handle in of Output/);
+    await expect(page.locator('.react-flow__edge')).toHaveCount(before + 1);
+  });
+
   test('the canvas is an application, so a screen reader hands it the arrow keys', async ({ page }) => {
     await open(page);
     await expect(page.locator('.react-flow')).toHaveAttribute('role', 'application');

@@ -93,6 +93,10 @@ read from React Flow's source.
 
 ## Beyond React Flow
 
+**Connecting from the keyboard.** A connectable handle is a button: Enter on one, then on another, connects them,
+and a screen reader is told each step ([accessibility](accessibility.md#connecting-from-the-keyboard)). React
+Flow's handles cannot be reached from the keyboard.
+
 Flowinger has 52 exports React Flow does not — the [feature objects](features.md) (`dragFeature`,
 `panKeyFeature`…) and what they need — and the [pro modules](pro.md): undo/redo, copy and paste, snap guides,
 export, smart routing, flowchart shapes and a collapsible tree. Those are in separate entry points

@@ -32,10 +32,34 @@ without asking.
   saying how to select, move and delete it. A selected node is marked `aria-current`.
 - **An edge** that can be focused is a `button` named "Edge from *a* to *b*" (or its own `ariaLabel`),
   `aria-pressed` while selected, with a hint.
+- **A handle** that can be connected is a `button` named "source handle out" or "target handle in" (or
+  `handle.ariaLabel`), with a hint saying how to connect from it; `aria-pressed` while a connection begun from it
+  waits for its other end. See [connecting from the keyboard](#connecting-from-the-keyboard).
 - **A move made with the arrow keys** is announced: "Moved selected node right. New position, x: 285, y: 500".
 - **The controls** are buttons named "Zoom in", "Zoom out", "Fit view" and "Toggle interactivity" (a toggle
   button). The minimap is an image named "Minimap".
-- All of the text is React Flow's, and `ariaLabelConfig` replaces any of it, with the same keys as React Flow.
+- The text is React Flow's, with the same `ariaLabelConfig` keys to replace it, except what is said about
+  connecting, which React Flow does not have: `handle.a11yDescription.default` and
+  `connection.ariaLiveMessage.start`, `.connected`, `.invalid` and `.cancelled`.
+
+## Connecting from the keyboard
+
+With `nodesConnectable`, two nodes can be connected without a pointer:
+
+1. Tab to a node, then on into its handles. A node's handles are tab stops only while focus is inside the node,
+   so Tab still goes node by node, and from a node into its own handles.
+2. Press Enter or Space on the handle to connect from. "Connecting from source handle out of Filter. Press enter
+   on another handle, or escape to cancel."
+3. Go to the other node, into its handle, and press Enter or Space. "Connected source handle out of Filter to
+   target handle in of Output." The connection goes to `onConnect`, as a dragged or clicked one does; one that
+   is not valid is said to be so, and nothing is connected.
+4. Escape — on a handle, or anywhere in the canvas — lets go of a connection begun, and so does pressing the
+   same handle again.
+
+A node is named by its `ariaLabel`, else its `data.label`, else the text it shows. This works with
+`connectOnClick` off, since a keyboard cannot drag; it does not call `onClickConnectStart` or
+`onClickConnectEnd`, which are given mouse events. `disableKeyboardA11y` turns it off. It is checked in Chromium,
+Firefox and WebKit by the browser suite, and has not yet been tried with VoiceOver.
 
 ## Checked with VoiceOver
 
@@ -54,9 +78,8 @@ takes focus out of sight. Three things did not work; they are fixed in 1.0.1, an
 ## Not done yet
 
 - **NVDA and JAWS on Windows** have not been tried.
-- **Connecting two nodes needs a pointer.** A handle cannot be reached or used from the keyboard. This is on the
-  [roadmap](https://github.com/Naveen-Boddepalli/flowinger/blob/main/ROADMAP.md).
-- **Deleting is not announced**, nor are selections, connections or changes made by the app.
+- **Connecting from the keyboard has not been tried with a screen reader** — only by the browser suite.
+- **Deleting is not announced**, nor are selections, connections made by dragging, or changes made by the app.
 - **Nodes and edges have no `aria-roledescription`**, which React Flow gives them ("node", "edge").
 
 If something here does not work with the screen reader you use, please

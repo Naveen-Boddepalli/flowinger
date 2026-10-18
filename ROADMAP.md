@@ -101,10 +101,9 @@ that compiles and does nothing apart, and there are none). What is left is bread
   a number means as a margin, and perhaps shipping ESM only) and what stays in 1.x until then.
 - **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
   release only once a `1.x` has users on more than one version.
-- **An accessibility pass** with a screen reader and the keyboard alone, written up honestly. The canvas is
-  opt-in tab stops and ARIA fields today; "good" is not yet measured.
-- **Real touch devices.** Multi-touch pinch is unit-tested in its maths and handling but has not been seen
-  on a phone. If you have one and a spare ten minutes, that is a wanted bug report.
+- **A screen reader on Windows.** VoiceOver on macOS has been checked ([accessibility](docs/accessibility.md)),
+  and connecting from the keyboard is on `main`; NVDA and JAWS have not been tried, nor has VoiceOver with
+  keyboard connecting.
 - **Mutation testing in CI.** Every guard in the project has been broken by hand and watched to fail; that
   is a job for a tool.
 

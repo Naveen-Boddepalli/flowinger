@@ -100,6 +100,7 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
   const dragging = bits.some((b) => b.dragging === true);
   const startConnection = bits.find((b) => b.startConnection)?.startConnection;
   const clickConnect = bits.find((b) => b.clickConnect)?.clickConnect;
+  const handleProps = bits.find((b) => b.handleProps)?.handleProps;
   // Above its parent by depth, unless it says otherwise — and as a feature (stacking) lifts or flattens it;
   // above all while dragged.
   const baseZ = node.zIndex ?? 1 + depth;
@@ -120,8 +121,9 @@ export const NodeWrapper = /*#__PURE__*/ memo(function NodeWrapper({
       startConnection: startConnection ?? NO_START,
       clickConnect: clickConnect ?? NO_START,
       labels: store.labels,
+      handleProps,
     }),
-    [store, node.id, connectable, startConnection, clickConnect],
+    [store, node.id, connectable, startConnection, clickConnect, handleProps],
   );
 
   // The edge layer needs the node's real size, and where its handles sit. The

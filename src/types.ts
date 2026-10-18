@@ -63,6 +63,16 @@ export interface AriaLabelConfig {
   'controls.interactive.ariaLabel'?: string;
   'minimap.ariaLabel'?: string;
   'handle.ariaLabel'?: string;
+  /** Flowinger's own, with `connectFeature`: the hint a handle reads out when it can be operated from the keyboard. */
+  'handle.a11yDescription.default'?: string;
+  /** Said as a connection begins from a handle; `from` names the handle and its node. Flowinger's own. */
+  'connection.ariaLiveMessage.start'?: (args: { from: string }) => string;
+  /** Said when a connection is made from a press on each of two handles. Flowinger's own. */
+  'connection.ariaLiveMessage.connected'?: (args: { from: string; to: string }) => string;
+  /** Said when the second handle pressed cannot be connected to the first. Flowinger's own. */
+  'connection.ariaLiveMessage.invalid'?: (args: { from: string; to: string }) => string;
+  /** Said when a connection begun by a press is let go of (Escape, or the same handle again). Flowinger's own. */
+  'connection.ariaLiveMessage.cancelled'?: string;
 }
 
 /**

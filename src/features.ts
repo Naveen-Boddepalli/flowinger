@@ -263,6 +263,11 @@ export interface NodeBits {
   startConnection?: (handle: HTMLElement, at: PointerEvent) => void;
   /** What a click on a `<Handle>` calls: the first and the second click of a connection made by clicking. */
   clickConnect?: (handle: HTMLElement, at: MouseEvent) => void;
+  /**
+   * More props for each connectable `<Handle>` inside the node, given its id and type — under the ones the canvas
+   * and the handle's own caller put there.
+   */
+  handleProps?: (id: string | null, type: HandleType) => HTMLAttributes<HTMLDivElement>;
   /** More props for the node's element, under the ones the canvas puts there itself. */
   props?: HTMLAttributes<HTMLDivElement>;
 }

@@ -225,7 +225,7 @@ merged (CONTRIBUTING's *Releasing*). Tagging is the owner's.
 - **A spatial index for culling** (a grid of node ids) — roadmap *Next* 4 (the culled first render shipped in
   0.8.0). Internal, so a minor release, given D4.
 - **Mutation testing in CI.**
-- **Connecting by keyboard.**
+- **Connecting by keyboard** — done on `main` after 1.1.0 (2026-10-19), for 1.2.
 - **A versioned docs site.**
 - New pro modules or props. Breadth after the contract, not before.
 
