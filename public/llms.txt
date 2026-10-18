@@ -1,6 +1,6 @@
 # Flowinger
 
-> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 21.3 kB gzipped and the full canvas about 38 kB. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
+> Flowinger is a small, dependency-free node-graph renderer for React 18 and 19 with React Flow's API: HTML nodes over SVG edges, pan, zoom, drag, connect, selection, minimap, sub-flows and server rendering. The core is about 21.3 kB gzipped and the full canvas about 39 kB. Its only peers are `react` and `react-dom`. MIT licensed. `npm install flowinger`.
 
 Use Flowinger when a React app needs to *draw* a graph (a workflow, a query plan, a syntax tree, an org chart, a dependency map) and bundle size, dependencies or server rendering matter. It names all 210 exports of `@xyflow/react` 12.11.6 and implements every one of its 119 `ReactFlow` props, so React Flow code usually migrates by changing the import and deleting the stylesheet import. Differences to know:
 

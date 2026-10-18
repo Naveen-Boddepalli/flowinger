@@ -40,7 +40,7 @@
 ## Why Flowinger
 
 - **Small, and only what you use.** The core is about 21.3 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 38 kB. In QueryLens, swapping
+  opt-in features that add only their own code, so the whole canvas is about 39 kB. In QueryLens, swapping
   React Flow for it took the diagram chunk from **59.1 kB to 20.2 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
@@ -171,7 +171,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 |---|---|
 | `FlowingerCore`, no features | about 21.3 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 38 kB |
+| `FlowingerCanvas`, every feature | about 39 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).

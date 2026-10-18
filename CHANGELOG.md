@@ -10,6 +10,32 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Added
+
+- **Connecting from the keyboard.** With `nodesConnectable`, a connectable handle is a button: Enter or Space on
+  one begins a connection, on another ends it (to `onConnect`, as a dragged or clicked one), and Escape — on a
+  handle or anywhere in the canvas — or the same handle again lets go. A node's handles are tab stops while focus
+  is inside the node, so Tab goes node by node and from a node into its handles. A handle is named "source handle
+  out" (or `handle.ariaLabel`) and reads a hint; each step is said in the live region (with `a11yFeature`), the
+  nodes named by their `ariaLabel`, else `data.label`, else their text. It works with `connectOnClick` off — a
+  keyboard cannot drag — and does not call `onClickConnectStart` / `onClickConnectEnd`, which are given mouse
+  events. `disableKeyboardA11y` turns it off. React Flow has no way to do this.
+- **`ariaLabelConfig` keys for it**, flowinger's own: `handle.a11yDescription.default` and
+  `connection.ariaLiveMessage.start`, `.connected`, `.invalid` and `.cancelled`.
+- **For a feature (experimental):** `NodeBits.handleProps`, props a feature adds to each connectable handle.
+
+### Changed
+
+- **Tab from a focused node with connectable handles goes into its handles** before the next node. Likely to be
+  noticed by a test that counts Tab presses.
+- **The whole canvas's size budget is 40 kB (was 39).** Connecting from the keyboard takes it from 38.10 to 38.98
+  kB gzipped. The core grows by 0.04 kB (21.30, budget 21.5): only what lets a feature add props to a handle.
+
+### Fixed
+
+- **Escape lets go of a connection begun by a click** (`connectOnClick`), and the click and its end are said in
+  the live region. 1.1's documentation said Escape did this; nothing did.
+
 ## [1.1.0] - 2026-10-17
 
 **The bridge to 2.0**, which follows React Flow 13. Everything React Flow 13.0.0-next.0 adds is here, without breaking
