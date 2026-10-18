@@ -87,24 +87,25 @@ Bundle, in a real app (QueryLens's diagram chunk, gzipped as Vite reports it; fl
 | Runtime dependencies | **0** | 3 direct, plus d3 modules through `@xyflow/system` |
 | Stylesheet to import | **none** | `@xyflow/react/dist/style.css` |
 
-Performance, at 10,000 nodes, Chrome on an Apple M4, median of 5 runs, measured on flowinger 0.7.0 (the culled mount on 0.8.0) against React Flow 12.11.6 ([full table](https://naveen-boddepalli.github.io/flowinger/docs/benchmarks/)):
+Performance, at 10,000 nodes, Chrome on an Apple M4, median of 5 runs, flowinger 1.1.0 against React Flow 12.11.6 ([full table](https://naveen-boddepalli.github.io/flowinger/docs/benchmarks/)):
 
 | | Flowinger | React Flow 12 |
 |---|---|---|
 | Mount, no culling | **0.6 s** | 1.2 s |
-| Mount, culled | **55 ms** | 594 ms |
-| Pan / zoom, no culling | **8.5 / 10.7 ms** a frame | 32.6 / 33.0 ms |
-| Pan / zoom, culled | **3.6 / 2.5 ms** a frame | 4.2 / 4.7 ms |
-| Drag, culled | **4.0 ms** a move | 4.8 ms |
-| JS heap, no culling | **169 MB** | 254 MB |
+| Mount, culled | **53 ms** | 559 ms |
+| Pan / zoom, no culling | **8.1 / 9.4 ms** a frame | 32.7 / 32.4 ms |
+| Pan / zoom, culled | **3.0 / 1.7 ms** a frame | 3.9 / 4.2 ms |
+| Drag, culled | **3.9 ms** a move | 4.6 ms |
+| JS heap, no culling | **173 MB** | 254 MB |
 
-Two honest notes on that table. First, the culled pan is a tie, not a win: across three runs on the same day
-React Flow's read between 2.6 and 4.2 ms, and Flowinger's 3.1 to 3.6. The culled zoom is about half React
+Three honest notes on that table. First, the culled pan is close to a tie: 3.0 against 3.9 here, but across
+earlier runs React Flow's has read anywhere between 2.6 and 4.2 ms. The culled zoom is about half React
 Flow's cost in every run, and a culled mount about a tenth: both libraries draw only what is in view in the end,
 but React Flow's first render draws every node first. Second, until 0.7.0 React Flow was ahead on culled pan and zoom — the benchmark
 found why (Flowinger re-checked every node on every frame of a pan), and 0.7.0 fixed it: while the view stays
 inside the region last worked out, a frame costs nothing. That is the kind of thing a published benchmark is
-for.
+for. Third, the numbers move with the machine: a first run on a busy laptop read the unculled mount at 0.87 s
+against 1.67 — slower for both, by about the same factor. The table is from a run with the machine idle.
 
 Re-run it yourself: `pnpm bench` in the repository builds one page with both libraries and measures them in a
 real browser.
