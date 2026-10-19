@@ -10,6 +10,15 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **1.2.0 made an unculled mount slower and heavier.** Connecting from the keyboard gave every node its own state,
+  callback and handlers, whether or not it had a handle to connect: at 10,000 nodes without culling a mount went
+  from 0.61 to 0.71 s and the JS heap from 173 to 198 MB (found by re-running the benchmarks for the launch). The
+  handles' keyboard props and the node's focus handlers are now one set for the whole canvas, and a node's handles
+  become tab stops by setting `tabIndex` on them, so no node redraws for it: 0.59 s and 173 MB again. Culled, and
+  everything else, was unaffected.
+
 ## [1.2.0] - 2026-10-19
 
 **Connecting from the keyboard.** Two nodes can now be connected without a pointer, and a screen reader is told
