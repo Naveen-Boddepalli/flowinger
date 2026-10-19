@@ -3,7 +3,7 @@ title: Flowinger
 head:
   - tag: title
     content: Flowinger — a small, dependency-free React Flow alternative
-description: A small, dependency-free node-graph renderer for React with React Flow’s API — about 20 kB gzipped, server rendering, and free undo/redo, export and smart edges.
+description: A small, dependency-free node-graph renderer for React with React Flow’s API — about 21 kB gzipped, server rendering, and free undo/redo, export and smart edges.
 template: splash
 hero:
   tagline: A small, dependency-free node-graph renderer for React. HTML nodes over SVG edges, with pan, zoom, drag and connect — and an API shaped like React Flow’s.
@@ -66,8 +66,8 @@ and TypeScript declarations.
 
 <CardGrid>
   <Card title="Small, and only what you use" icon="rocket">
-    The core is about 20.8 kB gzipped. Drag, connect, selection and the rest are opt-in features that add only
-    their own code, so the whole canvas is about 38 kB. [Features →](docs/features/)
+    The core is about 20.9 kB gzipped. Drag, connect, selection and the rest are opt-in features that add only
+    their own code, so the whole canvas is about 39 kB. [Features →](docs/features/)
   </Card>
   <Card title="No dependencies" icon="puzzle">
     `react` and `react-dom` are the only peers. Plain DOM, SVG and CSS variables; no stylesheet to import.
@@ -99,7 +99,7 @@ and TypeScript declarations.
 |---|---|---|
 | Runtime dependencies | **0** | 4 direct, plus `d3-zoom`, `d3-drag`, `d3-selection`… |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens), against React Flow 12) | **19.0 kB** gzipped | 60.5 kB gzipped |
+| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev), flowinger 1.1 against React Flow 12) | **20.2 kB** gzipped | 59.1 kB gzipped |
 | Mount 10,000 nodes | **0.8 s** | 1.45 s |
 | Mount 10,000 nodes, culled | **55 ms** | 541 ms |
 | Drag at 10,000 nodes, no culling | 86 ms a move | **57 ms** a move |

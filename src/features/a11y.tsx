@@ -1,6 +1,7 @@
-import { useId, useSyncExternalStore, type CSSProperties, type FocusEvent as ReactFocusEvent } from 'react';
+import { useId, useSyncExternalStore, type FocusEvent as ReactFocusEvent } from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
+import { HIDDEN } from '../hidden.ts';
 import type { AriaLabelConfig } from '../types.ts';
 
 /** What assistive technology is told, in English; `ariaLabelConfig` replaces any of it. */
@@ -13,19 +14,6 @@ const DEFAULTS = {
     `Moved selected node ${direction}. New position, x: ${String(x)}, y: ${String(y)}`,
   'edge.a11yDescription.default':
     'Press enter or space to select an edge. You can then press delete to remove it or escape to cancel.',
-};
-
-/** Read by screen readers and nothing else: on the page, and out of sight. */
-const HIDDEN: CSSProperties = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  margin: -1,
-  border: 0,
-  padding: 0,
-  overflow: 'hidden',
-  clip: 'rect(0px, 0px, 0px, 0px)',
-  clipPath: 'inset(100%)',
 };
 
 const SILENT = { text: '', count: 0 };

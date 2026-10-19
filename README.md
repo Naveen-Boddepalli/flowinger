@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
   <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="docs/features.md"><img alt="core size: about 20.8 kB gzipped" src="https://img.shields.io/badge/core-~20.8_kB_gzip-blue" /></a>
+  <a href="docs/features.md"><img alt="core size: about 20.9 kB gzipped" src="https://img.shields.io/badge/core-~20.9_kB_gzip-blue" /></a>
   <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
   <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
   <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
@@ -32,16 +32,16 @@
 </p>
 
 > **Status:** `2.0` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
-> for `3.0`. It is what [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) draws its diagrams with, and
+> for `3.0`. It is what [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) draws its diagrams with, and
 > its API follows React Flow 13's (whose release is still a pre-release), keeping every name of 12's;
 > [Upgrading](docs/upgrading.md) says what 2.0 and 1.0 changed. These docs describe `main`; what is newer than the latest npm
 > release is listed under *Unreleased* there.
 
 ## Why Flowinger
 
-- **Small, and only what you use.** The core is about 20.8 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 38 kB. In QueryLens, swapping
-  React Flow for it took the diagram chunk from **60.5 kB to 19.0 kB** gzipped.
+- **Small, and only what you use.** The core is about 20.9 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 39 kB. In QueryLens, swapping
+  React Flow for it took the diagram chunk from **59.1 kB to 20.2 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
   they are really drawn, so an edge follows a handle you moved with CSS.
@@ -66,7 +66,7 @@
 |---|---|---|
 | Runtime dependencies | **0** | 4 direct (`@xyflow/system`, `zustand`, `classcat`, `react-compiler-runtime`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://github.com/Naveen-Boddepalli/QueryLens), against React Flow 12) | **19.0 kB** gzipped | 60.5 kB gzipped |
+| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev), flowinger 1.1 against React Flow 12) | **20.2 kB** gzipped | 59.1 kB gzipped |
 | Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.8 s** | 1.45 s |
 | Mount 10,000 nodes, culled | **55 ms** | 541 ms |
 | Pan / zoom 10,000 nodes, no culling | **8.9 / 10.4 ms** a frame | 14.8 / 13.9 ms a frame |
@@ -172,9 +172,9 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
 | Build | Gzipped |
 |---|---|
-| `FlowingerCore`, no features | about 20.8 kB |
+| `FlowingerCore`, no features | about 20.9 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 38 kB |
+| `FlowingerCanvas`, every feature | about 39 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).

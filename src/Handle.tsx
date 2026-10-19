@@ -106,6 +106,7 @@ export const Handle = /*#__PURE__*/ memo(function Handle({
   return (
     <div
       aria-label={node?.labels['handle.ariaLabel']}
+      {...(connectable ? node?.handleProps?.(id ?? null, type) : undefined)}
       {...rest}
       ref={ref}
       data-handleid={id}

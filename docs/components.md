@@ -8,7 +8,7 @@
 | `FlowingerCanvas` | The whole canvas, every feature: pan by dragging, zoom with the wheel or a pinch, drag nodes if you allow it. Also `ReactFlow`. |
 | `FlowingerCore` | The same canvas with only the [features](features.md) you name — pan, zoom, nodes and edges are always there. Takes `id` and a `domAttributes` escape hatch for its own element (never an event handler, or `id`/`style`/`className`/`children`/`role`/`tabIndex`, which are the engine's own). |
 | `FlowingerProvider` | Optional: owns the state, so a toolbar *outside* the canvas can drive it. The canvas makes its own when there is none. |
-| `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. |
+| `Handle` | A connection point on a node. Edges attach to the handle they name, wherever it is drawn. With `nodesConnectable` it is a button a keyboard can connect from ([accessibility](accessibility.md#connecting-from-the-keyboard)). |
 | `BaseEdge` | How every built-in edge is drawn (a path, an optional label). A custom edge can render it and add to it. |
 | `ViewportPortal` | Draws your own elements in graph space — they pan and zoom with the diagram and sit above its nodes and edge labels. Renders nothing on the server. |
 | `EdgeLabelRenderer` | Inside a custom edge: draws HTML (a button, an input) at a point of the edge, in a layer above the edges that pans and zooms with the graph. Position it with a `translate(x, y)` from the edge's own label coordinates; give it `pointerEvents: 'all'` and a `nopan` class to make it clickable. |

@@ -36,7 +36,7 @@ crashes and regressions for six months after `2.0.0`, published to npm's `v1` ta
 - **Anything not exported** — the files under `src/`, and the store object a feature is handed.
 - **The text of development warnings**, the elements inside a node or an edge beyond the class names and test ids
   above, and exact pixels: a fix to where an edge meets a handle may move it by one.
-- **Size.** The budgets (21 kB gzipped for the core, 39 for the whole canvas) are checks in CI, not a promise; a
+- **Size.** The budgets (21 kB gzipped for the core, 40 for the whole canvas) are checks in CI, not a promise; a
   release that grows either says so in the changelog.
 - **Bugs.** Fixing one is a patch, even when something relied on it; a fix that is likely to be noticed says so in
   the changelog.

@@ -1,5 +1,6 @@
-import { createContext } from 'react';
+import { createContext, type HTMLAttributes } from 'react';
 import type { HandleRegistration } from './store.ts';
+import type { HandleType } from './types.ts';
 
 export interface NodeContextValue {
   nodeId: string;
@@ -13,6 +14,8 @@ export interface NodeContextValue {
   clickConnect: (handle: HTMLElement, at: MouseEvent) => void;
   /** The canvas's labels (`ariaLabelConfig`), read when a handle is drawn. */
   labels: Record<string, string | undefined>;
+  /** What a feature adds to a connectable handle's element (the connect feature: operating it from the keyboard). */
+  handleProps?: ((id: string | null, type: HandleType) => HTMLAttributes<HTMLDivElement>) | undefined;
 }
 
 /** Null outside a node — a `<Handle>` rendered there simply draws, and registers nowhere. */

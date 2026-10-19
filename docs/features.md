@@ -3,7 +3,7 @@
 [← Documentation](README.md) · The canvas is a small core plus opt-in features, so an app that only shows a graph does not carry the code for editing one.
 
 
-`FlowingerCanvas` (alias `ReactFlow`) does everything documented in these pages, and is what most apps want. An app that only
+`FlowingerCanvas` (and `<ReactFlow>`, the same canvas with React Flow's defaults) does everything documented in these pages, and is what most apps want. An app that only
 *shows* a graph — pan, zoom, nodes, edges, handles, `fitView` — needs far less, so the canvas is a small core
 plus **features**, and you import the ones you use:
 
@@ -17,7 +17,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 20.8 kB gzipped (38 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 20.9 kB gzipped (39 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |

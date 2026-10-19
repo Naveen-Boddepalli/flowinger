@@ -1,20 +1,24 @@
-import { useCallback, useRef, useSyncExternalStore } from 'react';
+import { type HTMLAttributes, useCallback, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import type { FlowingerEdgesProps } from '../FlowingerEdges.tsx';
 import { handleCoordinates } from '../handlePoint.ts';
+import { HIDDEN } from '../hidden.ts';
 import { pathFor } from '../paths.ts';
 import { isInteractive } from '../pointer.ts';
 import type { HandleRecord } from '../store.ts';
 import {
   ConnectionLineType,
+  type AriaLabelConfig,
   type Connection,
   type Edge,
   type FlowingerProps,
   type HandleType,
+  type Node,
   type Position,
   type XYPosition,
 } from '../types.ts';
+import type { A11yApi } from './a11y.tsx';
 import { autoPanFeature } from './autoPan.ts';
 
 /** Where a connection end lives: a node, one of its handles by id (null = unnamed), and that handle's type. */
@@ -29,6 +33,34 @@ interface Endpoint {
  * and a graph fitted to a phone draws the dot smaller still.
  */
 const TOUCH_REACH = 20;
+/** What is said as a connection is made by pressing handles, in English; `ariaLabelConfig` replaces any of it. */
+const SAID = {
+  'handle.a11yDescription.default': 'Press enter to connect from this handle, then enter on another to connect to it.',
+  'connection.ariaLiveMessage.start': ({ from }: { from: string }) =>
+    `Connecting from ${from}. Press enter on another handle, or escape to cancel.`,
+  'connection.ariaLiveMessage.connected': ({ from, to }: { from: string; to: string }) => `Connected ${from} to ${to}.`,
+  'connection.ariaLiveMessage.invalid': ({ from, to }: { from: string; to: string }) =>
+    `${from} cannot be connected to ${to}.`,
+  'connection.ariaLiveMessage.cancelled': 'Connection cancelled.',
+};
+/** One of the above: the caller's (`ariaLabelConfig`), else the default. */
+const said = <K extends keyof typeof SAID>(labels: AriaLabelConfig, key: K) => (labels[key] ?? SAID[key]) as (typeof SAID)[K];
+
+/** A handle's name: what the caller called handles (`handle.ariaLabel`), or its kind and id. */
+const handleName = (labels: AriaLabelConfig, id: string | null, type: HandleType): string =>
+  labels['handle.ariaLabel'] ?? `${type} handle ${id ?? ''}`.trim();
+
+/**
+ * A handle and its node, as a sentence names them. The node by its `ariaLabel`, else its `data.label` (as React
+ * Flow's own nodes are labelled), else the text it shows, else its id.
+ */
+const describe = (labels: AriaLabelConfig, node: Node | undefined, nodeId: string, record: HandleRecord): string => {
+  const label = node?.data.label;
+  const shown = record.el.closest<HTMLElement>('.react-flow__node');
+  const name = node?.ariaLabel ?? (typeof label === 'string' ? label : (shown?.innerText ?? shown?.textContent));
+  return `${handleName(labels, record.id, record.type)} of ${name?.replace(/\s+/g, ' ').trim() || nodeId}`;
+};
+
 /** How far a tap may drift, in screen pixels, and still be the tap that pressed near a handle. */
 const TAP_SLOP = 10;
 
@@ -58,6 +90,14 @@ export interface ConnectApi {
    * it — made if valid, and `onClickConnectEnd` either way. Does nothing with `connectOnClick` off.
    */
   clickConnect: (nodeId: string, handleEl: HTMLElement, at: MouseEvent) => void;
+  /**
+   * Enter or Space on a handle: as a click, but whether or not `connectOnClick` is on — a keyboard cannot drag —
+   * and without `onClickConnectStart` / `onClickConnectEnd`, which are given mouse events. Pressing the handle a
+   * connection began at again lets go of it.
+   */
+  pressConnect: (nodeId: string, handleEl: HTMLElement) => void;
+  /** Lets go of a connection begun by a click or a press, if there is one, and says so; false if there was none. */
+  cancelPress: () => boolean;
   /** The handle a first click began a connection from (`connectOnClick`), until the second click or Escape. */
   getClickStart: () => { nodeId: string; id: string | null; type: HandleType } | null;
   subscribeClickStart: (listener: () => void) => () => void;
@@ -78,6 +118,13 @@ export interface ConnectApi {
     onClickEnd: FlowingerProps['onClickConnectEnd'];
     /** Whether two fingers are pinching, which a connection gives way to. */
     isPinching: () => boolean;
+    /** Handles can be operated from the keyboard (not `disableKeyboardA11y`). */
+    keyboard: boolean;
+    /** Unique to this canvas, for the hint every handle points at. */
+    id: string;
+    labels: AriaLabelConfig;
+    /** Tells a screen reader (`a11yFeature`'s live region; nothing without it). */
+    say: (message: string) => void;
   };
 }
 
@@ -147,6 +194,10 @@ export const connectFeature: Feature<ConnectApi> = {
       onClickStart: undefined,
       onClickEnd: undefined,
       isPinching: () => false,
+      keyboard: true,
+      id: 'flowinger-connect',
+      labels: {},
+      say: () => undefined,
     };
     /** The handle a first click was made on, waiting for a second. */
     let pending: { nodeId: string; record: HandleRecord } | null = null;
@@ -447,25 +498,37 @@ export const connectFeature: Feature<ConnectApi> = {
 
     const clearPending = () => {
       pending?.record.el.classList.remove('clickconnecting');
+      pending?.record.el.removeAttribute('aria-pressed');
       pending = null;
       if (clickStart) setClickStart(null);
     };
     ctx.on('detach', clearPending);
 
-    const clickConnect: ConnectApi['clickConnect'] = (nodeId, handleEl, e) => {
-      if (!config.connectOnClick) return;
-      if (afterDrag === handleEl) {
-        afterDrag = null;
-        return;
-      }
+    const cancelPress: ConnectApi['cancelPress'] = () => {
+      if (!pending) return false;
+      clearPending();
+      config.say(said(config.labels, 'connection.ariaLiveMessage.cancelled'));
+      return true;
+    };
+
+    /** The first press on a handle begins a connection, the second, on another, ends it: a click (`e`) or a key. */
+    const press = (nodeId: string, handleEl: HTMLElement, e: MouseEvent | null) => {
       const record = [...ctx.handlesOf(nodeId)].find((r) => r.el === handleEl);
       if (!record) return;
+      const { labels, say } = config;
       if (!pending) {
         if (record.options?.current.isConnectableStart === false) return;
         pending = { nodeId, record };
         setClickStart({ nodeId, id: record.id, type: record.type });
         record.el.classList.add('clickconnecting');
-        config.onClickStart?.(e, { nodeId, handleId: record.id, handleType: record.type });
+        // Set here rather than rendered, so a connection begun on one node does not redraw every node.
+        if (config.keyboard) record.el.setAttribute('aria-pressed', 'true');
+        if (e) config.onClickStart?.(e, { nodeId, handleId: record.id, handleType: record.type });
+        say(said(labels, 'connection.ariaLiveMessage.start')({ from: describe(labels, ctx.nodeById.get(nodeId), nodeId, record) }));
+        return;
+      }
+      if (!e && pending.record === record) {
+        cancelPress();
         return;
       }
       const first = pending;
@@ -482,13 +545,31 @@ export const connectFeature: Feature<ConnectApi> = {
         ctx.callbacks.onConnect?.(c);
         first.record.options?.current.onConnect?.(c);
       }
-      config.onClickEnd?.(e, { connection: c, isValid: valid });
+      if (e) config.onClickEnd?.(e, { connection: c, isValid: valid });
+      const ends = {
+        from: describe(labels, ctx.nodeById.get(first.nodeId), first.nodeId, first.record),
+        to: describe(labels, ctx.nodeById.get(nodeId), nodeId, record),
+      };
+      say(said(labels, valid ? 'connection.ariaLiveMessage.connected' : 'connection.ariaLiveMessage.invalid')(ends));
+    };
+
+    const clickConnect: ConnectApi['clickConnect'] = (nodeId, handleEl, e) => {
+      if (!config.connectOnClick) return;
+      if (afterDrag === handleEl) {
+        afterDrag = null;
+        return;
+      }
+      press(nodeId, handleEl, e);
     };
 
     return {
       startConnection,
       beginConnection,
       clickConnect,
+      pressConnect: (nodeId, handleEl) => {
+        press(nodeId, handleEl, null);
+      },
+      cancelPress,
       handleNearTouch,
       config,
       getClickStart: () => clickStart,
@@ -502,7 +583,7 @@ export const connectFeature: Feature<ConnectApi> = {
   },
 
   useCanvas({ store, props }) {
-    const { config, handleNearTouch, beginConnection, clickConnect } = store.api(connectFeature);
+    const { config, handleNearTouch, beginConnection, clickConnect, cancelPress } = store.api(connectFeature);
     config.dragThreshold = props.connectionDragThreshold ?? 1;
     config.radius = props.connectionRadius ?? 20;
     config.reconnectRadius = props.reconnectRadius ?? 10;
@@ -510,9 +591,21 @@ export const connectFeature: Feature<ConnectApi> = {
     config.onClickStart = props.onClickConnectStart;
     config.onClickEnd = props.onClickConnectEnd;
     config.isPinching = store.isPinching;
+    config.keyboard = props.disableKeyboardA11y !== true;
+    config.labels = props.ariaLabelConfig ?? {};
+    // Unique per canvas, and the same on the server and the client.
+    config.id = `flowinger-connect-${useId().replace(/[^A-Za-z0-9_-]/g, '')}`;
+    // Said in `a11yFeature`'s live region, on a canvas that has it.
+    config.say = (store.apiOf('a11y') as A11yApi | undefined)?.say ?? config.say;
     // A press near a handle, waiting for the click a tap ends with.
     const tap = useRef<{ nodeId: string; el: HTMLElement; x: number; y: number } | null>(null);
     return {
+      // Escape anywhere in the canvas lets go of a connection begun by a click or a press.
+      onKeyDown: (e) => {
+        if (e.key !== 'Escape' || !cancelPress()) return false;
+        e.preventDefault();
+        return true;
+      },
       props: {
         // A finger that lands near a handle is on it: the press starts a connection from it, as a press on the
         // handle would, and the click a tap ends with is the handle's (`connectOnClick`). Only on the bare pane
@@ -543,7 +636,7 @@ export const connectFeature: Feature<ConnectApi> = {
   },
 
   useNode({ store, node }) {
-    const { startConnection, clickConnect } = store.api(connectFeature);
+    const { startConnection, clickConnect, pressConnect, cancelPress, config } = store.api(connectFeature);
     const id = node.id;
     // Stable, so a node's context — and every handle reading it — is not remade on each render.
     const start = useCallback(
@@ -558,8 +651,55 @@ export const connectFeature: Feature<ConnectApi> = {
       },
       [clickConnect, id],
     );
-    return { startConnection: start, clickConnect: click };
+    // A node's handles are tab stops while focus is inside it — on the node, or on one of them — so the tab order
+    // goes node by node, and from a node into its handles.
+    const [within, setWithin] = useState(false);
+    const { keyboard, labels, id: hint } = config;
+    const handleProps = useCallback(
+      (handleId: string | null, type: HandleType): HTMLAttributes<HTMLDivElement> =>
+        keyboard
+          ? {
+              tabIndex: within ? 0 : -1,
+              role: 'button',
+              'aria-label': handleName(labels, handleId, type),
+              'aria-describedby': `${hint}-handle-desc`,
+              onKeyDown: (e) => {
+                if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+                if (e.key === 'Enter' || e.key === ' ') pressConnect(id, e.currentTarget);
+                else if (e.key !== 'Escape' || !cancelPress()) return;
+                // The handle's, not the node's or the canvas's: Space would scroll the page, or hold a pan.
+                e.preventDefault();
+                e.stopPropagation();
+              },
+            }
+          : {},
+      [keyboard, labels, hint, within, id, pressConnect, cancelPress],
+    );
+    return {
+      startConnection: start,
+      clickConnect: click,
+      handleProps,
+      props: {
+        onFocusCapture: () => {
+          setWithin(true);
+        },
+        onBlurCapture: (e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Element | null)) setWithin(false);
+        },
+      },
+    };
   },
 
+  Layer: HandleHint,
   EdgesLayer: ConnectionLine,
 };
+
+/** The hint every handle that can be operated from the keyboard points at (`aria-describedby`). */
+function HandleHint() {
+  const { config } = useFlowingerStore().api(connectFeature);
+  return config.keyboard ? (
+    <div id={`${config.id}-handle-desc`} style={HIDDEN}>
+      {said(config.labels, 'handle.a11yDescription.default')}
+    </div>
+  ) : null;
+}

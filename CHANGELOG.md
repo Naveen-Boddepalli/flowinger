@@ -10,6 +10,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Added
+
+- **Everything in [1.2.0](#120---2026-10-19)**, merged from `main`: connecting from the keyboard, its
+  `ariaLabelConfig` keys, `NodeBits.handleProps`, and Escape letting go of a connection begun by a click. The whole
+  canvas's budget is 40 kB, as in 1.2; the core's stays 21 (20.85).
+
 ## [2.0.0-rc.1] - 2026-10-17
 
 **Flowinger 2.0, following React Flow 13** — a release candidate, published to the `next` dist-tag. React Flow 13 is
@@ -66,6 +72,38 @@ come with `edgePathsFeature`, and the package is ES modules only.
 - **`colorMode`**: React Flow 13 calls it `forceColorMode`, which flowinger has had since 1.1. It stays and works.
   So do the names React Flow 13 dropped — `useStore`, `useStoreApi`, `applyNodeChanges`, `applyEdgeChanges`,
   `useHandleConnections`, `ColorModeClass`: nothing is removed for following React Flow.
+
+## [1.2.0] - 2026-10-19
+
+**Connecting from the keyboard.** Two nodes can now be connected without a pointer, and a screen reader is told
+each step — checked in three browsers by the suite and with VoiceOver on macOS. Nothing breaks; the Tab sequence
+through a node with connectable handles changes (below).
+
+### Added
+
+- **Connecting from the keyboard.** With `nodesConnectable`, a connectable handle is a button: Enter or Space on
+  one begins a connection, on another ends it (to `onConnect`, as a dragged or clicked one), and Escape — on a
+  handle or anywhere in the canvas — or the same handle again lets go. A node's handles are tab stops while focus
+  is inside the node, so Tab goes node by node and from a node into its handles. A handle is named "source handle
+  out" (or `handle.ariaLabel`) and reads a hint; each step is said in the live region (with `a11yFeature`), the
+  nodes named by their `ariaLabel`, else `data.label`, else their text. It works with `connectOnClick` off — a
+  keyboard cannot drag — and does not call `onClickConnectStart` / `onClickConnectEnd`, which are given mouse
+  events. `disableKeyboardA11y` turns it off. React Flow has no way to do this.
+- **`ariaLabelConfig` keys for it**, flowinger's own: `handle.a11yDescription.default` and
+  `connection.ariaLiveMessage.start`, `.connected`, `.invalid` and `.cancelled`.
+- **For a feature (experimental):** `NodeBits.handleProps`, props a feature adds to each connectable handle.
+
+### Changed
+
+- **Tab from a focused node with connectable handles goes into its handles** before the next node. Likely to be
+  noticed by a test that counts Tab presses.
+- **The whole canvas's size budget is 40 kB (was 39).** Connecting from the keyboard takes it from 38.10 to 38.98
+  kB gzipped. The core grows by 0.04 kB (21.30, budget 21.5): only what lets a feature add props to a handle.
+
+### Fixed
+
+- **Escape lets go of a connection begun by a click** (`connectOnClick`), and the click and its end are said in
+  the live region. 1.1's documentation said Escape did this; nothing did.
 
 ## [1.1.0] - 2026-10-17
 
@@ -626,7 +664,10 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...HEAD
+[2.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v2.0.0-rc.1
+[1.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0-rc.1

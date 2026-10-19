@@ -166,6 +166,15 @@ canvas `role="application"` when it takes keys (React Flow's always is; this set
 up in `docs/accessibility.md`. Each was checked again on the phone and with VoiceOver after the fix, and passed;
 released as 1.0.1. Still not tried: NVDA on Windows.
 
+**QueryLens on 1.0.1 (2026-10-17)**, in production from its commit 7946cda, up from 0.3.0: nothing broke. The
+upgrade guide was accurate. QueryLens renders `<FlowingerCore>`, so D1 did not reach it; for D3 it lists each
+node's four handles in `handles`, so the first paint draws the same sides. Its 2,783 unit tests and 609 Playwright
+tests pass, edges meet the same handles as on 0.3.0, and the development build logs no warnings. This is the
+consumer check, done in production rather than as a week on the candidate. Its report that the diagram chunk grew
+from 19.9 to 22.9 kB was measured with React's own modules inside that chunk, pulled in by QueryLens's chunk
+configuration; with that fixed (QueryLens 259b549) the chunk is 19.0 kB on 1.0.1. Measured the same way on
+2026-10-18, in one build of QueryLens: React Flow 12.11.6 59.1 kB, flowinger 1.0.1 19.0, flowinger 1.1.0 20.2.
+
 These are the gaps the roadmap lists under *Now* and *Later* that a "1.0" is read as having closed:
 
 - **Firefox and WebKit in the browser suite — done.** `playwright.config.ts` has a project for each beside
@@ -216,7 +225,7 @@ merged (CONTRIBUTING's *Releasing*). Tagging is the owner's.
 - **A spatial index for culling** (a grid of node ids) — roadmap *Next* 4 (the culled first render shipped in
   0.8.0). Internal, so a minor release, given D4.
 - **Mutation testing in CI.**
-- **Connecting by keyboard.**
+- **Connecting by keyboard** — released in 1.2.0 (2026-10-19).
 - **A versioned docs site.**
 - New pro modules or props. Breadth after the contract, not before.
 

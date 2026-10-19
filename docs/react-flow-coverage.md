@@ -5,7 +5,7 @@
 Flowinger keeps React Flow's shape and names — `ReactFlow`, `ReactFlowProvider`, `useReactFlow`, `useStore`,
 `Handle`, `Position`, `Background`, `MarkerType`, `useNodesState`, `applyNodeChanges`, `addEdge`, the `Node` /
 `Edge` / `NodeProps` types — and the `react-flow__*` class names on the elements it draws. It began as the part of the
-API an app like [QueryLens](https://github.com/Naveen-Boddepalli/QueryLens) uses (which it replaced, with identical
+API an app like [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) uses (which it replaced, with identical
 geometry and its whole end-to-end suite passing), and has since grown to name all of the rest.
 
 **Naming something is not the same as doing it**, and this page counts the two apart.
@@ -92,6 +92,10 @@ says which, once, in development ([Features](features.md)). New ones: `a11yFeatu
 read from React Flow's source.
 
 ## Beyond React Flow
+
+**Connecting from the keyboard.** A connectable handle is a button: Enter on one, then on another, connects them,
+and a screen reader is told each step ([accessibility](accessibility.md#connecting-from-the-keyboard)). React
+Flow's handles cannot be reached from the keyboard.
 
 Flowinger has 52 exports React Flow does not — the [feature objects](features.md) (`dragFeature`,
 `panKeyFeature`…) and what they need — and the [pro modules](pro.md): undo/redo, copy and paste, snap guides,
