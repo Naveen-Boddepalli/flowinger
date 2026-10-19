@@ -10,6 +10,10 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-19
+
+A patch for 1.2.0's cost on a large canvas, which the benchmarks found when they were run again for the launch.
+
 ### Fixed
 
 - **1.2.0 made an unculled mount slower and heavier.** Connecting from the keyboard gave every node its own state,
@@ -610,7 +614,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...v1.0.1

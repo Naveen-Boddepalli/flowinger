@@ -53,6 +53,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - `1.1.0` (2026-10-17): the bridge to 2.0 — React Flow 13.0.0-next.0's additions without breaking anything, and a
   development warning for each thing 2.0 changes ([the 2.0 plan](PLAN-2.0.md)).
 - `1.2.0` (2026-10-19): connecting two nodes from the keyboard, each step announced — React Flow has no way to.
+- `1.2.1` (2026-10-19): 1.2.0 had made a 10,000-node unculled mount 17% slower; found by re-running the
+  benchmarks, and fixed.
 
 ## Now — be easy to try and to trust
 
