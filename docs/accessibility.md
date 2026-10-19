@@ -59,7 +59,7 @@ With `nodesConnectable`, two nodes can be connected without a pointer:
 A node is named by its `ariaLabel`, else its `data.label`, else the text it shows. This works with
 `connectOnClick` off, since a keyboard cannot drag; it does not call `onClickConnectStart` or
 `onClickConnectEnd`, which are given mouse events. `disableKeyboardA11y` turns it off. It is checked in Chromium,
-Firefox and WebKit by the browser suite, and has not yet been tried with VoiceOver.
+Firefox and WebKit by the browser suite, and was checked with VoiceOver in Safari on macOS for 1.2.0.
 
 ## Checked with VoiceOver
 
@@ -75,10 +75,12 @@ takes focus out of sight. Three things did not work; they are fixed in 1.0.1, an
 - **With Quick Nav on, VoiceOver kept the arrow keys** for itself. The canvas was a `group`; it is now an
   `application`, as React Flow's is.
 
+On 1.2.0: connecting two nodes from the keyboard, as [above](#connecting-from-the-keyboard) — the handles read
+as buttons with their hint, and each step is announced.
+
 ## Not done yet
 
 - **NVDA and JAWS on Windows** have not been tried.
-- **Connecting from the keyboard has not been tried with a screen reader** — only by the browser suite.
 - **Deleting is not announced**, nor are selections, connections made by dragging, or changes made by the app.
 - **Nodes and edges have no `aria-roledescription`**, which React Flow gives them ("node", "edge").
 

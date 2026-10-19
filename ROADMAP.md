@@ -50,6 +50,9 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - `1.0.1` (2026-10-17): what those passes found, on a real phone and with VoiceOver — a finger near a handle is on
   it, each keyboard move is announced, Escape lets go of a focused node, and the canvas is an `application` when
   it takes keys. Written up in [Accessibility](docs/accessibility.md).
+- `1.1.0` (2026-10-17): the bridge to 2.0 — React Flow 13.0.0-next.0's additions without breaking anything, and a
+  development warning for each thing 2.0 changes ([the 2.0 plan](PLAN-2.0.md)).
+- `1.2.0` (2026-10-19): connecting two nodes from the keyboard, each step announced — React Flow has no way to.
 
 ## Now — be easy to try and to trust
 
@@ -101,9 +104,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
   a number means as a margin, and perhaps shipping ESM only) and what stays in 1.x until then.
 - **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
   release only once a `1.x` has users on more than one version.
-- **A screen reader on Windows.** VoiceOver on macOS has been checked ([accessibility](docs/accessibility.md)),
-  and connecting from the keyboard is on `main`; NVDA and JAWS have not been tried, nor has VoiceOver with
-  keyboard connecting.
+- **A screen reader on Windows.** VoiceOver on macOS has been checked, connecting from the keyboard included
+  ([accessibility](docs/accessibility.md)); NVDA and JAWS have not been tried.
 - **Mutation testing in CI.** Every guard in the project has been broken by hand and watched to fail; that
   is a job for a tool.
 

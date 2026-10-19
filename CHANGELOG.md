@@ -10,6 +10,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-19
+
+**Connecting from the keyboard.** Two nodes can now be connected without a pointer, and a screen reader is told
+each step — checked in three browsers by the suite and with VoiceOver on macOS. Nothing breaks; the Tab sequence
+through a node with connectable handles changes (below).
+
 ### Added
 
 - **Connecting from the keyboard.** With `nodesConnectable`, a connectable handle is a button: Enter or Space on
@@ -595,7 +601,9 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v0.9.1...v1.0.0-rc.1
