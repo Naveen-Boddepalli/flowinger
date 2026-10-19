@@ -68,10 +68,10 @@
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
 | Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev)) | **20.2 kB** gzipped | 59.1 kB gzipped |
 | Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.2 s |
-| Mount 10,000 nodes, culled | **53 ms** | 559 ms |
-| Pan / zoom 10,000 nodes, no culling | **8.1 / 9.4 ms** a frame | 32.7 / 32.4 ms a frame |
-| Pan / zoom 10,000 nodes, culled | **3.0 / 1.7 ms** a frame | 3.9 / 4.2 ms a frame |
-| Drag at 10,000 nodes, culled | **3.9 ms** a move | 4.6 ms a move |
+| Mount 10,000 nodes, culled | **53 ms** | 544 ms |
+| Pan / zoom 10,000 nodes, no culling | **7.9 / 8.9 ms** a frame | 32.3 / 32.2 ms a frame |
+| Pan / zoom 10,000 nodes, culled | **2.5 / 1.2 ms** a frame | 3.7 / 4.3 ms a frame |
+| Drag at 10,000 nodes, culled | **3.8 ms** a move | 4.5 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
 | API | React Flow's names: 210 of 210 exports, 119 of 119 props | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
