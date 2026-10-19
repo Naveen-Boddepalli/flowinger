@@ -323,7 +323,9 @@ measured again, and the changelog says why for either outcome.
 
 - `2.0.0-rc.1` goes to the `next` dist-tag through `release.yml`, tagged from `release/2.0`. A second candidate
   only if the proof finds something.
-- The `v1` branch is cut from the last 1.x tag before the release PR merges.
+- **`2.0.0-rc.2` (2026-10-19):** 1.2.0 (connecting from the keyboard) merged into `release/2.0`, so the candidate
+  carries everything 1.x has. A third only if the proof finds something, or 1.x adds more first.
+- The `v1` branch is cut from the last 1.x tag — `v1.2.0` today — before the release PR merges.
 - Then `2.0.0` goes to `latest`, tagged from `main` after the PR merges (CONTRIBUTING's *Releasing*). Tagging is
   the owner's.
 

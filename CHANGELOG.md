@@ -10,11 +10,17 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [2.0.0-rc.2] - 2026-10-19
+
+The second candidate for 2.0, on the `next` dist-tag: [rc.1](#200-rc1---2026-10-17) and everything 1.2.0 added
+since, so an app moving to 2.0 keeps what it has on 1.2. Nothing else changes; React Flow 13 is still at
+`13.0.0-next.0`, so 2.0 stays a candidate.
+
 ### Added
 
 - **Everything in [1.2.0](#120---2026-10-19)**, merged from `main`: connecting from the keyboard, its
   `ariaLabelConfig` keys, `NodeBits.handleProps`, and Escape letting go of a connection begun by a click. The whole
-  canvas's budget is 40 kB, as in 1.2; the core's stays 21 (20.85).
+  canvas's budget is 40 kB, as in 1.2 (39.01); the core's stays 21 (20.85).
 
 ## [2.0.0-rc.1] - 2026-10-17
 
@@ -664,7 +670,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...HEAD
+[2.0.0-rc.2]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...v2.0.0-rc.2
 [2.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v2.0.0-rc.1
 [1.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...v1.1.0

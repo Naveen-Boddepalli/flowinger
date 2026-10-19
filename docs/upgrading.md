@@ -12,7 +12,7 @@ anything: its store hooks, its changesets, `forceColorMode`, `changeParent`.
 
 1.1 changed nothing an app could see, and in development it names — once a page, in the console, ending with *See
 "Upgrading to 2.0"* — each place an app would notice 2.0. An app that runs on 1.1 without one of those warnings, and
-does not load flowinger with `require` under Jest, needs nothing more.
+does not load flowinger with `require` under Jest, needs nothing more. (1.2 gives the same warnings.)
 
 ### In short
 
@@ -90,6 +90,8 @@ There is one build, of ES modules, as React Flow 13 has. What changes depends on
 - `<FlowingerCanvas>` and `<FlowingerCore>` and their defaults; every name 1.x exports but `CounterNode` —
   `applyNodeChanges`, `useStore`, `useStoreApi`, `colorMode` among them, though React Flow 13 dropped them; the
   class names, test ids and CSS variables; React 18 and 19; server rendering.
+- What 1.2 added: connecting from the keyboard, with its `ariaLabelConfig` keys
+  ([accessibility](accessibility.md#connecting-from-the-keyboard)).
 
 ## Upgrading to 1.0
 
