@@ -1,6 +1,6 @@
 {
   "name": "flowinger",
-  "version": "2.0.0-rc.2",
+  "version": "2.0.0-rc.3",
   "description": "A small, dependency-free React Flow alternative: a node-graph and flowchart renderer for React with React Flow's API, ~20 kB gzipped core, SSR, and free undo/redo, export and smart edges",
   "keywords": [
     "react",

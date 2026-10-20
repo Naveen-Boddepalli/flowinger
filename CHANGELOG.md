@@ -10,6 +10,11 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [2.0.0-rc.3] - 2026-10-20
+
+The third candidate for 2.0, on the `next` dist-tag: [rc.2](#200-rc2---2026-10-19) with 1.2.1's fix, so a large
+canvas costs on 2.0 what it does on 1.2.1. Nothing else changes.
+
 ### Fixed
 
 - **Everything in [1.2.1](#121---2026-10-19)**, merged from `main`: 2.0.0-rc.2 carried 1.2.0's cost on a large
@@ -689,7 +694,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...HEAD
+[2.0.0-rc.3]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...v2.0.0-rc.3
 [2.0.0-rc.2]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...v2.0.0-rc.2
 [2.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v2.0.0-rc.1
 [1.2.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.0...v1.2.1

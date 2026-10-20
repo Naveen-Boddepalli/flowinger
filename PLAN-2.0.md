@@ -325,7 +325,9 @@ measured again, and the changelog says why for either outcome.
   only if the proof finds something.
 - **`2.0.0-rc.2` (2026-10-19):** 1.2.0 (connecting from the keyboard) merged into `release/2.0`, so the candidate
   carries everything 1.x has. A third only if the proof finds something, or 1.x adds more first.
-- The `v1` branch is cut from the last 1.x tag — `v1.2.0` today — before the release PR merges.
+- **`2.0.0-rc.3` (2026-10-20):** 1.2.1 merged in — the fix for 1.2.0's cost on a large unculled canvas, which rc.2
+  carried.
+- The `v1` branch is cut from the last 1.x tag — `v1.2.1` today — before the release PR merges.
 - Then `2.0.0` goes to `latest`, tagged from `main` after the PR merges (CONTRIBUTING's *Releasing*). Tagging is
   the owner's.
 
