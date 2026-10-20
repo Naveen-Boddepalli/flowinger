@@ -10,6 +10,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **Everything in [1.2.1](#121---2026-10-19)**, merged from `main`: 2.0.0-rc.2 carried 1.2.0's cost on a large
+  canvas — every node's own state and handlers for connecting from the keyboard, a 10,000-node unculled mount 17%
+  slower — and this takes 1.2.1's fix.
+
 ## [2.0.0-rc.2] - 2026-10-19
 
 The second candidate for 2.0, on the `next` dist-tag: [rc.1](#200-rc1---2026-10-17) and everything 1.2.0 added
@@ -78,6 +84,19 @@ come with `edgePathsFeature`, and the package is ES modules only.
 - **`colorMode`**: React Flow 13 calls it `forceColorMode`, which flowinger has had since 1.1. It stays and works.
   So do the names React Flow 13 dropped — `useStore`, `useStoreApi`, `applyNodeChanges`, `applyEdgeChanges`,
   `useHandleConnections`, `ColorModeClass`: nothing is removed for following React Flow.
+
+## [1.2.1] - 2026-10-19
+
+A patch for 1.2.0's cost on a large canvas, which the benchmarks found when they were run again for the launch.
+
+### Fixed
+
+- **1.2.0 made an unculled mount slower and heavier.** Connecting from the keyboard gave every node its own state,
+  callback and handlers, whether or not it had a handle to connect: at 10,000 nodes without culling a mount went
+  from 0.61 to 0.71 s and the JS heap from 173 to 198 MB (found by re-running the benchmarks for the launch). The
+  handles' keyboard props and the node's focus handlers are now one set for the whole canvas, and a node's handles
+  become tab stops by setting `tabIndex` on them, so no node redraws for it: 0.59 s and 173 MB again. Culled, and
+  everything else, was unaffected.
 
 ## [1.2.0] - 2026-10-19
 
@@ -673,6 +692,7 @@ First release.
 [Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...HEAD
 [2.0.0-rc.2]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...v2.0.0-rc.2
 [2.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v2.0.0-rc.1
+[1.2.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.0...v1.0.1

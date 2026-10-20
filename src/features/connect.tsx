@@ -1,4 +1,11 @@
-import { type HTMLAttributes, useCallback, useId, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  type HTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useId,
+  useRef,
+  useSyncExternalStore,
+} from 'react';
 import { useFlowingerStore } from '../context.ts';
 import type { Feature } from '../features.ts';
 import type { FlowingerEdgesProps } from '../FlowingerEdges.tsx';
@@ -98,6 +105,14 @@ export interface ConnectApi {
   pressConnect: (nodeId: string, handleEl: HTMLElement) => void;
   /** Lets go of a connection begun by a click or a press, if there is one, and says so; false if there was none. */
   cancelPress: () => boolean;
+  /**
+   * What makes a connectable handle a button a keyboard can use, and a node's handles tab stops while focus is
+   * inside it — one set for the whole canvas, so a node costs nothing for them until one is used.
+   */
+  readonly keys: {
+    handleProps: (id: string | null, type: HandleType) => HTMLAttributes<HTMLDivElement>;
+    nodeProps: HTMLAttributes<HTMLDivElement>;
+  };
   /** The handle a first click began a connection from (`connectOnClick`), until the second click or Escape. */
   getClickStart: () => { nodeId: string; id: string | null; type: HandleType } | null;
   subscribeClickStart: (listener: () => void) => () => void;
@@ -553,6 +568,43 @@ export const connectFeature: Feature<ConnectApi> = {
       say(said(labels, valid ? 'connection.ariaLiveMessage.connected' : 'connection.ariaLiveMessage.invalid')(ends));
     };
 
+    const onHandleKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      const nodeId = e.currentTarget.dataset.nodeid;
+      if (nodeId === undefined || e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'Enter' || e.key === ' ') press(nodeId, e.currentTarget, null);
+      else if (e.key !== 'Escape' || !cancelPress()) return;
+      // The handle's, not the node's or the canvas's: Space would scroll the page, or hold a pan.
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    /**
+     * A node's handles are tab stops while focus is inside it — on the node, or on one of them — so the tab order
+     * goes node by node, and from a node into its handles. Set on the elements: no node redraws for it.
+     */
+    const tabStops = (node: HTMLElement, on: boolean) => {
+      for (const el of node.querySelectorAll<HTMLElement>('[data-handletype][role="button"]')) el.tabIndex = on ? 0 : -1;
+    };
+    const keys: ConnectApi['keys'] = {
+      handleProps: (handleId, type) =>
+        config.keyboard
+          ? {
+              tabIndex: -1,
+              role: 'button',
+              'aria-label': handleName(config.labels, handleId, type),
+              'aria-describedby': `${config.id}-handle-desc`,
+              onKeyDown: onHandleKey,
+            }
+          : {},
+      nodeProps: {
+        onFocusCapture: (e) => {
+          tabStops(e.currentTarget, true);
+        },
+        onBlurCapture: (e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Element | null)) tabStops(e.currentTarget, false);
+        },
+      },
+    };
+
     const clickConnect: ConnectApi['clickConnect'] = (nodeId, handleEl, e) => {
       if (!config.connectOnClick) return;
       if (afterDrag === handleEl) {
@@ -570,6 +622,7 @@ export const connectFeature: Feature<ConnectApi> = {
         press(nodeId, handleEl, null);
       },
       cancelPress,
+      keys,
       handleNearTouch,
       config,
       getClickStart: () => clickStart,
@@ -636,7 +689,7 @@ export const connectFeature: Feature<ConnectApi> = {
   },
 
   useNode({ store, node }) {
-    const { startConnection, clickConnect, pressConnect, cancelPress, config } = store.api(connectFeature);
+    const { startConnection, clickConnect, keys } = store.api(connectFeature);
     const id = node.id;
     // Stable, so a node's context — and every handle reading it — is not remade on each render.
     const start = useCallback(
@@ -651,43 +704,7 @@ export const connectFeature: Feature<ConnectApi> = {
       },
       [clickConnect, id],
     );
-    // A node's handles are tab stops while focus is inside it — on the node, or on one of them — so the tab order
-    // goes node by node, and from a node into its handles.
-    const [within, setWithin] = useState(false);
-    const { keyboard, labels, id: hint } = config;
-    const handleProps = useCallback(
-      (handleId: string | null, type: HandleType): HTMLAttributes<HTMLDivElement> =>
-        keyboard
-          ? {
-              tabIndex: within ? 0 : -1,
-              role: 'button',
-              'aria-label': handleName(labels, handleId, type),
-              'aria-describedby': `${hint}-handle-desc`,
-              onKeyDown: (e) => {
-                if (e.target !== e.currentTarget || e.ctrlKey || e.metaKey || e.altKey) return;
-                if (e.key === 'Enter' || e.key === ' ') pressConnect(id, e.currentTarget);
-                else if (e.key !== 'Escape' || !cancelPress()) return;
-                // The handle's, not the node's or the canvas's: Space would scroll the page, or hold a pan.
-                e.preventDefault();
-                e.stopPropagation();
-              },
-            }
-          : {},
-      [keyboard, labels, hint, within, id, pressConnect, cancelPress],
-    );
-    return {
-      startConnection: start,
-      clickConnect: click,
-      handleProps,
-      props: {
-        onFocusCapture: () => {
-          setWithin(true);
-        },
-        onBlurCapture: (e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Element | null)) setWithin(false);
-        },
-      },
-    };
+    return { startConnection: start, clickConnect: click, handleProps: keys.handleProps, props: keys.nodeProps };
   },
 
   Layer: HandleHint,

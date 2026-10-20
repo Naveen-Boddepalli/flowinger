@@ -4,10 +4,10 @@ Everything here is to be posted by the author, from their own accounts, saying t
 spacing are in [GROWTH.md](../GROWTH.md#phase-2-launch-one-week-staggered-not-all-in-one-day): the dev.to
 article ([`devto.md`](devto.md)) first, then these over a week. Replace `<article>` with its URL once it is up.
 
-Numbers used below, so they stay the same everywhere — measured on 1.1.0, what `npm install flowinger` gives
+Numbers used below, so they stay the same everywhere — measured on 1.2.1, what `npm install flowinger` gives
 (measure again if a later version is out when these are posted): diagram chunk 59.1 → 20.2 kB (QueryLens, React
-Flow 12.11.6 against flowinger 1.1.0 in the same build); core ~21.3 kB, whole canvas ~38 kB gzipped; 0 dependencies; 210/210 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
-1.2 s (culled: 53 ms vs 559), unculled pan 8.1 vs 32.7 ms a frame, culled zoom 1.7 vs 4.2 ms (culled pan 3.0 vs 3.9, close to noise).
+Flow 12.11.6 against flowinger 1.2.1 in the same build); core ~21.3 kB, whole canvas ~39 kB gzipped; 0 dependencies; 210/210 exports, 119/119 props; at 10,000 nodes mount 0.6 s vs
+1.2 s (culled: 53 ms vs 544), unculled pan 7.9 vs 32.3 ms a frame, culled zoom 1.2 vs 4.3 ms (culled pan 2.5 vs 3.7, close to noise).
 
 ---
 
@@ -24,8 +24,9 @@ Read the subreddit's rules first; self-promotion is allowed in moderation and on
 > 59.1 kB to 20.2 kB gzipped; switching was an import change plus three props, since interaction is off by default.
 >
 > Undo/redo, copy-paste, snap lines, PNG/SVG export and obstacle-avoiding edges are included, as separate
-> entry points. Benchmarks against React Flow at 1k–10k nodes are reproducible (`pnpm bench`), including the
-> rows where it was behind until this release.
+> entry points. You can connect nodes from the keyboard, with a screen reader told each step — React Flow's
+> handles can't be reached from the keyboard. Benchmarks against React Flow at 1k–10k nodes are reproducible
+> (`pnpm bench`), including where it was once behind and what fixed it.
 >
 > It's 1.0 but young, with one maintainer (me), and React Flow's ecosystem is far bigger — the README says when to stay on
 > React Flow. What would you need to see before switching?
@@ -53,10 +54,13 @@ connect two, undo, export a PNG.
 > 3/ Undo/redo, copy-paste, snap lines, PNG/SVG export and edges that route around nodes are free, as separate
 > imports: `flowinger/history`, `flowinger/export`, `flowinger/smart-edges`…
 
-> 4/ Benchmarked against React Flow at 10k nodes: with culling it mounts in 53 ms vs 559, because its first
-> render is culled too; unculled it pans at 8.1 vs 33 ms a frame. The culled pan is close to a tie. Reproducible: `pnpm bench`.
+> 4/ And one thing React Flow can't do: connect nodes from the keyboard. Tab into a handle, Enter, then Enter
+> on another — and a screen reader hears each step.
 
-> 5/ It's 1.0 but new, with one maintainer; React Flow's ecosystem is much bigger, and the docs say when to stay on it. Write-up with
+> 5/ Benchmarked against React Flow at 10k nodes: with culling it mounts in 53 ms vs 544, because its first
+> render is culled too; unculled it pans at 7.9 vs 32 ms a frame. The culled pan is close to a tie. Reproducible: `pnpm bench`.
+
+> 6/ It's 1.x but new, with one maintainer; React Flow's ecosystem is much bigger, and the docs say when to stay on it. Write-up with
 > the trade-offs: <article>
 
 ---
@@ -67,7 +71,8 @@ connect two, undo, export a PNG.
 >
 > The result is Flowinger, an open-source React library with React Flow's API — so switching was an import
 > change — built as a small core plus opt-in features, with no dependencies. Undo/redo, export and smart edges
-> come free. It is benchmarked against React Flow at up to 10,000 nodes, and the write-up includes where it
+> come free, and nodes can be connected from the keyboard, which React Flow's can't. It is benchmarked against
+> React Flow at up to 10,000 nodes, and the write-up includes where it
 > was behind and how that was fixed.
 >
 > If your team draws workflows, pipelines or dependency graphs in React, I'd value your feedback: <article>
@@ -85,7 +90,7 @@ One accepted newsletter often outweighs every social post. Submit the article UR
 Blurb, under 50 words:
 
 > **Flowinger** — React Flow's API in ~21 kB with no dependencies: a small core plus opt-in features, free
-> undo/redo, export and smart edges, and server rendering. The write-up covers a 59 → 20 kB bundle cut,
+> undo/redo, export and smart edges, keyboard connecting, and server rendering. The write-up covers a 59 → 20 kB bundle cut,
 > benchmarks against React Flow at 10k nodes, and when not to switch.
 
 ---

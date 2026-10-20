@@ -67,7 +67,7 @@ import { FlowingerCore, dragFeature, connectFeature } from 'flowinger';
 />
 ```
 
-`FlowingerCanvas` and `<ReactFlow>` include every feature, at about 38 kB. A read-only viewer like
+`FlowingerCanvas` and `<ReactFlow>` include every feature, at about 39 kB. A read-only viewer like
 QueryLens's uses the core and pays for nothing it doesn't do.
 
 **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Pan and zoom are plain pointer and
@@ -78,7 +78,7 @@ override.
 
 ## The numbers
 
-Bundle, in a real app (QueryLens's diagram chunk, gzipped as Vite reports it; flowinger 1.1.0 and React Flow
+Bundle, in a real app (QueryLens's diagram chunk, gzipped as Vite reports it; flowinger 1.2.1 and React Flow
 12.11.6, each built into the same app with React in a chunk of its own):
 
 | | Flowinger | React Flow 12 |
@@ -87,24 +87,25 @@ Bundle, in a real app (QueryLens's diagram chunk, gzipped as Vite reports it; fl
 | Runtime dependencies | **0** | 3 direct, plus d3 modules through `@xyflow/system` |
 | Stylesheet to import | **none** | `@xyflow/react/dist/style.css` |
 
-Performance, at 10,000 nodes, Chrome on an Apple M4, median of 5 runs, flowinger 1.1.0 against React Flow 12.11.6 ([full table](https://naveen-boddepalli.github.io/flowinger/docs/benchmarks/)):
+Performance, at 10,000 nodes, Chrome on an Apple M4, median of 5 runs, flowinger 1.2.1 against React Flow 12.11.6 ([full table](https://naveen-boddepalli.github.io/flowinger/docs/benchmarks/)):
 
 | | Flowinger | React Flow 12 |
 |---|---|---|
 | Mount, no culling | **0.6 s** | 1.2 s |
-| Mount, culled | **53 ms** | 559 ms |
-| Pan / zoom, no culling | **8.1 / 9.4 ms** a frame | 32.7 / 32.4 ms |
-| Pan / zoom, culled | **3.0 / 1.7 ms** a frame | 3.9 / 4.2 ms |
-| Drag, culled | **3.9 ms** a move | 4.6 ms |
+| Mount, culled | **53 ms** | 544 ms |
+| Pan / zoom, no culling | **7.9 / 8.9 ms** a frame | 32.3 / 32.2 ms |
+| Pan / zoom, culled | **2.5 / 1.2 ms** a frame | 3.7 / 4.3 ms |
+| Drag, culled | **3.8 ms** a move | 4.5 ms |
 | JS heap, no culling | **173 MB** | 254 MB |
 
-Three honest notes on that table. First, the culled pan is close to a tie: 3.0 against 3.9 here, but across
-earlier runs React Flow's has read anywhere between 2.6 and 4.2 ms. The culled zoom is about half React
+Three honest notes on that table. First, the culled pan is close to a tie: 2.5 against 3.7 here, but across
+earlier runs React Flow's has read anywhere between 2.6 and 4.2 ms. The culled zoom is under half React
 Flow's cost in every run, and a culled mount about a tenth: both libraries draw only what is in view in the end,
 but React Flow's first render draws every node first. Second, until 0.7.0 React Flow was ahead on culled pan and zoom — the benchmark
 found why (Flowinger re-checked every node on every frame of a pan), and 0.7.0 fixed it: while the view stays
 inside the region last worked out, a frame costs nothing. That is the kind of thing a published benchmark is
-for. Third, the numbers move with the machine: a first run on a busy laptop read the unculled mount at 0.87 s
+for — and it did it again while I wrote this: re-running the table for 1.2.0 showed an unculled mount 17% slower,
+because the new keyboard connecting gave every node its own state. 1.2.1 fixed it, and the table is 1.2.1's. Third, the numbers move with the machine: a first run on a busy laptop read the unculled mount at 0.87 s
 against 1.67 — slower for both, by about the same factor. The table is from a run with the machine idle.
 
 Re-run it yourself: `pnpm bench` in the repository builds one page with both libraries and measures them in a
@@ -113,9 +114,9 @@ real browser.
 ## Is it correct, though?
 
 Small and fast is easy if you skip the hard parts. The tests use **React Flow as the oracle**: for geometry and
-behaviour, the expected answer is what React Flow produces for the same input. There are 1,179 unit tests; a real-browser suite of 41 tests run in Chromium, Firefox and WebKit, covering
-dragging, connecting, wheel zoom about the pointer, export and real multi-touch (pinches, and a finger near a
-handle); and CI installs the *packed* package and builds nine example apps against it — so a broken export map
+behaviour, the expected answer is what React Flow produces for the same input. There are 1,197 unit tests; a real-browser suite of 42 tests run in Chromium, Firefox and WebKit, covering
+dragging, connecting (with a mouse, a finger and the keyboard), wheel zoom about the pointer, export and real
+multi-touch; and CI installs the *packed* package and builds nine example apps against it — so a broken export map
 fails a pull request, not your build. After 1.0 shipped it was also tried by hand on a real phone and with
 VoiceOver; what they found is fixed in 1.0.1.
 
@@ -142,6 +143,14 @@ downloadFile(png, 'diagram.png');
 
 Also included: copy/cut/paste (`flowinger/clipboard`), snap guides (`flowinger/snaplines`), edges that route
 around nodes (`flowinger/smart-edges`), editable edges, flowchart shapes, and a collapsible tree.
+
+## One thing React Flow can't do
+
+Connect two nodes from the keyboard. With `nodesConnectable`, a handle is a button: Tab to a node and on into its
+handles, press Enter, go to another node's handle and press Enter again. A screen reader is told each step —
+"Connected source handle out of Filter to target handle in of Output" — and Escape cancels. React Flow's handles
+cannot be reached from the keyboard at all. It was the gap the by-hand accessibility pass before 1.0.1 left open,
+and was checked with VoiceOver before it shipped in 1.2.0 ([how it works](https://naveen-boddepalli.github.io/flowinger/docs/accessibility/#connecting-from-the-keyboard)).
 
 ## When not to switch
 
