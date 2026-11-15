@@ -61,6 +61,27 @@ const ARROWS: Record<string, [number, number]> = {
 };
 
 /**
+ * Stops the click the browser sends after a release, wherever it lands: heard first, on the window, and only that
+ * one — it comes in the same task as the release, so the listener goes in the next, or at the next press. A click
+ * made by code (`el.click()`, not trusted) is not the browser's, and goes through.
+ */
+function swallowNextClick(view: Window): void {
+  const done = () => {
+    view.removeEventListener('click', swallow, true);
+    view.removeEventListener('pointerdown', done, true);
+  };
+  const swallow = (e: MouseEvent) => {
+    if (!e.isTrusted) return;
+    done();
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  view.addEventListener('click', swallow, true);
+  view.addEventListener('pointerdown', done, true);
+  setTimeout(done, 0);
+}
+
+/**
  * Dragging nodes: `nodesDraggable` and a node's own `draggable`, snapping to a grid, `nodeExtent` and
  * `extent`, dragging a selection together, sub-flows that grow to hold a child (`expandParent`), the
  * arrow keys, and the `onNodeDrag*` callbacks.
@@ -319,11 +340,17 @@ export const dragFeature: Feature<DragApi> = {
       // the pointer is; every move after that comes here.
       const element = e.currentTarget;
       stopClaiming.current?.();
-      const stop = () => {
+      const stop = (ev?: PointerEvent) => {
         window.removeEventListener('pointermove', claim, true);
         window.removeEventListener('pointerup', stop, true);
         window.removeEventListener('pointercancel', stop, true);
         if (stopClaiming.current === stop) stopClaiming.current = null;
+        // Let go of off the node, before it was a drag: the browser's click goes to what is under both the press
+        // and the release — the pane, which would take it as its own and clear the selection. As in React Flow
+        // 13.0.0-next.3, that click is no one's.
+        if (ev?.type === 'pointerup' && ev.pointerId === pressed.pointerId && !(ev.target instanceof Node && element.contains(ev.target))) {
+          swallowNextClick(ev.view ?? window);
+        }
       };
       const claim = (ev: PointerEvent) => {
         if (ev.pointerId !== pressed.pointerId) return;

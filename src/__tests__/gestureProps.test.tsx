@@ -278,6 +278,37 @@ describe('paneClickDistance and nodeClickDistance', () => {
   });
 });
 
+describe('the middle button on a node', () => {
+  /** A middle-button drag that begins on node a. */
+  const middleDrag = (container: HTMLElement) => {
+    const a = must(container, '[data-id="a"]');
+    fireEvent.pointerDown(a, pointer({ button: 1, clientX: 20, clientY: 20 }));
+    fireEvent.pointerMove(pane(container), pointer({ button: 1, clientX: 80, clientY: 60 }));
+    fireEvent.pointerUp(pane(container), pointer({ button: 1, clientX: 80, clientY: 60 }));
+  };
+
+  it('pans where panOnDrag lets it, and not where it does not, as in React Flow 13.0.0-next.3', () => {
+    for (const [panOnDrag, pans] of [
+      [true, true],
+      [[1], true],
+      [[1, 2], true],
+      [[0], false],
+      [[0, 2], false],
+      [false, false],
+    ] as const) {
+      const onNodeDragStart = vi.fn();
+      const { container, unmount } = render(
+        <ReactFlow nodes={nodes} panOnDrag={panOnDrag as FlowingerProps['panOnDrag']} onNodeDragStart={onNodeDragStart} />,
+      );
+      const before = viewportOf(container);
+      middleDrag(container);
+      expect(viewportOf(container) !== before, JSON.stringify(panOnDrag)).toBe(pans);
+      expect(onNodeDragStart).not.toHaveBeenCalled(); // never the node's drag
+      unmount();
+    }
+  });
+});
+
 describe('selectNodesOnDrag', () => {
   const drag = (el: Element) => {
     fireEvent.pointerDown(el, pointer({ clientX: 10, clientY: 10 }));
