@@ -6,6 +6,10 @@ import type {
   NodeChange,
 } from './types.ts';
 
+/** The data a `data` change leaves: its `data` in place of the element's (`replace`), or merged into it. */
+const changedData = <D>(current: D, change: { data: unknown; replace?: boolean }): D =>
+  (change.replace === true ? change.data : { ...current, ...(change.data as object) }) as D;
+
 /**
  * `node` with `patch` applied — or `node` itself when the patch changes nothing,
  * so an unaffected node keeps its identity and a memoised view skips it.
@@ -50,6 +54,10 @@ function applyToNode<N extends Node>(node: N, change: NodeChange<N>): N | null {
       return null;
     case 'replace':
       return change.item;
+    case 'update':
+      return assign(node, change.item);
+    case 'data':
+      return assign(node, { data: changedData(node.data, change) } as Partial<N>);
     case 'add':
       return node;
     case 'select':
@@ -72,6 +80,9 @@ function applyToNode<N extends Node>(node: N, change: NodeChange<N>): N | null {
       if (change.resizing !== undefined) patch.resizing = change.resizing;
       return assign(node, patch as Partial<N>);
     }
+    default:
+      // A kind of change this version does not know leaves the node as it is, as in React Flow.
+      return node;
   }
 }
 
@@ -108,10 +119,16 @@ function applyToEdge<E extends Edge>(edge: E, change: EdgeChange<E>): E | null {
       return null;
     case 'replace':
       return change.item;
+    case 'update':
+      return assign(edge, change.item);
+    case 'data':
+      return assign(edge, { data: changedData(edge.data, change) } as Partial<E>);
     case 'add':
       return edge;
     case 'select':
       return assign(edge, { selected: change.selected } as Partial<E>);
+    default:
+      return edge;
   }
 }
 
@@ -213,39 +230,84 @@ export function getOutgoers<N extends Node = Node>(node: Node, nodes: readonly N
   return nodes.filter((n) => to.has(n.id));
 }
 
-type ElementChange = { type: string; id?: string; item?: { id: string } };
+type ElementChange = { type: string; id?: string; item?: { id?: string } };
 /** The element a change is to: its `id`, or for an `add` written before changes carried one, its item's. */
-const idOf = (change: ElementChange): string | undefined => change.id ?? change.item?.id;
+const idOf = (change: ElementChange): string | undefined =>
+  change.id ?? (change.type === 'add' ? change.item?.id : undefined);
+
+/**
+ * React Flow 13's reading of a changeset, which `applyTo` follows: an element's changes apply in the order they
+ * were queued, and a `remove` among them takes it out whatever comes after. An `add` is of a new element: one whose
+ * id is already in the list (even if it is being removed) is not added, and an added element gets the changes
+ * queued for its id too. Added elements go at the end, or at their `index`.
+ */
+function applyAsChangeset<T extends { id: string }, C extends ElementChange>(
+  changes: readonly C[],
+  elements: T[],
+  applyOne: (element: T, change: C) => T | null,
+): T[] {
+  if (changes.length === 0) return elements;
+  const added = new Map<string, { item: T; index?: number | undefined }>();
+  const byId = new Map<string, C[]>();
+  for (const change of changes) {
+    const id = idOf(change);
+    if (id === undefined) continue;
+    if (change.type === 'add') {
+      const { item, index } = change as unknown as { item: T; index?: number };
+      added.set(id, { item, index });
+      continue;
+    }
+    const list = byId.get(id);
+    if (list) list.push(change);
+    else byId.set(id, [change]);
+  }
+  const applied = (element: T, id: string): T | null => {
+    let next: T | null = element;
+    for (const change of byId.get(id) ?? []) {
+      next = applyOne(next, change);
+      if (next === null) break;
+    }
+    return next;
+  };
+  const out: T[] = [];
+  for (const element of elements) {
+    added.delete(element.id);
+    const next = byId.has(element.id) ? applied(element, element.id) : element;
+    if (next) out.push(next);
+  }
+  if (added.size === 0) return out;
+  const adding: { item: T; index?: number | undefined }[] = [];
+  for (const [id, { item, index }] of added) {
+    const next = applied(item, id);
+    if (next) adding.push({ item: next, index });
+  }
+  return insertAdded(out, adding);
+}
 
 /**
  * A list of changes that is also React Flow 13's changeset: an array, so code written for React Flow 12 (and
  * `applyNodeChanges`) takes it as before, with the methods React Flow 13's `onNodesChange` handlers call —
- * `applyTo(nodes)`, `getByType`, `getForNode`, `add`, `toArray`…
+ * `applyTo(nodes)`, `getByType`, `getForNode`, `add`, `isEmpty`, `toArray`…
  */
-class Changeset<T, C extends ElementChange> extends Array<C> {
+class Changeset<T extends { id: string }, C extends ElementChange> extends Array<C> {
   /** What `filter`, `map`, `slice` and the rest return: plain arrays. */
   static override get [Symbol.species](): ArrayConstructor {
     return Array;
   }
   #version = 0;
-  readonly #apply: (changes: C[], elements: T[]) => T[];
+  readonly #applyOne: (element: T, change: C) => T | null;
 
-  constructor(apply: (changes: C[], elements: T[]) => T[], changes?: readonly C[]) {
+  constructor(applyOne: (element: T, change: C) => T | null, changes?: readonly C[]) {
     super();
-    this.#apply = apply;
+    this.#applyOne = applyOne;
     if (changes) for (const change of changes) this.push(change);
   }
 
-  /**
-   * Queues a change, or several. As in React Flow 13, an element's `remove`, then its `add`, go before its other
-   * changes, so what follows applies to the element as added.
-   */
+  /** Queues a change, or several, after those already queued. */
   add(change: C | readonly C[]): void {
     for (const c of Array.isArray(change) ? (change as readonly C[]) : [change as C]) {
       this.#version += 1;
-      const first = c.type === 'remove' || c.type === 'add' ? this.findIndex((x) => idOf(x) === idOf(c)) : -1;
-      if (first >= 0 && (c.type === 'remove' || this[first]!.type !== 'remove')) this.splice(first, 0, c);
-      else this.push(c);
+      this.push(c);
     }
   }
   /** Takes this change (this object) out. */
@@ -255,14 +317,34 @@ class Changeset<T, C extends ElementChange> extends Array<C> {
     this.splice(at, 1);
     this.#version += 1;
   }
+  /** The changes queued for the element with this id, other than the one adding it (`getNewElements` has that). */
   getForElement(id: string): C[] {
-    return this.filter((c) => idOf(c) === id);
+    return this.filter((c) => c.type !== 'add' && idOf(c) === id);
   }
+  /** Takes out every change queued for the element with this id, the one adding it as well. */
   removeForElement(id: string): void {
     let kept = 0;
     for (const c of this) if (idOf(c) !== id) this[kept++] = c;
     this.length = kept;
     this.#version += 1;
+  }
+  /** Takes out every queued change. */
+  clear(): void {
+    this.length = 0;
+    this.#version += 1;
+  }
+  /** Whether no change is queued. */
+  isEmpty(): boolean {
+    return this.length === 0;
+  }
+  /** The elements this changeset adds: each `add` change's item, the last one for an id that is added twice. */
+  getNewElements(): T[] {
+    const items = new Map<string, T>();
+    for (const c of this) {
+      const id = idOf(c);
+      if (c.type === 'add' && id !== undefined) items.set(id, (c as unknown as { item: T }).item);
+    }
+    return [...items.values()];
   }
   toArray(): C[] {
     return [...this];
@@ -270,15 +352,21 @@ class Changeset<T, C extends ElementChange> extends Array<C> {
   getByType<K extends C['type']>(type: K): Extract<C, { type: K }>[] {
     return this.filter((c): c is Extract<C, { type: K }> => c.type === type);
   }
-  /** The elements with these changes applied: `applyNodeChanges(changes, nodes)`. */
+  /** The elements with these changes applied, as React Flow 13 applies a changeset. */
   applyTo(elements: T[]): T[] {
-    return this.#apply(this, elements);
+    return applyAsChangeset(this, elements, this.#applyOne);
   }
-  /** How many elements the changes are to. */
+  /**
+   * How many elements the changes are to.
+   * @deprecated React Flow 13.0.0-next.3 took it out of its changesets; `isEmpty()` says whether there are any.
+   */
   get size(): number {
     return new Set(this.map(idOf)).size;
   }
-  /** Goes up with each `add`, `remove` and `removeForElement`. */
+  /**
+   * Goes up with each `add`, `remove`, `removeForElement` and `clear`.
+   * @deprecated React Flow 13.0.0-next.3 took it out of its changesets.
+   */
   get version(): number {
     return this.#version;
   }
@@ -287,7 +375,7 @@ class Changeset<T, C extends ElementChange> extends Array<C> {
 /** The changes `onNodesChange` is given: an array of `NodeChange`, and React Flow 13's `NodeChangeset`. */
 export class NodeChangeset<N extends Node = Node> extends Changeset<N, NodeChange<N>> {
   constructor(changes?: readonly NodeChange<N>[]) {
-    super(applyNodeChanges, changes);
+    super(applyToNode, changes);
   }
   getForNode(id: string): NodeChange<N>[] {
     return this.getForElement(id);
@@ -295,17 +383,25 @@ export class NodeChangeset<N extends Node = Node> extends Changeset<N, NodeChang
   removeForNode(id: string): void {
     this.removeForElement(id);
   }
+  /** The nodes this changeset adds. */
+  getNewNodes(): N[] {
+    return this.getNewElements();
+  }
 }
 
 /** The changes `onEdgesChange` is given: an array of `EdgeChange`, and React Flow 13's `EdgeChangeset`. */
 export class EdgeChangeset<E extends Edge = Edge> extends Changeset<E, EdgeChange<E>> {
   constructor(changes?: readonly EdgeChange<E>[]) {
-    super(applyEdgeChanges, changes);
+    super(applyToEdge, changes);
   }
   getForEdge(id: string): EdgeChange<E>[] {
     return this.getForElement(id);
   }
   removeForEdge(id: string): void {
     this.removeForElement(id);
+  }
+  /** The edges this changeset adds. */
+  getNewEdges(): E[] {
+    return this.getNewElements();
   }
 }

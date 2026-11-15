@@ -47,7 +47,6 @@ export const reactFlowDefaults = {
   minZoom: 0.5,
   nodeDragThreshold: 1,
   paneClickDistance: 1,
-  nodeClickDistance: 0,
   multiSelectionKeyCode: modifier,
   zoomActivationKeyCode: modifier,
   panActivationKeyCode: 'Space',
@@ -56,8 +55,9 @@ export const reactFlowDefaults = {
 
 /**
  * React Flow 12's defaults, which `<ReactFlow>` had in 1.x: React Flow 13's but for the fit margin, which is 12's 0.1
- * of the view, written with a unit (`'4.545454545454546%'` a side, since a bare number is pixels now). Spread this to
- * keep 1.x's margin:
+ * of the view, written with a unit (`'4.545454545454546%'` a side, since a bare number is pixels now), and
+ * `nodeClickDistance: 0` — in React Flow 12 a press on a node that moved at all was not a click; React Flow 13 has no
+ * such prop, and a press is a click unless it became a drag. Spread this to keep 1.x's margin and clicks:
  *
  * ```tsx
  * <ReactFlow {...reactFlow12Defaults} nodes={nodes} edges={edges} fitView />
@@ -68,4 +68,5 @@ export const reactFlowDefaults = {
 export const reactFlow12Defaults = {
   ...reactFlowDefaults,
   fitViewOptions: { padding: REACT_FLOW_12_MARGIN },
+  nodeClickDistance: 0,
 } as const satisfies Partial<FlowingerProps>;

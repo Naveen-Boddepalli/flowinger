@@ -6,7 +6,6 @@ import type {
   ControlButtonProps as RFControlButtonProps,
   CoordinateExtent as RFCoordinateExtent,
   Dimensions as RFDimensions,
-  HandleConnection as RFHandleConnection,
   KeyCode as RFKeyCode,
   OnConnect as RFOnConnect,
   SnapGrid as RFSnapGrid,
@@ -203,9 +202,7 @@ describe('React Flow\'s names for types flowinger has', () => {
     expectTypeOf<Transform>().toEqualTypeOf<RFTransform>();
     expectTypeOf<XYZPosition>().toEqualTypeOf<RFXYZPosition>();
     expectTypeOf<ControlButtonProps>().toEqualTypeOf<RFControlButtonProps>();
-    // React Flow builds this one as `Connection & { edgeId }`; the same fields, so each fits the other.
-    expectTypeOf<HandleConnection>().toMatchTypeOf<RFHandleConnection>();
-    expectTypeOf<RFHandleConnection>().toMatchTypeOf<HandleConnection>();
+    // React Flow 13 took `HandleConnection` out; flowinger keeps it, deprecated, as `NodeConnection` (above).
     expect(true).toBe(true);
   });
 

@@ -41,7 +41,6 @@ const SAID_BY_REACT_FLOW: Record<keyof typeof reactFlowDefaults, [said: string, 
   minZoom: ['minZoom = 0.5', 0.5],
   nodeDragThreshold: ['nodeDragThreshold: 1,', 1],
   paneClickDistance: ['paneClickDistance = 1', 1],
-  nodeClickDistance: ['nodeClickDistance = 0', 0],
   multiSelectionKeyCode: ["multiSelectionKeyCode = isMacOs() ? 'Meta' : 'Control'", 'Control'],
   zoomActivationKeyCode: ["zoomActivationKeyCode = isMacOs() ? 'Meta' : 'Control'", 'Control'],
   panActivationKeyCode: ["panActivationKeyCode = 'Space'", 'Space'],
@@ -60,6 +59,8 @@ describe('reactFlowDefaults', () => {
     }
     expect(Object.keys(reactFlowDefaults).sort()).toEqual(Object.keys(SAID_BY_REACT_FLOW).sort());
     expect(systemSource).toMatch(/defaultFitViewPadding = ["']5%["']/);
+    // React Flow 13.0.0-next.3 took nodeClickDistance out: a press on a node is a click unless it became a drag.
+    expect(reactFlowSource.includes('nodeClickDistance'), 'React Flow has nodeClickDistance again').toBe(false);
     expect(REACT_FLOW_MARGIN).toBe('5%');
   });
 
@@ -178,9 +179,11 @@ describe("the view defaults <ReactFlow> gives its store", () => {
 
 describe('reactFlow12Defaults', () => {
   it("is reactFlowDefaults with React Flow 12's margin, written with a unit", () => {
-    const { fitViewOptions, ...rest } = reactFlow12Defaults;
+    const { fitViewOptions, nodeClickDistance, ...rest } = reactFlow12Defaults;
     const { fitViewOptions: thirteen, ...same } = reactFlowDefaults;
     expect(rest).toEqual(same);
+    // React Flow 12's: a press on a node that moved at all is not a click.
+    expect(nodeClickDistance).toBe(0);
     expect(thirteen).toEqual({ padding: '5%' });
     expect(fitViewOptions).toEqual({ padding: REACT_FLOW_12_MARGIN });
   });

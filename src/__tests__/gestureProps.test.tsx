@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
-import { FlowingerCanvas, FlowingerCore, type FlowingerProps, type Node, type NodeProps } from '../index.ts';
+import { FlowingerCanvas, FlowingerCore, ReactFlow, reactFlow12Defaults, type FlowingerProps, type Node, type NodeProps } from '../index.ts';
 
 // The gesture props that were accepted and ignored: what they say is now what happens. Each is compared
 // with React Flow's own behaviour, read from its source (`@xyflow/system`'s XYPanZoom and XYDrag).
@@ -261,6 +261,20 @@ describe('paneClickDistance and nodeClickDistance', () => {
     const { container } = render(<FlowingerCanvas nodes={nodes} nodesDraggable onNodeClick={onNodeClick} />);
     press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
     expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('<ReactFlow>: a press that moved, but not past nodeDragThreshold, is a click, as in React Flow 13', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(<ReactFlow nodes={nodes} onNodeClick={onNodeClick} />);
+    press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('<ReactFlow> with reactFlow12Defaults: a press that moved at all is not a click, as in React Flow 12', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(<ReactFlow {...reactFlow12Defaults} nodes={nodes} onNodeClick={onNodeClick} />);
+    press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
+    expect(onNodeClick).not.toHaveBeenCalled();
   });
 });
 

@@ -634,7 +634,7 @@ describe('getNodeConnections and getHandleConnections', () => {
     }
   });
 
-  it('the handle form is the same question, for a type', () => {
+  it('the handle form (deprecated: React Flow 13 took it out) is getNodeConnections for a type', () => {
     const mine = ours();
     const rf = theirs();
     for (const q of [
@@ -643,7 +643,9 @@ describe('getNodeConnections and getHandleConnections', () => {
       { type: 'source' as const, nodeId: 'a' },
       { type: 'target' as const, nodeId: 'c', id: null },
     ]) {
-      expect(mine.getHandleConnections(q), JSON.stringify(q)).toEqual(rf.getHandleConnections(q));
+      expect(mine.getHandleConnections(q), JSON.stringify(q)).toEqual(
+        rf.getNodeConnections({ type: q.type, nodeId: q.nodeId, handleId: q.id ?? null }),
+      );
     }
   });
 

@@ -152,7 +152,10 @@ export type StepEdgeProps = ComponentProps<typeof StepEdge>;
 
 // --- the small ones --------------------------------------------------------------------------------------
 
-/** An edge at a handle, as `useNodeConnections` and `getHandleConnections` return it. */
+/**
+ * An edge at a handle, as `useNodeConnections` and `getHandleConnections` return it.
+ * @deprecated React Flow 13.0.0-next.3 took it out for `NodeConnection`, which it is.
+ */
 export type HandleConnection = NodeConnection;
 /** What a `ControlButton` takes: a button's own attributes. */
 export type ControlButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;

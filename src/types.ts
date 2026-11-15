@@ -564,7 +564,10 @@ export interface FlowingerInstance {
    * Flow, a `handleId` alone, or `null`, does not narrow.
    */
   getNodeConnections: (query: { type?: HandleType; nodeId: string; handleId?: string | null }) => NodeConnection[];
-  /** The edges at one handle — `getNodeConnections` for a `type`, as React Flow's older call has it. */
+  /**
+   * The edges at one handle — `getNodeConnections` for a `type`, as React Flow's older call has it.
+   * @deprecated React Flow 13.0.0-next.3 took it out: `getNodeConnections({ type, nodeId, handleId })` asks the same.
+   */
   getHandleConnections: (query: { type: HandleType; nodeId: string; id?: string | null }) => NodeConnection[];
 
   /**
@@ -852,8 +855,8 @@ export interface FlowingerProps {
    */
   panActivationKeyCode?: string | string[] | null;
   /**
-   * Pixels a press must travel before it becomes a node drag. Left out, the engine's own 3; an explicit `0` is
-   * no threshold. Needs `dragFeature`.
+   * Pixels a press must travel past before it becomes a node drag: one that moves exactly this far is still a click,
+   * as in React Flow. Left out, the engine's own 3; an explicit `0` is no threshold. Needs `dragFeature`.
    */
   nodeDragThreshold?: number;
   /**
@@ -881,7 +884,7 @@ export interface FlowingerProps {
    */
   connectionDragThreshold?: number;
   /**
-   * How far, in pixels, a press on a node may move and still be a click. Further than that, and not far enough to be a drag, it is not a click (no `onNodeClick`, no selection). Left out, any press that does not become a drag is a click. Needs `dragFeature`.
+   * How far, in pixels, a press on a node may move and still be a click. Further than that, and not far enough to be a drag, it is not a click (no `onNodeClick`, no selection). Left out, any press that does not become a drag is a click, as in React Flow 13, which has no such prop; React Flow 12's default was `0` (`reactFlow12Defaults`). Needs `dragFeature`.
    */
   nodeClickDistance?: number;
   /**
@@ -1034,13 +1037,27 @@ export interface NodeReplaceChange<N extends Node = Node> {
   item: N;
 }
 
+/** Merges `item` into the node, as React Flow 13's `update` change does. */
+export interface NodeUpdateChange<N extends Node = Node> {
+  type: 'update';
+  id: string;
+  item: Partial<N>;
+}
+
+/** Merges `data` into the node's data — or, with `replace: true`, puts it in its place — as React Flow 13's `data` change does. */
+export type NodeDataChange<N extends Node = Node> =
+  | { type: 'data'; id: string; data: Partial<N['data']>; replace?: false }
+  | { type: 'data'; id: string; data: N['data']; replace: true };
+
 export type NodeChange<N extends Node = Node> =
   | NodePositionChange
   | NodeDimensionChange
   | NodeSelectionChange
   | NodeRemoveChange
   | NodeAddChange<N>
-  | NodeReplaceChange<N>;
+  | NodeReplaceChange<N>
+  | NodeUpdateChange<N>
+  | NodeDataChange<N>;
 
 export interface EdgeSelectionChange {
   type: 'select';
@@ -1067,8 +1084,22 @@ export interface EdgeReplaceChange<E extends Edge = Edge> {
   item: E;
 }
 
+/** The edge counterpart of `NodeUpdateChange`. */
+export interface EdgeUpdateChange<E extends Edge = Edge> {
+  type: 'update';
+  id: string;
+  item: Partial<E>;
+}
+
+/** The edge counterpart of `NodeDataChange`. */
+export type EdgeDataChange<E extends Edge = Edge> =
+  | { type: 'data'; id: string; data: Partial<NonNullable<E['data']>>; replace?: false }
+  | { type: 'data'; id: string; data: NonNullable<E['data']>; replace: true };
+
 export type EdgeChange<E extends Edge = Edge> =
   | EdgeSelectionChange
   | EdgeRemoveChange
   | EdgeAddChange<E>
-  | EdgeReplaceChange<E>;
+  | EdgeReplaceChange<E>
+  | EdgeUpdateChange<E>
+  | EdgeDataChange<E>;

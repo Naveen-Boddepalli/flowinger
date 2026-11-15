@@ -281,6 +281,7 @@ export const dragFeature: Feature<DragApi> = {
     const stopClaiming = useRef<(() => void) | null>(null);
     const [dragging, setDragging] = useState(false);
     /** How far a press travels to become a drag: the canvas's `nodeDragThreshold`, else the engine's own. */
+    // A press becomes a drag once it has moved further than this, as in React Flow (`distance > nodeDragThreshold`).
     const threshold = () => store.getOptions().nodeDragThreshold ?? DRAG_THRESHOLD;
 
     useIsomorphicLayoutEffect(
@@ -330,7 +331,7 @@ export const dragFeature: Feature<DragApi> = {
           stop();
           return;
         }
-        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < threshold()) return;
+        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) <= threshold()) return;
         capturePointer(element, pressed.pointerId);
         stop();
       };
@@ -365,7 +366,7 @@ export const dragFeature: Feature<DragApi> = {
         return;
       }
       if (!d.session) {
-        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold()) return;
+        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) <= threshold()) return;
         d.session = beginNodeDrag(node, e, isMulti(e));
         justDragged.current = true;
         setDragging(true);
@@ -394,7 +395,7 @@ export const dragFeature: Feature<DragApi> = {
         // is delivered to whatever is under the pointer — the capture it triggers only takes effect from
         // the next event — so the node never saw the pointer travel, and with no move after it the drag
         // would be lost. The release is the capture's first event: begin the drag, and end it, there.
-        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= threshold()) {
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > threshold()) {
           const session = beginNodeDrag(node, e, isMulti(e));
           justDragged.current = true;
           const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
