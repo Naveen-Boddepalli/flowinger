@@ -10,6 +10,49 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [2.0.0-rc.4] - 2026-11-15
+
+The fourth candidate for 2.0, on the `next` dist-tag: [rc.3](#200-rc3---2026-10-20) following React Flow
+13.0.0-next.3 (2026-11-08) where it followed next.0. React Flow 13 is still a pre-release, so 2.0 stays a candidate.
+What it means for an app: [Upgrading to 2.0](docs/upgrading.md#6-what-react-flow-1300-next3-changed).
+
+### Changed
+
+- **Breaking: `<ReactFlow>`'s defaults have no `nodeClickDistance`**, as React Flow 13.0.0-next.3 has none: a press
+  on a node is a click unless it became a drag. It was 0, React Flow 12's and next.0's: a press that moved at all was
+  not a click. `reactFlow12Defaults` keeps 0, and the prop still works.
+- **Breaking: a press becomes a node drag once it moves further than `nodeDragThreshold`**, as in React Flow; it
+  began at that distance. On `<FlowingerCanvas>` a press that moves exactly 3 px is a click now, and on
+  `<ReactFlow>` a pixel's wobble is.
+- **`changes.applyTo(nodes)` reads a changeset as React Flow 13.0.0-next.3 does**, checked against it on random
+  batches: an element's changes in the order queued, a `remove` winning over what follows, an `add` of an id already
+  in the list not added, and an added element given the changes queued for its id. `add` no longer moves an
+  element's `remove` and `add` to the front, and `getForNode` leaves out the `add`. `applyNodeChanges` keeps React
+  Flow 12's reading.
+- **A click on the pane lets go of a connection begun by a click**, with `onClickConnectEnd` and nothing connected,
+  or of one begun from the keyboard, saying so — as in React Flow 13.0.0-next.3. Only Escape did.
+
+### Added
+
+- **React Flow 13.0.0-next.3's `update` and `data` changes** (`NodeUpdateChange`, `NodeDataChange`,
+  `EdgeUpdateChange`, `EdgeDataChange`), applied by `applyTo` and `applyNodeChanges`.
+- **`clear()`, `isEmpty()` and `getNewNodes()` / `getNewEdges()`** on a changeset.
+- **`useEqualSelector`**, React Flow 13.0.0-next.3's one new export.
+
+### Fixed
+
+- **A change of a kind this version does not know no longer loses its element**: `applyNodeChanges` and `applyTo`
+  leave it as it is, as React Flow does. React Flow 13's `update` and `data` changes took nodes out.
+- **A press on a node let go of off it is not a click** on what is under the release: the pane cleared the
+  selection and called `onPaneClick`, where React Flow 13.0.0-next.3 swallows that click. Watched in Chromium,
+  Firefox and WebKit.
+
+### Deprecated
+
+- **`getHandleConnections` and the type `HandleConnection`**, which React Flow 13.0.0-next.3 took out:
+  `getNodeConnections({ type, nodeId, handleId })` and `NodeConnection` are the same.
+- **A changeset's `size` and `version`**, which next.3 took out.
+
 ## [2.0.0-rc.3] - 2026-10-20
 
 The third candidate for 2.0, on the `next` dist-tag: [rc.2](#200-rc2---2026-10-19) with 1.2.1's fix, so a large
@@ -694,7 +737,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.4...HEAD
+[2.0.0-rc.4]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...v2.0.0-rc.4
 [2.0.0-rc.3]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...v2.0.0-rc.3
 [2.0.0-rc.2]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...v2.0.0-rc.2
 [2.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v2.0.0-rc.1
