@@ -5,7 +5,7 @@ covers waits for it. This page is the plan for that release: when it starts, wha
 what has to be seen working first, and in what order. Each section says whether it is decided, proposed, or waiting
 on a measurement. Decisions are the owner's; "proposed" means a recommendation not yet taken.
 
-## Status (2026-10-17): built on `release/2.0`, ahead of the trigger
+## Status (2026-11-15): built on `release/2.0`, ahead of the trigger; rc.4 follows React Flow 13.0.0-next.3
 
 The owner chose to build 2.0 now rather than wait for React Flow 13.0.0 (*When 2.0 starts*, below). It is done on
 the branch, in two releases:
@@ -22,7 +22,15 @@ the branch, in two releases:
 - **One item of D1 was not needed.** React Flow 13 drops 12's `light` class on a canvas with no colour mode, but
   flowinger's `<ReactFlow>` never added it (1.0's D1 left colours out), so nothing changed.
 
-**What waiting would have bought, and still can:** React Flow 13 is at `next.0`. If its `13.0.0` changes a default
+- **rc.4 (2026-11-15) follows 13.0.0-next.3**, which came three weeks after next.0 (next.1 and next.2 on 2026-11-04,
+  next.3 on 2026-11-08) and moved more than the oracles had seen: it took out `nodeClickDistance`,
+  `getHandleConnections` and `HandleConnection`, added `useEqualSelector`, gave changesets `update` and `data`
+  changes and a new reading of an `add`, and made a pane click end a click-connect and a release off a node no
+  click. The unit tests and the audit caught three of these; a diff of next.0's source against next.3's found the
+  rest. The core is 20.97 kB (budget 21), the whole canvas 39.5 (budget 40).
+
+**What waiting would have bought, and still can:** React Flow 13 is at `next.3`, and three pre-releases in a week
+say it is still moving. If its `13.0.0` changes a default
 or a behaviour again, the stability page says `<ReactFlow>` follows only in a major — 3.0. So 2.0 is released as a
 candidate on `next` until React Flow 13.0.0 is out, and promoted to `latest` only once the weekly job shows nothing
 more has moved.

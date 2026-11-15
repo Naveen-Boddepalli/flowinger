@@ -32,7 +32,7 @@ React Flow's defaults where they differ — interaction on, `minZoom` 0.5 and th
 | `zoomActivationKeyCode` | Ctrl / ⌘ | Held, the wheel zooms — even with `zoomOnScroll` off — and instead of panning under `panOnScroll`; a pinch (Control + wheel) zooms whatever `zoomOnScroll` says once a key is given. Left out, `zoomOnScroll` off still means no zoom. |
 | `panOnScrollMode`, `preventScrolling` | `'free'`, `true` | With `panOnScroll`: `'free'`, `'vertical'` or `'horizontal'` (Shift turns a vertical wheel sideways, except in `'vertical'`). `preventScrolling` off leaves a plain wheel to the page and does not zoom; a pinch still does. |
 | `noWheelClassName`, `noPanClassName`, `noDragClassName` | | Classes of your own that the wheel, a pan or a node drag pass through, as `nowheel`, `nopan` and `nodrag` do — which keep working. |
-| `paneClickDistance`, `nodeClickDistance` | none | How far a press may move and still be a click. Further, and not far enough to be a drag, it is not one. Left out, any press that does not become a pan or a drag is a click. |
+| `paneClickDistance`, `nodeClickDistance` | none | How far a press may move and still be a click. Further, and not far enough to be a drag, it is not one. Left out, any press that does not become a pan or a drag is a click — as in React Flow 13, which has no `nodeClickDistance` (12's was 0). |
 | `selectNodesOnDrag` | `true` | Off, dragging an unselected node moves it alone and drops the selection; a click still selects. |
 | `connectionDragThreshold`, `connectionRadius`, `reconnectRadius` | `1`, `20`, `10` | A press on a handle is a connection once the pointer has travelled that far (px); a drop snaps to the nearest handle within the radius (graph units) of the pointer, and the line is drawn to it. A finger reaches at least 20 screen px, at the start of a connection too ([why](react-flow-coverage.md#differences-on-purpose)). |
 | `connectOnClick`, `onClickConnectStart`, `onClickConnectEnd` | `true` | Click a handle, then another: `onClickConnectStart(event, { nodeId, handleId, handleType })`, then the connection is made if valid and `onClickConnectEnd(event, { connection, isValid })` either way. The first handle gets a `clickconnecting` class; Escape lets go of it. Enter or Space on a handle does the same from the keyboard, with `connectOnClick` off too ([accessibility](accessibility.md#connecting-from-the-keyboard)). |
@@ -192,7 +192,9 @@ A node with `hidden: true` is neither drawn nor listed on the minimap, and nor a
 Give the canvas `onNodesChange` and it stops keeping state for you: dragging, selecting and measuring
 are *reported* as a list of changes, and you apply them. The list is a `NodeChangeset` (`EdgeChangeset` for
 edges): an array, and React Flow 13's changeset, so `applyNodeChanges(changes, nodes)` and
-`changes.applyTo(nodes)` both work, and so do `getByType('position')`, `getForNode(id)` and `toArray()`.
+`changes.applyTo(nodes)` both work, and so do `getByType('position')`, `getForNode(id)`, `getNewNodes()`,
+`isEmpty()` and `toArray()`. `applyTo` reads changes an app queues itself (`changes.add(…)`) as React Flow 13 does;
+`applyNodeChanges` as React Flow 12 did ([the difference](upgrading.md#3-change-handlers-are-given-a-changeset)).
 
 ```tsx
 const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -212,7 +214,8 @@ const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 `useNodesState` is `useState` plus `onNodesChange = (changes) => setNodes((ns) => applyNodeChanges(changes, ns))`;
 write that yourself if you keep nodes in a store. A change is one of `position` (with `dragging`),
 `dimensions` (the measured size, which `applyNodeChanges` writes to `node.measured`), `select`, `remove`,
-`add` and `replace`. Selection then lives on `node.selected`, and the canvas draws it from there.
+`add` and `replace`, and React Flow 13's `update` (fields merged into the node) and `data` (merged into its data,
+or in its place with `replace: true`). Selection then lives on `node.selected`, and the canvas draws it from there.
 `applyNodeChanges` returns the same object for every node a change did not touch, so memoised views skip
 them. `useNodesInitialized()` is true once every node has been measured, and re-renders only when that flips.
 

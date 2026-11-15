@@ -5,7 +5,7 @@ use — a viewer of trees and plans, with some editing. It is **not a drop-in fo
 is a checklist, not a promise. The compiler will find most of what is missing; this page is for the things it
 will not: defaults that differ, and behaviour that changes without an error.
 
-Every default below was read from `@xyflow/react` 13's source (13.0.0-next.0), not remembered. Coming from React
+Every default below was read from `@xyflow/react` 13's source (13.0.0-next.3), not remembered. Coming from React
 Flow 12, the same holds: flowinger has every name 12 had, and [Upgrading to 2.0](upgrading.md#upgrading-to-20) lists
 what 13 changed.
 
@@ -58,7 +58,8 @@ says what changed.
 | `nodesFocusable` | `true` | **as `elementsSelectable`** |
 | `minZoom` | `0.5` | **`0.05`** |
 | `nodeDragThreshold` | 1 px | **3 px** |
-| `paneClickDistance`, `nodeClickDistance` | 1 px, 0 px | **none: a press is a click however far it moved** |
+| `paneClickDistance` | 1 px | **none: a press is a click however far it moved** |
+| `nodeClickDistance` | not a prop: a press is a click unless it became a drag | the same; flowinger keeps 12's prop, to make a press that moved not a click |
 | `maxZoom` | `2` | `2` |
 | `fitView` margin | `padding` `'5%'` of the pane a side | **40 px**, unless you pass a `padding` (pixels, `'%'` or per side) |
 | `deleteKeyCode` | `'Backspace'` | `'Backspace'` |

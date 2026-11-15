@@ -43,7 +43,7 @@ crashes and regressions for six months after `2.0.0`, published to npm's `v1` ta
 
 ## React Flow's API
 
-Flowinger follows React Flow 13's API ([coverage](react-flow-coverage.md)): all of 13.0.0-next.0's names, and every
+Flowinger follows React Flow 13's API ([coverage](react-flow-coverage.md)): all of 13.0.0-next.3's names, and every
 name of 12's it dropped as well. When a later React Flow adds a name, Flowinger may add it in a minor release; when
 it changes a default or a behaviour, `<ReactFlow>` follows only in a major one. A weekly job checks flowinger
 against React Flow's next release, so a change there is seen when it lands.
