@@ -143,9 +143,9 @@ export interface NodeCallbacks {
   onEdgesDelete?: ((edges: Edge[]) => void) | undefined;
   onDelete?: ((elements: { nodes: Node[]; edges: Edge[] }) => void) | undefined;
   /** Given, it makes the *nodes* controlled: what happens is reported here, not done. */
-  onNodesChange?: ((changes: NodeChange[]) => void) | undefined;
+  onNodesChange?: ((changes: NodeChangeset) => void) | undefined;
   /** The edge counterpart of `onNodesChange`. */
-  onEdgesChange?: ((changes: EdgeChange[]) => void) | undefined;
+  onEdgesChange?: ((changes: EdgeChangeset) => void) | undefined;
 }
 
 /** The canvas's settings the store needs to act on a gesture. */

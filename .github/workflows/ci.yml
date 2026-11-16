@@ -47,9 +47,13 @@ jobs:
         run: pnpm check:package
       # The coverage numbers in the docs come from this script, which reads TypeScript's in-process API — gone
       # in TypeScript 7, so it uses a 6.x alias. It broke once without a test failing; now it is run.
-      - name: The React Flow coverage audit still runs
+      # Against the declarations React Flow's `exports` names (13's package still carries an older build under
+      # dist/esm/), and --strict: a React Flow name flowinger lacks or ignores fails the build.
+      - name: Every React Flow name is here and does something
         if: matrix.react == '19'
-        run: node scripts/audit-react-flow.mjs node_modules/@xyflow/react/dist/esm/index.d.ts
+        run: |
+          types=$(node -p "const p = require('@xyflow/react/package.json'), e = p.exports['.']; e.types ?? e.node?.types ?? p.types")
+          node scripts/audit-react-flow.mjs "node_modules/@xyflow/react/$types" --strict
 
   demo:
     # The demo and the docs site are built from source (and docs/), so a change that breaks either should fail
@@ -78,6 +82,25 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: node scripts/check-examples.mjs
+
+  toolchains:
+    # The packed package in the tools a consumer loads it with — Node's require and import, Jest, Vitest, TypeScript 5
+    # and 7, Next.js — since it is ES modules only (scripts/check-toolchains.mjs; three known failures are reported,
+    # not failed). On both Node lines in support.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/check-toolchains.mjs
 
   e2e:
     # Real browsers against the demo — Chromium, Firefox and WebKit: layout, pointer capture, the wheel — what

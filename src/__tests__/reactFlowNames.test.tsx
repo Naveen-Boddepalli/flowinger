@@ -6,7 +6,6 @@ import type {
   ControlButtonProps as RFControlButtonProps,
   CoordinateExtent as RFCoordinateExtent,
   Dimensions as RFDimensions,
-  HandleConnection as RFHandleConnection,
   KeyCode as RFKeyCode,
   OnConnect as RFOnConnect,
   SnapGrid as RFSnapGrid,
@@ -36,7 +35,8 @@ import {
   type DeleteElementsOptions,
   type Dimensions,
   type Edge,
-  type EdgeChange,
+  type EdgeChangeset,
+  type NodeChangeset,
   type EdgeLabelRendererProps,
   type EdgeMarkerType,
   type EdgeMouseHandler,
@@ -134,8 +134,11 @@ describe('React Flow\'s names for types flowinger has', () => {
   it('the generic ones take a node or edge type, defaulting to the plain one', () => {
     type MyNode = Node<{ label: string }, 'custom'>;
     type MyEdge = Edge & { data: { weight: number } };
-    expectTypeOf<OnNodesChange<MyNode>>().parameter(0).toEqualTypeOf<NodeChange<MyNode>[]>();
-    expectTypeOf<OnEdgesChange<MyEdge>>().parameter(0).toEqualTypeOf<EdgeChange<MyEdge>[]>();
+    expectTypeOf<OnNodesChange<MyNode>>().parameter(0).toEqualTypeOf<NodeChangeset<MyNode>>();
+    expectTypeOf<OnEdgesChange<MyEdge>>().parameter(0).toEqualTypeOf<EdgeChangeset<MyEdge>>();
+    // A changeset is an array of the changes, so a handler written for React Flow 12's arrays still fits.
+    expectTypeOf<NodeChangeset<MyNode>>().toMatchTypeOf<NodeChange<MyNode>[]>();
+    expectTypeOf<(changes: NodeChange[]) => void>().toMatchTypeOf<OnNodesChange>();
     expectTypeOf<NodeMouseHandler<MyNode>>().parameter(1).toEqualTypeOf<MyNode>();
     expectTypeOf<EdgeMouseHandler<MyEdge>>().parameter(1).toEqualTypeOf<MyEdge>();
     expectTypeOf<ReactFlowJsonObject<MyNode, MyEdge>['nodes']>().toEqualTypeOf<MyNode[]>();
@@ -199,9 +202,7 @@ describe('React Flow\'s names for types flowinger has', () => {
     expectTypeOf<Transform>().toEqualTypeOf<RFTransform>();
     expectTypeOf<XYZPosition>().toEqualTypeOf<RFXYZPosition>();
     expectTypeOf<ControlButtonProps>().toEqualTypeOf<RFControlButtonProps>();
-    // React Flow builds this one as `Connection & { edgeId }`; the same fields, so each fits the other.
-    expectTypeOf<HandleConnection>().toMatchTypeOf<RFHandleConnection>();
-    expectTypeOf<RFHandleConnection>().toMatchTypeOf<HandleConnection>();
+    // React Flow 13 took `HandleConnection` out; flowinger keeps it, deprecated, as `NodeConnection` (above).
     expect(true).toBe(true);
   });
 

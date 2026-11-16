@@ -52,7 +52,7 @@ A change is ready when all of these pass; CI runs them on React 18 and 19.
 ```bash
 pnpm typecheck
 pnpm test                       # vitest, jsdom — `pnpm test edges` runs the files matching "edges"
-pnpm build                      # dist/: ESM, CJS and declarations for both
+pnpm build                      # dist/: ES modules and their declarations
 pnpm size --max-full 40 --max-lean 21.5   # gzip kB: the whole canvas, and the core with no features
 node scripts/size-dist.mjs --max-lean 21.5 # the core again, from the built package
 pnpm check:package              # publint + Are the Types Wrong, on the packed tarball
@@ -122,6 +122,13 @@ Maintainers only. A release is a tag; there is no npm token anywhere.
 3. [`release.yml`](.github/workflows/release.yml) re-runs the gate, publishes to npm with a provenance
    attestation, and creates the GitHub release from the changelog. A tag with a hyphen (`v0.5.0-rc.1`)
    goes to the `next` dist-tag and is marked a prerelease.
+
+**A 1.x fix after 2.0.** 1.x gets fixes for security problems, crashes and regressions for six months after
+`2.0.0`, from a `v1` branch: cut it from the last 1.x tag, with this repository's `release.yml` (which knows about
+older majors) — `git switch -c v1 v1.1.0 && git checkout main -- .github/workflows/release.yml` — and commit. Each
+fix is a pull request into `v1` with its changelog entry and version; tag the merge commit as above. The workflow
+publishes a version older than npm's `latest` major to that major's dist-tag (`v1`), so `latest` stays on 2.x, and
+does not mark its GitHub release the latest.
 
 **One-time setup**, on npmjs.com: the package's *Settings → Trusted Publisher → GitHub Actions*, with this
 repository's owner and name and the workflow file `release.yml` (the environment is left blank). Then, in

@@ -17,7 +17,7 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 />
 ```
 
-With no features `FlowingerCore` costs about 21.3 kB gzipped (39 for the whole canvas); each feature you name adds
+With no features `FlowingerCore` costs about 20.9 kB gzipped (39 for the whole canvas); each feature you name adds
 only its own code. The props, the nodes and the instance are the same either way.
 
 | Feature | What it adds | Props that need it |
@@ -30,12 +30,12 @@ only its own code. The props, the nodes and the instance are the same either way
 | `selectionRectFeature` | The rectangle that stays round what a box selection took: dragged to move it all, right-clicked for a menu (brings `boxSelectFeature` and `dragFeature`) | `onSelectionDragStart`, `onSelectionDrag`, `onSelectionDragStop`, `onSelectionContextMenu` |
 | `deleteFeature` | The delete key, and `deleteElements` | `deleteKeyCode`, `onBeforeDelete`, `onNodesDelete`, `onEdgesDelete`, `onDelete` |
 | `cullingFeature` | Drawing only what is in view | `onlyRenderVisibleElements` |
-| `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `updateEdgeData`, `getNodeConnections`, `getHandleConnections`, `getIntersectingNodes`, `isNodeIntersecting` | |
+| `editingFeature` | The instance's `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode`, `updateNodeData`, `updateEdge`, `updateEdgeData`, `getNodeConnections`, `getHandleConnections` (deprecated), `getIntersectingNodes`, `isNodeIntersecting` | |
 | `eventsFeature` | A double click, a right click, and the pointer entering, moving over and leaving a node, an edge or the pane; the wheel over the pane. Giving any edge event (or `onEdgeClick`) makes every edge take the pointer, selectable or not | `onNodeDoubleClick`, `onNodeContextMenu`, `onNodeMouseEnter` / `Move` / `Leave` and the same for edges and the pane, `onPaneScroll` |
 | `edgeLabelsFeature` | The box behind an edge's label (`labelShowBg`), sized to the text once a browser has laid it out | `labelShowBg` on an edge |
 | `a11yFeature` | Which nodes and edges are tab stops (`nodesFocusable`, their own `focusable`, `disableKeyboardA11y`), the descriptions they point at and the live announcement of a keyboard move (`ariaLabelConfig`, which also labels the controls, minimap and handles), and panning to a node that takes focus out of view | `nodesFocusable`, `disableKeyboardA11y`, `ariaLabelConfig`, `autoPanOnNodeFocus` |
 | `stackingFeature` | A selected node is raised by 1000 (and what is inside it), a selected edge optionally too; `zIndexMode` `'auto'` and `'manual'` | `elevateNodesOnSelect`, `elevateEdgesOnSelect`, `zIndexMode` |
-| `edgePathsFeature` | Nothing in 1.x, where the core draws every path. In 2.0 the `straight`, `smoothstep` and `step` paths come with it, and a core without it draws them as beziers — name it now and nothing changes then | an edge's `type` |
+| `edgePathsFeature` | The `straight`, `smoothstep` and `step` paths; without it every edge is a bezier, React Flow's default (before 2.0 the core drew them all) | an edge's `type` |
 | `colorModeFeature` | A `light` / `dark` class on the canvas, `'system'` following the OS, and a light palette for the `--flowinger-*` colours | `colorMode`, `forceColorMode` |
 | `zoomKeyFeature` | Holding a key makes the wheel zoom — even with `zoomOnScroll` off, and instead of panning | `zoomActivationKeyCode` |
 | `smoothFeature` | `interpolate: 'smooth'` on an animated move: it zooms out and back in over a long one | `interpolate` |

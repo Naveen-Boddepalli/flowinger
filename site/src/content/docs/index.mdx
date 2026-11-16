@@ -66,7 +66,7 @@ and TypeScript declarations.
 
 <CardGrid>
   <Card title="Small, and only what you use" icon="rocket">
-    The core is about 21.3 kB gzipped. Drag, connect, selection and the rest are opt-in features that add only
+    The core is about 20.9 kB gzipped. Drag, connect, selection and the rest are opt-in features that add only
     their own code, so the whole canvas is about 39 kB. [Features →](docs/features/)
   </Card>
   <Card title="No dependencies" icon="puzzle">
@@ -74,7 +74,7 @@ and TypeScript declarations.
     [Theming →](docs/theming/)
   </Card>
   <Card title="An API you already know" icon="approve-check">
-    React Flow’s names for components, hooks, props, class names and types — all 210 of its exports, measured
+    React Flow’s names for components, hooks, props, class names and types — all 220 of React Flow 13's exports, measured
     from its own type declarations. [Coverage →](docs/react-flow-coverage/)
   </Card>
   <Card title="The “pro” extras, free" icon="star">
@@ -86,8 +86,8 @@ and TypeScript declarations.
     [Server rendering →](docs/server-rendering/)
   </Card>
   <Card title="Fast at 10,000 nodes" icon="analytics">
-    Mounts 10,000 nodes in 0.6 s against React Flow’s 1.2 s, and pans them in a quarter of the time without
-    culling. [Benchmarks →](docs/benchmarks/)
+    Mounts 10,000 nodes in 0.8 s against React Flow 13’s 1.45 s, and culled in 55 ms against 541; pans and zooms
+    for less. React Flow 13 drags faster without culling. [Benchmarks →](docs/benchmarks/)
   </Card>
 </CardGrid>
 
@@ -95,13 +95,14 @@ and TypeScript declarations.
 
 <div class="flowinger-compare">
 
-| | Flowinger | React Flow (`@xyflow/react` 12) |
+| | Flowinger 2 | React Flow 13 |
 |---|---|---|
-| Runtime dependencies | **0** | 3 direct, plus `d3-zoom`, `d3-drag`, `d3-selection`… |
+| Runtime dependencies | **0** | 4 direct, plus `d3-zoom`, `d3-drag`, `d3-selection`… |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev)) | **20.2 kB** gzipped | 59.1 kB gzipped |
-| Mount 10,000 nodes | **0.6 s** | 1.2 s |
-| Mount 10,000 nodes, culled | **53 ms** | 544 ms |
+| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev), flowinger 1.1 against React Flow 12) | **20.2 kB** gzipped | 59.1 kB gzipped |
+| Mount 10,000 nodes | **0.8 s** | 1.45 s |
+| Mount 10,000 nodes, culled | **55 ms** | 541 ms |
+| Drag at 10,000 nodes, no culling | 86 ms a move | **57 ms** a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) (paid) |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 

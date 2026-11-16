@@ -61,6 +61,27 @@ const ARROWS: Record<string, [number, number]> = {
 };
 
 /**
+ * Stops the click the browser sends after a release, wherever it lands: heard first, on the window, and only that
+ * one — it comes in the same task as the release, so the listener goes in the next, or at the next press. A click
+ * made by code (`el.click()`, not trusted) is not the browser's, and goes through.
+ */
+function swallowNextClick(view: Window): void {
+  const done = () => {
+    view.removeEventListener('click', swallow, true);
+    view.removeEventListener('pointerdown', done, true);
+  };
+  const swallow = (e: MouseEvent) => {
+    if (!e.isTrusted) return;
+    done();
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  view.addEventListener('click', swallow, true);
+  view.addEventListener('pointerdown', done, true);
+  setTimeout(done, 0);
+}
+
+/**
  * Dragging nodes: `nodesDraggable` and a node's own `draggable`, snapping to a grid, `nodeExtent` and
  * `extent`, dragging a selection together, sub-flows that grow to hold a child (`expandParent`), the
  * arrow keys, and the `onNodeDrag*` callbacks.
@@ -281,6 +302,7 @@ export const dragFeature: Feature<DragApi> = {
     const stopClaiming = useRef<(() => void) | null>(null);
     const [dragging, setDragging] = useState(false);
     /** How far a press travels to become a drag: the canvas's `nodeDragThreshold`, else the engine's own. */
+    // A press becomes a drag once it has moved further than this, as in React Flow (`distance > nodeDragThreshold`).
     const threshold = () => store.getOptions().nodeDragThreshold ?? DRAG_THRESHOLD;
 
     useIsomorphicLayoutEffect(
@@ -318,11 +340,17 @@ export const dragFeature: Feature<DragApi> = {
       // the pointer is; every move after that comes here.
       const element = e.currentTarget;
       stopClaiming.current?.();
-      const stop = () => {
+      const stop = (ev?: PointerEvent) => {
         window.removeEventListener('pointermove', claim, true);
         window.removeEventListener('pointerup', stop, true);
         window.removeEventListener('pointercancel', stop, true);
         if (stopClaiming.current === stop) stopClaiming.current = null;
+        // Let go of off the node, before it was a drag: the browser's click goes to what is under both the press
+        // and the release — the pane, which would take it as its own and clear the selection. As in React Flow
+        // 13.0.0-next.3, that click is no one's.
+        if (ev?.type === 'pointerup' && ev.pointerId === pressed.pointerId && !(ev.target instanceof Node && element.contains(ev.target))) {
+          swallowNextClick(ev.view ?? window);
+        }
       };
       const claim = (ev: PointerEvent) => {
         if (ev.pointerId !== pressed.pointerId) return;
@@ -330,7 +358,7 @@ export const dragFeature: Feature<DragApi> = {
           stop();
           return;
         }
-        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) < threshold()) return;
+        if (Math.hypot(ev.clientX - pressed.startX, ev.clientY - pressed.startY) <= threshold()) return;
         capturePointer(element, pressed.pointerId);
         stop();
       };
@@ -365,7 +393,7 @@ export const dragFeature: Feature<DragApi> = {
         return;
       }
       if (!d.session) {
-        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < threshold()) return;
+        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) <= threshold()) return;
         d.session = beginNodeDrag(node, e, isMulti(e));
         justDragged.current = true;
         setDragging(true);
@@ -394,7 +422,7 @@ export const dragFeature: Feature<DragApi> = {
         // is delivered to whatever is under the pointer — the capture it triggers only takes effect from
         // the next event — so the node never saw the pointer travel, and with no move after it the drag
         // would be lost. The release is the capture's first event: begin the drag, and end it, there.
-        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) >= threshold()) {
+        if (e.type === 'pointerup' && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > threshold()) {
           const session = beginNodeDrag(node, e, isMulti(e));
           justDragged.current = true;
           const at = store.instance.screenToFlowPosition({ x: e.clientX, y: e.clientY });

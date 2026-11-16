@@ -7,15 +7,6 @@ demo-dist
 bench-dist
 test-results
 playwright-report
-/history
-/clipboard
-/snaplines
-/export
-/smart-edges
-/editable-edge
-/shapes
-/tree
-/pro
 site/dist
 site/.astro
 site/src/content/docs/*

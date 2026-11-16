@@ -188,7 +188,7 @@ function Swimlanes() {
       elementsSelectable
       deleteKeyCode={['Backspace', 'Delete']}
       fitView
-      fitViewOptions={{ padding: 0.14 }}
+      fitViewOptions={{ padding: '6%' }}
     >
       <Background />
       <Panel position="bottom-right">

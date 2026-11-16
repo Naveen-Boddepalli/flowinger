@@ -356,6 +356,21 @@ function shallow(a: unknown, b: unknown): boolean {
  * React Flow's `useShallow` (zustand's): wraps a selector so that a result holding the same things as the last
  * one — the same members of an array or an object — is the last one, and does not re-render the caller.
  */
+/**
+ * `selector` with its result kept while `isEqual` says a new one is the same: what a store hook re-renders on is the
+ * last result, not a new object equal to it. React Flow 13's `useEqualSelector`; `useShallow` is it with a shallow
+ * comparison.
+ */
+export function useEqualSelector<S, U>(selector: (state: S) => U, isEqual: (a: U, b: U) => boolean): (state: S) => U {
+  const last = useRef<{ value: U } | null>(null);
+  return (state) => {
+    const next = selector(state);
+    if (last.current && last.current.value !== undefined && isEqual(last.current.value, next)) return last.current.value;
+    last.current = { value: next };
+    return next;
+  };
+}
+
 export function useShallow<S, U>(selector: (state: S) => U): (state: S) => U {
   const last = useRef<{ value: U } | null>(null);
   return (state) => {

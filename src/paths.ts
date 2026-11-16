@@ -301,6 +301,33 @@ export function getSmoothStepPath({
   return [roundedPolyline(points, borderRadius), labelX, labelY, offsetX, offsetY];
 }
 
+/** What an edge's path is: where it goes, and where its label sits. */
+export type EdgePath = { d: string; labelX: number; labelY: number };
+
+/**
+ * The bezier between two ends, whatever the edge's `type`: what the core draws, React Flow's default. The other
+ * built-in paths come with `edgePathsFeature` (`pathFor`), so a core whose edges are all beziers does not carry them.
+ */
+export function bezierPathFor(
+  _type: Edge['type'],
+  s: { x: number; y: number },
+  sourcePosition: Position,
+  t: { x: number; y: number },
+  targetPosition: Position,
+  options?: Edge['pathOptions'],
+): EdgePath {
+  const [d, labelX, labelY] = getBezierPath({
+    sourceX: s.x,
+    sourceY: s.y,
+    targetX: t.x,
+    targetY: t.y,
+    sourcePosition,
+    targetPosition,
+    curvature: options?.curvature,
+  });
+  return { d, labelX, labelY };
+}
+
 /** The path an edge of this `type` takes between two ends — a built-in one, whatever else `type` may name. */
 export function pathFor(
   type: Edge['type'],
@@ -309,7 +336,7 @@ export function pathFor(
   t: { x: number; y: number },
   targetPosition: Position,
   options?: Edge['pathOptions'],
-): { d: string; labelX: number; labelY: number } {
+): EdgePath {
   const ends = { sourceX: s.x, sourceY: s.y, targetX: t.x, targetY: t.y };
   const [d, labelX, labelY] =
     type === 'straight'

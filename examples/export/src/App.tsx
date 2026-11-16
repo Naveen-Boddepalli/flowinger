@@ -169,7 +169,7 @@ export function App() {
     <div className="layout">
       <div className="canvas" ref={canvasRef}>
         <FlowingerProvider>
-          <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.15 }}>
+          <FlowingerCanvas nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: '6.5%' }}>
             <Background />
             <Controls position="bottom-left" />
           </FlowingerCanvas>

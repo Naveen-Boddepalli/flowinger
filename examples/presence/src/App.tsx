@@ -252,7 +252,7 @@ function Board({ room }: { room: Room }) {
         elementsSelectable
         deleteKeyCode={['Backspace', 'Delete']}
         fitView
-        fitViewOptions={{ padding: 0.4 }}
+        fitViewOptions={{ padding: '14%' }}
       >
         <Background />
         <Cursors peers={peers} />

@@ -26,8 +26,9 @@ export default defineConfig({
         'pro/index': resolve(import.meta.dirname, 'src/pro/index.ts'),
       },
       name: 'Flowinger',
-      fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
-      formats: ['es', 'cjs'],
+      // ES modules only, as React Flow 13 ships: Node's `require` loads them (20.19+, 22.12+).
+      fileName: (_format, entryName) => `${entryName}.js`,
+      formats: ['es'],
     },
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime'],

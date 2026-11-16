@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
-import { FlowingerCanvas, FlowingerCore, type FlowingerProps, type Node, type NodeProps } from '../index.ts';
+import { FlowingerCanvas, FlowingerCore, ReactFlow, reactFlow12Defaults, type FlowingerProps, type Node, type NodeProps } from '../index.ts';
 
 // The gesture props that were accepted and ignored: what they say is now what happens. Each is compared
 // with React Flow's own behaviour, read from its source (`@xyflow/system`'s XYPanZoom and XYDrag).
@@ -261,6 +261,51 @@ describe('paneClickDistance and nodeClickDistance', () => {
     const { container } = render(<FlowingerCanvas nodes={nodes} nodesDraggable onNodeClick={onNodeClick} />);
     press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
     expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('<ReactFlow>: a press that moved, but not past nodeDragThreshold, is a click, as in React Flow 13', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(<ReactFlow nodes={nodes} onNodeClick={onNodeClick} />);
+    press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('<ReactFlow> with reactFlow12Defaults: a press that moved at all is not a click, as in React Flow 12', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(<ReactFlow {...reactFlow12Defaults} nodes={nodes} onNodeClick={onNodeClick} />);
+    press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('the middle button on a node', () => {
+  /** A middle-button drag that begins on node a. */
+  const middleDrag = (container: HTMLElement) => {
+    const a = must(container, '[data-id="a"]');
+    fireEvent.pointerDown(a, pointer({ button: 1, clientX: 20, clientY: 20 }));
+    fireEvent.pointerMove(pane(container), pointer({ button: 1, clientX: 80, clientY: 60 }));
+    fireEvent.pointerUp(pane(container), pointer({ button: 1, clientX: 80, clientY: 60 }));
+  };
+
+  it('pans where panOnDrag lets it, and not where it does not, as in React Flow 13.0.0-next.3', () => {
+    for (const [panOnDrag, pans] of [
+      [true, true],
+      [[1], true],
+      [[1, 2], true],
+      [[0], false],
+      [[0, 2], false],
+      [false, false],
+    ] as const) {
+      const onNodeDragStart = vi.fn();
+      const { container, unmount } = render(
+        <ReactFlow nodes={nodes} panOnDrag={panOnDrag as FlowingerProps['panOnDrag']} onNodeDragStart={onNodeDragStart} />,
+      );
+      const before = viewportOf(container);
+      middleDrag(container);
+      expect(viewportOf(container) !== before, JSON.stringify(panOnDrag)).toBe(pans);
+      expect(onNodeDragStart).not.toHaveBeenCalled(); // never the node's drag
+      unmount();
+    }
   });
 });
 

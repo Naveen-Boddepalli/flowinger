@@ -58,7 +58,7 @@ function Editor() {
       nodesConnectable
       elementsSelectable
       fitView
-      fitViewOptions={{ padding: 0.25 }}
+      fitViewOptions={{ padding: '10%' }}
     >
       <Background />
       <Controls position="bottom-left" />

@@ -433,3 +433,51 @@ test.describe('the keyboard, as a screen reader user has it', () => {
     await expect(page.locator('.react-flow')).toHaveAttribute('aria-label', 'Query plan');
   });
 });
+
+test.describe('a press on a node let go of off it', () => {
+  // A press by a node's edge that leaves it without moving far enough to be a drag (the demo's canvas: 3 px) is
+  // let go of over the pane, and the browser's click goes to what is under both the press and the release — the
+  // pane. That click is not the pane's: it does not clear the selection, as in React Flow 13.0.0-next.3, which
+  // swallows it.
+  test('is not a click on the pane', async ({ page }) => {
+    await open(page);
+    const n = node(page, '1');
+    await n.click();
+    await expect(page.getByTestId('picked')).toHaveText('1 nodes, 0 edges selected');
+    const box = await n.boundingBox();
+    if (!box) throw new Error('node 1 is not visible');
+    // By its right edge, above the handle in the middle of it, and out by two pixels.
+    const from = { x: box.x + box.width - 0.5, y: box.y + 4 };
+    const to = { x: box.x + box.width + 1.5, y: from.y };
+    expect(await nodeAt(page, from.x, from.y)).toBe('1');
+    expect(await nodeAt(page, to.x, to.y)).toBeNull();
+    await drag(page, from, to, 2);
+    expect(await n.boundingBox()).toEqual(box);
+    await expect(page.getByTestId('picked')).toHaveText('1 nodes, 0 edges selected');
+    // A click on the pane still is one.
+    const pane = await paneBox(page);
+    await page.mouse.click(pane.x + 30, pane.y + 30);
+    await expect(page.getByTestId('picked')).toHaveText('nothing selected');
+  });
+
+  test('nor is one let go of off it after a drag', async ({ page }) => {
+    // With a grid to snap to, a dragged node can stay put while the pointer leaves it.
+    await open(page);
+    await page.getByLabel('Snap to 20px grid').check();
+    const n = node(page, '1');
+    // A drag puts it on the grid (and selects it), so a move of less than half a step leaves it where it is.
+    const start = await n.boundingBox();
+    if (!start) throw new Error('node 1 is not visible');
+    await drag(page, { x: start.x + 20, y: start.y + 6 }, { x: start.x + 60, y: start.y + 26 });
+    await expect(page.getByTestId('picked')).toHaveText('1 nodes, 0 edges selected');
+    const box = await n.boundingBox();
+    if (!box) throw new Error('node 1 is not visible');
+    const zoom = (await view(page)).zoom;
+    const from = { x: box.x + box.width - 2, y: box.y + 4 };
+    const to = { x: from.x + Math.min(8, 9 * zoom), y: from.y };
+    expect(await nodeAt(page, to.x, to.y)).toBeNull();
+    await drag(page, from, to, 4);
+    expect(await n.boundingBox()).toEqual(box);
+    await expect(page.getByTestId('picked')).toHaveText('1 nodes, 0 edges selected');
+  });
+});
