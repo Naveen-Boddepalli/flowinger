@@ -123,12 +123,12 @@ Maintainers only. A release is a tag; there is no npm token anywhere.
    attestation, and creates the GitHub release from the changelog. A tag with a hyphen (`v0.5.0-rc.1`)
    goes to the `next` dist-tag and is marked a prerelease.
 
-**A 1.x fix after 2.0.** 1.x gets fixes for security problems, crashes and regressions for six months after
-`2.0.0`, from a `v1` branch: cut it from the last 1.x tag, with this repository's `release.yml` (which knows about
-older majors) — `git switch -c v1 v1.1.0 && git checkout main -- .github/workflows/release.yml` — and commit. Each
-fix is a pull request into `v1` with its changelog entry and version; tag the merge commit as above. The workflow
-publishes a version older than npm's `latest` major to that major's dist-tag (`v1`), so `latest` stays on 2.x, and
-does not mark its GitHub release the latest.
+**A 1.x fix.** `main` is the 2.x line. 1.x gets fixes for security problems, crashes and regressions for six months
+after `2.0.0`, from the **`v1` branch**: 1.2.1 with Dependabot's updates, `main`'s `release.yml` (which knows about
+older majors), and CI on every push. Each fix is a pull request into `v1` with its changelog entry and version; tag
+the merge commit as above. While npm's `latest` is 1.x, a 1.x release goes to `latest`; once 2.0 is there, the
+workflow publishes a version older than `latest`'s major to that major's dist-tag (`v1`), so `latest` stays on 2.x,
+and does not mark its GitHub release the latest.
 
 **One-time setup**, on npmjs.com: the package's *Settings → Trusted Publisher → GitHub Actions*, with this
 repository's owner and name and the workflow file `release.yml` (the environment is left blank). Then, in
