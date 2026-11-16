@@ -47,6 +47,12 @@ What it means for an app: [Upgrading to 2.0](docs/upgrading.md#6-what-react-flow
   selection and called `onPaneClick`, where React Flow 13.0.0-next.3 swallows that click. Watched in Chromium,
   Firefox and WebKit.
 
+### Size
+
+- **The core's budget is 21.5 kB gzipped**, as in 1.1 (it was 21): the changesets above add 0.12 kB, which puts the
+  core at 20.97 kB on a Mac and 21.03 on CI's Linux runner, whose gzip comes out about 60 bytes bigger. The whole
+  canvas is 39.57 against 40.
+
 ### Deprecated
 
 - **`getHandleConnections` and the type `HandleConnection`**, which React Flow 13.0.0-next.3 took out:

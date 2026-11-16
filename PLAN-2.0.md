@@ -27,7 +27,9 @@ the branch, in two releases:
   `getHandleConnections` and `HandleConnection`, added `useEqualSelector`, gave changesets `update` and `data`
   changes and a new reading of an `add`, and made a pane click end a click-connect and a release off a node no
   click. The unit tests and the audit caught three of these; a diff of next.0's source against next.3's found the
-  rest. The core is 20.97 kB (budget 21), the whole canvas 39.5 (budget 40).
+  rest. The core is 20.97 kB here and 21.03 on CI's Linux runner, whose gzip comes out about 60 bytes bigger, so
+  its budget went back to 1.1's 21.5 kB (the owner's choice; the growth is the changesets, 0.12 kB). The whole
+  canvas is 39.5–39.6 (budget 40).
 
 **What waiting would have bought, and still can:** React Flow 13 is at `next.3`, and three pre-releases in a week
 say it is still moving. If its `13.0.0` changes a default
