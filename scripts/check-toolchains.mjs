@@ -165,7 +165,9 @@ try {
     run(bin('attw'), [tarball, '--profile', 'esm-only'], root);
     return 'no problems';
   });
-  check('publint --strict', () => run(bin('publint'), ['--strict', '--pack', 'npm', join(app, 'node_modules', 'flowinger')], root).split('\n').slice(-2).join(' '));
+  // On the tarball itself, which is what is published. On the installed copy, publint packs it again, and npm 10
+  // (Node 22) runs its `prepare` there, a build with no vite.config.ts beside it.
+  check('publint --strict', () => run(bin('publint'), ['--strict', tarball], root).split('\n').slice(-2).join(' '));
 
   if (!only || only.some((o) => 'Next.js'.includes(o) || o === 'next')) {
     const next = join(scratch, 'next');
