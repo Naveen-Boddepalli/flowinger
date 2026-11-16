@@ -159,7 +159,7 @@ applied:
 |---|---|---|
 | Node 24.16 and 22.19: `require` and `import`, a server render from each | ok | ok |
 | Jest 30.5, default config | ok | **fails**: "Must use import to load ES Module" |
-| Jest 30.5, `NODE_OPTIONS=--experimental-vm-modules` | ok | ok on Node 24.16; fails on 22.19 (Jest needs 22.21+ or 24.9+) |
+| Jest 30.5, `NODE_OPTIONS=--experimental-vm-modules` | ok | ok on Node 24.16; fails on 22.19, and on 22.23 in CI (2026-11-16: the "22.21+" written here first was a guess) |
 | Vitest 5 | ok | ok |
 | TypeScript 5.9, `node16`: a `.cts` and an `.mts` | ok | **fails** in the `.cts` (TS1479: an ES module cannot be `require`d) |
 | TypeScript 5.9, `bundler` | ok | ok |

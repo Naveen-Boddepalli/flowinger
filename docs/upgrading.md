@@ -94,8 +94,8 @@ There is one build, of ES modules, as React Flow 13 has. What changes depends on
 
 - **A bundler, Vite, Next.js, Vitest, Node's `import`**: nothing.
 - **Node's `require`**: nothing on Node 20.19+ or 22.12+, which `require` an ES module.
-- **Jest**, which loads modules itself: run it with `NODE_OPTIONS=--experimental-vm-modules` on Node 22.21+ or
-  24.9+, or let a transform compile flowinger (`transformIgnorePatterns: ['/node_modules/(?!flowinger/)']` with a
+- **Jest**, which loads modules itself: run it with `NODE_OPTIONS=--experimental-vm-modules` on Node 24 (on Node
+  22 that is not enough, 22.23 included), or let a transform compile flowinger (`transformIgnorePatterns: ['/node_modules/(?!flowinger/)']` with a
   Babel config that turns ES modules into CommonJS).
 - **TypeScript**: a `.cts` file needs `module: nodenext` (or `bundler` in an app that bundles); `node16` refuses to
   import an ES module from CommonJS. `moduleResolution: node10`, which TypeScript 7 removed, no longer finds the

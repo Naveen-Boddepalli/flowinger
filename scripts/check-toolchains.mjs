@@ -1,7 +1,8 @@
 // What the tools a consumer uses make of the package, which is ES modules only from 2.0 (D2 of PLAN-2.0.md): the
 // packed package is installed into empty projects and loaded, rendered or type-checked the way each tool does it.
-// Three checks are known to fail, as "Upgrading to 2.0" says, and are reported as such: Jest's default config,
-// TypeScript 5's node16 from a .cts, and node10 (which TypeScript 7 removed) for a subpath. Any other outcome fails.
+// Three checks are known to fail, as "Upgrading to 2.0" says, and are reported as such: Jest's default config (and
+// on Node 22, Jest with --experimental-vm-modules too), TypeScript 5's node16 from a .cts, and node10 (which
+// TypeScript 7 removed) for a subpath. Any other outcome fails.
 //
 //   pnpm build && node scripts/check-toolchains.mjs
 //   … --node /usr/local/bin/node                                    also run the Node checks with another Node
@@ -132,11 +133,16 @@ try {
     check(`Node ${v}: require`, () => run(node, ['render.cjs'], app));
     check(`Node ${v}: import`, () => run(node, ['render.mjs'], app));
   }
-  // Jest loads modules through its own registry, not Node's. It can `require` an ES module only where `vm` has
-  // SourceTextModule's synchronous evaluation: behind --experimental-vm-modules, on Node 22.21+ or 24.9+.
+  // Jest loads modules through its own registry, not Node's. It can `require` an ES module only behind
+  // --experimental-vm-modules, and only on Node 24: seen to pass on 24.16, and to fail on 22.19 and 22.23 (CI).
+  const node22 = Number(process.versions.node.split('.')[0]) < 24;
   for (const [label, env, known] of [
     ['default config', {}, 'Jest cannot require an ES module without --experimental-vm-modules'],
-    ['NODE_OPTIONS=--experimental-vm-modules', { NODE_OPTIONS: '--experimental-vm-modules' }],
+    [
+      'NODE_OPTIONS=--experimental-vm-modules',
+      { NODE_OPTIONS: '--experimental-vm-modules' },
+      node22 ? 'Jest cannot require an ES module on Node 22, even with --experimental-vm-modules: Node 24, or a transform' : undefined,
+    ],
   ]) {
     check(`Jest ${version('jest')} on Node ${process.version}, ${label}`, () => {
       const jest = join(app, 'node_modules', 'jest', 'bin', 'jest.js');

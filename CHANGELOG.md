@@ -10,6 +10,14 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **Upgrading to 2.0 said Jest can load the ES modules with `NODE_OPTIONS=--experimental-vm-modules` on Node
+  22.21+**; CI's first run on Node 22 shows it cannot, on 22.23 either. It needs Node 24 (or a transform), as the
+  page now says, and `check:toolchains` counts it as known to fail on Node 22.
+- **`check:toolchains` lints the packed tarball with publint**, not the copy installed from it, which publint packed
+  again and npm 10 (Node 22) built.
+
 ## [2.0.0-rc.4] - 2026-11-15
 
 The fourth candidate for 2.0, on the `next` dist-tag: [rc.3](#200-rc3---2026-10-20) following React Flow
