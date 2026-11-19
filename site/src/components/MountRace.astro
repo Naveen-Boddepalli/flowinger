@@ -1,0 +1,159 @@
+---
+// The speed claim as a race, in real time: each bar takes as long to fill as its library takes to mount 10,000
+// nodes. The times are text in the page; the race runs once in view (Bento.astro arms it) and again on "Run again".
+// From docs/benchmarks.md (Flowinger 2.0 against React Flow 13); keep the two in step.
+const rows = [
+  { name: 'Flowinger 2', ms: 800, label: '0.8 s', ours: true },
+  { name: 'React Flow 13', ms: 1450, label: '1.45 s', ours: false },
+];
+---
+
+<figure class="fl-race fl-anim">
+  <figcaption>
+    <span>Mounting 10,000 nodes, in real time</span>
+    <button type="button" class="fl-race-replay" data-fl-replay>Run again</button>
+  </figcaption>
+  <div class="fl-race-rows">
+    {
+      rows.map((row) => (
+        <div class:list={['fl-race-row', { 'is-ours': row.ours }]} style={`--t: ${row.ms}ms`}>
+          <span class="fl-race-name">{row.name}</span>
+          <span class="fl-race-track">
+            <span class="fl-race-bar" />
+          </span>
+          <span class="fl-race-value">{row.label}</span>
+        </div>
+      ))
+    }
+  </div>
+  <p class="fl-race-note">Culled, it is 55 ms against 541.</p>
+</figure>
+
+<style>
+  .fl-race {
+    margin: 0;
+    padding: 1.125rem 1.25rem 1.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 70%, transparent);
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .fl-race-replay {
+    display: none;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: normal;
+    text-transform: none;
+    cursor: pointer;
+    transition:
+      border-color var(--fl-dur-1) ease,
+      color var(--fl-dur-1) ease;
+  }
+
+  .fl-race-replay:hover,
+  .fl-race-replay:focus-visible {
+    border-color: var(--sl-color-text-accent);
+    color: var(--sl-color-white);
+  }
+
+  /* Only where the race can run. */
+  .fl-race:global(.is-armed) .fl-race-replay {
+    display: inline-block;
+  }
+
+  .fl-race-rows {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.875rem 0.75rem;
+  }
+
+  .fl-race-row {
+    display: contents;
+  }
+
+  .fl-race-name {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    white-space: nowrap;
+  }
+
+  .fl-race-track {
+    height: 0.75rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-6);
+    overflow: hidden;
+  }
+
+  .fl-race-bar {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--sl-color-gray-4);
+    transform-origin: left;
+  }
+
+  .is-ours .fl-race-bar {
+    background: linear-gradient(90deg, var(--sl-color-text-accent), #a78bfa);
+    box-shadow: 0 0 16px -2px color-mix(in srgb, var(--sl-color-text-accent) 60%, transparent);
+  }
+
+  .fl-race-value {
+    min-width: 3.5em;
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-sm);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  .is-ours .fl-race-value {
+    font-weight: 700;
+  }
+
+  .fl-race-note {
+    margin: 0.875rem 0 0;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+  }
+
+  /* Armed: empty bars, times hidden; in view, each bar fills in its own time and its time appears as it lands. */
+  .fl-race:global(.is-armed) .fl-race-bar {
+    scale: 0 1;
+  }
+
+  .fl-race:global(.is-armed) .fl-race-value {
+    opacity: 0;
+    translate: -0.25rem 0;
+  }
+
+  .fl-race:global(.is-armed.is-in) .fl-race-bar {
+    scale: 1 1;
+    transition: scale var(--t) linear 0.3s;
+  }
+
+  .fl-race:global(.is-armed.is-in) .fl-race-value {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 0.25s ease calc(var(--t) + 0.3s),
+      translate 0.4s var(--fl-ease-spring) calc(var(--t) + 0.3s);
+  }
+</style>
