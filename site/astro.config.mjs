@@ -38,7 +38,7 @@ export default defineConfig({
         { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
       ],
       customCss: ['./src/styles/site.css', './src/styles/motion.css'],
-      components: { Head: './src/components/Head.astro' },
+      components: { Head: './src/components/Head.astro', Hero: './src/components/Hero.astro' },
       lastUpdated: true,
       // The same groups as docs/README.md.
       sidebar: [

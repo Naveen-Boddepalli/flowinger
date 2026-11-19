@@ -103,7 +103,19 @@ nav.sidebar {
   }
 }
 
+/* On the landing page the header starts clear, over the hero's background (components/Hero.astro). */
+@supports (animation-timeline: scroll()) {
+  [data-has-hero] header.header {
+    --fl-header-from: transparent;
+    --fl-header-border-from: transparent;
+  }
+}
+
 @keyframes fl-header-scrolled {
+  from {
+    background-color: var(--fl-header-from, var(--sl-color-bg-nav));
+    border-bottom-color: var(--fl-header-border-from, var(--sl-color-hairline-shade));
+  }
   to {
     background-color: color-mix(in srgb, var(--sl-color-bg-nav) 72%, transparent);
     backdrop-filter: blur(12px) saturate(1.5);
