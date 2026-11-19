@@ -26,7 +26,7 @@ import Tile from '../../components/Tile.astro';
 import SizeBars from '../../components/SizeBars.astro';
 import MountRace from '../../components/MountRace.astro';
 import ExampleGallery from '../../components/ExampleGallery.astro';
-import { LiveEditor } from '../../components/LiveEditor.tsx';
+import { Playground } from '../../components/Playground.tsx';
 
 ## Install
 
@@ -58,11 +58,12 @@ and TypeScript declarations.
 
 ## Try it
 
-<LiveEditor client:visible />
+<Playground client:visible />
 
 <p class="flowinger-live-caption">
-  Drag a node, draw an edge from a handle to another, select one and press Backspace. This page rendered the
-  diagram on the server; the code is in <a href="docs/getting-started/#make-it-interactive">Getting started</a>.
+  Pick a diagram and a direction, switch on a prop and see its line of code. Drag a node, draw an edge from a
+  handle to another, select one and press Backspace. This page rendered the diagram on the server; there is more
+  in <a href="docs/getting-started/#make-it-interactive">Getting started</a>.
 </p>
 
 ## Why Flowinger

@@ -127,6 +127,19 @@ change the look of every page.
 - Lighthouse on the landing page before and after: performance and accessibility do not drop, CLS stays 0.
 - `pnpm test` and `pnpm e2e` still pass (they should, since `src/` and `demo/` are untouched).
 
+## Status
+
+All four phases are in, one commit each. Where the work differed from the plan:
+
+- **Phase 2.** The hero graph hydrates at idle (`client:idle`), so React and Flowinger now load soon after the
+  page does instead of when "Try it" scrolls into view. Its entrance is CSS and needs neither.
+- **Phase 3.** The thumbnails live in `site/public/thumbs/`, because `scripts/sync-docs.mjs` empties
+  `site/public/assets/` on every build. The section rail is CSS only, and shows from 76rem wide.
+- **Phase 4.** The presets are a query plan, an org chart and a CI pipeline (no state machine: the layout is
+  for DAGs). The playground replaces `LiveEditor.tsx`, which nothing else used.
+- **Size.** The landing page ships about 5.5 kB gzipped more JavaScript than before the branch, against a
+  budget of 15.
+
 ## Open questions
 
 - **The demo page** (`/demo/`, `demo/App.tsx`) is outside this plan because the browser suite drives it. Give it a
