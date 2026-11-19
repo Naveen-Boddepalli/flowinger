@@ -1,0 +1,190 @@
+/* The hero's graph (HeroGraph.tsx). Colours come from Starlight's, so it follows the light/dark switch. */
+.fl-hero-graph {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  --fl-violet: #a78bfa;
+  --flowinger-surface: transparent;
+  --flowinger-surface-raised: var(--sl-color-gray-6);
+  --flowinger-border: var(--sl-color-gray-5);
+  --flowinger-text: var(--sl-color-white);
+  --flowinger-edge: var(--sl-color-gray-4);
+  --flowinger-selected: var(--sl-color-accent);
+}
+
+:root[data-theme='light'] .fl-hero-graph {
+  --fl-violet: #7c3aed;
+}
+
+.fl-hero-graph .react-flow,
+.fl-hero-graph .flowinger-pane {
+  background: transparent;
+}
+
+/* Nodes. */
+.fl-hero-node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 0.875rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--sl-color-bg) 82%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--sl-color-white);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px -16px rgb(0 0 0 / 0.6);
+  transition:
+    border-color var(--fl-dur-2) ease,
+    box-shadow var(--fl-dur-2) ease,
+    translate var(--fl-dur-2) var(--fl-ease-spring);
+}
+
+.fl-hero-node.is-data,
+.fl-hero-node.is-core {
+  font-family: var(--__sl-font-mono, ui-monospace, monospace);
+  font-size: 0.8125rem;
+}
+
+.fl-hero-node.is-core {
+  border-color: color-mix(in srgb, var(--sl-color-text-accent) 70%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--sl-color-text-accent) 18%, transparent), color-mix(in srgb, var(--fl-violet) 18%, transparent)),
+    color-mix(in srgb, var(--sl-color-bg) 88%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--sl-color-text-accent) 12%, transparent),
+    0 12px 32px -12px color-mix(in srgb, var(--sl-color-text-accent) 55%, transparent);
+  font-weight: 600;
+}
+
+.fl-hero-node.is-feature {
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: var(--sl-color-gray-2);
+}
+
+.flowinger-node:hover .fl-hero-node {
+  border-color: var(--sl-color-text-accent);
+  translate: 0 -1px;
+}
+
+.flowinger-node.dragging .fl-hero-node {
+  box-shadow: 0 18px 36px -14px rgb(0 0 0 / 0.6);
+}
+
+.fl-hero-graph .flowinger-handle {
+  width: 7px;
+  height: 7px;
+  min-width: 0;
+  min-height: 0;
+  border: 1.5px solid var(--sl-color-bg);
+  background: var(--sl-color-gray-3);
+  pointer-events: none;
+}
+
+/* Edges: the line, and dots that flow along it. */
+.fl-hero-edge-base {
+  fill: none;
+  stroke: var(--sl-color-gray-4);
+  stroke-width: 1.5;
+  transition: stroke var(--fl-dur-2) ease;
+}
+
+.fl-hero-edge-flow {
+  fill: none;
+  stroke: var(--sl-color-text-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 0 16;
+  opacity: 0.7;
+  transition: opacity var(--fl-dur-2) ease;
+}
+
+.is-lit .fl-hero-edge-base {
+  stroke: var(--sl-color-text-accent);
+}
+
+.is-lit .fl-hero-edge-flow {
+  opacity: 1;
+}
+
+/* The hint, once the graph has come in; gone after the first drag. */
+.fl-hero-hint {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  text-align: center;
+  font-size: var(--sl-text-xs);
+  color: var(--sl-color-gray-3);
+  pointer-events: none;
+  transition: opacity var(--fl-dur-3) ease;
+}
+
+.fl-hero-hint.is-done {
+  opacity: 0;
+}
+
+/* The entrance: each step's nodes pop in, then the edges leaving them draw, then the dots start to flow. */
+@media (prefers-reduced-motion: no-preference) {
+  .fl-hero-node {
+    animation: fl-hero-pop 560ms var(--fl-ease-spring) backwards;
+    animation-delay: calc(var(--fl-step) * 260ms + 100ms);
+  }
+
+  .fl-hero-edge-base {
+    stroke-dasharray: 1;
+    animation: fl-hero-draw 360ms var(--fl-ease-out) backwards;
+    animation-delay: calc(var(--fl-step) * 260ms + 120ms);
+  }
+
+  .fl-hero-edge-flow {
+    animation:
+      fl-hero-appear 600ms ease backwards,
+      fl-hero-flow 1.1s linear infinite;
+    animation-delay: calc(4 * 260ms + 500ms), 0s;
+  }
+
+  .fl-hero-hint {
+    animation: fl-hero-appear 600ms ease backwards;
+    animation-delay: 2.2s;
+  }
+
+  /* Off screen, nothing runs (the hero sets .is-paused on the way out). */
+  .is-paused .fl-hero-edge-flow {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes fl-hero-pop {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+
+@keyframes fl-hero-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fl-hero-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fl-hero-flow {
+  from {
+    stroke-dashoffset: 16;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

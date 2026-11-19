@@ -1,0 +1,195 @@
+---
+// One tile of the landing page's bento grid (Bento.astro). The whole tile is its link; `size` sets how many of
+// the grid's six columns it spans, and an optional `visual` slot sits beside or under the text.
+import { Icon } from '@astrojs/starlight/components';
+
+interface Props {
+  title: string;
+  icon: Parameters<typeof Icon>[0]['name'];
+  href: string;
+  cta: string;
+  size?: 'small' | 'half' | 'large';
+}
+
+const { title, icon, href, cta, size = 'small' } = Astro.props;
+const hasVisual = Astro.slots.has('visual');
+---
+
+<article class:list={['fl-tile', `is-${size}`, { 'has-visual': hasVisual }]}>
+  <div class="fl-tile-text">
+    <span class="fl-tile-icon"><Icon name={icon} /></span>
+    <h3>{title}</h3>
+    <div class="fl-tile-body"><slot /></div>
+    <a class="fl-tile-link" href={href}>{cta}<span aria-hidden="true">→</span></a>
+  </div>
+  {
+    hasVisual && (
+      <div class="fl-tile-visual">
+        <slot name="visual" />
+      </div>
+    )
+  }
+</article>
+
+<style>
+  .fl-tile {
+    position: relative;
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 1rem;
+    background:
+      radial-gradient(28rem circle at var(--mx, 50%) var(--my, -20%), color-mix(in srgb, var(--sl-color-text-accent) 7%, transparent), transparent 60%),
+      var(--sl-color-bg-nav);
+    transition:
+      translate var(--fl-dur-2) var(--fl-ease-spring),
+      box-shadow var(--fl-dur-2) var(--fl-ease-out),
+      border-color var(--fl-dur-2) ease;
+  }
+
+  /* The spotlight: a bright patch of border that follows the pointer (Bento.astro sets --mx and --my). */
+  .fl-tile::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    background: radial-gradient(16rem circle at var(--mx, 50%) var(--my, 50%), var(--sl-color-text-accent), transparent 70%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    opacity: 0;
+    transition: opacity var(--fl-dur-3) ease;
+    pointer-events: none;
+  }
+
+  .fl-tile:hover {
+    translate: 0 var(--fl-lift);
+    box-shadow: 0 18px 40px -28px rgb(0 0 0 / 0.7);
+  }
+
+  .fl-tile:hover::before,
+  .fl-tile:focus-within::before {
+    opacity: 1;
+  }
+
+  .fl-tile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .fl-tile-icon {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.625rem;
+    background: color-mix(in srgb, var(--sl-color-text-accent) 14%, transparent);
+    color: var(--sl-color-text-accent);
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    margin: 0.25rem 0 0;
+    font-size: var(--sl-text-xl);
+    line-height: 1.25;
+    color: var(--sl-color-white);
+  }
+
+  .fl-tile-body {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    line-height: 1.6;
+  }
+
+  .fl-tile-body :global(p) {
+    margin: 0;
+  }
+
+  .fl-tile-body :global(code) {
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 0.25rem;
+    background: var(--sl-color-gray-6);
+    font-size: 0.875em;
+  }
+
+  .fl-tile-link {
+    margin-top: auto;
+    padding-top: 0.25rem;
+    color: var(--sl-color-text-accent);
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .fl-tile-link > span {
+    display: inline-block;
+    margin-inline-start: 0.3em;
+    transition: translate var(--fl-dur-2) var(--fl-ease-spring);
+  }
+
+  .fl-tile:hover .fl-tile-link > span {
+    translate: 0.25em 0;
+  }
+
+  /* The link covers the tile, so anywhere on it follows the link; controls in a visual sit above it. */
+  .fl-tile-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .fl-tile-link:focus-visible {
+    outline: none;
+  }
+
+  .fl-tile-link:focus-visible::after {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  .fl-tile-visual {
+    position: relative;
+    z-index: 1;
+    align-self: center;
+  }
+
+  /* Six columns on a wide screen: large tiles span four, half tiles three, small two. */
+  @media (min-width: 72rem) {
+    .is-large {
+      grid-column: span 4;
+    }
+
+    .is-half {
+      grid-column: span 3;
+    }
+
+    .is-small {
+      grid-column: span 2;
+    }
+
+    .is-large.has-visual {
+      grid-template-columns: 1fr 1.15fr;
+      gap: 2rem;
+    }
+  }
+
+  /* Two columns in between: large tiles take the row. */
+  @media (min-width: 45rem) and (max-width: 71.99rem) {
+    .is-large {
+      grid-column: span 2;
+    }
+
+    .is-large.has-visual {
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+  }
+</style>

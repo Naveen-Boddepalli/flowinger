@@ -1,0 +1,331 @@
+---
+// The landing page's hero, in place of Starlight's (the only page with a `hero`): the headline, tagline and
+// actions from the page's frontmatter on one side, a live Flowinger graph on the other in place of an image,
+// and behind them a background of Flowinger's dot grid with a glow that trails the pointer.
+import { LinkButton } from '@astrojs/starlight/components';
+import { HeroGraph } from './HeroGraph.tsx';
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+
+// Numbers from the README and docs/benchmarks.md; keep them in step when those change.
+const stats = ['20.9 kB core, gzipped', '0 runtime dependencies', '10,000 nodes mounted in 0.8 s'];
+---
+
+<div class="fl-hero">
+  <div class="fl-hero-bg" aria-hidden="true">
+    <div class="fl-hero-dots"></div>
+    <div class="fl-hero-glow"></div>
+  </div>
+
+  <div class="fl-hero-copy">
+    <p class="fl-stats">
+      <span class="sr-only">{stats.join(', ')}</span>
+      <span class="fl-stats-rotor" aria-hidden="true">
+        {stats.map((stat, i) => <span style={`--i: ${i}`}>{stat}</span>)}
+      </span>
+    </p>
+    <!-- Starlight's skip link and table of contents point at this id. -->
+    <h1 id="_top" data-page-title set:html={title} />
+    {tagline && <div class="fl-tagline" set:html={tagline} />}
+    {
+      actions.length > 0 && (
+        <div class="fl-actions">
+          {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+            <LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+              {text}
+              {icon?.html && <Fragment set:html={icon.html} />}
+            </LinkButton>
+          ))}
+        </div>
+      )
+    }
+  </div>
+
+  <div class="fl-hero-visual">
+    <HeroGraph client:idle />
+  </div>
+</div>
+
+<script>
+  // The glow follows a mouse, easing towards it rather than sticking to it; the grid leans a few pixels
+  // the other way. All of it stops while the hero is off screen, and none of it starts under reduced motion
+  // or without a mouse.
+  const hero = document.querySelector<HTMLElement>('.fl-hero');
+  const bg = hero?.querySelector<HTMLElement>('.fl-hero-bg');
+
+  if (hero && bg) {
+    let visible = true;
+    new IntersectionObserver(([entry]) => {
+      visible = entry?.isIntersecting ?? true;
+      hero.classList.toggle('is-paused', !visible);
+    }).observe(hero);
+
+    const motion = matchMedia('(prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine)');
+    if (motion.matches) {
+      let pointerX = 0;
+      let pointerY = 0;
+      let x: number | undefined;
+      let y: number | undefined;
+      let frame = 0;
+
+      const step = () => {
+        frame = 0;
+        const rect = bg.getBoundingClientRect();
+        const targetX = pointerX - rect.left;
+        const targetY = pointerY - rect.top;
+        // Start from where the glow rests (behind the graph), so the first move eases out from there.
+        x ??= rect.width * 0.72;
+        y ??= rect.height * 0.42;
+        x += (targetX - x) * 0.12;
+        y += (targetY - y) * 0.12;
+        bg.style.setProperty('--fl-x', `${x.toFixed(1)}px`);
+        bg.style.setProperty('--fl-y', `${y.toFixed(1)}px`);
+        bg.style.setProperty('--fl-px', ((pointerX / innerWidth - 0.5) * 2).toFixed(3));
+        bg.style.setProperty('--fl-py', ((pointerY / innerHeight - 0.5) * 2).toFixed(3));
+        if (Math.abs(targetX - x) > 0.5 || Math.abs(targetY - y) > 0.5) frame = requestAnimationFrame(step);
+      };
+
+      addEventListener(
+        'pointermove',
+        (event) => {
+          if (!visible || event.pointerType !== 'mouse') return;
+          pointerX = event.clientX;
+          pointerY = event.clientY;
+          frame ||= requestAnimationFrame(step);
+        },
+        { passive: true },
+      );
+    }
+  }
+</script>
+
+<style>
+  .fl-hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: 100%;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 1.5rem 1rem;
+  }
+
+  /* The background: full width, from under the header to a little below the hero, fading out at the bottom. */
+  .fl-hero-bg {
+    position: absolute;
+    z-index: -1;
+    top: calc(-1 * (var(--sl-nav-height) + 1.5rem));
+    bottom: -6rem;
+    left: 50%;
+    width: 100vw;
+    translate: -50% 0;
+    overflow: hidden;
+    pointer-events: none;
+    --fl-x: 72%;
+    --fl-y: 42%;
+    --fl-px: 0;
+    --fl-py: 0;
+    --fl-blue: var(--sl-color-text-accent);
+    --fl-violet: #a78bfa;
+    -webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
+    mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  }
+
+  :global(:root[data-theme='light']) .fl-hero-bg {
+    --fl-violet: #7c3aed;
+  }
+
+  .fl-hero-dots {
+    position: absolute;
+    inset: -2rem;
+    transform: translate(calc(var(--fl-px) * -8px), calc(var(--fl-py) * -8px));
+    transition: transform 600ms var(--fl-ease-out);
+  }
+
+  /* One grid cell bigger than its box on each side, so drifting by a cell loops without a seam. */
+  .fl-hero-dots::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    background-image: radial-gradient(circle, var(--sl-color-gray-5) 1.1px, transparent 1.6px);
+    background-size: 24px 24px;
+  }
+
+  .fl-hero-glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(32rem circle at var(--fl-x) var(--fl-y), color-mix(in srgb, var(--fl-blue) 16%, transparent), transparent 70%),
+      radial-gradient(40rem circle at 12% 8%, color-mix(in srgb, var(--fl-blue) 9%, transparent), transparent 70%),
+      radial-gradient(36rem circle at 92% 70%, color-mix(in srgb, var(--fl-violet) 11%, transparent), transparent 70%);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fl-hero-dots::before {
+      animation: fl-drift 14s linear infinite;
+    }
+
+    .fl-hero:global(.is-paused) .fl-hero-dots::before {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes fl-drift {
+    to {
+      translate: 24px 24px;
+    }
+  }
+
+  .fl-hero-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    text-align: center;
+  }
+
+  .fl-hero-copy > * {
+    max-width: 48ch;
+    margin: 0;
+  }
+
+  h1 {
+    font-size: clamp(var(--sl-text-4xl), calc(0.5rem + 6vw), 4.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+    color: var(--sl-color-white);
+  }
+
+  .fl-tagline {
+    font-size: clamp(var(--sl-text-base), calc(0.0625rem + 2vw), var(--sl-text-xl));
+    color: var(--sl-color-gray-2);
+  }
+
+  /* A phrase of the tagline in a slowly moving blue-to-violet gradient. */
+  .fl-tagline :global(.fl-gradient) {
+    background: linear-gradient(90deg, var(--sl-color-text-accent), #a78bfa, var(--sl-color-text-accent)) 0 0 / 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 600;
+  }
+
+  :global(:root[data-theme='light']) .fl-tagline :global(.fl-gradient) {
+    background-image: linear-gradient(90deg, var(--sl-color-text-accent), #7c3aed, var(--sl-color-text-accent));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fl-tagline :global(.fl-gradient) {
+      animation: fl-sweep 8s linear infinite;
+    }
+  }
+
+  @keyframes fl-sweep {
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  /* The numbers, one at a time; with reduced motion, all of them in a row. */
+  .fl-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3125rem 0.875rem 0.3125rem 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--sl-color-text-accent) 35%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--sl-color-text-accent) 8%, transparent);
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+  }
+
+  .fl-stats::before {
+    content: '';
+    flex-shrink: 0;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--sl-color-text-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--sl-color-text-accent) 25%, transparent);
+  }
+
+  .fl-stats-rotor {
+    display: grid;
+  }
+
+  .fl-stats-rotor > span {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fl-stats-rotor > span {
+      animation: fl-rotate 9s var(--fl-ease-out) infinite both;
+      animation-delay: calc(var(--i) * 3s);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fl-stats-rotor {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0 0.75rem;
+    }
+  }
+
+  @keyframes fl-rotate {
+    0% {
+      opacity: 0;
+      translate: 0 0.5em;
+    }
+    4%,
+    30% {
+      opacity: 1;
+      translate: 0 0;
+    }
+    34%,
+    100% {
+      opacity: 0;
+      translate: 0 -0.5em;
+    }
+  }
+
+  .fl-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem 2rem;
+  }
+
+  .fl-hero-visual {
+    height: clamp(18rem, 72vw, 22rem);
+  }
+
+  @media (min-width: 50rem) {
+    .fl-hero {
+      grid-template-columns: 6fr 5fr;
+      gap: 2rem;
+      padding-block: clamp(2.5rem, calc(1rem + 8vmin), 7rem);
+    }
+
+    .fl-hero-copy {
+      align-items: flex-start;
+      text-align: start;
+    }
+
+    .fl-actions {
+      justify-content: flex-start;
+    }
+
+    .fl-hero-visual {
+      height: 26rem;
+    }
+  }
+
+  /* The background is 100vw wide; on a system whose scrollbars take space, keep that from scrolling sideways. */
+  :global([data-has-hero] .main-frame) {
+    overflow-x: clip;
+  }
+</style>
