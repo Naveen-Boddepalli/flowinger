@@ -1,0 +1,240 @@
+/*
+ * Motion for the whole site (PLAN-SITE.md, phase 1): the tokens later CSS builds on, page transitions,
+ * small hover and press feedback, the header's blur once the page scrolls, and sections that rise into view.
+ * All of it is CSS the browser runs natively; browsers without a feature get the page as it was. Under
+ * `prefers-reduced-motion: reduce` motion is off, not slower: the tokens go to 0s, and the effects that a
+ * duration cannot stop (scroll-driven ones, view transitions) are not applied at all.
+ */
+
+/* Tokens. */
+:root {
+  --fl-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  /* A light spring: a few per cent of overshoot, settled by 60%. */
+  --fl-ease-spring: linear(0, 0.06 2.4%, 0.24 5.4%, 0.75 12.6%, 0.95 17.2%, 1.04 21.8%, 1.07 26%, 1.06 31.4%, 1.02 39%, 0.995 50%, 1);
+  --fl-dur-1: 120ms;
+  --fl-dur-2: 220ms;
+  --fl-dur-3: 480ms;
+  --fl-lift: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fl-dur-1: 0s;
+    --fl-dur-2: 0s;
+    --fl-dur-3: 0s;
+    --fl-lift: 0px;
+  }
+}
+
+/* Page transitions: navigating between pages cross-fades the content while the header and sidebar stay put. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+header.header {
+  view-transition-name: fl-header;
+}
+
+nav.sidebar {
+  view-transition-name: fl-sidebar;
+}
+
+::view-transition-group(fl-header),
+::view-transition-group(fl-sidebar),
+::view-transition-new(fl-header),
+::view-transition-new(fl-sidebar) {
+  animation: none;
+}
+
+/* Present on both pages: show the new one at once. On one side only (to or from the landing page): fade. */
+::view-transition-old(fl-header),
+::view-transition-old(fl-sidebar):not(:only-child) {
+  display: none;
+}
+
+::view-transition-old(fl-sidebar):only-child {
+  animation: fl-fade-out var(--fl-dur-2) var(--fl-ease-out) both;
+}
+
+::view-transition-new(fl-sidebar):only-child {
+  animation: fl-fade-in var(--fl-dur-3) var(--fl-ease-out) both;
+}
+
+::view-transition-old(root) {
+  animation: fl-fade-out var(--fl-dur-2) var(--fl-ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: fl-page-in var(--fl-dur-3) var(--fl-ease-out) both;
+}
+
+@keyframes fl-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fl-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fl-page-in {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+}
+
+/*
+ * The header turns translucent and blurs what passes under it over the first few rems of scrolling.
+ * A note for every scroll-driven rule here: the shorthand's easing is a var() on purpose. With only literal
+ * values the build's CSS minifier folds `animation-timeline` into the `animation` shorthand, which browsers
+ * reject, and the whole declaration is dropped.
+ */
+@supports (animation-timeline: scroll()) {
+  header.header {
+    animation: fl-header-scrolled var(--fl-ease-out) both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 6rem;
+  }
+}
+
+@keyframes fl-header-scrolled {
+  to {
+    background-color: color-mix(in srgb, var(--sl-color-bg-nav) 72%, transparent);
+    backdrop-filter: blur(12px) saturate(1.5);
+    box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.5);
+  }
+}
+
+/* Buttons lift on hover and settle when pressed; the primary one glows in the accent colour. */
+.sl-link-button {
+  transition:
+    translate var(--fl-dur-2) var(--fl-ease-spring),
+    box-shadow var(--fl-dur-2) var(--fl-ease-out),
+    color var(--fl-dur-1) ease;
+}
+
+.sl-link-button svg {
+  transition: translate var(--fl-dur-2) var(--fl-ease-spring);
+}
+
+.sl-link-button:hover {
+  translate: 0 var(--fl-lift);
+}
+
+.sl-link-button:hover svg {
+  translate: 0.2em 0;
+}
+
+.sl-link-button.primary:hover {
+  box-shadow: 0 12px 28px -12px var(--sl-color-text-accent);
+}
+
+.sl-link-button:active {
+  translate: 0 0;
+  transition-duration: var(--fl-dur-1);
+}
+
+/*
+ * Links in prose: a faint underline at rest (so a link never relies on colour alone) that a solid one sweeps
+ * across on hover. Headings' links (the changelog's) and anything with its own class keep their styles.
+ */
+.sl-markdown-content a:not(:where(.not-content *, [class], :is(h1, h2, h3, h4, h5, h6) > a)) {
+  text-decoration: none;
+  background:
+    linear-gradient(currentColor, currentColor) 0 100% / 0% 1px no-repeat,
+    linear-gradient(color-mix(in srgb, currentColor 45%, transparent), color-mix(in srgb, currentColor 45%, transparent))
+      0 100% / 100% 1px no-repeat;
+  padding-bottom: 0.0625em;
+  transition:
+    background-size var(--fl-dur-3) var(--fl-ease-out),
+    color var(--fl-dur-1) ease;
+}
+
+.sl-markdown-content a:not(:where(.not-content *, [class], :is(h1, h2, h3, h4, h5, h6) > a)):hover {
+  background-size:
+    100% 1px,
+    100% 1px;
+}
+
+/* Link cards lift a little; the sidebar and tabs ease between states instead of snapping. */
+.sl-link-card {
+  transition:
+    translate var(--fl-dur-2) var(--fl-ease-spring),
+    box-shadow var(--fl-dur-2) var(--fl-ease-out),
+    border-color var(--fl-dur-1) ease,
+    background-color var(--fl-dur-1) ease;
+}
+
+.sl-link-card:hover {
+  translate: 0 var(--fl-lift);
+  box-shadow: 0 14px 30px -20px rgb(0 0 0 / 0.6);
+}
+
+nav.sidebar a,
+starlight-tabs [role='tab'] {
+  transition:
+    color var(--fl-dur-1) ease,
+    background-color var(--fl-dur-1) ease,
+    border-color var(--fl-dur-2) var(--fl-ease-out);
+}
+
+/* The code blocks' copy button turns into a tick while its "Copied!" shows. */
+.expressive-code .copy:has(.feedback.show) button::after {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  background-color: var(--ec-frm-tooltipSuccessBg);
+  animation: fl-pop var(--fl-dur-3) var(--fl-ease-spring);
+}
+
+@keyframes fl-pop {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+
+/*
+ * Sections rise into view: anything with .fl-reveal, and every block of a splash page's content. Where
+ * scroll-driven animations exist the scroll drives it, so what is on screen at load is already in place;
+ * elsewhere src/scripts/reveal.ts adds .fl-reveal-pending to what starts below the fold and reveals it on entry.
+ * The end state is `translate: none`, so a revealed block keeps no transform (a canvas inside measures itself).
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :is(.fl-reveal, [data-has-hero] .sl-markdown-content > *) {
+      animation: fl-reveal var(--fl-ease-out) both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+}
+
+@keyframes fl-reveal {
+  from {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+.fl-reveal-pending {
+  opacity: 0;
+  translate: 0 1.5rem;
+  transition:
+    opacity var(--fl-dur-3) var(--fl-ease-out),
+    translate var(--fl-dur-3) var(--fl-ease-out);
+}
+
+.fl-reveal-pending.fl-revealed {
+  opacity: 1;
+  translate: none;
+}
