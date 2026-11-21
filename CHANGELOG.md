@@ -10,6 +10,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [2.0.0-rc.5] - 2026-11-22
+
 Follows React Flow 13.0.2 (13.0.0 came out on 2026-11-16), where rc.4 followed 13.0.0-next.3.
 [Upgrading to 2.0, §7](docs/upgrading.md#7-what-react-flow-1300-changed) says what it means for an app.
 
@@ -37,6 +39,12 @@ Follows React Flow 13.0.2 (13.0.0 came out on 2026-11-16), where rc.4 followed 1
   page now says, and `check:toolchains` counts it as known to fail on Node 22.
 - **`check:toolchains` lints the packed tarball with publint**, not the copy installed from it, which publint packed
   again and npm 10 (Node 22) built.
+
+### Size
+
+The core is 20.98 kB gzipped (was 20.97) and the whole canvas 39.49 (was 39.5), inside the 21.5 and 40 kB
+budgets: `paneDragThreshold` is a few bytes. The benchmarks were re-run against React Flow 13.0.2
+([benchmarks](docs/benchmarks.md)).
 
 ## [2.0.0-rc.4] - 2026-11-15
 
@@ -771,7 +779,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.4...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.5...HEAD
+[2.0.0-rc.5]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.4...v2.0.0-rc.5
 [2.0.0-rc.4]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...v2.0.0-rc.4
 [2.0.0-rc.3]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...v2.0.0-rc.3
 [2.0.0-rc.2]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...v2.0.0-rc.2

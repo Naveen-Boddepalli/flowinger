@@ -356,6 +356,8 @@ measured again, and the changelog says why for either outcome.
   carries everything 1.x has. A third only if the proof finds something, or 1.x adds more first.
 - **`2.0.0-rc.3` (2026-10-20):** 1.2.1 merged in — the fix for 1.2.0's cost on a large unculled canvas, which rc.2
   carried.
+- **`2.0.0-rc.5` (2026-11-22):** follows React Flow 13.0.2, out since 2026-11-16 (*Status*, and D1's table). The
+  candidate `check:registry` and the phone are tried on, since 13.0.0 changed when a pan starts.
 - The `v1` branch is cut from the last 1.x tag — `v1.2.1` today — before the release PR merges.
 - Then `2.0.0` goes to `latest`, tagged from `main` after the PR merges (CONTRIBUTING's *Releasing*). Tagging is
   the owner's.

@@ -127,7 +127,7 @@ about these: React Flow made them after.
 
 ### 7. What React Flow 13.0.0 changed
 
-React Flow 13.0.0 came out on 2026-11-16, and 13.0.2 on 2026-11-17; 2.0 follows 13.0.2. Since next.3:
+React Flow 13.0.0 came out on 2026-11-16, and 13.0.2 on 2026-11-17; 2.0.0-rc.5 follows 13.0.2. Since next.3:
 
 - **`paneClickDistance` is `paneDragThreshold` in React Flow 13**, and it decides when a pan starts as well as what
   is a click: a press on the pane pans once it moves further than that, and one that moves no further is a click,
