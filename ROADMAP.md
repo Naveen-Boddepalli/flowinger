@@ -61,7 +61,7 @@ it.** A library nobody can find the answer to a question about is not helped by 
   each thing 2.0 changes.
 - `2.0.0` (built 2026-10-17, `release/2.0`, a release candidate until React Flow 13.0.0): follows React Flow 13 — a
   number margin is pixels, `<ReactFlow>` fits with `'5%'`, changesets in the types, ES modules only, and the edge
-  paths other than bezier in `edgePathsFeature`. rc.4 (2026-11-15) follows React Flow 13.0.0-next.3. [The 2.0
+  paths other than bezier in `edgePathsFeature`. rc.4 (2026-11-15) follows React Flow 13.0.0-next.3; `main` follows 13.0.2 (2026-11-21). [The 2.0
   plan](PLAN-2.0.md) and [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20).
 
 ## Now — be easy to try and to trust
@@ -108,8 +108,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
 
 ## Later
 
-- **2.0 to `latest`** once React Flow 13.0.0 is out and the weekly job shows nothing else has moved; until then 2.0
-  is a release candidate on `next` ([the 2.0 plan](PLAN-2.0.md)).
+- **2.0 to `latest`**: React Flow 13.0.0 is out (2026-11-16) and `main` follows 13.0.2; what is left is the proof
+  in [the 2.0 plan](PLAN-2.0.md) against it. Until then 2.0 is a release candidate on `next`.
 - **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
   release only once a `1.x` has users on more than one version.
 - **A screen reader on Windows.** VoiceOver on macOS has been checked, connecting from the keyboard included

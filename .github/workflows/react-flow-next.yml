@@ -1,10 +1,11 @@
 name: React Flow next
 
-# React Flow's next major is published to its `next` dist-tag long before its release, and flowinger's 2.0 starts
-# when that release does (PLAN-2.0.md). Until then, once a week, this runs flowinger's React Flow oracles against
-# `@xyflow/react@next` — the unit tests that check names, geometry and defaults against React Flow's own code, and
-# the coverage audit — so a change in React Flow shows up as each pre-release lands, not on release day. A failure
-# here is news about React Flow, not a broken flowinger: CI stays on the version package.json pins.
+# Once a week this runs flowinger's React Flow oracles — the unit tests that check names, geometry and defaults
+# against React Flow's own code, and the coverage audit — against the newest React Flow: `@xyflow/react@latest`,
+# where 13's patches and minors land (2.0 follows 13), and `@xyflow/react@next` when it is ahead of that, where the
+# next major's pre-releases do. So a change in React Flow shows up the week it is published, not when someone
+# notices. A failure here is news about React Flow, not a broken flowinger: CI stays on the version package.json
+# pins.
 on:
   schedule:
     - cron: '17 6 * * 1'
@@ -16,6 +17,10 @@ permissions:
 jobs:
   next:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: [latest, next]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -23,16 +28,27 @@ jobs:
           node-version: 24
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - name: Use @xyflow/react@next
+      # `next` is left behind once a major is out (13.0.0-next.4 after 13.0.2): then there is nothing newer to check.
+      - name: Use @xyflow/react@${{ matrix.tag }}
+        id: pick
         run: |
-          pnpm add --save-dev @xyflow/react@next
-          echo "React Flow $(node -p "require('@xyflow/react/package.json').version")" >> "$GITHUB_STEP_SUMMARY"
+          latest=$(npm view @xyflow/react@latest version)
+          want=$(npm view "@xyflow/react@${{ matrix.tag }}" version)
+          if [ "${{ matrix.tag }}" = next ] && [ "$(printf '%s\n%s\n' "$latest" "$want" | sort -V | tail -n 1)" = "$latest" ]; then
+            echo "React Flow next ($want) is not ahead of latest ($latest): nothing newer to check" >> "$GITHUB_STEP_SUMMARY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pnpm add --save-dev "@xyflow/react@$want"
+          echo "React Flow $(node -p "require('@xyflow/react/package.json').version") (${{ matrix.tag }})" >> "$GITHUB_STEP_SUMMARY"
       # Among them, the test that reads each of reactFlowDefaults' values from React Flow's source.
-      - run: pnpm test
-      - run: pnpm build
-      # The declarations its `exports` names: 13's package still carries an older build under dist/esm/, which nothing
-      # reads.
+      - if: steps.pick.outputs.skip != 'true'
+        run: pnpm test
+      - if: steps.pick.outputs.skip != 'true'
+        run: pnpm build
+      # The declarations its `exports` names (13's pre-releases carried an older build under dist/esm/ beside them).
       - name: Every React Flow name is here and does something
+        if: steps.pick.outputs.skip != 'true'
         run: |
           types=$(node -p "const p = require('@xyflow/react/package.json'), e = p.exports['.']; e.types ?? e.node?.types ?? p.types")
           node scripts/audit-react-flow.mjs "node_modules/@xyflow/react/$types" --strict

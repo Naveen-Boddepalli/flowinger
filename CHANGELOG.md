@@ -10,6 +10,26 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+Follows React Flow 13.0.2 (13.0.0 came out on 2026-11-16), where rc.4 followed 13.0.0-next.3.
+[Upgrading to 2.0, §7](docs/upgrading.md#7-what-react-flow-1300-changed) says what it means for an app.
+
+### Added
+
+- **`paneDragThreshold`**, React Flow 13.0.0's name for the pane's threshold: a press on the empty canvas pans, or
+  draws a `selectionOnDrag` box, once it moves further than this, and one that moves no further is a click on the
+  pane. Left out, the engine's own 3 px, as before.
+
+### Changed
+
+- **`<ReactFlow>` pans from 2 px**: `reactFlowDefaults` has React Flow 13's `paneDragThreshold: 1` where it had
+  `paneClickDistance: 1`, which 13.0.0 renamed. Its clicks are the same; a press that moves 2 or 3 px pans, where it
+  did nothing. `paneClickDistance` still works on every canvas.
+- **`NodeProps` of a union of nodes is a union**, one member a type, as in React Flow 13.0.0, so a component for
+  several types can narrow `data` by `type`. An `interface` that extends `NodeProps<N>` for a generic `N` becomes a
+  `type` with `&`.
+- **`@xyflow/react` 13.0.2** is the dev dependency the oracle tests and the audit read (it was 13.0.0-next.3), and
+  the weekly job checks React Flow's `latest` as well as its `next`, which is behind `latest` now.
+
 ### Fixed
 
 - **Upgrading to 2.0 said Jest can load the ES modules with `NODE_OPTIONS=--experimental-vm-modules` on Node

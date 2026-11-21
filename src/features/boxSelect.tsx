@@ -139,7 +139,7 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
 
   useCanvas({ store, props, suppressPaneClick }) {
     const { elementsSelectable = false, selectionOnDrag = false, selectionMode = 'full' } = props;
-    const { onSelectionStart, onSelectionEnd, selectionKeyCode = 'Shift' } = props;
+    const { onSelectionStart, onSelectionEnd, selectionKeyCode = 'Shift', paneDragThreshold } = props;
     const { boxSelect, endBoxSelect } = store.api(boxSelectFeature);
     const { isMulti } = store.api(selectionFeature);
     const autoPan = store.api(autoPanFeature);
@@ -198,7 +198,9 @@ export const boxSelectFeature: Feature<BoxSelectApi> = {
           );
         };
         if (!b.active) {
-          if (Math.hypot(e.clientX - b.startX, e.clientY - b.startY) < DRAG_THRESHOLD) return true;
+          const moved = Math.hypot(e.clientX - b.startX, e.clientY - b.startY);
+          // A box starts where a pan would: past `paneDragThreshold`, else the engine's own threshold.
+          if (paneDragThreshold === undefined ? moved < DRAG_THRESHOLD : moved <= paneDragThreshold) return true;
           b.active = true;
           suppressPaneClick(); // the click that ends it is not a click on the pane
           capturePointer(e.currentTarget, e.pointerId);

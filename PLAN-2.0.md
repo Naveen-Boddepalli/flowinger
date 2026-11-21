@@ -5,7 +5,7 @@ covers waits for it. This page is the plan for that release: when it starts, wha
 what has to be seen working first, and in what order. Each section says whether it is decided, proposed, or waiting
 on a measurement. Decisions are the owner's; "proposed" means a recommendation not yet taken.
 
-## Status (2026-11-15): built on `release/2.0`, ahead of the trigger; rc.4 follows React Flow 13.0.0-next.3
+## Status (2026-11-21): on `main` since 2026-11-16; follows React Flow 13.0.2, 2.0.0 not yet released
 
 The owner chose to build 2.0 now rather than wait for React Flow 13.0.0 (*When 2.0 starts*, below). It is done on
 the branch, in two releases:
@@ -31,11 +31,14 @@ the branch, in two releases:
   its budget went back to 1.1's 21.5 kB (the owner's choice; the growth is the changesets, 0.12 kB). The whole
   canvas is 39.5–39.6 (budget 40).
 
-**What waiting would have bought, and still can:** React Flow 13 is at `next.3`, and three pre-releases in a week
-say it is still moving. If its `13.0.0` changes a default
-or a behaviour again, the stability page says `<ReactFlow>` follows only in a major — 3.0. So 2.0 is released as a
-candidate on `next` until React Flow 13.0.0 is out, and promoted to `latest` only once the weekly job shows nothing
-more has moved.
+- **React Flow 13.0.0 came out on 2026-11-16**, the day `release/2.0` merged into `main`, and 13.0.2 the day after.
+  From next.3 it renamed `paneClickDistance` to `paneDragThreshold`, which a pan now waits for, and made `NodeProps`
+  of a union a union; D1's table has the rest, and what needed nothing. Only the `reactFlowDefaults` test and the
+  audit failed on it, as they should, each on the rename. The core is 20.98 kB, the whole canvas 39.49.
+
+**What waiting would have bought:** React Flow 13.0.0 is out, so nothing more: a change in 13.x after 2.0.0 is
+2.x's to follow where it adds and 3.0's where it changes a default. What is left before `2.0.0` goes to `latest` is
+the proof (5), against 13.0.2.
 
 ## Where it stood when this plan was written (2026-10-17)
 
@@ -87,7 +90,7 @@ the feature API (still `@experimental`, so it can change in a minor).
 
 ## Decisions
 
-### D1. Follow React Flow 13 on `<ReactFlow>` — **proposed; waiting on 13.0.0**
+### D1. Follow React Flow 13 on `<ReactFlow>` — **decided; filled from 13.0.2 (2026-11-21)**
 
 1.0's split stays: `<ReactFlow>` behaves like React Flow, while `<FlowingerCanvas>` and `<FlowingerCore>` keep
 flowinger's own defaults. 2.0 moves `<ReactFlow>` from React Flow 12 to 13. When 13.0.0 is out, the audit and the
@@ -117,6 +120,22 @@ the audit in CI runs against it.
 | **The fit margin:** a number is pixels, not a ratio, and the default is `'5%'` a side, not 0.1 | **2.0** | The same number would fit differently, on every canvas, and in `getViewportForBounds`. The bridge warns, once a page, where a number margin is given, and says how to write the same margin as a string (`'5%'` and `'20px'` mean the same in 12 and 13) |
 | **No colour class without `forceColorMode`** (12's `<ReactFlow>` puts `light` on the container) | **2.0** | On `<ReactFlow>` only. A stylesheet that selects `.react-flow.light` notices |
 | Packaging (ESM only, React Compiler…) | D2 | |
+
+**What 13.0.0 changes beyond next.0**, read from 13.0.2's source (2026-11-21), the release 2.0 follows; next.1–next.3
+were measured as they came (rc.4), and next.3 → 13.0.2 by a diff of the two packages' source:
+
+| React Flow 13.0.0 (next.1 to 13.0.2) | Lands in | How |
+|---|---|---|
+| `useEqualSelector`; `update` and `data` changes; a changeset's `clear`, `isEmpty`, `getNewNodes`, `getNewEdges` | 2.0 (rc.4) | Added names |
+| `nodeClickDistance` removed | 2.0 (rc.4) | Kept as flowinger's own prop, out of `reactFlowDefaults`; `reactFlow12Defaults` keeps 12's 0. Not deprecated: 13 has nothing that says the same |
+| `getHandleConnections`, `HandleConnection`, a changeset's `size` and `version` removed | 2.0 (rc.4) | Kept, `@deprecated` with 13's replacement |
+| A changeset's reading of an `add` and a `remove`; a pane click ends a click-connect; a press let go of off a node is no click | 2.0 (rc.4) | On all three canvases |
+| **`paneClickDistance` renamed `paneDragThreshold`**, and a pan waits for it as a click does | **2.0** | `paneDragThreshold` added on every canvas, and a selection box waits for it too; `reactFlowDefaults` has 13's 1 in place of `paneClickDistance: 1`, so `<ReactFlow>`'s clicks are the same and it pans from 2 px, not 3. `paneClickDistance` kept and not deprecated: a click distance below the pan's is something `paneDragThreshold` cannot say |
+| **`NodeProps` of a union is a union** | **2.0** | The same, a type change only. An `interface` extending `NodeProps<N>` for a generic `N` breaks, as in 13 |
+| `selectionOnDrag` does nothing while the left button pans (`panOnDrag` `true`, and now an array with `0`) | — | Not followed, as in 1.x, where 12 did the same for `true`: in flowinger the box is the plain drag's. The migration guide says so |
+| An `EdgeToolbar` is stacked with its edge, among the nodes | — | Not followed: flowinger draws edge labels and toolbars on a layer over every node |
+| A node moved with the arrows is announced where it is after the move | — | Flowinger already did |
+| Measured nodes clamped with `nodeOrigin`; children updated after any measure | — | React Flow's own store; flowinger's engine places nodes its own way, and its geometry oracles pass on 13.0.2 |
 
 So next.0 alone makes 2.0 smaller than it looks. Every name 13 adds can be in flowinger before 2.0, and what has
 to wait is two defaults and what a number means as a margin. A React Flow 13 app could then switch to a flowinger

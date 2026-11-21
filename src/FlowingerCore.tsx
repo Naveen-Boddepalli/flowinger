@@ -189,6 +189,7 @@ function InnerCanvas(props: FlowingerProps) {
     noPanClassName,
     noDragClassName,
     paneClickDistance,
+    paneDragThreshold,
     connectionLineContainerStyle,
     defaultMarkerColor,
     disableKeyboardA11y,
@@ -631,7 +632,10 @@ function InnerCanvas(props: FlowingerProps) {
     const dx = e.clientX - p.startX;
     const dy = e.clientY - p.startY;
     if (!p.active) {
-      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      // Past `paneDragThreshold`, as React Flow 13's pan (`distance > paneDragThreshold`); else the engine's own.
+      if (paneDragThreshold === undefined ? Math.hypot(dx, dy) < DRAG_THRESHOLD : Math.hypot(dx, dy) <= paneDragThreshold) {
+        return;
+      }
       p.active = true;
       justPanned.current = true;
       capturePointer(e.currentTarget, e.pointerId);

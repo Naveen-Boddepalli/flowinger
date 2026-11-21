@@ -5,7 +5,7 @@ use — a viewer of trees and plans, with some editing. It is **not a drop-in fo
 is a checklist, not a promise. The compiler will find most of what is missing; this page is for the things it
 will not: defaults that differ, and behaviour that changes without an error.
 
-Every default below was read from `@xyflow/react` 13's source (13.0.0-next.3), not remembered. Coming from React
+Every default below was read from `@xyflow/react` 13's source (13.0.2), not remembered. Coming from React
 Flow 12, the same holds: flowinger has every name 12 had, and [Upgrading to 2.0](upgrading.md#upgrading-to-20) lists
 what 13 changed.
 
@@ -58,7 +58,8 @@ says what changed.
 | `nodesFocusable` | `true` | **as `elementsSelectable`** |
 | `minZoom` | `0.5` | **`0.05`** |
 | `nodeDragThreshold` | 1 px | **3 px** |
-| `paneClickDistance` | 1 px | **none: a press is a click however far it moved** |
+| `paneDragThreshold` | 1 px: a press on the pane pans past it, and is a click up to it | **3 px** |
+| `paneClickDistance` | not a prop since 13.0.0, which has `paneDragThreshold` | none: a press is a click unless it became a pan; flowinger keeps the prop |
 | `nodeClickDistance` | not a prop: a press is a click unless it became a drag | the same; flowinger keeps 12's prop, to make a press that moved not a click |
 | `maxZoom` | `2` | `2` |
 | `fitView` margin | `padding` `'5%'` of the pane a side | **40 px**, unless you pass a `padding` (pixels, `'%'` or per side) |
@@ -93,7 +94,8 @@ changed. Two differences are on purpose:
 - **`onConnectEnd` is given a `ConnectEndState`** (`{ connection, isValid }`), not React Flow's
   `FinalConnectionState` (the type is exported, but a handler annotated with it is a compile error).
 - `Node<Data, Type>`, `NodeProps<MyNode>`, `Edge`, `NodeChange<MyNode>` and `EdgeChange<MyEdge>` are generic as
-  they are in React Flow.
+  they are in React Flow. `NodeProps` of a union of nodes is a union, as in React Flow 13, but its `type` is the
+  node's own: a node with none has none there, where React Flow passes `'default'`. Check each type by name.
 
 ## 4. What is not there
 
@@ -152,6 +154,12 @@ saying what you were building.
   — or a 150 × 40 fallback — is used for `fitView` and `getNodesBounds`.
 - **Accessibility attributes are opt-in.** React Flow's `role="application"`, `aria-roledescription` and
   live region are not added. Turn on `elementsSelectable` or `keyboardNavigation`, and use `ariaLabel`.
+- **`selectionOnDrag` draws a box even where the left button pans.** In React Flow it does nothing while `panOnDrag`
+  is `true` or includes `0` (its default is `true`), so a box takes `panOnDrag={false}` or `[1, 2]` as well. In
+  flowinger `selectionOnDrag` is the plain drag's, and the other buttons and the wheel still pan.
+- **Edge labels and `EdgeToolbar` are drawn above every node.** React Flow 13 stacks a toolbar with its edge, among
+  the nodes, so a node can cover it; flowinger draws labels and toolbars on one layer over the nodes, to be read
+  and clicked.
 - **There is no attribution badge.** `proOptions` and `attributionPosition` are accepted and do nothing.
 - **Pointer behaviour on inert nodes differs, for the better.** React Flow sets `pointer-events: none` on a
   node that is neither draggable nor selectable, which silences hover styles and tooltips in it; Flowinger

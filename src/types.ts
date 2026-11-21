@@ -218,7 +218,11 @@ export interface InternalNode extends Node {
   };
 }
 
-export interface NodeProps<N extends Node = Node> {
+/**
+ * What a node component is given, for one type of node. `NodeProps` is this for each member of a union, so a
+ * component for several types of node can tell them apart by `type`, as in React Flow 13.
+ */
+interface NodePropsFor<N extends Node> {
   id: string;
   data: N['data'];
   type?: N['type'];
@@ -244,6 +248,12 @@ export interface NodeProps<N extends Node = Node> {
   sourcePosition?: Position | undefined;
   targetPosition?: Position | undefined;
 }
+
+/**
+ * What a node component is given. For a union of nodes it is a union too, one member a type, so checking
+ * `props.type` narrows `props.data` (React Flow 13's `NodeProps` does the same).
+ */
+export type NodeProps<N extends Node = Node> = N extends unknown ? NodePropsFor<N> : never;
 
 export const MarkerType = {
   Arrow: 'arrow',
@@ -592,12 +602,12 @@ export interface FlowingerInstance {
 }
 
 /**
- * A registry of node components by `Node.type`. `NodeProps<never>` is the
- * widest type a component written against a specific `NodeProps<MyNode>` can
- * be assigned to: function parameters are contravariant, so anything narrower
- * than `never` would reject them.
+ * A registry of node components by `Node.type`. The props of a node that is `never` are the widest type a
+ * component written against a specific `NodeProps<MyNode>` can be assigned to: function parameters are
+ * contravariant, so anything narrower would reject them. (`NodeProps<never>` itself is `never` now that it is
+ * spread over a union, hence the props it is made of.)
  */
-export type NodeTypes = Record<string, ComponentType<NodeProps<never>>>;
+export type NodeTypes = Record<string, ComponentType<NodePropsFor<never>>>;
 
 export interface FlowingerProps {
   /**
@@ -888,9 +898,13 @@ export interface FlowingerProps {
    */
   nodeClickDistance?: number;
   /**
-   * How far, in pixels, a press on the empty canvas may move and still be a click on the pane (`onPaneClick`, clearing the selection). Left out, any press that does not become a pan is a click.
+   * How far, in pixels, a press on the empty canvas may move and still be a click on the pane (`onPaneClick`, clearing the selection). Left out, any press that does not become a pan is a click. React Flow 13 has no such prop: its `paneDragThreshold` decides both, as flowinger's does when this is left out.
    */
   paneClickDistance?: number;
+  /**
+   * Pixels a press on the empty canvas must travel past before it pans the view or draws a selection box; one that moves exactly this far is still a click on the pane, as in React Flow 13. Left out, the engine's own 3; an explicit `0` pans at the first move. `<ReactFlow>` sets React Flow 13's 1.
+   */
+  paneDragThreshold?: number;
   /**
    * How near a handle a dropped connection snaps to it, in graph units (default 20): the nearest connectable handle within that of the pointer is the one it ends at, and the line is drawn to it, even where the pointer is not over it. A handle under the pointer is always preferred. `0` is only a handle the pointer is over. Needs `connectFeature`.
    */

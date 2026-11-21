@@ -7,6 +7,8 @@ import type {
   CoordinateExtent as RFCoordinateExtent,
   Dimensions as RFDimensions,
   KeyCode as RFKeyCode,
+  Node as RFNode,
+  NodeProps as RFNodeProps,
   OnConnect as RFOnConnect,
   SnapGrid as RFSnapGrid,
   Transform as RFTransform,
@@ -54,6 +56,8 @@ import {
   type NodeConnection,
   type KeyCode,
   type Node,
+  type NodeProps,
+  type NodeTypes,
   type NodeChange,
   type NodeMouseHandler,
   type OnBeforeDelete,
@@ -276,5 +280,30 @@ describe('code written against those names runs on the canvas', () => {
     const handlers: [OnBeforeDelete, OnNodeDrag, OnNodesDelete, OnEdgesDelete, OnDelete, OnReconnect, OnConnectStart, OnConnectEnd, OnMove, OnMoveStart, EdgeMouseHandler] =
       [() => true, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}];
     expect(handlers).toHaveLength(11);
+  });
+});
+
+// React Flow 13.0.0 spreads `NodeProps` over a union of nodes, so one component for several types can narrow
+// `data` by `type`. Checked by `pnpm typecheck`, as above.
+describe('NodeProps for a union of nodes', () => {
+  type Note = Node<{ text: string }, 'note'>;
+  type Task = Node<{ done: boolean }, 'task'>;
+  it("is a union, one member a type, as React Flow 13's is", () => {
+    expectTypeOf<NodeProps<Note | Task>>().toEqualTypeOf<NodeProps<Note> | NodeProps<Task>>();
+    expectTypeOf<RFNodeProps<RFNode<{ text: string }, 'note'> | RFNode<{ done: boolean }, 'task'>>>().toEqualTypeOf<
+      RFNodeProps<RFNode<{ text: string }, 'note'>> | RFNodeProps<RFNode<{ done: boolean }, 'task'>>
+    >();
+    // Each type checked by name: `type` is the node's own, so a node that gives none has none here (React Flow
+    // passes 'default'), and a bare `else` cannot rule a type out.
+    const label = (props: NodeProps<Note | Task>): string =>
+      props.type === 'note' ? props.data.text : props.type === 'task' ? String(props.data.done) : '';
+    expect(label({ id: 'n', type: 'note', data: { text: 'hi' } })).toBe('hi');
+    expect(label({ id: 't', type: 'task', data: { done: true } })).toBe('true');
+  });
+
+  it('a component for one type of node still goes in nodeTypes', () => {
+    const NoteNode = ({ data }: NodeProps<Note>) => data.text;
+    const types: NodeTypes = { note: NoteNode };
+    expect(types.note).toBe(NoteNode);
   });
 });

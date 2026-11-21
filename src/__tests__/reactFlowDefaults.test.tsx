@@ -40,7 +40,7 @@ const SAID_BY_REACT_FLOW: Record<keyof typeof reactFlowDefaults, [said: string, 
   nodesFocusable: ['nodesFocusable: true,', true],
   minZoom: ['minZoom = 0.5', 0.5],
   nodeDragThreshold: ['nodeDragThreshold: 1,', 1],
-  paneClickDistance: ['paneClickDistance = 1', 1],
+  paneDragThreshold: ['paneDragThreshold = 1', 1],
   multiSelectionKeyCode: ["multiSelectionKeyCode = isMacOs() ? 'Meta' : 'Control'", 'Control'],
   zoomActivationKeyCode: ["zoomActivationKeyCode = isMacOs() ? 'Meta' : 'Control'", 'Control'],
   panActivationKeyCode: ["panActivationKeyCode = 'Space'", 'Space'],
@@ -61,6 +61,8 @@ describe('reactFlowDefaults', () => {
     expect(systemSource).toMatch(/defaultFitViewPadding = ["']5%["']/);
     // React Flow 13.0.0-next.3 took nodeClickDistance out: a press on a node is a click unless it became a drag.
     expect(reactFlowSource.includes('nodeClickDistance'), 'React Flow has nodeClickDistance again').toBe(false);
+    // 13.0.0 renamed paneClickDistance to paneDragThreshold, which a pan has to pass as well as a click stay under.
+    expect(reactFlowSource.includes('paneClickDistance'), 'React Flow has paneClickDistance again').toBe(false);
     expect(REACT_FLOW_MARGIN).toBe('5%');
   });
 

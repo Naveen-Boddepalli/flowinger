@@ -5,7 +5,7 @@ What changed in each major version, and how to upgrade: [to 2.0](#upgrading-to-2
 
 ## Upgrading to 2.0
 
-2.0 follows React Flow 13. React Flow 13 changes what a number means as a fit's margin and the margin
+2.0 follows React Flow 13 (13.0.2). React Flow 13 changes what a number means as a fit's margin and the margin
 `<ReactFlow>` fits with, gives change handlers a changeset, and ships ES modules only; 2.0 does the same, and moves
 the edge paths other than bezier out of the core. Everything React Flow 13 *adds* came in 1.1, without breaking
 anything: its store hooks, its changesets, `forceColorMode`, `changeParent`.
@@ -26,6 +26,7 @@ does not load flowinger with `require` under Jest, needs nothing more. (1.2 give
 | imports the type `CounterNode` | it is gone: React Flow never exported it | write your own node type |
 | renders `<ReactFlow>`, and a press on a node that moved a little is not a click | it is one, unless it became a drag: React Flow 13 has **no `nodeClickDistance`** (12's was 0) | spread `reactFlow12Defaults`, or pass `nodeClickDistance={0}` — see [6](#6-what-react-flow-1300-next3-changed) |
 | queues its own changes and applies them with `changes.applyTo(nodes)` | they are read as **React Flow 13 reads them**: in order, a `remove` wins, an `add` of an id already there is not added | see [3](#3-change-handlers-are-given-a-changeset) |
+| renders `<ReactFlow>`, and a press on the pane that moved 2 px did not pan | it pans: React Flow 13.0.0 calls the pane's threshold **`paneDragThreshold`** (1 px), and a pan waits for it as a click does | pass `paneDragThreshold={3}` for 1.x's — see [7](#7-what-react-flow-1300-changed) |
 
 ### 1. A number as a margin is pixels
 
@@ -123,6 +124,25 @@ about these: React Flow made them after.
   `getNodeConnections({ type, nodeId, handleId })` asks the same, and `NodeConnection` is the same type.
 - **`useEqualSelector`** is new, as in React Flow 13: a store hook's selector with a comparison of your own, of
   which `useShallow` is the shallow one.
+
+### 7. What React Flow 13.0.0 changed
+
+React Flow 13.0.0 came out on 2026-11-16, and 13.0.2 on 2026-11-17; 2.0 follows 13.0.2. Since next.3:
+
+- **`paneClickDistance` is `paneDragThreshold` in React Flow 13**, and it decides when a pan starts as well as what
+  is a click: a press on the pane pans once it moves further than that, and one that moves no further is a click,
+  with the view where it was. `<ReactFlow>` sets React Flow's 1 px where it set `paneClickDistance: 1`, so its
+  clicks are the same, and it pans from 2 px where it waited for flowinger's 3. A selection box drawn with
+  `selectionOnDrag` waits for the same distance. `paneClickDistance` still works on every canvas, and
+  `<FlowingerCanvas>` still pans from 3 px.
+- **`NodeProps` of a union of nodes is a union**, one member a type, so a component for several types can check
+  `props.type` and have the `data` that goes with it. An `interface` that extends `NodeProps<N>` for a generic `N`
+  has to be a `type` with `&` now, as in React Flow 13. A node with no `type` has none in its props (React Flow
+  passes `'default'`), so test for each type by name rather than with a bare `else`.
+
+Two of 13.0.0's changes needed nothing. A node moved with the arrow keys is announced where it is after the move,
+which is what flowinger already said. An `EdgeToolbar` is stacked with its edge, among the nodes; flowinger's edge
+labels and toolbars are drawn on a layer above every node, as they were.
 
 ### What stays as it is
 

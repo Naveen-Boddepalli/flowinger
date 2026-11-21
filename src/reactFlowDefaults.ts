@@ -46,7 +46,7 @@ export const reactFlowDefaults = {
   nodesFocusable: true,
   minZoom: 0.5,
   nodeDragThreshold: 1,
-  paneClickDistance: 1,
+  paneDragThreshold: 1,
   multiSelectionKeyCode: modifier,
   zoomActivationKeyCode: modifier,
   panActivationKeyCode: 'Space',
