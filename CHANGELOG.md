@@ -10,6 +10,11 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **The release workflow publishes a 1.x release to npm's `latest-1` tag** (`npm install flowinger@latest-1`), so
+  `latest` stays on 2.x. It named the tag `v1`, which npm refuses, because a tag must not read as a version range.
+
 ## [1.2.1] - 2026-10-19
 
 A patch for 1.2.0's cost on a large canvas, which the benchmarks found when they were run again for the launch.
