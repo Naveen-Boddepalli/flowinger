@@ -196,3 +196,8 @@
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--sl-color-text-accent) 25%, transparent);
   }
 }
+
+/* A README's centred row of badges (the 1.x home page, /v1/) stays a row: Starlight sets Markdown images to block. */
+.sl-markdown-content p[align='center'] img {
+  display: inline-block;
+}
