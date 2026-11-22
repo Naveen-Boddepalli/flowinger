@@ -79,8 +79,7 @@
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
 A culled mount is a tenth of React Flow's, because Flowinger's first render is culled too. Where React Flow is
-ahead: the last row, its ecosystem. (Until the next 2.x minor, which has the drag fix on `main`, React Flow 13 also drags
-a node without culling 1.3–2× cheaper than the published 2.0.0 does.)
+ahead: the last row, its ecosystem. (Before 2.1, React Flow 13 also dragged a node without culling 1.3–2× cheaper.)
 
 ## Install
 

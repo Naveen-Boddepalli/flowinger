@@ -3,7 +3,7 @@
 Flowinger and React Flow (`@xyflow/react`) drawing the same graph, in the same page, in a real browser — what
 it costs to put 1,000, 5,000 and 10,000 nodes on the screen, to pan and zoom over them, and to drag one.
 
-**In short** (Flowinger 2.0 with the drag fix on `main`, against React Flow 13.0.2). Without culling Flowinger mounts
+**In short** (Flowinger 2.1, the table's `868f413`, against React Flow 13.0.2). Without culling Flowinger mounts
 1.4–1.8× as fast, pans and zooms level at 1,000 and 5,000 nodes and for 1.2–1.5× less at 10,000, holds about 30% less
 memory, and drags a node for a little less: 1.1–1.3×. With `onlyRenderVisibleElements` on, Flowinger mounts 2–10×
 as fast and zooms for 1.7–2.2× less; a pan and a drag are level, all well inside a 60 Hz frame at 10,000 nodes.

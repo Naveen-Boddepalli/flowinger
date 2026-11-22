@@ -10,6 +10,11 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-22
+
+**An unculled drag costs what moved**, and with it Flowinger drags a node without culling for less than React Flow
+13 at every size measured, which was the one row of the benchmarks React Flow 13 led. Nothing breaks.
+
 ### Changed
 
 - **Dragging a node without culling costs what moved.** The edge layer drew every edge again on each mouse move of a
@@ -829,7 +834,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.1...v2.0.0
 [2.0.0-rc.5]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.4...v2.0.0-rc.5
 [2.0.0-rc.4]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...v2.0.0-rc.4

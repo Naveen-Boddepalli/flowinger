@@ -60,6 +60,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
   Built on `release/2.0` from 2026-10-17, a release candidate (rc.1–rc.5) until React Flow 13.0.0 was out. 1.x keeps
   fixes on the `v1` branch for six months. [The 2.0 plan](PLAN-2.0.md) and
   [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20).
+- `2.1.0` (2026-11-22): dragging a node without culling costs what moved — the one row React Flow 13 led, now
+  Flowinger's at every size (at 10,000 nodes 44 ms a move against 47; it was 68 against 49).
 
 ## Now — be easy to try and to trust
 
@@ -81,7 +83,7 @@ Flowinger *names* every export and prop of React Flow 13.0.2 (220 of 220 exports
 one does something** (301 of 301 members counted by `node scripts/audit-react-flow.mjs`, which counts a name that
 compiles and does nothing apart; there are none), and it keeps every name of 12's. What is left is speed, and proof:
 
-1. **Dragging a node without culling** — closed on `main`, for the next 2.x minor. It was the one row React Flow 13
+1. **Dragging a node without culling** — closed in 2.1.0. It was the one row React Flow 13
    led, 1.3–2× (at 10,000 nodes 49 ms a mouse move against 68); the edge layer drew every edge again on each move.
    It keeps them now, and the drag costs 44 ms against React Flow's 47 at 10,000 nodes, 16 against 18 at 5,000
    ([benchmarks](docs/benchmarks.md)). Both are still heavy at those sizes without culling: what is left of the 44
