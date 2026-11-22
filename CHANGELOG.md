@@ -12,6 +12,8 @@ The design notes behind each release — what was measured, what was tried and d
 
 ### Fixed
 
+- **The release workflow publishes a 1.x release to npm's `latest-1` tag** (`npm install flowinger@latest-1`), so
+  `latest` stays on 2.x. It named the tag `v1`, which npm refuses, because a tag must not read as a version range.
 - **A 1.x release would not have published.** From 2.0 the release workflow sent a release of an older major to
   that major's dist-tag, `v1`, which npm refuses: a tag must not read as a version range, and `v1` reads as `1.x`.
   The tag is `latest-1` now (`npm install flowinger@latest-1`), here and on the `v1` branch. No 1.x release had been

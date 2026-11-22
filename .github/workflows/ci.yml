@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, v1] # v1: the 1.x line, so a fix pushed there is checked as one on main is
   pull_request:
 
 permissions:
