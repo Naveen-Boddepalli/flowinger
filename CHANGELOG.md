@@ -10,6 +10,12 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Added
+
+- **The 1.x docs on the site, under [`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/)**, built from the
+  `v1` branch: its README, docs, changelog and roadmap, each page with a banner pointing at its 2.x counterpart.
+  [What 2.0 promises](docs/stability.md) and [Upgrading](docs/upgrading.md) link to them.
+
 ## [2.0.0] - 2026-11-22
 
 **Flowinger follows React Flow 13** (13.0.2), as 1.x followed 12. A change that breaks what

@@ -73,7 +73,9 @@ export const onRequest = defineRouteMiddleware((context) => {
     label,
     collapsed: false,
     badge: undefined,
-    entries: items.map(([label, slug]) => link(label, `${base}v1/${slug ? `${slug}/` : ''}`, `v1${slug ? `/${slug}` : ''}` === route.id)),
+    entries: items.map(([label, slug]) =>
+      link(label, `${base}v1/${slug ? `${slug}/` : ''}`, (slug ? `v1/${slug}` : 'v1') === route.id),
+    ),
   }));
   route.sidebar = [link('← 2.x docs (current)', `${base}docs/`), ...pages];
 

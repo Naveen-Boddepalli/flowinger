@@ -3,7 +3,8 @@
 Flowinger follows [semantic versioning](https://semver.org), as it has since `1.0.0`: a change that breaks anything
 on this page waits for `3.0`, and a minor or patch release only adds or fixes. [Upgrading](upgrading.md) says what
 2.0 and 1.0 changed, and the [changelog](../CHANGELOG.md) lists every release. 1.x gets fixes for security problems,
-crashes and regressions for six months after `2.0.0`, published to npm's `v1` tag.
+crashes and regressions for six months after `2.0.0`, published to npm's `v1` tag; its docs are on the site under
+[`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/).
 
 ## Covered
 

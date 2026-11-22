@@ -51,7 +51,8 @@ function gitRef(ref, branch) {
   );
   return {
     branch,
-    list: (dir) => [...entries.keys()].filter((path) => posix.dirname(path) === dir).map((path) => posix.basename(path)),
+    list: (dir) =>
+      [...entries.keys()].filter((path) => posix.dirname(path) === dir).map((path) => posix.basename(path)),
     read: (path) => git('show', `${ref}:${path}`).toString(),
     isDir: (path) => entries.get(path) === 'tree',
     copyDir: (dir, to) => {

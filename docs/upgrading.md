@@ -1,7 +1,8 @@
 # Upgrading
 
 What changed in each major version, and how to upgrade: [to 2.0](#upgrading-to-20) from 1.x, and
-[to 1.0](#upgrading-to-10) from `0.x`. What a major version covers is on [its own page](stability.md).
+[to 1.0](#upgrading-to-10) from `0.x`. What a major version covers is on [its own page](stability.md), and the 1.x
+docs are on the site under [`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/).
 
 ## Upgrading to 2.0
 

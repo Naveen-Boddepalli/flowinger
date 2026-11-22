@@ -109,10 +109,9 @@ that compiles and does nothing apart, and there are none). What is left is bread
 
 ## Later
 
-- **The 1.x docs under `/v1/`** on the site (PLAN-2.0's D5): until then 1.x's README and docs are on the `v1`
-  branch.
-- **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
-  release only once a `1.x` has users on more than one version.
+- **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`, and the `v1`
+  branch under [`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/); a page per minor release only once a
+  `2.x` has users on more than one.
 - **A screen reader on Windows.** VoiceOver on macOS has been checked, connecting from the keyboard included
   ([accessibility](docs/accessibility.md)); NVDA and JAWS have not been tried.
 - **Mutation testing in CI.** Every guard in the project has been broken by hand and watched to fail; that

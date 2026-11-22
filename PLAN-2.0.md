@@ -248,7 +248,8 @@ This will be the first time two stable lines exist, with one maintainer.
 - **Publishing:** releases come from that branch through `release.yml` with a `v1` dist-tag, so a 1.x patch never
   moves `latest`. `release.yml` needs to learn both: a tag from a branch other than `main`, and the dist-tag.
 - **Docs:** the roadmap's condition for versioned docs ("a `1.x` has users on more than one version") is met at
-  2.0. The site keeps the 1.x pages under `/v1/`.
+  2.0. The site keeps the 1.x pages under `/v1/` — done: `site/scripts/sync-docs.mjs` builds them from the `v1`
+  branch.
 
 ### Considered and left as they are
 
@@ -346,7 +347,7 @@ measured again, and the changelog says why for either outcome.
 - The migration guide written against 13, with its defaults read from 13's source.
 - The README's *Status*, the comparison table and the size figures, updated.
 - `llms.txt` updated.
-- The `/v1/` docs (D5).
+- The `/v1/` docs (D5) — done after 2.0.0.
 
 ### 7. Release
 
