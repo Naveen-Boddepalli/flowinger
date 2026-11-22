@@ -10,6 +10,13 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Fixed
+
+- **A 1.x release would not have published.** From 2.0 the release workflow sent a release of an older major to
+  that major's dist-tag, `v1`, which npm refuses: a tag must not read as a version range, and `v1` reads as `1.x`.
+  The tag is `latest-1` now (`npm install flowinger@latest-1`), here and on the `v1` branch. No 1.x release had been
+  made since 2.0, so nothing was lost; 1.2.1, the last, is under `latest-1` too.
+
 ## [2.1.0] - 2026-11-22
 
 **An unculled drag costs what moved**, and with it Flowinger drags a node without culling for less than React Flow

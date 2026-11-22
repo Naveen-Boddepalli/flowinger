@@ -127,7 +127,7 @@ Maintainers only. A release is a tag; there is no npm token anywhere.
 after `2.0.0`, from the **`v1` branch**: 1.2.1 with Dependabot's updates, `main`'s `release.yml` (which knows about
 older majors), and CI on every push. Each fix is a pull request into `v1` with its changelog entry and version; tag
 the merge commit as above. While npm's `latest` is 1.x, a 1.x release goes to `latest`; once 2.0 is there, the
-workflow publishes a version older than `latest`'s major to that major's dist-tag (`v1`), so `latest` stays on 2.x,
+workflow publishes a version older than `latest`'s major to that major's dist-tag (`latest-1`), so `latest` stays on 2.x,
 and does not mark its GitHub release the latest.
 
 **One-time setup**, on npmjs.com: the package's *Settings → Trusted Publisher → GitHub Actions*, with this

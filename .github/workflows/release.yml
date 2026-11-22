@@ -67,14 +67,14 @@ jobs:
         run: |
           # A prerelease (v2.0.0-rc.1) goes to the `next` tag, so `npm install flowinger` stays on a release. A release
           # of an older major than `latest` — a 1.x fix after 2.0, from the v1 branch — goes to that major's own tag
-          # (`v1`), so it does not move `latest` back.
+          # (`latest-1`), so it does not move `latest` back. Not `v1`: npm refuses a tag that reads as a version range.
           version="${GITHUB_REF_NAME#v}"
           latest="$(npm view flowinger dist-tags.latest 2>/dev/null || echo 0.0.0)"
           case "${GITHUB_REF_NAME}" in
             *-*) npm publish --access public --tag next ;;
             *)
               if [ "${version%%.*}" -lt "${latest%%.*}" ]; then
-                npm publish --access public --tag "v${version%%.*}"
+                npm publish --access public --tag "latest-${version%%.*}"
               else
                 npm publish --access public
               fi
