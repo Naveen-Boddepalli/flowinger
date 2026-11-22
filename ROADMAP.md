@@ -59,10 +59,11 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - `1.1.0` (built 2026-10-17, `release/1.1`): the bridge to 2.0 — React Flow 13's names (store hooks, changesets,
   `forceColorMode`, `changeParent`, margins with units) without breaking anything, and a warning in development for
   each thing 2.0 changes.
-- `2.0.0` (built 2026-10-17, `release/2.0`, a release candidate until React Flow 13.0.0): follows React Flow 13 — a
-  number margin is pixels, `<ReactFlow>` fits with `'5%'`, changesets in the types, ES modules only, and the edge
-  paths other than bezier in `edgePathsFeature`. rc.4 (2026-11-15) follows React Flow 13.0.0-next.3; `main` follows 13.0.2 (2026-11-21). [The 2.0
-  plan](PLAN-2.0.md) and [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20).
+- `2.0.0` (2026-11-22): follows React Flow 13 (13.0.2) — a number margin is pixels, `<ReactFlow>` has 13's
+  defaults, changesets in the types, ES modules only, and the edge paths other than bezier in `edgePathsFeature`.
+  Built on `release/2.0` from 2026-10-17, a release candidate (rc.1–rc.5) until React Flow 13.0.0 was out. 1.x keeps
+  fixes on the `v1` branch for six months. [The 2.0 plan](PLAN-2.0.md) and
+  [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20).
 
 ## Now — be easy to try and to trust
 
@@ -108,8 +109,8 @@ that compiles and does nothing apart, and there are none). What is left is bread
 
 ## Later
 
-- **2.0 to `latest`**: React Flow 13.0.0 is out (2026-11-16) and `main` follows 13.0.2; what is left is the proof
-  in [the 2.0 plan](PLAN-2.0.md) against it. Until then 2.0 is a release candidate on `next`.
+- **The 1.x docs under `/v1/`** on the site (PLAN-2.0's D5): until then 1.x's README and docs are on the `v1`
+  branch.
 - **Versioned docs.** The [site](https://naveen-boddepalli.github.io/flowinger/) shows `main`; a page per
   release only once a `1.x` has users on more than one version.
 - **A screen reader on Windows.** VoiceOver on macOS has been checked, connecting from the keyboard included

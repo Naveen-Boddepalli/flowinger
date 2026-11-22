@@ -10,6 +10,35 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-22
+
+**Flowinger follows React Flow 13** (13.0.2), as 1.x followed 12. A change that breaks what
+[What 2.0 promises](https://naveen-boddepalli.github.io/flowinger/docs/stability/) covers waits for 3.0. The library
+is the same as `2.0.0-rc.5`; since then only the docs changed, to describe 2.0. Everything React Flow 13 *adds* came
+in 1.1 without breaking anything, and 1.1 and 1.2 warn in development about the first five below; the rest came
+with React Flow 13's later pre-releases and its release, after them. [Upgrading to 2.0](https://naveen-boddepalli.github.io/flowinger/docs/upgrading/) has each one and what to
+do; the candidates' entries below have the detail.
+
+### Changed
+
+- **Breaking: a number as a fit's margin is pixels**, as in React Flow 13 (it was a ratio of the view). Written
+  with a unit (`'5%'`, `'20px'`) it means the same in 1.1 and 2.0.
+- **Breaking: `<ReactFlow>` has React Flow 13's defaults**: it fits with a `'5%'` margin a side, has no
+  `nodeClickDistance`, and pans past `paneDragThreshold` (1 px). `reactFlow12Defaults` keeps 1.x's margin and
+  clicks.
+- **Breaking: change handlers are typed as given a `NodeChangeset` / `EdgeChangeset`**, which they have been at run
+  time since 1.1, and a changeset applies its changes as React Flow 13 reads them.
+- **Breaking: the edge paths other than bezier come with `edgePathsFeature`** on a `<FlowingerCore>`
+  (`<FlowingerCanvas>` and `<ReactFlow>` have it).
+- **Breaking: ES modules only**, as React Flow 13: Node's `require` loads them (Node 20.19+ or 22.12+); Jest needs
+  Node 24 with `--experimental-vm-modules`, or a transform.
+- **Breaking: a press becomes a drag once it moves further than `nodeDragThreshold`**, a press let go of off a node
+  is no click, and a pane click ends a connection begun by a click — on every canvas, as in React Flow 13.
+- **`NodeProps` of a union of nodes is a union**, as in React Flow 13.
+- **`CounterNode` is gone** (React Flow never exported it), and `colorMode` is deprecated for `forceColorMode`.
+- **1.x is kept** on the `v1` branch, with fixes for security problems, crashes and regressions for six months;
+  its releases go to npm's `v1` tag, so `latest` stays on 2.x.
+
 ## [2.0.0-rc.5] - 2026-11-22
 
 Follows React Flow 13.0.2 (13.0.0 came out on 2026-11-16), where rc.4 followed 13.0.0-next.3.
@@ -779,7 +808,8 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.5...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.1...v2.0.0
 [2.0.0-rc.5]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.4...v2.0.0-rc.5
 [2.0.0-rc.4]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...v2.0.0-rc.4
 [2.0.0-rc.3]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...v2.0.0-rc.3

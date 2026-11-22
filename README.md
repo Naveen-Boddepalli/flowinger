@@ -34,7 +34,7 @@
 
 > **Status:** `2.0` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
 > for `3.0`. It is what [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) draws its diagrams with, and
-> its API follows React Flow 13's (whose release is still a pre-release), keeping every name of 12's;
+> its API follows React Flow 13's (13.0.2), keeping every name of 12's;
 > [Upgrading](docs/upgrading.md) says what 2.0 and 1.0 changed. These docs describe `main`; what is newer than the latest npm
 > release is listed under *Unreleased* there.
 

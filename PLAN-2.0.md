@@ -5,7 +5,7 @@ covers waits for it. This page is the plan for that release: when it starts, wha
 what has to be seen working first, and in what order. Each section says whether it is decided, proposed, or waiting
 on a measurement. Decisions are the owner's; "proposed" means a recommendation not yet taken.
 
-## Status (2026-11-21): on `main` since 2026-11-16; follows React Flow 13.0.2, 2.0.0 not yet released
+## Status (2026-11-22): `2.0.0` released, following React Flow 13.0.2
 
 The owner chose to build 2.0 now rather than wait for React Flow 13.0.0 (*When 2.0 starts*, below). It is done on
 the branch, in two releases:
@@ -360,7 +360,8 @@ measured again, and the changelog says why for either outcome.
   candidate `check:registry` and the phone are tried on, since 13.0.0 changed when a pan starts. Published
   2026-11-22 with provenance; `check:registry` passes on it on React 18 and 19 (signatures and provenance, `require`
   and `import` with a server render, strict TypeScript on `nodenext`), and CI's browser suite ran in Chromium,
-  Firefox and WebKit before the tag. The phone is still to do.
+  Firefox and WebKit before the tag. A phone was tried on it the same day, and was fine.
+- **`2.0.0` (2026-11-22)** goes to `latest`, the same library as rc.5, tagged from `main`.
 - The `v1` branch is cut from the last 1.x tag — `v1.2.1` today — before the release PR merges.
 - Then `2.0.0` goes to `latest`, tagged from `main` after the PR merges (CONTRIBUTING's *Releasing*). Tagging is
   the owner's.
