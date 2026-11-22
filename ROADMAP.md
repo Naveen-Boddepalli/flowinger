@@ -55,10 +55,6 @@ it.** A library nobody can find the answer to a question about is not helped by 
 - `1.2.0` (2026-10-19): connecting two nodes from the keyboard, each step announced — React Flow has no way to.
 - `1.2.1` (2026-10-19): 1.2.0 had made a 10,000-node unculled mount 17% slower; found by re-running the
   benchmarks, and fixed.
-
-- `1.1.0` (built 2026-10-17, `release/1.1`): the bridge to 2.0 — React Flow 13's names (store hooks, changesets,
-  `forceColorMode`, `changeParent`, margins with units) without breaking anything, and a warning in development for
-  each thing 2.0 changes.
 - `2.0.0` (2026-11-22): follows React Flow 13 (13.0.2) — a number margin is pixels, `<ReactFlow>` has 13's
   defaults, changesets in the types, ES modules only, and the edge paths other than bezier in `edgePathsFeature`.
   Built on `release/2.0` from 2026-10-17, a release candidate (rc.1–rc.5) until React Flow 13.0.0 was out. 1.x keeps
@@ -69,8 +65,8 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 - **More examples.** `examples/` has a layout viewer, a controlled editor, a collapsible tree, a Next.js
   app (laid out and framed on the server, hydrated into an editor), a graph that saves and loads JSON, and
-  exporting to PNG, JPEG, WebP or SVG;
-  wanted next: the recipes under *Next* (grouping and swimlanes, presence, a simulation stepper).
+  exporting to PNG, JPEG, WebP or SVG, and the three recipes: grouping and swimlanes, presence with Yjs, and a
+  simulation stepper. Wanted next: what an issue asks for.
 - **More in the browser suite.** `e2e/` covers load, anchors, wheel, pan, drag, a flick, connecting by
   dragging and by clicking, reconnecting, deleting, export, `nodeOrigin`, the selection rectangle and a box
   held at the pane's edge, stacking by what is on top, `colorMode: 'system'`, the lock, `'smooth'` moves, and
@@ -81,30 +77,23 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 ## Next
 
-Flowinger *names* every export and prop of React Flow 12.11.6 (210 of 210 exports, 119 of 119 props) and **every
-one does something** (302 of 302 members counted by `node scripts/audit-react-flow.mjs`; the audit counts a name
-that compiles and does nothing apart, and there are none). What is left is breadth and proof:
+Flowinger *names* every export and prop of React Flow 13.0.2 (220 of 220 exports, 118 of 118 props) and **every
+one does something** (301 of 301 members counted by `node scripts/audit-react-flow.mjs`, which counts a name that
+compiles and does nothing apart; there are none), and it keeps every name of 12's. What is left is speed where React
+Flow leads, and proof:
 
-1. **Real-browser coverage for what jsdom cannot see** — done for the 0.5.0 behaviour (see *Now*): it found
-   one bug jsdom could not (the selection rectangle, a node toolbar for another node and the focus pan used a
-   child's position inside its parent, not on the canvas). Left: touch, which needs a device.
-2. **The pro modules' recipes — written.** `flowinger/editable-edge` and the Hexagon shape are in (0.6.0), and
-   the three recipes are examples: [grouping and swimlanes](examples/swimlanes), [multiplayer presence with
-   Yjs](examples/presence) and [a workflow-simulation stepper](examples/stepper).
-3. **Size.** The core grew from 17.6 to 19.6 kB and the whole canvas from 27.3 to 35.4 — the 39 props, then
-   making a drag cost what changed rather than the size of the graph. The duplication pass is done (one parser
-   for key codes, one box round some rectangles) saved 0.13 kB of the whole canvas and nothing of the core,
-   because gzip had already folded most of the copies — and the faster culling pass took about that back (35.5 kB). Measured, the core is the store (37%), the canvas (19%) and
-   the edges (13%), with no development text left in a production build. What remains is the React Flow
-   instance API itself; moving its rarely used methods behind features would save more, and break code that
-   calls them — so not before a `1.0` that can say so. [The 1.0 plan](PLAN-1.0.md) says what that release
-   promises, breaks and has to be seen doing first.
-4. **The culled gap is closed.** With `onlyRenderVisibleElements` on, a pan or zoom that stays inside the
-   region last worked out costs nothing, and at 10,000 nodes a pan is 3.2 ms a frame (was 4.4; React Flow
-   2.6–4.2 across runs) and a zoom 2.3 (was 5.0; React Flow 4.3–4.5) — [benchmarks](docs/benchmarks.md).
-   The first render is culled too (0.8.0): a culled mount at 10,000 nodes is 55 ms against React Flow's
-   594. Still possible: a spatial index (a grid of node ids) so the pass that does run, when the view leaves the
-   region, asks only the cells it enters.
+1. **Dragging a node without culling.** React Flow 13 does it 1.3–2× cheaper: at 10,000 nodes 49 ms a mouse move
+   against 68, at 5,000 19 against 37 ([benchmarks](docs/benchmarks.md)). It is the one row React Flow wins, and
+   the next thing to close, in a 2.x minor: nothing about it needs to break.
+2. **A spatial index for culling.** With `onlyRenderVisibleElements` on, flowinger is ahead — at 10,000 nodes a
+   mount is 54 ms against 531, a pan 3.0 ms a frame against 3.8, a zoom 1.7 against 4.5 — and a pan or zoom that
+   stays inside the region last worked out costs nothing. The pass that does run, when the view leaves it, still
+   asks every node; a grid of node ids would have it ask only the cells it enters.
+3. **Size.** The core is 20.98 kB against a 21.5 budget and the whole canvas 39.49 against 40, so the next
+   feature that touches either finds the bytes or raises the budget in the open, as 2.0 did. What could still
+   come out of the core is the rarely used part of the instance API, behind a feature — a break, so 3.0's.
+4. **Touch and screen readers.** Touch is automated in Chromium and was checked on a phone for 1.0.1 and 2.0;
+   VoiceOver on macOS for 1.0.1 and keyboard connecting.
 5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
 
 ## Later
