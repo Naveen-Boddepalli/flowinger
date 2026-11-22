@@ -10,6 +10,21 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **Dragging a node without culling costs what moved.** The edge layer drew every edge again on each mouse move of a
+  drag: at 10,000 nodes 10,000 endpoints, paths and elements for React to compare, to move the few that touch the
+  dragged node. It now keeps each edge as it drew it while the edge, its two nodes and where the store has them
+  (position, size, handles) are the same, and draws everything again when anything else an edge is drawn from
+  changes (a selection, `nodeOrigin`, the edge types…). And reading the instance's state (`getState`, which a
+  drag's changes read) took the pane's size from the element, forcing a layout on every read after the drag had
+  moved something; it now takes the size its `ResizeObserver` last saw. An unculled drag at 10,000 nodes went from
+  68 ms a move to 44 (React Flow 13: 47), at 5,000 from 37 to 16 (18), at 1,000 from 6.3 to 3.8 (5.0): the one row
+  of the [benchmarks](docs/benchmarks.md) where React Flow 13 led.
+- **The size budgets are 22 kB gzipped for the core and 40.5 for the whole canvas** (were 21.5 and 40): keeping the
+  drawn edges costs 0.47 kB, and the core is now 21.45 kB and the whole canvas 39.95 — about 60 bytes more each on
+  CI's Linux runner, whose gzip comes out bigger, which is over the old budgets.
+
 ### Added
 
 - **The 1.x docs on the site, under [`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/)**, built from the

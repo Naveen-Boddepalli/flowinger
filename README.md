@@ -13,7 +13,7 @@
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm total downloads" src="https://badgen.net/npm/dt/flowinger?color=green" /></a>
   <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="docs/features.md"><img alt="core size: about 20.9 kB gzipped" src="https://img.shields.io/badge/core-~20.9_kB_gzip-blue" /></a>
+  <a href="docs/features.md"><img alt="core size: about 21.5 kB gzipped" src="https://img.shields.io/badge/core-~21.5_kB_gzip-blue" /></a>
   <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
   <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
   <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
@@ -40,8 +40,8 @@
 
 ## Why Flowinger
 
-- **Small, and only what you use.** The core is about 20.9 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 39 kB. In QueryLens, swapping
+- **Small, and only what you use.** The core is about 21.5 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 40 kB. In QueryLens, swapping
   React Flow for it took the diagram chunk from **59.1 kB to 20.2 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
@@ -69,18 +69,18 @@
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
 | Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev), flowinger 1.1 against React Flow 12) | **20.2 kB** gzipped | 59.1 kB gzipped |
 | Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.1 s |
-| Mount 10,000 nodes, culled | **54 ms** | 531 ms |
-| Pan / zoom 10,000 nodes, no culling | **8.0 / 9.7 ms** a frame | 12.6 / 12.5 ms a frame |
-| Pan / zoom 10,000 nodes, culled | **3.0 / 1.7 ms** a frame | 3.8 / 4.5 ms a frame |
-| Drag at 10,000 nodes, no culling | 68 ms a move | **49 ms** a move |
-| Drag at 10,000 nodes, culled | **4.0 ms** a move | 5.4 ms a move |
+| Mount 10,000 nodes, culled | **55 ms** | 571 ms |
+| Pan / zoom 10,000 nodes, no culling | **8.1 / 9.4 ms** a frame | 12.1 / 11.6 ms a frame |
+| Pan / zoom 10,000 nodes, culled | 2.6 / **1.5 ms** a frame | 2.1 / 3.3 ms a frame (a pan is level: it varies from run to run) |
+| Drag at 10,000 nodes, no culling | **44 ms** a move | 47 ms a move |
+| Drag at 10,000 nodes, culled | **3.7 ms** a move | 4.4 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
 | API | React Flow 13's names: 220 of 220 exports, 118 of 118 props — and every one of 12's | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
 A culled mount is a tenth of React Flow's, because Flowinger's first render is culled too. Where React Flow is
-ahead: dragging a node without culling, which React Flow 13 does 1.3–2× cheaper (it was level against 12) — and
-the last row, its ecosystem.
+ahead: the last row, its ecosystem. (Until the next 2.x minor, which has the drag fix on `main`, React Flow 13 also drags
+a node without culling 1.3–2× cheaper than the published 2.0.0 does.)
 
 ## Install
 
@@ -173,9 +173,9 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
 | Build | Gzipped |
 |---|---|
-| `FlowingerCore`, no features | about 20.9 kB |
+| `FlowingerCore`, no features | about 21.5 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 39 kB |
+| `FlowingerCanvas`, every feature | about 40 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).

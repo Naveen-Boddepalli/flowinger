@@ -79,19 +79,21 @@ it.** A library nobody can find the answer to a question about is not helped by 
 
 Flowinger *names* every export and prop of React Flow 13.0.2 (220 of 220 exports, 118 of 118 props) and **every
 one does something** (301 of 301 members counted by `node scripts/audit-react-flow.mjs`, which counts a name that
-compiles and does nothing apart; there are none), and it keeps every name of 12's. What is left is speed where React
-Flow leads, and proof:
+compiles and does nothing apart; there are none), and it keeps every name of 12's. What is left is speed, and proof:
 
-1. **Dragging a node without culling.** React Flow 13 does it 1.3–2× cheaper: at 10,000 nodes 49 ms a mouse move
-   against 68, at 5,000 19 against 37 ([benchmarks](docs/benchmarks.md)). It is the one row React Flow wins, and
-   the next thing to close, in a 2.x minor: nothing about it needs to break.
-2. **A spatial index for culling.** With `onlyRenderVisibleElements` on, flowinger is ahead — at 10,000 nodes a
-   mount is 54 ms against 531, a pan 3.0 ms a frame against 3.8, a zoom 1.7 against 4.5 — and a pan or zoom that
+1. **Dragging a node without culling** — closed on `main`, for the next 2.x minor. It was the one row React Flow 13
+   led, 1.3–2× (at 10,000 nodes 49 ms a mouse move against 68); the edge layer drew every edge again on each move.
+   It keeps them now, and the drag costs 44 ms against React Flow's 47 at 10,000 nodes, 16 against 18 at 5,000
+   ([benchmarks](docs/benchmarks.md)). Both are still heavy at those sizes without culling: what is left of the 44
+   is React's work for the nodes, which a canvas that draws everything does.
+2. **A spatial index for culling.** With `onlyRenderVisibleElements` on, flowinger is ahead or level — at 10,000 nodes a
+   mount is 55 ms against 571 and a zoom 1.5 ms a frame against 3.3, and a pan is level — and a pan or zoom that
    stays inside the region last worked out costs nothing. The pass that does run, when the view leaves it, still
    asks every node; a grid of node ids would have it ask only the cells it enters.
-3. **Size.** The core is 20.98 kB against a 21.5 budget and the whole canvas 39.49 against 40, so the next
-   feature that touches either finds the bytes or raises the budget in the open, as 2.0 did. What could still
-   come out of the core is the rarely used part of the instance API, behind a feature — a break, so 3.0's.
+3. **Size.** The core is 21.45 kB against a 22 budget and the whole canvas 39.95 against 40.5 — both raised by half
+   a kilobyte for the drag, in the open, as 2.0 did — so the next feature that touches either finds the bytes or
+   raises the budget again. What could still come out of the core is the rarely used part of the instance API,
+   behind a feature — a break, so 3.0's.
 4. **Touch and screen readers.** Touch is automated in Chromium and was checked on a phone for 1.0.1 and 2.0;
    VoiceOver on macOS for 1.0.1 and keyboard connecting.
 5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
