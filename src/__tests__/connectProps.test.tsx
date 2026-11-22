@@ -252,6 +252,28 @@ describe('connectOnClick', () => {
     expect(r.onClickConnectStart).toHaveBeenCalledTimes(2);
   });
 
+  it('a click on the pane lets go of it, with onClickConnectEnd and nothing connected, as in React Flow 13', () => {
+    const onPaneClick = vi.fn();
+    const r = mount({ onPaneClick });
+    const out = handle(r.container, 'a', 'out');
+    fireEvent.click(out);
+    expect(out.classList.contains('clickconnecting')).toBe(true);
+    fireEvent.click(must(r.container, '.flowinger'));
+    expect(r.onClickConnectEnd).toHaveBeenCalledTimes(1);
+    expect(r.onClickConnectEnd.mock.calls[0]?.[1]).toEqual({ connection: null, isValid: null });
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+    expect(out.classList.contains('clickconnecting')).toBe(false);
+    // Over: a click on another handle begins again rather than connecting.
+    fireEvent.click(handle(r.container, 'b', 'in'));
+    expect(r.onConnect).not.toHaveBeenCalled();
+    expect(r.onClickConnectStart).toHaveBeenCalledTimes(2);
+    // The same handle again ends that one (refused); then, with nothing begun, a pane click is only a pane click.
+    fireEvent.click(handle(r.container, 'b', 'in'));
+    fireEvent.click(must(r.container, '.flowinger'));
+    fireEvent.click(must(r.container, '.flowinger'));
+    expect(r.onClickConnectEnd).toHaveBeenCalledTimes(2);
+  });
+
   it('two of a kind (strict mode) is not a connection', () => {
     const r = mount();
     fireEvent.click(handle(r.container, 'a', 'out'));

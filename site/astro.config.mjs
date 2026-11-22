@@ -1,6 +1,6 @@
 // The documentation site: a landing page plus the repository's Markdown (docs/, the examples' README, the
 // changelog, roadmap, contributing guide and design record) rendered as pages (scripts/sync-docs.mjs copies it in),
-// served from GitHub Pages beside the demo. `pnpm site:build` at the repository root builds both and puts the
+// served from GitHub Pages beside the demo, and the 1.x docs from the `v1` branch under /v1/. `pnpm site:build` at the repository root builds both and puts the
 // demo at <base>demo/.
 import { fileURLToPath } from 'node:url';
 import { defineConfig, passthroughImageService } from 'astro/config';
@@ -37,8 +37,11 @@ export default defineConfig({
         },
         { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
       ],
-      customCss: ['./src/styles/site.css'],
+      customCss: ['./src/styles/site.css', './src/styles/motion.css'],
+      components: { Head: './src/components/Head.astro', Hero: './src/components/Hero.astro' },
       lastUpdated: true,
+      // The 1.x pages under /v1/ get 1.x's sidebar.
+      routeMiddleware: './src/v1-sidebar.ts',
       // The same groups as docs/README.md.
       sidebar: [
         {
@@ -71,7 +74,7 @@ export default defineConfig({
             { label: 'Theming', link: '/docs/theming/' },
             { label: 'Server rendering', link: '/docs/server-rendering/' },
             { label: 'Accessibility', link: '/docs/accessibility/' },
-            { label: 'What 1.0 promises', link: '/docs/stability/' },
+            { label: 'What 2.0 promises', link: '/docs/stability/' },
             { label: 'Upgrading', link: '/docs/upgrading/' },
           ],
         },

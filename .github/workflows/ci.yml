@@ -38,8 +38,8 @@ jobs:
       # What a small consumer pays: the whole canvas, and the core with no features (from src, then from
       # the built package — one pre-bundled file, where a stray top-level call keeps unused code alive).
       # Raise a budget deliberately, not by drift; the lean one is the one that matters.
-      - run: pnpm size --max-full 40 --max-lean 21.5
-      - run: node scripts/size-dist.mjs --max-lean 21.5
+      - run: pnpm size --max-full 40.5 --max-lean 22
+      - run: node scripts/size-dist.mjs --max-lean 22
       # The package itself, once: exports, types for import *and* require, and what the tarball holds.
       # (publint and Are the Types Wrong — the failure they exist for is a consumer who cannot import it.)
       - name: Package is importable and typed for ESM and CJS
@@ -47,16 +47,22 @@ jobs:
         run: pnpm check:package
       # The coverage numbers in the docs come from this script, which reads TypeScript's in-process API — gone
       # in TypeScript 7, so it uses a 6.x alias. It broke once without a test failing; now it is run.
-      - name: The React Flow coverage audit still runs
+      # Against the declarations React Flow's `exports` names (13's pre-releases carried an older build under
+      # dist/esm/ beside them), and --strict: a React Flow name flowinger lacks or ignores fails the build.
+      - name: Every React Flow name is here and does something
         if: matrix.react == '19'
-        run: node scripts/audit-react-flow.mjs node_modules/@xyflow/react/dist/esm/index.d.ts
+        run: |
+          types=$(node -p "const p = require('@xyflow/react/package.json'), e = p.exports['.']; e.types ?? e.node?.types ?? p.types")
+          node scripts/audit-react-flow.mjs "node_modules/@xyflow/react/$types" --strict
 
   demo:
     # The demo and the docs site are built from source (and docs/), so a change that breaks either should fail
-    # the PR, not the deploy.
+    # the PR, not the deploy. The site's /v1/ pages come from the v1 branch, so the checkout has every branch.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -78,6 +84,25 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: node scripts/check-examples.mjs
+
+  toolchains:
+    # The packed package in the tools a consumer loads it with — Node's require and import, Jest, Vitest, TypeScript 5
+    # and 7, Next.js — since it is ES modules only (scripts/check-toolchains.mjs; three known failures are reported,
+    # not failed). On both Node lines in support.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node scripts/check-toolchains.mjs
 
   e2e:
     # Real browsers against the demo — Chromium, Firefox and WebKit: layout, pointer capture, the wheel — what

@@ -96,12 +96,12 @@ describe('fitView and fitBounds', () => {
     expect(store.getViewport().zoom).toBeCloseTo((800 - 80) / 200);
   });
 
-  it('takes a padding ratio as React Flow does, in whole pixels a side', () => {
+  it('takes a number as a margin in pixels, as React Flow 13 does', () => {
     const { store } = mounted(800, 600);
     store.setBounds(0.1, 10);
     store.setNodes(nodes);
-    void store.instance.fitView({ padding: 0.1 });
-    // React Flow 12's arithmetic: floor((800 - 800 / 1.1) / 2) = 36 px a side, so 728 px for 200 of graph.
+    void store.instance.fitView({ padding: 36 });
+    // 36 px a side: 728 px for 200 of graph.
     const zoom = (800 - 2 * 36) / 200;
     const vp = store.getViewport();
     expect(vp.zoom).toBeCloseTo(zoom);

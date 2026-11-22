@@ -7,6 +7,7 @@ import type {
   ReactNode,
   SVGAttributes,
 } from 'react';
+import type { EdgeChangeset, NodeChangeset } from './changes.ts';
 import type { Padding } from './geometry.ts';
 import type { PassThroughHtml } from './attributes.ts';
 import type { NodeConnection } from './connections.ts';
@@ -217,7 +218,11 @@ export interface InternalNode extends Node {
   };
 }
 
-export interface NodeProps<N extends Node = Node> {
+/**
+ * What a node component is given, for one type of node. `NodeProps` is this for each member of a union, so a
+ * component for several types of node can tell them apart by `type`, as in React Flow 13.
+ */
+interface NodePropsFor<N extends Node> {
   id: string;
   data: N['data'];
   type?: N['type'];
@@ -243,6 +248,12 @@ export interface NodeProps<N extends Node = Node> {
   sourcePosition?: Position | undefined;
   targetPosition?: Position | undefined;
 }
+
+/**
+ * What a node component is given. For a union of nodes it is a union too, one member a type, so checking
+ * `props.type` narrows `props.data` (React Flow 13's `NodeProps` does the same).
+ */
+export type NodeProps<N extends Node = Node> = N extends unknown ? NodePropsFor<N> : never;
 
 export const MarkerType = {
   Arrow: 'arrow',
@@ -420,10 +431,9 @@ export interface SetViewportOptions {
 
 export interface FitViewOptions extends SetViewportOptions {
   /**
-   * The margin round what is fitted. A number is a ratio, as in React Flow 12: `0.1` leaves a tenth of the
-   * diagram's size around it (2.0 reads it as pixels, as React Flow 13 does). `'20px'`, `'5%'` of the pane, and
-   * per side (`{ top: '10px', x: '5%' }`) are React Flow's, and mean the same in 2.0. Left out, the margin is a
-   * fixed 40 px.
+   * The margin round what is fitted, as React Flow 13 writes it: pixels (`20`, `'20px'`), `'5%'` of the pane, or per
+   * side (`{ top: '10px', x: '5%' }`). Left out, it is 40 px on a `FlowingerCanvas` and `'5%'` on a `ReactFlow`.
+   * (In 1.x a bare number was a ratio of the fitted size, as in React Flow 12.)
    */
   padding?: Padding;
   /** Fit only these nodes. */
@@ -564,7 +574,10 @@ export interface FlowingerInstance {
    * Flow, a `handleId` alone, or `null`, does not narrow.
    */
   getNodeConnections: (query: { type?: HandleType; nodeId: string; handleId?: string | null }) => NodeConnection[];
-  /** The edges at one handle — `getNodeConnections` for a `type`, as React Flow's older call has it. */
+  /**
+   * The edges at one handle — `getNodeConnections` for a `type`, as React Flow's older call has it.
+   * @deprecated React Flow 13.0.0-next.3 took it out: `getNodeConnections({ type, nodeId, handleId })` asks the same.
+   */
   getHandleConnections: (query: { type: HandleType; nodeId: string; id?: string | null }) => NodeConnection[];
 
   /**
@@ -589,12 +602,12 @@ export interface FlowingerInstance {
 }
 
 /**
- * A registry of node components by `Node.type`. `NodeProps<never>` is the
- * widest type a component written against a specific `NodeProps<MyNode>` can
- * be assigned to: function parameters are contravariant, so anything narrower
- * than `never` would reject them.
+ * A registry of node components by `Node.type`. The props of a node that is `never` are the widest type a
+ * component written against a specific `NodeProps<MyNode>` can be assigned to: function parameters are
+ * contravariant, so anything narrower would reject them. (`NodeProps<never>` itself is `never` now that it is
+ * spread over a union, hence the props it is made of.)
  */
-export type NodeTypes = Record<string, ComponentType<NodeProps<never>>>;
+export type NodeTypes = Record<string, ComponentType<NodePropsFor<never>>>;
 
 export interface FlowingerProps {
   /**
@@ -615,9 +628,9 @@ export interface FlowingerProps {
   defaultNodes?: Node[];
   defaultEdges?: Edge[];
   /** Given, the nodes are controlled: what happens to them is reported here, not done. */
-  onNodesChange?(changes: NodeChange[]): void;
+  onNodesChange?(changes: NodeChangeset): void;
   /** Given, the edges are controlled — selection and removal are reported here, not done. */
-  onEdgesChange?(changes: EdgeChange[]): void;
+  onEdgesChange?(changes: EdgeChangeset): void;
   nodeTypes?: NodeTypes;
   /** Custom edge components, by `Edge.type`. A key overrides a built-in of the same name. */
   edgeTypes?: EdgeTypes;
@@ -852,8 +865,8 @@ export interface FlowingerProps {
    */
   panActivationKeyCode?: string | string[] | null;
   /**
-   * Pixels a press must travel before it becomes a node drag. Left out, the engine's own 3; an explicit `0` is
-   * no threshold. Needs `dragFeature`.
+   * Pixels a press must travel past before it becomes a node drag: one that moves exactly this far is still a click,
+   * as in React Flow. Left out, the engine's own 3; an explicit `0` is no threshold. Needs `dragFeature`.
    */
   nodeDragThreshold?: number;
   /**
@@ -881,13 +894,17 @@ export interface FlowingerProps {
    */
   connectionDragThreshold?: number;
   /**
-   * How far, in pixels, a press on a node may move and still be a click. Further than that, and not far enough to be a drag, it is not a click (no `onNodeClick`, no selection). Left out, any press that does not become a drag is a click. Needs `dragFeature`.
+   * How far, in pixels, a press on a node may move and still be a click. Further than that, and not far enough to be a drag, it is not a click (no `onNodeClick`, no selection). Left out, any press that does not become a drag is a click, as in React Flow 13, which has no such prop; React Flow 12's default was `0` (`reactFlow12Defaults`). Needs `dragFeature`.
    */
   nodeClickDistance?: number;
   /**
-   * How far, in pixels, a press on the empty canvas may move and still be a click on the pane (`onPaneClick`, clearing the selection). Left out, any press that does not become a pan is a click.
+   * How far, in pixels, a press on the empty canvas may move and still be a click on the pane (`onPaneClick`, clearing the selection). Left out, any press that does not become a pan is a click. React Flow 13 has no such prop: its `paneDragThreshold` decides both, as flowinger's does when this is left out.
    */
   paneClickDistance?: number;
+  /**
+   * Pixels a press on the empty canvas must travel past before it pans the view or draws a selection box; one that moves exactly this far is still a click on the pane, as in React Flow 13. Left out, the engine's own 3; an explicit `0` pans at the first move. `<ReactFlow>` sets React Flow 13's 1.
+   */
+  paneDragThreshold?: number;
   /**
    * How near a handle a dropped connection snaps to it, in graph units (default 20): the nearest connectable handle within that of the pointer is the one it ends at, and the line is drawn to it, even where the pointer is not over it. A handle under the pointer is always preferred. `0` is only a handle the pointer is over. Needs `connectFeature`.
    */
@@ -918,6 +935,8 @@ export interface FlowingerProps {
   onSelectionContextMenu?: (event: React.MouseEvent, nodes: Node[]) => void;
   /**
    * `'light'`, `'dark'` or `'system'` (the OS's setting, followed as it changes). The canvas gets the class `light` or `dark`, as in React Flow; `light` also sets the `--flowinger-*` colours to a light palette for what is drawn inside the canvas (`dark` is the library's default). Needs `colorModeFeature`.
+   *
+   * @deprecated React Flow 13 calls it `forceColorMode`, which does the same. This name stays and works.
    */
   colorMode?: ColorMode;
   /**
@@ -1032,13 +1051,27 @@ export interface NodeReplaceChange<N extends Node = Node> {
   item: N;
 }
 
+/** Merges `item` into the node, as React Flow 13's `update` change does. */
+export interface NodeUpdateChange<N extends Node = Node> {
+  type: 'update';
+  id: string;
+  item: Partial<N>;
+}
+
+/** Merges `data` into the node's data — or, with `replace: true`, puts it in its place — as React Flow 13's `data` change does. */
+export type NodeDataChange<N extends Node = Node> =
+  | { type: 'data'; id: string; data: Partial<N['data']>; replace?: false }
+  | { type: 'data'; id: string; data: N['data']; replace: true };
+
 export type NodeChange<N extends Node = Node> =
   | NodePositionChange
   | NodeDimensionChange
   | NodeSelectionChange
   | NodeRemoveChange
   | NodeAddChange<N>
-  | NodeReplaceChange<N>;
+  | NodeReplaceChange<N>
+  | NodeUpdateChange<N>
+  | NodeDataChange<N>;
 
 export interface EdgeSelectionChange {
   type: 'select';
@@ -1065,8 +1098,22 @@ export interface EdgeReplaceChange<E extends Edge = Edge> {
   item: E;
 }
 
+/** The edge counterpart of `NodeUpdateChange`. */
+export interface EdgeUpdateChange<E extends Edge = Edge> {
+  type: 'update';
+  id: string;
+  item: Partial<E>;
+}
+
+/** The edge counterpart of `NodeDataChange`. */
+export type EdgeDataChange<E extends Edge = Edge> =
+  | { type: 'data'; id: string; data: Partial<NonNullable<E['data']>>; replace?: false }
+  | { type: 'data'; id: string; data: NonNullable<E['data']>; replace: true };
+
 export type EdgeChange<E extends Edge = Edge> =
   | EdgeSelectionChange
   | EdgeRemoveChange
   | EdgeAddChange<E>
-  | EdgeReplaceChange<E>;
+  | EdgeReplaceChange<E>
+  | EdgeUpdateChange<E>
+  | EdgeDataChange<E>;

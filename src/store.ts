@@ -143,9 +143,9 @@ export interface NodeCallbacks {
   onEdgesDelete?: ((edges: Edge[]) => void) | undefined;
   onDelete?: ((elements: { nodes: Node[]; edges: Edge[] }) => void) | undefined;
   /** Given, it makes the *nodes* controlled: what happens is reported here, not done. */
-  onNodesChange?: ((changes: NodeChange[]) => void) | undefined;
+  onNodesChange?: ((changes: NodeChangeset) => void) | undefined;
   /** The edge counterpart of `onNodesChange`. */
-  onEdgesChange?: ((changes: EdgeChange[]) => void) | undefined;
+  onEdgesChange?: ((changes: EdgeChangeset) => void) | undefined;
 }
 
 /** The canvas's settings the store needs to act on a gesture. */
@@ -364,7 +364,22 @@ export function createFlowingerStore(
   let viewDefaults: ViewDefaults = NO_VIEW_DEFAULTS;
   /** Two fingers are on the canvas, zooming it: a node's drag, begun by the first, gives way. */
   let pinching = false;
+  /**
+   * What the edge layer keeps an edge's drawing by: a node's revision moves when something it is drawn from
+   * moves (its position, size or handles), and the epoch when a change cannot say which nodes — then every
+   * revision is stale. Unlike `dirty` these are not taken, so more than one reader can keep them.
+   */
+  let epoch = 0;
+  let rev = 0;
+  const revs = new Map<string, number>();
+  const revise = (ids?: Iterable<string>) => {
+    if (ids === undefined) {
+      epoch += 1;
+      revs.clear();
+    } else for (const id of ids) revs.set(id, ++rev);
+  };
   const markDirty = (ids?: Iterable<string>) => {
+    revise(ids);
     if (ids === undefined) dirty = 'all';
     else if (dirty !== 'all') for (const id of ids) dirty.add(id);
   };
@@ -833,7 +848,10 @@ export function createFlowingerStore(
         changed = true;
       }
     }
-    if (changed) bumpHandles();
+    if (changed) {
+      revise([nodeId]);
+      bumpHandles();
+    }
   };
 
   const registerHandle = (nodeId: string, registration: HandleRegistration): (() => void) => {
@@ -845,10 +863,12 @@ export function createFlowingerStore(
     }
     records.add(record);
     measureHandles(nodeId);
+    revise([nodeId]);
     bumpHandles();
     return () => {
       records.delete(record);
       if (records.size === 0 && handles.get(nodeId) === records) handles.delete(nodeId);
+      revise([nodeId]);
       bumpHandles();
     };
   };
@@ -1168,6 +1188,8 @@ export function createFlowingerStore(
 
   // --- lifecycle ------------------------------------------------------------
 
+  /** The pane's size as its `ResizeObserver` last saw it; null without one. */
+  let observedPane: Size | null = null;
   const attach = (viewportElement: HTMLElement, container: HTMLElement) => {
     viewportEl = viewportElement;
     containerEl = container;
@@ -1178,10 +1200,12 @@ export function createFlowingerStore(
       // A resized pane changes what a minimap should show as "visible".
       let width = container.clientWidth;
       let height = container.clientHeight;
+      observedPane = { width, height };
       const observer = new ResizeObserver(() => {
         if (container.clientWidth === width && container.clientHeight === height) return;
         width = container.clientWidth;
         height = container.clientHeight;
+        observedPane = { width, height };
         bumpGeometry();
       });
       observer.observe(container);
@@ -1198,6 +1222,7 @@ export function createFlowingerStore(
     run('detach');
     stopObserving?.();
     stopObserving = null;
+    observedPane = null;
     viewportEl = null;
     containerEl = null;
     mounted = false;
@@ -1214,8 +1239,10 @@ export function createFlowingerStore(
         nodes,
         edges,
         transform: [viewport.x, viewport.y, viewport.zoom],
-        width: containerEl?.clientWidth ?? 0,
-        height: containerEl?.clientHeight ?? 0,
+        // The size the observer last saw: read from the element here, after a change to the document (a drag's), it
+        // forced a layout on every state read.
+        width: observedPane?.width ?? containerEl?.clientWidth ?? 0,
+        height: observedPane?.height ?? containerEl?.clientHeight ?? 0,
         minZoom,
         maxZoom,
         nodesInitialized: areNodesInitialized(),
@@ -1472,6 +1499,9 @@ export function createFlowingerStore(
     getViewport: () => viewport,
     getState,
     getGeometryVersion: () => geometryVersion,
+    /** The epoch and a node's revision: see `revise`. */
+    getGeometryEpoch: () => epoch,
+    geometryRevOf: (id: string) => revs.get(id) ?? 0,
 
     setPanKeyHeld: (held: boolean) => {
       panKeyHeld = held;

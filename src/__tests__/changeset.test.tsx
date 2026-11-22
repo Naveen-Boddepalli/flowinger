@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
 import { useState } from 'react';
+import * as RF from '@xyflow/react';
 import {
   EdgeChangeset,
   FlowingerCanvas,
@@ -34,7 +35,7 @@ describe('NodeChangeset and EdgeChangeset', () => {
     ]);
   });
 
-  it("have React Flow 13's methods: applyTo, getByType, getForNode, toArray, size, removeForNode", () => {
+  it("have React Flow 13's methods: applyTo, getByType, getForNode, toArray, removeForNode (and size, deprecated)", () => {
     const changes = new NodeChangeset([
       { type: 'select', id: 'a', selected: true },
       { type: 'position', id: 'a', position: { x: 1, y: 2 } },
@@ -53,21 +54,78 @@ describe('NodeChangeset and EdgeChangeset', () => {
     expect(changes.version).toBeGreaterThan(before);
   });
 
-  it("add: an element's remove, then its add, go before its other changes, as in React Flow 13", () => {
+  it('add queues changes in order; getForNode leaves out the add, which getNewNodes has, as in React Flow 13', () => {
     const changes = new NodeChangeset();
     const select: NodeChange = { type: 'select', id: 'c', selected: true };
     changes.add(select);
     changes.add({ type: 'add', id: 'c', item: { id: 'c', position: { x: 0, y: 0 }, data: {} } });
-    expect(changes.map((c) => c.type)).toEqual(['add', 'select']);
+    expect(changes.map((c) => c.type)).toEqual(['select', 'add']);
+    expect(changes.getForNode('c')).toEqual([select]);
+    expect(changes.getNewNodes().map((n) => n.id)).toEqual(['c']);
+    // An added node gets the changes queued for its id.
+    expect(changes.applyTo(nodes()).map((n) => [n.id, n.selected])).toEqual([
+      ['a', undefined],
+      ['b', undefined],
+      ['c', true],
+    ]);
+    // A node already in the list is not added again, and a remove takes it out whatever else is queued.
     changes.add({ type: 'remove', id: 'c' });
-    expect(changes.map((c) => c.type)).toEqual(['remove', 'add', 'select']);
-    // Removed and added again: the node as added. (A change to a node added in the same batch is not applied to
-    // it, as in React Flow 12's applyNodeChanges, which applyTo is.)
-    expect(changes.applyTo([{ id: 'c', position: { x: 9, y: 9 }, data: {} }]).map((n) => n.position)).toEqual([{ x: 0, y: 0 }]);
+    expect(changes.applyTo([{ id: 'c', position: { x: 9, y: 9 }, data: {} }])).toEqual([]);
     changes.remove(select);
-    expect(changes.map((c) => c.type)).toEqual(['remove', 'add']);
-    changes.add([{ type: 'select', id: 'd', selected: false }]);
-    expect(changes.getForElement('d')).toHaveLength(1);
+    expect(changes.map((c) => c.type)).toEqual(['add', 'remove']);
+    expect(changes.isEmpty()).toBe(false);
+    changes.clear();
+    expect(changes.isEmpty()).toBe(true);
+    expect(changes).toHaveLength(0);
+  });
+
+  it("apply update and data changes, which leave a node they do not change as it was", () => {
+    const list: Node[] = [{ id: 'a', position: { x: 0, y: 0 }, data: { k: 1, j: 2 } }];
+    const changes = new NodeChangeset([
+      { type: 'update', id: 'a', item: { position: { x: 5, y: 5 } } },
+      { type: 'data', id: 'a', data: { k: 9 } },
+    ]);
+    expect(changes.applyTo(list)).toEqual([{ id: 'a', position: { x: 5, y: 5 }, data: { k: 9, j: 2 } }]);
+    expect(applyNodeChanges(changes, list)).toEqual(changes.applyTo(list));
+    expect(new NodeChangeset([{ type: 'data', id: 'a', data: { z: 0 }, replace: true }]).applyTo(list)[0]?.data).toEqual({ z: 0 });
+    expect(new NodeChangeset([{ type: 'update', id: 'a', item: { data: list[0]!.data } }]).applyTo(list)[0]).toBe(list[0]);
+    // A kind of change this version does not know leaves the node alone rather than losing it.
+    expect(applyNodeChanges([{ type: 'unknown', id: 'a' } as unknown as NodeChange], list)).toEqual(list);
+  });
+
+  it("applyTo is React Flow 13's, on random batches of every kind of change", () => {
+    let seed = 11;
+    const rnd = (n: number) => (seed = (seed * 16807) % 2147483647) % n;
+    const ids = ['a', 'b', 'c', 'd', 'e'];
+    const start = (): Node[] => ['a', 'b', 'c'].map((id, i) => ({ id, position: { x: i, y: i }, data: { n: i } }));
+    const change = (): NodeChange => {
+      const id = ids[rnd(ids.length)]!;
+      const item = { id, position: { x: rnd(50), y: rnd(50) }, data: { m: rnd(9) } };
+      switch (rnd(8)) {
+        case 0: return { type: 'select', id, selected: rnd(2) === 0 };
+        case 1: return { type: 'position', id, position: { x: rnd(50), y: rnd(50) }, dragging: rnd(2) === 0 };
+        case 2: return { type: 'dimensions', id, dimensions: { width: rnd(90), height: rnd(90) }, setAttributes: rnd(2) === 0 };
+        case 3: return { type: 'remove', id };
+        case 4: return { type: 'add', id, item };
+        case 5: return { type: 'replace', id, item };
+        case 6: return { type: 'update', id, item: { position: { x: rnd(50), y: 0 } } };
+        default: return rnd(2) === 0 ? { type: 'data', id, data: { m: rnd(9) } } : { type: 'data', id, data: { r: 1 }, replace: true };
+      }
+    };
+    for (let round = 0; round < 500; round++) {
+      const batch = Array.from({ length: 1 + rnd(8) }, change);
+      const mine = new NodeChangeset();
+      const theirs = new RF.NodeChangeset();
+      for (const c of batch) {
+        mine.add(c);
+        theirs.add(structuredClone(c) as never);
+      }
+      const label = JSON.stringify(batch);
+      expect(mine.applyTo(start()), label).toEqual(theirs.applyTo(start() as never));
+      expect(mine.getNewNodes(), label).toEqual(theirs.getNewNodes());
+      for (const id of ids) expect(mine.getForNode(id), label).toEqual(theirs.getForNode(id));
+      expect(mine.isEmpty()).toBe(theirs.isEmpty());
+    }
   });
 
   it('EdgeChangeset applies edge changes', () => {

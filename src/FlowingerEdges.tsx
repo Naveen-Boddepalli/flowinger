@@ -15,8 +15,9 @@ import type { Feature } from './features.ts';
 import { handleCoordinates } from './handlePoint.ts';
 import { useFlowingerStore } from './context.ts';
 import { absolutePositionOf, createNodeIndex } from './parents.ts';
-import { pathFor } from './paths.ts';
-import { warnAboutEdgePath } from './devWarnings.ts';
+import type { EdgePathsApi } from './features/edgePaths.ts';
+import type { StackingApi } from './features/stacking.ts';
+import { bezierPathFor } from './paths.ts';
 import type { ConnectionLineProps, ConnectionLineType } from './types.ts';
 import {
   type Edge,
@@ -183,6 +184,21 @@ function endpoint(
 
 
 const NO_FEATURES: readonly Feature[] = [];
+
+/** An edge as last drawn, and what it was drawn from: while all of that holds, it is drawn the same. */
+interface Drawn {
+  edge: Edge;
+  source: Node;
+  target: Node;
+  /** The geometry revisions of its two nodes when it was drawn. */
+  srev: number;
+  trev: number;
+  level: number;
+  element: ReactElement;
+  animated: boolean;
+  /** The arrowheads it refers to, by key, for the shared `<defs>`. */
+  markers: [string, ResolvedMarker][];
+}
 
 const DEFAULT_MARKER_SIZE = 12;
 
@@ -421,6 +437,8 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     connectionLineContainerStyle,
   } = props;
   const store = useFlowingerStore();
+  // The path of each edge: the bezier, or with edgePathsFeature whatever its type names.
+  const drawPath = (store.apiOf('edgePaths') as EdgePathsApi | undefined)?.pathFor ?? bezierPathFor;
   // Stable, so the memoised edges below are not remade by a new array each render.
   const adornments = useMemo(() => features.filter((f) => f.EdgeAdornment), [features]);
   const hooks = useMemo(() => features.filter((f) => f.useEdge), [features]);
@@ -445,24 +463,65 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     [edges, visibleEdgeIds !== undefined],
   );
 
+  // Each edge as last drawn. A drag moves one node, and the edges of the other ten thousand are what they
+  // were: drawn again, each cost its endpoints, its path, its stacking and an element for React to compare.
+  // They are kept while the edge and its two nodes (the objects, and the store's revision of where they are, how
+  // big and where their handles sit) are the same — and dropped whole when anything else an edge is drawn from
+  // changes, or when a change cannot say which nodes it moved: a selection is one (the epoch moves). Nesting is
+  // left out: a child is where its parents are, and is drawn afresh each time.
+  const cache = useMemo(
+    () => ({ key: [] as unknown[], epoch: -1, drawn: new Map<string, Drawn>(), markerIds: new Map<string, string>() }),
+    [],
+  );
+  const stacking = (store.apiOf('stacking') as StackingApi | undefined)?.config;
+  const key = [edgeTypes, elementsSelectable, selectionActs, edgesFocusable, interactive, controlledSelection,
+    reconnectable, features, defaultMarkerColor, drawPath, stacking?.mode, stacking?.elevateNodes,
+    stacking?.elevateEdges, stacking?.controlled];
+  const epoch = store.getGeometryEpoch();
+  const keeps =
+    (depths === undefined || depths.size === 0) &&
+    features.every((f) => f.name === 'stacking' || (f.stackNode === undefined && f.stackEdge === undefined));
+  if (
+    !keeps ||
+    epoch !== cache.epoch ||
+    cache.drawn.size > 2 * edges.length + 64 ||
+    key.some((v, i) => v !== cache.key[i])
+  ) {
+    cache.drawn.clear();
+    cache.markerIds.clear();
+    cache.key = key;
+    cache.epoch = epoch;
+  }
+
   // Identical arrowheads share one <marker>. `useId` keeps ids unique across
   // canvases on a page; its format varies by React version (`:r1:`, `«r1»`,
   // `_r_1_`), so keep only characters that are always safe inside url(#…).
+  // An arrowhead keeps its id while the edges are kept, since a kept edge refers to it by that id.
   const prefix = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const markers = new Map<string, { id: string; marker: ResolvedMarker }>();
+  const useMarker = (mkey: string, marker: ResolvedMarker): string => {
+    let entry = markers.get(mkey);
+    if (!entry) {
+      let id = cache.markerIds.get(mkey);
+      if (id === undefined) {
+        id = `${prefix}-m${String(cache.markerIds.size)}`;
+        cache.markerIds.set(mkey, id);
+      }
+      entry = { id, marker };
+      markers.set(mkey, entry);
+    }
+    return entry.id;
+  };
   const markerRef = (
     spec: MarkerType | EdgeMarker | undefined,
     edgeStroke: string,
+    used: [string, ResolvedMarker][],
   ): string | undefined => {
     if (!spec) return undefined;
     const marker = resolveMarker(spec, defaultMarkerColor ?? edgeStroke);
-    const key = `${marker.type}|${marker.color}|${String(marker.width)}|${String(marker.height)}`;
-    let entry = markers.get(key);
-    if (!entry) {
-      entry = { id: `${prefix}-m${String(markers.size)}`, marker };
-      markers.set(key, entry);
-    }
-    return `url(#${entry.id})`;
+    const mkey = `${marker.type}|${marker.color}|${String(marker.width)}|${String(marker.height)}`;
+    used.push([mkey, marker]);
+    return `url(#${useMarker(mkey, marker)})`;
   };
 
   // An edge is stacked with the nodes it joins — the higher of the two — so one
@@ -491,6 +550,32 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     if (visibleEdgeIds && !visibleEdgeIds.has(edge.id)) return;
     if (reconnecting === edge.id) return;
 
+    const selected = controlledSelection ? edge.selected === true : store.isEdgeSelected(edge.id);
+    const srev = store.geometryRevOf(source.id);
+    const trev = store.geometryRevOf(target.id);
+    let d = keeps ? cache.drawn.get(edge.id) : undefined;
+    if (
+      d?.edge === edge &&
+      d.source === source &&
+      d.target === target &&
+      d.srev === srev &&
+      d.trev === trev
+    ) {
+      for (const [mkey, marker] of d.markers) useMarker(mkey, marker);
+    } else {
+      d = draw(edge, source, target, selected);
+      d.srev = srev;
+      d.trev = trev;
+      if (keeps) cache.drawn.set(edge.id, d);
+    }
+    if (d.animated) anyAnimated = true;
+    const at = levels.get(d.level);
+    if (at) at.push(d.element);
+    else levels.set(d.level, [d.element]);
+  };
+
+  /** An edge drawn afresh: its endpoints, path, stacking and element. */
+  const draw = (edge: Edge, source: Node, target: Node, selected: boolean): Drawn => {
     const lookup = (id: string) => byId.get(id);
     // Top-left corners: each node on a chain gives up its origin's share of its size.
     const sourceAt = absolutePositionOf(source, lookup, store.resolvePosition, store.originOffset);
@@ -517,11 +602,10 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
     );
 
     const selectable = edge.selectable === undefined ? elementsSelectable : edge.selectable && selectionActs;
-    const selected = controlledSelection ? edge.selected === true : store.isEdgeSelected(edge.id);
-    if (edge.animated) anyAnimated = true;
     const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : DEFAULT_EDGE_COLOR;
-    const markerStart = markerRef(edge.markerStart, stroke);
-    const markerEnd = markerRef(edge.markerEnd, stroke);
+    const used: [string, ResolvedMarker][] = [];
+    const markerStart = markerRef(edge.markerStart, stroke, used);
+    const markerEnd = markerRef(edge.markerEnd, stroke, used);
 
     // A key of `edgeTypes` wins, even over a built-in name.
     const View = edge.type ? edgeTypes?.[edge.type] : undefined;
@@ -529,13 +613,19 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
       (l, f) => f.stackEdge?.(store, edge, l, selected) ?? l,
       edge.zIndex ?? levelOf(source, target),
     );
-    const place = (element: ReactElement): void => {
-      const at = levels.get(level);
-      if (at) at.push(element);
-      else levels.set(level, [element]);
-    };
+    const done = (element: ReactElement): Drawn => ({
+      edge,
+      source,
+      target,
+      srev: 0,
+      trev: 0,
+      level,
+      element,
+      animated: edge.animated === true,
+      markers: used,
+    });
     if (View) {
-      place(
+      return done(
         <CustomEdge
           key={edge.id}
           View={View}
@@ -557,12 +647,10 @@ export const FlowingerEdges = /*#__PURE__*/ memo(function FlowingerEdges(props: 
           markerEnd={markerEnd}
         />,
       );
-      return;
     }
 
-    if (process.env.NODE_ENV !== 'production' && store.apiOf('edgePaths') === undefined) warnAboutEdgePath(edge.type);
-    const path = pathFor(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
-    place(
+    const path = drawPath(edge.type, from.point, from.position, to.point, to.position, edge.pathOptions);
+    return done(
       <EdgePath
         key={edge.id}
         edge={edge}

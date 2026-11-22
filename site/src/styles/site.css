@@ -56,3 +56,148 @@
   color: inherit;
   text-decoration: none;
 }
+
+/*
+ * The comparison table on the landing page: a framed table, Flowinger's column tinted, the row under the
+ * pointer lit. A bold cell is the better number whichever library has it, so React Flow's wins read as plainly.
+ */
+.flowinger-compare {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.875rem;
+  overflow: hidden;
+  background: var(--sl-color-bg-nav);
+}
+
+.flowinger-compare table {
+  margin: 0;
+  border: 0;
+}
+
+.flowinger-compare :is(th, td) {
+  padding: 0.75rem 1rem;
+  border-color: var(--sl-color-gray-5);
+  transition: background-color var(--fl-dur-1) ease;
+}
+
+.flowinger-compare tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.flowinger-compare td:first-child {
+  color: var(--sl-color-gray-2);
+}
+
+.flowinger-compare :is(th, td):nth-child(2) {
+  background: color-mix(in srgb, var(--sl-color-text-accent) 7%, transparent);
+}
+
+.flowinger-compare thead th {
+  font-size: var(--sl-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sl-color-gray-3);
+}
+
+.flowinger-compare thead th:nth-child(2) {
+  color: var(--sl-color-text-accent);
+}
+
+.flowinger-compare tbody tr:hover td {
+  background: var(--sl-color-gray-6);
+}
+
+.flowinger-compare tbody tr:hover td:nth-child(2) {
+  background: color-mix(in srgb, var(--sl-color-text-accent) 14%, var(--sl-color-gray-6));
+}
+
+.flowinger-compare strong {
+  color: var(--sl-color-white);
+  text-decoration: underline 2px color-mix(in srgb, var(--sl-color-text-accent) 70%, transparent);
+  text-underline-offset: 0.3em;
+}
+
+/*
+ * The landing page as one flow: a rail down the left margin, a node on it at each section heading, filled in
+ * by scrolling as far as the middle of the screen, and each node lighting as the line reaches it. Only where
+ * the margin has room for it, only where scroll-driven animations exist, and not under reduced motion.
+ */
+@supports (animation-timeline: view()) {
+  @media (min-width: 76rem) and (prefers-reduced-motion: no-preference) {
+    [data-has-hero] .sl-markdown-content {
+      position: relative;
+      --fl-rail-x: -2.5rem;
+    }
+
+    [data-has-hero] .sl-markdown-content::before,
+    [data-has-hero] .sl-markdown-content::after {
+      content: '';
+      position: absolute;
+      top: 0.9rem;
+      bottom: 6rem;
+      left: var(--fl-rail-x);
+      width: 2px;
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    /* The rail: faint, and dotted like an edge waiting for data. */
+    [data-has-hero] .sl-markdown-content::before {
+      background: repeating-linear-gradient(to bottom, var(--sl-color-gray-5) 0 4px, transparent 4px 10px);
+      -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent);
+      mask-image: linear-gradient(to bottom, #000 85%, transparent);
+    }
+
+    /* The line filled in so far: from the content's top at mid-screen to its bottom at mid-screen. */
+    [data-has-hero] .sl-markdown-content::after {
+      background: linear-gradient(to bottom, var(--sl-color-text-accent), #a78bfa);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--sl-color-text-accent) 60%, transparent);
+      transform-origin: top;
+      animation: fl-rail-fill var(--fl-ease-linear, linear) both;
+      animation-timeline: view();
+      animation-range: cover 50vh cover calc(100% - 50vh);
+    }
+
+    /* A node on the rail at each section heading, lighting as the line reaches it. */
+    [data-has-hero] .sl-markdown-content > .sl-heading-wrapper.level-h2 {
+      position: relative;
+    }
+
+    [data-has-hero] .sl-markdown-content > .sl-heading-wrapper.level-h2::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: calc(var(--fl-rail-x) + 1px);
+      width: 0.75rem;
+      height: 0.75rem;
+      translate: -50% -50%;
+      border: 2px solid var(--sl-color-gray-4);
+      border-radius: 50%;
+      background: var(--sl-color-bg);
+      animation: fl-rail-node var(--fl-ease-out) both;
+      animation-timeline: view();
+      animation-range: cover calc(50vh - 2rem) cover 50vh;
+    }
+  }
+}
+
+@keyframes fl-rail-fill {
+  from {
+    scale: 1 0;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+
+@keyframes fl-rail-node {
+  to {
+    border-color: var(--sl-color-text-accent);
+    background: var(--sl-color-text-accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--sl-color-text-accent) 25%, transparent);
+  }
+}
+
+/* A README's centred row of badges (the 1.x home page, /v1/) stays a row: Starlight sets Markdown images to block. */
+.sl-markdown-content p[align='center'] img {
+  display: inline-block;
+}

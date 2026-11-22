@@ -1,0 +1,69 @@
+---
+// The landing page's bento grid of Tiles, and the two behaviours its tiles share: the border spotlight that
+// follows the pointer, and the visuals (.fl-anim) that play once when they come into view.
+---
+
+<div class="fl-bento not-content">
+  <slot />
+</div>
+
+<script>
+  // The spotlight: where the pointer is, relative to the tile under it.
+  for (const bento of document.querySelectorAll<HTMLElement>('.fl-bento')) {
+    bento.addEventListener('pointermove', (event) => {
+      const tile = (event.target as Element).closest<HTMLElement>('.fl-tile');
+      if (!tile) return;
+      const rect = tile.getBoundingClientRect();
+      tile.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+      tile.style.setProperty('--my', `${event.clientY - rect.top}px`);
+    });
+  }
+
+  // The visuals: without JavaScript or with reduced motion they show their end state, so the numbers are always
+  // there to read. Otherwise each is armed (drawn at its start) and plays once most of it is on screen; a
+  // [data-fl-replay] button inside one plays it again.
+  if (matchMedia('(prefers-reduced-motion: no-preference)').matches && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add('is-in');
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.6 },
+    );
+    for (const visual of document.querySelectorAll('.fl-anim')) {
+      visual.classList.add('is-armed');
+      observer.observe(visual);
+    }
+    document.addEventListener('click', (event) => {
+      const visual = (event.target as Element).closest('[data-fl-replay]')?.closest<HTMLElement>('.fl-anim');
+      if (!visual) return;
+      visual.classList.remove('is-in');
+      void visual.offsetWidth; // restart from the start state
+      visual.classList.add('is-in');
+    });
+  }
+</script>
+
+<style>
+  .fl-bento {
+    display: grid;
+    grid-template-columns: 100%;
+    gap: 1rem;
+    margin-block: 1.5rem;
+  }
+
+  @media (min-width: 45rem) {
+    .fl-bento {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 72rem) {
+    .fl-bento {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+</style>

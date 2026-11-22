@@ -6,8 +6,9 @@ import type {
   ControlButtonProps as RFControlButtonProps,
   CoordinateExtent as RFCoordinateExtent,
   Dimensions as RFDimensions,
-  HandleConnection as RFHandleConnection,
   KeyCode as RFKeyCode,
+  Node as RFNode,
+  NodeProps as RFNodeProps,
   OnConnect as RFOnConnect,
   SnapGrid as RFSnapGrid,
   Transform as RFTransform,
@@ -36,7 +37,8 @@ import {
   type DeleteElementsOptions,
   type Dimensions,
   type Edge,
-  type EdgeChange,
+  type EdgeChangeset,
+  type NodeChangeset,
   type EdgeLabelRendererProps,
   type EdgeMarkerType,
   type EdgeMouseHandler,
@@ -54,6 +56,8 @@ import {
   type NodeConnection,
   type KeyCode,
   type Node,
+  type NodeProps,
+  type NodeTypes,
   type NodeChange,
   type NodeMouseHandler,
   type OnBeforeDelete,
@@ -134,8 +138,11 @@ describe('React Flow\'s names for types flowinger has', () => {
   it('the generic ones take a node or edge type, defaulting to the plain one', () => {
     type MyNode = Node<{ label: string }, 'custom'>;
     type MyEdge = Edge & { data: { weight: number } };
-    expectTypeOf<OnNodesChange<MyNode>>().parameter(0).toEqualTypeOf<NodeChange<MyNode>[]>();
-    expectTypeOf<OnEdgesChange<MyEdge>>().parameter(0).toEqualTypeOf<EdgeChange<MyEdge>[]>();
+    expectTypeOf<OnNodesChange<MyNode>>().parameter(0).toEqualTypeOf<NodeChangeset<MyNode>>();
+    expectTypeOf<OnEdgesChange<MyEdge>>().parameter(0).toEqualTypeOf<EdgeChangeset<MyEdge>>();
+    // A changeset is an array of the changes, so a handler written for React Flow 12's arrays still fits.
+    expectTypeOf<NodeChangeset<MyNode>>().toMatchTypeOf<NodeChange<MyNode>[]>();
+    expectTypeOf<(changes: NodeChange[]) => void>().toMatchTypeOf<OnNodesChange>();
     expectTypeOf<NodeMouseHandler<MyNode>>().parameter(1).toEqualTypeOf<MyNode>();
     expectTypeOf<EdgeMouseHandler<MyEdge>>().parameter(1).toEqualTypeOf<MyEdge>();
     expectTypeOf<ReactFlowJsonObject<MyNode, MyEdge>['nodes']>().toEqualTypeOf<MyNode[]>();
@@ -199,9 +206,7 @@ describe('React Flow\'s names for types flowinger has', () => {
     expectTypeOf<Transform>().toEqualTypeOf<RFTransform>();
     expectTypeOf<XYZPosition>().toEqualTypeOf<RFXYZPosition>();
     expectTypeOf<ControlButtonProps>().toEqualTypeOf<RFControlButtonProps>();
-    // React Flow builds this one as `Connection & { edgeId }`; the same fields, so each fits the other.
-    expectTypeOf<HandleConnection>().toMatchTypeOf<RFHandleConnection>();
-    expectTypeOf<RFHandleConnection>().toMatchTypeOf<HandleConnection>();
+    // React Flow 13 took `HandleConnection` out; flowinger keeps it, deprecated, as `NodeConnection` (above).
     expect(true).toBe(true);
   });
 
@@ -275,5 +280,30 @@ describe('code written against those names runs on the canvas', () => {
     const handlers: [OnBeforeDelete, OnNodeDrag, OnNodesDelete, OnEdgesDelete, OnDelete, OnReconnect, OnConnectStart, OnConnectEnd, OnMove, OnMoveStart, EdgeMouseHandler] =
       [() => true, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}, () => {}];
     expect(handlers).toHaveLength(11);
+  });
+});
+
+// React Flow 13.0.0 spreads `NodeProps` over a union of nodes, so one component for several types can narrow
+// `data` by `type`. Checked by `pnpm typecheck`, as above.
+describe('NodeProps for a union of nodes', () => {
+  type Note = Node<{ text: string }, 'note'>;
+  type Task = Node<{ done: boolean }, 'task'>;
+  it("is a union, one member a type, as React Flow 13's is", () => {
+    expectTypeOf<NodeProps<Note | Task>>().toEqualTypeOf<NodeProps<Note> | NodeProps<Task>>();
+    expectTypeOf<RFNodeProps<RFNode<{ text: string }, 'note'> | RFNode<{ done: boolean }, 'task'>>>().toEqualTypeOf<
+      RFNodeProps<RFNode<{ text: string }, 'note'>> | RFNodeProps<RFNode<{ done: boolean }, 'task'>>
+    >();
+    // Each type checked by name: `type` is the node's own, so a node that gives none has none here (React Flow
+    // passes 'default'), and a bare `else` cannot rule a type out.
+    const label = (props: NodeProps<Note | Task>): string =>
+      props.type === 'note' ? props.data.text : props.type === 'task' ? String(props.data.done) : '';
+    expect(label({ id: 'n', type: 'note', data: { text: 'hi' } })).toBe('hi');
+    expect(label({ id: 't', type: 'task', data: { done: true } })).toBe('true');
+  });
+
+  it('a component for one type of node still goes in nodeTypes', () => {
+    const NoteNode = ({ data }: NodeProps<Note>) => data.text;
+    const types: NodeTypes = { note: NoteNode };
+    expect(types.note).toBe(NoteNode);
   });
 });

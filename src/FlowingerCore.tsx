@@ -16,7 +16,7 @@ import {
 } from 'react';
 import { FlowingerContext, useFlowingerStore, useNodesInitialized, useStore, ViewDefaultsContext } from './context.ts';
 import { EdgeLabelHost } from './EdgeLabelRenderer.tsx';
-import { warnAboutIgnoredProps, warnAboutJest } from './devWarnings.ts';
+import { warnAboutIgnoredProps } from './devWarnings.ts';
 import { resolveFeatures, type Feature } from './features.ts';
 import { ViewportPortalHost } from './ViewportPortal.tsx';
 import { FlowingerEdges } from './FlowingerEdges.tsx';
@@ -189,6 +189,7 @@ function InnerCanvas(props: FlowingerProps) {
     noPanClassName,
     noDragClassName,
     paneClickDistance,
+    paneDragThreshold,
     connectionLineContainerStyle,
     defaultMarkerColor,
     disableKeyboardA11y,
@@ -219,10 +220,7 @@ function InnerCanvas(props: FlowingerProps) {
   // What a canvas is given when it mounts is what it is judged by. The condition is a constant to a
   // production bundle, which then drops the check and the table behind it.
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      warnAboutIgnoredProps(props, feats);
-      warnAboutJest();
-    }
+    if (process.env.NODE_ENV !== 'production') warnAboutIgnoredProps(props, feats);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -634,7 +632,10 @@ function InnerCanvas(props: FlowingerProps) {
     const dx = e.clientX - p.startX;
     const dy = e.clientY - p.startY;
     if (!p.active) {
-      if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      // Past `paneDragThreshold`, as React Flow 13's pan (`distance > paneDragThreshold`); else the engine's own.
+      if (paneDragThreshold === undefined ? Math.hypot(dx, dy) < DRAG_THRESHOLD : Math.hypot(dx, dy) <= paneDragThreshold) {
+        return;
+      }
       p.active = true;
       justPanned.current = true;
       capturePointer(e.currentTarget, e.pointerId);

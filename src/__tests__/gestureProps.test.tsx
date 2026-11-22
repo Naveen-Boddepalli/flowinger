@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
-import { FlowingerCanvas, FlowingerCore, type FlowingerProps, type Node, type NodeProps } from '../index.ts';
+import { FlowingerCanvas, FlowingerCore, ReactFlow, reactFlow12Defaults, type FlowingerProps, type Node, type NodeProps } from '../index.ts';
 
 // The gesture props that were accepted and ignored: what they say is now what happens. Each is compared
 // with React Flow's own behaviour, read from its source (`@xyflow/system`'s XYPanZoom and XYDrag).
@@ -261,6 +261,115 @@ describe('paneClickDistance and nodeClickDistance', () => {
     const { container } = render(<FlowingerCanvas nodes={nodes} nodesDraggable onNodeClick={onNodeClick} />);
     press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
     expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('<ReactFlow>: a press that moved, but not past nodeDragThreshold, is a click, as in React Flow 13', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(<ReactFlow nodes={nodes} onNodeClick={onNodeClick} />);
+    press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('<ReactFlow> with reactFlow12Defaults: a press that moved at all is not a click, as in React Flow 12', () => {
+    const onNodeClick = vi.fn();
+    const { container } = render(<ReactFlow {...reactFlow12Defaults} nodes={nodes} onNodeClick={onNodeClick} />);
+    press(must(container, '[data-id="a"]'), [10, 10], [11, 10]);
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+});
+
+// React Flow 13.0.0's XYPanZoom: a press on the pane pans once it has moved further than `paneDragThreshold`
+// (`dx * dx + dy * dy > threshold * threshold`); less, and the view stays where it was and the press is a click.
+describe('paneDragThreshold', () => {
+  const press = (el: Element, to: [number, number]) => {
+    fireEvent.pointerDown(el, pointer({ clientX: 300, clientY: 300 }));
+    fireEvent.pointerMove(el, pointer({ clientX: to[0], clientY: to[1] }));
+    fireEvent.pointerUp(el, pointer({ clientX: to[0], clientY: to[1] }));
+    fireEvent.click(el, { clientX: to[0], clientY: to[1] });
+  };
+
+  it('pans only past it; up to it, the view stays and the press is a click', () => {
+    const onPaneClick = vi.fn();
+    const { container } = render(<FlowingerCanvas nodes={nodes} onPaneClick={onPaneClick} paneDragThreshold={5} />);
+    press(pane(container), [305, 300]); // exactly 5: still a click
+    expect(translateOf(container)).toEqual({ x: 0, y: 0 });
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+    press(pane(container), [306, 300]);
+    expect(translateOf(container)).toEqual({ x: 6, y: 0 });
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('0 pans at the first move', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} paneDragThreshold={0} />);
+    press(pane(container), [301, 300]);
+    expect(translateOf(container)).toEqual({ x: 1, y: 0 });
+  });
+
+  it('left out, the engine pans from 3 pixels, as before', () => {
+    const { container } = render(<FlowingerCanvas nodes={nodes} />);
+    press(pane(container), [302, 300]);
+    expect(translateOf(container)).toEqual({ x: 0, y: 0 });
+    press(pane(container), [303, 300]);
+    expect(translateOf(container)).toEqual({ x: 3, y: 0 });
+  });
+
+  it('<ReactFlow>: React Flow 13\'s 1 — two pixels pan, and one is a click', () => {
+    const onPaneClick = vi.fn();
+    const { container } = render(<ReactFlow nodes={nodes} onPaneClick={onPaneClick} />);
+    press(pane(container), [301, 300]);
+    expect(translateOf(container)).toEqual({ x: 0, y: 0 });
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+    press(pane(container), [302, 300]);
+    expect(translateOf(container)).toEqual({ x: 2, y: 0 });
+    expect(onPaneClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('a selection box starts where a pan would', () => {
+    const onSelectionStart = vi.fn();
+    const { container } = render(
+      <FlowingerCanvas
+        nodes={nodes}
+        elementsSelectable
+        selectionOnDrag
+        paneDragThreshold={5}
+        onSelectionStart={onSelectionStart}
+      />,
+    );
+    press(pane(container), [305, 300]);
+    expect(onSelectionStart).not.toHaveBeenCalled();
+    press(pane(container), [306, 300]);
+    expect(onSelectionStart).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the middle button on a node', () => {
+  /** A middle-button drag that begins on node a. */
+  const middleDrag = (container: HTMLElement) => {
+    const a = must(container, '[data-id="a"]');
+    fireEvent.pointerDown(a, pointer({ button: 1, clientX: 20, clientY: 20 }));
+    fireEvent.pointerMove(pane(container), pointer({ button: 1, clientX: 80, clientY: 60 }));
+    fireEvent.pointerUp(pane(container), pointer({ button: 1, clientX: 80, clientY: 60 }));
+  };
+
+  it('pans where panOnDrag lets it, and not where it does not, as in React Flow 13.0.0-next.3', () => {
+    for (const [panOnDrag, pans] of [
+      [true, true],
+      [[1], true],
+      [[1, 2], true],
+      [[0], false],
+      [[0, 2], false],
+      [false, false],
+    ] as const) {
+      const onNodeDragStart = vi.fn();
+      const { container, unmount } = render(
+        <ReactFlow nodes={nodes} panOnDrag={panOnDrag as FlowingerProps['panOnDrag']} onNodeDragStart={onNodeDragStart} />,
+      );
+      const before = viewportOf(container);
+      middleDrag(container);
+      expect(viewportOf(container) !== before, JSON.stringify(panOnDrag)).toBe(pans);
+      expect(onNodeDragStart).not.toHaveBeenCalled(); // never the node's drag
+      unmount();
+    }
   });
 });
 

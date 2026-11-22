@@ -1,0 +1,104 @@
+---
+// The size claim as a picture: the diagram chunk of one real app built with each library, bars to scale. The
+// numbers are text in the page; the bars grow in once when they come into view (Bento.astro arms them).
+// From the comparison table below (QueryLens, flowinger 1.1 against React Flow 12); keep the two in step.
+const rows = [
+  { name: 'Flowinger 1.1', kb: 20.2, ours: true },
+  { name: 'React Flow 12', kb: 59.1, ours: false },
+];
+const max = Math.max(...rows.map((row) => row.kb));
+---
+
+<figure class="fl-bars fl-anim">
+  <figcaption>The diagram chunk of one real app, gzipped</figcaption>
+  <div class="fl-bars-rows">
+    {
+      rows.map((row) => (
+        <div class:list={['fl-bars-row', { 'is-ours': row.ours }]}>
+          <span class="fl-bars-name">{row.name}</span>
+          <span class="fl-bars-track">
+            <span class="fl-bars-bar" style={`--share: ${(row.kb / max).toFixed(4)}`} />
+          </span>
+          <span class="fl-bars-value">{row.kb} kB</span>
+        </div>
+      ))
+    }
+  </div>
+</figure>
+
+<style>
+  .fl-bars {
+    margin: 0;
+    padding: 1.125rem 1.25rem 1.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 70%, transparent);
+  }
+
+  figcaption {
+    margin-bottom: 1rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .fl-bars-rows {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.875rem 0.75rem;
+  }
+
+  .fl-bars-row {
+    display: contents;
+  }
+
+  .fl-bars-name {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    white-space: nowrap;
+  }
+
+  .fl-bars-track {
+    height: 0.75rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-6);
+    overflow: hidden;
+  }
+
+  .fl-bars-bar {
+    display: block;
+    width: calc(var(--share) * 100%);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--sl-color-gray-4);
+    transform-origin: left;
+  }
+
+  .is-ours .fl-bars-bar {
+    background: linear-gradient(90deg, var(--sl-color-text-accent), #a78bfa);
+    box-shadow: 0 0 16px -2px color-mix(in srgb, var(--sl-color-text-accent) 60%, transparent);
+  }
+
+  .fl-bars-value {
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-sm);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  .is-ours .fl-bars-value {
+    font-weight: 700;
+  }
+
+  /* Armed: the bars start empty; in view, they grow, the longer one for longer. */
+  .fl-bars:global(.is-armed) .fl-bars-bar {
+    scale: 0 1;
+  }
+
+  .fl-bars:global(.is-armed.is-in) .fl-bars-bar {
+    scale: 1 1;
+    transition: scale calc(var(--share) * 1.2s + 0.2s) var(--fl-ease-out);
+  }
+</style>

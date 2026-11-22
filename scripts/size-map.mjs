@@ -16,11 +16,6 @@ const full = process.argv.includes('--full');
 const entry = full ? 'scripts/size-entry.ts' : 'scripts/size-entry-lean.ts';
 
 /** Candidates for leaving the core: each a set of [file, from, to] replacements that makes the part unreachable. */
-const NON_BEZIER_PATHS = [
-  ['src/paths.ts', "type === 'straight'", 'false'],
-  ['src/paths.ts', "type === 'smoothstep'", 'false'],
-  ['src/paths.ts', "type === 'step'", 'false'],
-];
 const NESTING = [
   [
     'src/FlowingerCore.tsx',
@@ -28,11 +23,8 @@ const NESTING = [
     'useMemo(() => () => ({ origin: new Map(), depth: new Map(), hidden: new Set() }), [])',
   ],
 ];
-const CANDIDATES = [
-  ['edge paths other than bezier (straight, smoothstep, step)', NON_BEZIER_PATHS],
-  ["the canvas's nesting pass (where a child's parent is, its depth, hidden with its parent)", NESTING],
-  ['both', [...NON_BEZIER_PATHS, ...NESTING]],
-];
+// The edge paths other than bezier were the first (0.45 kB): they left the core for edgePathsFeature in 2.0.
+const CANDIDATES = [["the canvas's nesting pass (where a child's parent is, its depth, hidden with its parent)", NESTING]];
 
 async function bundle(patches = []) {
   const patch = {

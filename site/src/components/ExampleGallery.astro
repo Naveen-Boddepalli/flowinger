@@ -1,0 +1,156 @@
+---
+// The examples as a strip of screenshots, each linking to its folder in the repository. The thumbnails are
+// public/thumbs/, 720 px JPEGs made from the screenshots in docs/assets/ (not public/assets/, which
+// scripts/sync-docs.mjs empties and refills on every build). From the repository's root:
+//   sips -Z 720 docs/assets/<name>.png -s format jpeg -s formatOptions 80 --out site/public/thumbs/<name>.jpg
+// The alt text is the examples README's.
+const tree = 'https://github.com/Naveen-Boddepalli/flowinger/tree/main/examples/';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const examples = [
+  {
+    name: 'layouts',
+    blurb: 'One query plan laid out by d3-hierarchy, dagre and ELK.',
+    alt: 'The layouts example: a query plan laid out left to right by ELK',
+  },
+  {
+    name: 'editor',
+    blurb: 'A controlled editor: drag, connect, delete, snap, a minimap.',
+    alt: 'The editor example: four task nodes with connections, a minimap and an add-task button',
+  },
+  {
+    name: 'export',
+    blurb: 'The diagram as PNG, JPEG, WebP or SVG with flowinger/export.',
+    alt: 'The export example: an architecture diagram beside export options, an Export button and a preview of the exported PNG',
+  },
+  {
+    name: 'swimlanes',
+    blurb: 'Steps in lanes, which change lane when dropped in another.',
+    alt: 'The swimlanes example: an order process in four lanes — Customer, Sales, Warehouse, Billing — with steps joined by right-angled edges',
+  },
+  {
+    name: 'presence',
+    blurb: 'Multiplayer over Yjs: one shared graph, everyone’s cursor.',
+    alt: "The presence example: a graph with another person's cursor over one card and their name tag on the card they have selected",
+  },
+  {
+    name: 'stepper',
+    blurb: 'An order workflow simulated a tick at a time.',
+    alt: 'The stepper example: an order workflow mid-run, finished steps in green, the charge step running, the unchosen branch skipped, and a log of each tick',
+  },
+  {
+    name: 'save-load',
+    blurb: 'The graph saved and loaded as JSON, checked on the way in.',
+    alt: 'The save-load example: three notes joined by arrows, a toolbar with Save, Restore, Download and Open, and the graph as JSON beside it',
+  },
+  {
+    name: 'tree',
+    blurb: 'An org chart whose branches fold away.',
+    alt: 'The tree example: an organisation as a left-to-right tree, each branch with a button that folds it',
+  },
+];
+---
+
+<ul class="fl-gallery not-content" aria-label="Examples">
+  {
+    examples.map(({ name, blurb, alt }) => (
+      <li>
+        <a class="fl-shot" href={`${tree}${name}`}>
+          <span class="fl-shot-frame">
+            <img src={`${base}thumbs/${name}.jpg`} alt={alt} width="720" height="366" loading="lazy" decoding="async" />
+          </span>
+          <span class="fl-shot-name">{name}</span>
+          <span class="fl-shot-blurb">{blurb}</span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  /* A row that scrolls sideways, snapping card by card; the next card peeks in to say there is more. */
+  .fl-gallery {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(19rem, 82%);
+    gap: 1rem;
+    margin: 1.5rem 0 0;
+    padding: 0.25rem 0.25rem 1rem;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  li {
+    scroll-snap-align: start;
+  }
+
+  .fl-shot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    height: 100%;
+    padding: 0.625rem 0.625rem 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.875rem;
+    background: var(--sl-color-bg-nav);
+    color: inherit;
+    text-decoration: none;
+    transition:
+      translate var(--fl-dur-2) var(--fl-ease-spring),
+      border-color var(--fl-dur-2) ease,
+      box-shadow var(--fl-dur-2) var(--fl-ease-out);
+  }
+
+  .fl-shot:hover,
+  .fl-shot:focus-visible {
+    translate: 0 var(--fl-lift);
+    border-color: color-mix(in srgb, var(--sl-color-text-accent) 60%, transparent);
+    box-shadow: 0 18px 36px -26px rgb(0 0 0 / 0.7);
+  }
+
+  .fl-shot:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  .fl-shot-frame {
+    display: block;
+    margin-bottom: 0.375rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--sl-color-gray-6);
+    aspect-ratio: 720 / 366;
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: scale var(--fl-dur-3) var(--fl-ease-out);
+  }
+
+  .fl-shot:hover img,
+  .fl-shot:focus-visible img {
+    scale: 1.06;
+  }
+
+  .fl-shot-name {
+    padding-inline: 0.25rem;
+    color: var(--sl-color-white);
+    font-family: var(--__sl-font-mono, ui-monospace, monospace);
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+  }
+
+  .fl-shot-blurb {
+    padding-inline: 0.25rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    line-height: 1.5;
+  }
+</style>

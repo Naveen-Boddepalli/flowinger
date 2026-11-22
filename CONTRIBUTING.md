@@ -52,9 +52,9 @@ A change is ready when all of these pass; CI runs them on React 18 and 19.
 ```bash
 pnpm typecheck
 pnpm test                       # vitest, jsdom — `pnpm test edges` runs the files matching "edges"
-pnpm build                      # dist/: ESM, CJS and declarations for both
-pnpm size --max-full 40 --max-lean 21.5   # gzip kB: the whole canvas, and the core with no features
-node scripts/size-dist.mjs --max-lean 21.5 # the core again, from the built package
+pnpm build                      # dist/: ES modules and their declarations
+pnpm size --max-full 40.5 --max-lean 22   # gzip kB: the whole canvas, and the core with no features
+node scripts/size-dist.mjs --max-lean 22   # the core again, from the built package
 pnpm check:package              # publint + Are the Types Wrong, on the packed tarball
 pnpm check:examples             # each app in examples/ installed against that tarball, type-checked and built
 pnpm e2e                        # Playwright, a real browser against the demo (see below)
@@ -122,6 +122,13 @@ Maintainers only. A release is a tag; there is no npm token anywhere.
 3. [`release.yml`](.github/workflows/release.yml) re-runs the gate, publishes to npm with a provenance
    attestation, and creates the GitHub release from the changelog. A tag with a hyphen (`v0.5.0-rc.1`)
    goes to the `next` dist-tag and is marked a prerelease.
+
+**A 1.x fix.** `main` is the 2.x line. 1.x gets fixes for security problems, crashes and regressions for six months
+after `2.0.0`, from the **`v1` branch**: 1.2.1 with Dependabot's updates, `main`'s `release.yml` (which knows about
+older majors), and CI on every push. Each fix is a pull request into `v1` with its changelog entry and version; tag
+the merge commit as above. While npm's `latest` is 1.x, a 1.x release goes to `latest`; once 2.0 is there, the
+workflow publishes a version older than `latest`'s major to that major's dist-tag (`latest-1`), so `latest` stays on 2.x,
+and does not mark its GitHub release the latest.
 
 **One-time setup**, on npmjs.com: the package's *Settings → Trusted Publisher → GitHub Actions*, with this
 repository's owner and name and the workflow file `release.yml` (the environment is left blank). Then, in

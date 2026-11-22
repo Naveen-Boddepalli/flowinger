@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
 import { useEffect } from 'react';
-import { ReactFlowProvider as ReactFlowsProvider, useStore as useReactFlowsStore } from '@xyflow/react';
+import { ReactFlowProvider as ReactFlowsProvider, useEdgesStore as useReactFlowsEdgesStore } from '@xyflow/react';
 import {
   FlowingerCanvas,
   Handle,
@@ -16,6 +16,7 @@ import {
   useReactFlowStoreApi,
   useSelectionStore,
   useShallow,
+  useEqualSelector,
   useStore,
   useViewportStore,
   type ConnectionStore,
@@ -78,10 +79,10 @@ describe("React Flow 13's store hooks", () => {
     expect(s.edges).toBe(edges);
     expect(s.edgeLookup.get('a-b2')).toBe(edges[1]);
 
-    // React Flow 12 builds the same lookup in its store from the same edges.
+    // React Flow 13 builds the same lookup in its edges store from the same edges.
     let theirs: Map<string, Map<string, unknown>> | null = null;
     function Read() {
-      theirs = useReactFlowsStore((state) => state.connectionLookup);
+      theirs = useReactFlowsEdgesStore((state) => state.connectionLookup);
       return null;
     }
     render(
@@ -207,6 +208,31 @@ describe("React Flow 13's store hooks", () => {
       </FlowingerCanvas>,
     );
     // New node objects, the same ids: the same array as before.
+    expect(results[results.length - 1]).toBe(settled);
+  });
+
+  it('useEqualSelector: a result its comparison calls the same as the last one is the last one', () => {
+    const results: unknown[] = [];
+    const sameCount = (a: { count: number }, b: { count: number }) => a.count === b.count;
+    function Probe() {
+      const count = useNodesStore(useEqualSelector((s: NodesStore) => ({ count: s.nodes.length }), sameCount));
+      useEffect(() => {
+        results.push(count);
+      });
+      return null;
+    }
+    const { rerender } = render(
+      <FlowingerCanvas nodes={nodes} edges={edges}>
+        <Probe />
+      </FlowingerCanvas>,
+    );
+    const settled = results[results.length - 1];
+    expect(settled).toEqual({ count: 3 });
+    rerender(
+      <FlowingerCanvas nodes={nodes.map((n) => ({ ...n }))} edges={edges}>
+        <Probe />
+      </FlowingerCanvas>,
+    );
     expect(results[results.length - 1]).toBe(settled);
   });
 });

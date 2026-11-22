@@ -1,18 +1,19 @@
 # Upgrading
 
 What changed in each major version, and how to upgrade: [to 2.0](#upgrading-to-20) from 1.x, and
-[to 1.0](#upgrading-to-10) from `0.x`. What a major version covers is on [its own page](stability.md).
+[to 1.0](#upgrading-to-10) from `0.x`. What a major version covers is on [its own page](stability.md), and the 1.x
+docs are on the site under [`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/).
 
 ## Upgrading to 2.0
 
-2.0 follows React Flow 13. React Flow 13 changes what a number means as a fit's margin and the margin
+2.0 follows React Flow 13 (13.0.2). React Flow 13 changes what a number means as a fit's margin and the margin
 `<ReactFlow>` fits with, gives change handlers a changeset, and ships ES modules only; 2.0 does the same, and moves
 the edge paths other than bezier out of the core. Everything React Flow 13 *adds* came in 1.1, without breaking
 anything: its store hooks, its changesets, `forceColorMode`, `changeParent`.
 
 1.1 changed nothing an app could see, and in development it names — once a page, in the console, ending with *See
 "Upgrading to 2.0"* — each place an app would notice 2.0. An app that runs on 1.1 without one of those warnings, and
-does not load flowinger with `require` under Jest, needs nothing more.
+does not load flowinger with `require` under Jest, needs nothing more. (1.2 gives the same warnings.)
 
 ### In short
 
@@ -24,6 +25,9 @@ does not load flowinger with `require` under Jest, needs nothing more.
 | renders `<FlowingerCore>` with `straight`, `smoothstep` or `step` edges | those paths come with **`edgePathsFeature`** | add it to `features` (`<FlowingerCanvas>` and `<ReactFlow>` have it) |
 | loads flowinger with `require` | there is **no CommonJS build**; Node's `require` loads the ES modules (Node 20.19+ or 22.12+) | under Jest, see [5](#5-es-modules-only); in TypeScript, a `.cts` file needs `module: nodenext` |
 | imports the type `CounterNode` | it is gone: React Flow never exported it | write your own node type |
+| renders `<ReactFlow>`, and a press on a node that moved a little is not a click | it is one, unless it became a drag: React Flow 13 has **no `nodeClickDistance`** (12's was 0) | spread `reactFlow12Defaults`, or pass `nodeClickDistance={0}` — see [6](#6-what-react-flow-1300-next3-changed) |
+| queues its own changes and applies them with `changes.applyTo(nodes)` | they are read as **React Flow 13 reads them**: in order, a `remove` wins, an `add` of an id already there is not added | see [3](#3-change-handlers-are-given-a-changeset) |
+| renders `<ReactFlow>`, and a press on the pane that moved 2 px did not pan | it pans: React Flow 13.0.0 calls the pane's threshold **`paneDragThreshold`** (1 px), and a pan waits for it as a click does | pass `paneDragThreshold={3}` for 1.x's — see [7](#7-what-react-flow-1300-changed) |
 
 ### 1. A number as a margin is pixels
 
@@ -63,6 +67,22 @@ const onNodesChange: OnNodesChange = (changes) => setNodes((ns) => changes.apply
 In 2.0 the types say so: `OnNodesChange` takes a `NodeChangeset`. A handler written for a plain array still
 compiles; code that *calls* one with an array needs `new NodeChangeset(list)`.
 
+`applyTo` reads a changeset as React Flow 13.0.0-next.3 does, which the tests check against it on random batches.
+For the changes the canvas makes this is what `applyNodeChanges` gives; it matters for changes an app queues
+itself, with `changes.add(…)` in a handler or a middleware:
+
+- An element's changes apply in the order they were queued, and a `remove` among them takes it out, whatever comes
+  after. (In rc.1–rc.3, as in next.0, `add` moved an element's `remove` and `add` to the front.)
+- An `add` is of a new element: one whose id is already in the list, even one being removed, is not added. An added
+  element gets the other changes queued for its id.
+- Two kinds of change are new, as in React Flow 13: **`update`** merges `item` into the element, and **`data`**
+  merges `data` into its data, or puts it in its place with `replace: true` (`NodeUpdateChange`, `NodeDataChange`…).
+  `applyNodeChanges` applies them too. A kind of change it does not know leaves the element as it is.
+- `getForNode` leaves out the `add` (`getNewNodes()` has the added nodes), and there are `clear()` and `isEmpty()`.
+  `size` and `version`, which next.3 took out, are still there, deprecated.
+
+`applyNodeChanges(changes, nodes)` keeps React Flow 12's reading, which is what code written for 12 expects.
+
 ### 4. The edge paths other than bezier come with a feature
 
 A `<FlowingerCore>` draws `straight`, `smoothstep` and `step` edges only with `edgePathsFeature`; without it they are
@@ -76,8 +96,8 @@ There is one build, of ES modules, as React Flow 13 has. What changes depends on
 
 - **A bundler, Vite, Next.js, Vitest, Node's `import`**: nothing.
 - **Node's `require`**: nothing on Node 20.19+ or 22.12+, which `require` an ES module.
-- **Jest**, which loads modules itself: run it with `NODE_OPTIONS=--experimental-vm-modules` on Node 22.21+ or
-  24.9+, or let a transform compile flowinger (`transformIgnorePatterns: ['/node_modules/(?!flowinger/)']` with a
+- **Jest**, which loads modules itself: run it with `NODE_OPTIONS=--experimental-vm-modules` on Node 24 (on Node
+  22 that is not enough, 22.23 included), or let a transform compile flowinger (`transformIgnorePatterns: ['/node_modules/(?!flowinger/)']` with a
   Babel config that turns ES modules into CommonJS).
 - **TypeScript**: a `.cts` file needs `module: nodenext` (or `bundler` in an app that bundles); `node16` refuses to
   import an ES module from CommonJS. `moduleResolution: node10`, which TypeScript 7 removed, no longer finds the
@@ -85,11 +105,53 @@ There is one build, of ES modules, as React Flow 13 has. What changes depends on
 
 `pnpm check:toolchains` is the check behind this list.
 
+### 6. What React Flow 13.0.0-next.3 changed
+
+2.0.0-rc.4 follows React Flow 13.0.0-next.3 (2026-11-08) where rc.1–rc.3 followed next.0. 1.1 and 1.2 do not warn
+about these: React Flow made them after.
+
+- **A press on a node is a click unless it became a drag.** React Flow 13 took out `nodeClickDistance`, whose
+  default was 0 — a press that moved at all was not a click — so `reactFlowDefaults` has none, and `<ReactFlow>`
+  counts a press that moved no further than `nodeDragThreshold` as a click. `reactFlow12Defaults` keeps
+  `nodeClickDistance: 0`, and the prop still works on every canvas.
+- **A press becomes a drag once it moves *further* than `nodeDragThreshold`**, as in React Flow; flowinger began it
+  at that distance. This is so on every canvas: on `<FlowingerCanvas>`, a press that moves exactly 3 px is a click
+  now.
+- **A press on a node let go of off it is not a click** on what is under the release — the pane, where it cleared
+  the selection and called `onPaneClick`.
+- **A click on the pane lets go of a connection begun by a click** (`connectOnClick`), with `onClickConnectEnd` and
+  nothing connected, and of one begun from the keyboard, saying so. Before, only Escape did.
+- **`getHandleConnections` and the type `HandleConnection` are deprecated**: React Flow 13 took them out.
+  `getNodeConnections({ type, nodeId, handleId })` asks the same, and `NodeConnection` is the same type.
+- **`useEqualSelector`** is new, as in React Flow 13: a store hook's selector with a comparison of your own, of
+  which `useShallow` is the shallow one.
+
+### 7. What React Flow 13.0.0 changed
+
+React Flow 13.0.0 came out on 2026-11-16, and 13.0.2 on 2026-11-17; 2.0 follows 13.0.2 (from rc.5). Since next.3:
+
+- **`paneClickDistance` is `paneDragThreshold` in React Flow 13**, and it decides when a pan starts as well as what
+  is a click: a press on the pane pans once it moves further than that, and one that moves no further is a click,
+  with the view where it was. `<ReactFlow>` sets React Flow's 1 px where it set `paneClickDistance: 1`, so its
+  clicks are the same, and it pans from 2 px where it waited for flowinger's 3. A selection box drawn with
+  `selectionOnDrag` waits for the same distance. `paneClickDistance` still works on every canvas, and
+  `<FlowingerCanvas>` still pans from 3 px.
+- **`NodeProps` of a union of nodes is a union**, one member a type, so a component for several types can check
+  `props.type` and have the `data` that goes with it. An `interface` that extends `NodeProps<N>` for a generic `N`
+  has to be a `type` with `&` now, as in React Flow 13. A node with no `type` has none in its props (React Flow
+  passes `'default'`), so test for each type by name rather than with a bare `else`.
+
+Two of 13.0.0's changes needed nothing. A node moved with the arrow keys is announced where it is after the move,
+which is what flowinger already said. An `EdgeToolbar` is stacked with its edge, among the nodes; flowinger's edge
+labels and toolbars are drawn on a layer above every node, as they were.
+
 ### What stays as it is
 
 - `<FlowingerCanvas>` and `<FlowingerCore>` and their defaults; every name 1.x exports but `CounterNode` —
   `applyNodeChanges`, `useStore`, `useStoreApi`, `colorMode` among them, though React Flow 13 dropped them; the
   class names, test ids and CSS variables; React 18 and 19; server rendering.
+- What 1.2 added: connecting from the keyboard, with its `ariaLabelConfig` keys
+  ([accessibility](accessibility.md#connecting-from-the-keyboard)).
 
 ## Upgrading to 1.0
 
@@ -106,7 +168,7 @@ would notice 1.0; an app that went through 0.9 and did what it said needs nothin
 | has an edge that names a handle `in`, `out`, `prev`, `next`, `top`, `bottom`, `left` or `right` that no `<Handle>` has | the edge no longer meets a side guessed from the name | add the `<Handle>` |
 | writes its own `Feature` | the feature API is `@experimental` | nothing; minor releases may change it |
 
-What 1.0 promises from then on is on [its own page](stability.md).
+What a major version promises from then on is on [its own page](stability.md).
 
 ### 1. `<ReactFlow>` takes React Flow's defaults
 

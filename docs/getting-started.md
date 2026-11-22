@@ -9,7 +9,8 @@ run.
 npm install flowinger      # or: pnpm add flowinger · yarn add flowinger
 ```
 
-React 18 or 19 is a peer dependency. The package ships ESM, CommonJS and TypeScript declarations for both, and
+React 18 or 19 is a peer dependency. The package is ES modules with TypeScript declarations — Node's `require` loads
+them on Node 20.19+ or 22.12+, and Jest needs [a setting](upgrading.md#5-es-modules-only) — and
 needs no stylesheet.
 
 To try a commit that is not released, install from GitHub instead. A git dependency has no `dist/`, so it is

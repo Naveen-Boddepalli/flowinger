@@ -106,6 +106,11 @@ export interface ConnectApi {
   /** Lets go of a connection begun by a click or a press, if there is one, and says so; false if there was none. */
   cancelPress: () => boolean;
   /**
+   * A click on the bare pane lets go of a connection begun by a click or a press, as in React Flow 13: one begun by a
+   * click ends with `onClickConnectEnd` (nothing connected).
+   */
+  endOnPane: (e: MouseEvent) => void;
+  /**
    * What makes a connectable handle a button a keyboard can use, and a node's handles tab stops while focus is
    * inside it — one set for the whole canvas, so a node costs nothing for them until one is used.
    */
@@ -214,8 +219,8 @@ export const connectFeature: Feature<ConnectApi> = {
       labels: {},
       say: () => undefined,
     };
-    /** The handle a first click was made on, waiting for a second. */
-    let pending: { nodeId: string; record: HandleRecord } | null = null;
+    /** The handle a first click (`byClick`) or key press was made on, waiting for a second. */
+    let pending: { nodeId: string; record: HandleRecord; byClick: boolean } | null = null;
     // What a first click began from, in React Flow's shape (13's `connectionClickStartHandle`).
     let clickStart: ReturnType<ConnectApi['getClickStart']> = null;
     const clickStartListeners = new Set<() => void>();
@@ -526,6 +531,12 @@ export const connectFeature: Feature<ConnectApi> = {
       return true;
     };
 
+    const endOnPane: ConnectApi['endOnPane'] = (e) => {
+      const was = pending;
+      if (!was || !cancelPress()) return;
+      if (was.byClick) config.onClickEnd?.(e, { connection: null, isValid: null });
+    };
+
     /** The first press on a handle begins a connection, the second, on another, ends it: a click (`e`) or a key. */
     const press = (nodeId: string, handleEl: HTMLElement, e: MouseEvent | null) => {
       const record = [...ctx.handlesOf(nodeId)].find((r) => r.el === handleEl);
@@ -533,7 +544,7 @@ export const connectFeature: Feature<ConnectApi> = {
       const { labels, say } = config;
       if (!pending) {
         if (record.options?.current.isConnectableStart === false) return;
-        pending = { nodeId, record };
+        pending = { nodeId, record, byClick: e !== null };
         setClickStart({ nodeId, id: record.id, type: record.type });
         record.el.classList.add('clickconnecting');
         // Set here rather than rendered, so a connection begun on one node does not redraw every node.
@@ -622,6 +633,7 @@ export const connectFeature: Feature<ConnectApi> = {
         press(nodeId, handleEl, null);
       },
       cancelPress,
+      endOnPane,
       keys,
       handleNearTouch,
       config,
@@ -636,7 +648,7 @@ export const connectFeature: Feature<ConnectApi> = {
   },
 
   useCanvas({ store, props }) {
-    const { config, handleNearTouch, beginConnection, clickConnect, cancelPress } = store.api(connectFeature);
+    const { config, handleNearTouch, beginConnection, clickConnect, cancelPress, endOnPane } = store.api(connectFeature);
     config.dragThreshold = props.connectionDragThreshold ?? 1;
     config.radius = props.connectionRadius ?? 20;
     config.reconnectRadius = props.reconnectRadius ?? 10;
@@ -659,6 +671,7 @@ export const connectFeature: Feature<ConnectApi> = {
         e.preventDefault();
         return true;
       },
+      onPaneClick: (e) => endOnPane(e.nativeEvent),
       props: {
         // A finger that lands near a handle is on it: the press starts a connection from it, as a press on the
         // handle would, and the click a tap ends with is the handle's (`connectOnClick`). Only on the bare pane

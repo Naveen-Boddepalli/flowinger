@@ -14,6 +14,230 @@ The design notes behind each release — what was measured, what was tried and d
 
 - **The release workflow publishes a 1.x release to npm's `latest-1` tag** (`npm install flowinger@latest-1`), so
   `latest` stays on 2.x. It named the tag `v1`, which npm refuses, because a tag must not read as a version range.
+- **A 1.x release would not have published.** From 2.0 the release workflow sent a release of an older major to
+  that major's dist-tag, `v1`, which npm refuses: a tag must not read as a version range, and `v1` reads as `1.x`.
+  The tag is `latest-1` now (`npm install flowinger@latest-1`), here and on the `v1` branch. No 1.x release had been
+  made since 2.0, so nothing was lost; 1.2.1, the last, is under `latest-1` too.
+
+## [2.1.0] - 2026-11-22
+
+**An unculled drag costs what moved**, and with it Flowinger drags a node without culling for less than React Flow
+13 at every size measured, which was the one row of the benchmarks React Flow 13 led. Nothing breaks.
+
+### Changed
+
+- **Dragging a node without culling costs what moved.** The edge layer drew every edge again on each mouse move of a
+  drag: at 10,000 nodes 10,000 endpoints, paths and elements for React to compare, to move the few that touch the
+  dragged node. It now keeps each edge as it drew it while the edge, its two nodes and where the store has them
+  (position, size, handles) are the same, and draws everything again when anything else an edge is drawn from
+  changes (a selection, `nodeOrigin`, the edge types…). And reading the instance's state (`getState`, which a
+  drag's changes read) took the pane's size from the element, forcing a layout on every read after the drag had
+  moved something; it now takes the size its `ResizeObserver` last saw. An unculled drag at 10,000 nodes went from
+  68 ms a move to 44 (React Flow 13: 47), at 5,000 from 37 to 16 (18), at 1,000 from 6.3 to 3.8 (5.0): the one row
+  of the [benchmarks](docs/benchmarks.md) where React Flow 13 led.
+- **The size budgets are 22 kB gzipped for the core and 40.5 for the whole canvas** (were 21.5 and 40): keeping the
+  drawn edges costs 0.47 kB, and the core is now 21.45 kB and the whole canvas 39.95 — about 60 bytes more each on
+  CI's Linux runner, whose gzip comes out bigger, which is over the old budgets.
+
+### Added
+
+- **The 1.x docs on the site, under [`/v1/`](https://naveen-boddepalli.github.io/flowinger/v1/)**, built from the
+  `v1` branch: its README, docs, changelog and roadmap, each page with a banner pointing at its 2.x counterpart.
+  [What 2.0 promises](docs/stability.md) and [Upgrading](docs/upgrading.md) link to them.
+
+## [2.0.0] - 2026-11-22
+
+**Flowinger follows React Flow 13** (13.0.2), as 1.x followed 12. A change that breaks what
+[What 2.0 promises](https://naveen-boddepalli.github.io/flowinger/docs/stability/) covers waits for 3.0. The library
+is the same as `2.0.0-rc.5`; since then only the docs changed, to describe 2.0. Everything React Flow 13 *adds* came
+in 1.1 without breaking anything, and 1.1 and 1.2 warn in development about the first five below; the rest came
+with React Flow 13's later pre-releases and its release, after them. [Upgrading to 2.0](https://naveen-boddepalli.github.io/flowinger/docs/upgrading/) has each one and what to
+do; the candidates' entries below have the detail.
+
+### Changed
+
+- **Breaking: a number as a fit's margin is pixels**, as in React Flow 13 (it was a ratio of the view). Written
+  with a unit (`'5%'`, `'20px'`) it means the same in 1.1 and 2.0.
+- **Breaking: `<ReactFlow>` has React Flow 13's defaults**: it fits with a `'5%'` margin a side, has no
+  `nodeClickDistance`, and pans past `paneDragThreshold` (1 px). `reactFlow12Defaults` keeps 1.x's margin and
+  clicks.
+- **Breaking: change handlers are typed as given a `NodeChangeset` / `EdgeChangeset`**, which they have been at run
+  time since 1.1, and a changeset applies its changes as React Flow 13 reads them.
+- **Breaking: the edge paths other than bezier come with `edgePathsFeature`** on a `<FlowingerCore>`
+  (`<FlowingerCanvas>` and `<ReactFlow>` have it).
+- **Breaking: ES modules only**, as React Flow 13: Node's `require` loads them (Node 20.19+ or 22.12+); Jest needs
+  Node 24 with `--experimental-vm-modules`, or a transform.
+- **Breaking: a press becomes a drag once it moves further than `nodeDragThreshold`**, a press let go of off a node
+  is no click, and a pane click ends a connection begun by a click — on every canvas, as in React Flow 13.
+- **`NodeProps` of a union of nodes is a union**, as in React Flow 13.
+- **`CounterNode` is gone** (React Flow never exported it), and `colorMode` is deprecated for `forceColorMode`.
+- **1.x is kept** on the `v1` branch, with fixes for security problems, crashes and regressions for six months;
+  its releases go to npm's `v1` tag, so `latest` stays on 2.x.
+
+## [2.0.0-rc.5] - 2026-11-22
+
+Follows React Flow 13.0.2 (13.0.0 came out on 2026-11-16), where rc.4 followed 13.0.0-next.3.
+[Upgrading to 2.0, §7](docs/upgrading.md#7-what-react-flow-1300-changed) says what it means for an app.
+
+### Added
+
+- **`paneDragThreshold`**, React Flow 13.0.0's name for the pane's threshold: a press on the empty canvas pans, or
+  draws a `selectionOnDrag` box, once it moves further than this, and one that moves no further is a click on the
+  pane. Left out, the engine's own 3 px, as before.
+
+### Changed
+
+- **`<ReactFlow>` pans from 2 px**: `reactFlowDefaults` has React Flow 13's `paneDragThreshold: 1` where it had
+  `paneClickDistance: 1`, which 13.0.0 renamed. Its clicks are the same; a press that moves 2 or 3 px pans, where it
+  did nothing. `paneClickDistance` still works on every canvas.
+- **`NodeProps` of a union of nodes is a union**, one member a type, as in React Flow 13.0.0, so a component for
+  several types can narrow `data` by `type`. An `interface` that extends `NodeProps<N>` for a generic `N` becomes a
+  `type` with `&`.
+- **`@xyflow/react` 13.0.2** is the dev dependency the oracle tests and the audit read (it was 13.0.0-next.3), and
+  the weekly job checks React Flow's `latest` as well as its `next`, which is behind `latest` now.
+
+### Fixed
+
+- **Upgrading to 2.0 said Jest can load the ES modules with `NODE_OPTIONS=--experimental-vm-modules` on Node
+  22.21+**; CI's first run on Node 22 shows it cannot, on 22.23 either. It needs Node 24 (or a transform), as the
+  page now says, and `check:toolchains` counts it as known to fail on Node 22.
+- **`check:toolchains` lints the packed tarball with publint**, not the copy installed from it, which publint packed
+  again and npm 10 (Node 22) built.
+
+### Size
+
+The core is 20.98 kB gzipped (was 20.97) and the whole canvas 39.49 (was 39.5), inside the 21.5 and 40 kB
+budgets: `paneDragThreshold` is a few bytes. The benchmarks were re-run against React Flow 13.0.2
+([benchmarks](docs/benchmarks.md)).
+
+## [2.0.0-rc.4] - 2026-11-15
+
+The fourth candidate for 2.0, on the `next` dist-tag: [rc.3](#200-rc3---2026-10-20) following React Flow
+13.0.0-next.3 (2026-11-08) where it followed next.0. React Flow 13 is still a pre-release, so 2.0 stays a candidate.
+What it means for an app: [Upgrading to 2.0](docs/upgrading.md#6-what-react-flow-1300-next3-changed).
+
+### Changed
+
+- **Breaking: `<ReactFlow>`'s defaults have no `nodeClickDistance`**, as React Flow 13.0.0-next.3 has none: a press
+  on a node is a click unless it became a drag. It was 0, React Flow 12's and next.0's: a press that moved at all was
+  not a click. `reactFlow12Defaults` keeps 0, and the prop still works.
+- **Breaking: a press becomes a node drag once it moves further than `nodeDragThreshold`**, as in React Flow; it
+  began at that distance. On `<FlowingerCanvas>` a press that moves exactly 3 px is a click now, and on
+  `<ReactFlow>` a pixel's wobble is.
+- **`changes.applyTo(nodes)` reads a changeset as React Flow 13.0.0-next.3 does**, checked against it on random
+  batches: an element's changes in the order queued, a `remove` winning over what follows, an `add` of an id already
+  in the list not added, and an added element given the changes queued for its id. `add` no longer moves an
+  element's `remove` and `add` to the front, and `getForNode` leaves out the `add`. `applyNodeChanges` keeps React
+  Flow 12's reading.
+- **A click on the pane lets go of a connection begun by a click**, with `onClickConnectEnd` and nothing connected,
+  or of one begun from the keyboard, saying so — as in React Flow 13.0.0-next.3. Only Escape did.
+
+### Added
+
+- **React Flow 13.0.0-next.3's `update` and `data` changes** (`NodeUpdateChange`, `NodeDataChange`,
+  `EdgeUpdateChange`, `EdgeDataChange`), applied by `applyTo` and `applyNodeChanges`.
+- **`clear()`, `isEmpty()` and `getNewNodes()` / `getNewEdges()`** on a changeset.
+- **`useEqualSelector`**, React Flow 13.0.0-next.3's one new export.
+
+### Fixed
+
+- **A change of a kind this version does not know no longer loses its element**: `applyNodeChanges` and `applyTo`
+  leave it as it is, as React Flow does. React Flow 13's `update` and `data` changes took nodes out.
+- **A press on a node let go of off it is not a click** on what is under the release: the pane cleared the
+  selection and called `onPaneClick`, where React Flow 13.0.0-next.3 swallows that click. Watched in Chromium,
+  Firefox and WebKit.
+
+### Size
+
+- **The core's budget is 21.5 kB gzipped**, as in 1.1 (it was 21): the changesets above add 0.12 kB, which puts the
+  core at 20.97 kB on a Mac and 21.03 on CI's Linux runner, whose gzip comes out about 60 bytes bigger. The whole
+  canvas is 39.57 against 40.
+
+### Deprecated
+
+- **`getHandleConnections` and the type `HandleConnection`**, which React Flow 13.0.0-next.3 took out:
+  `getNodeConnections({ type, nodeId, handleId })` and `NodeConnection` are the same.
+- **A changeset's `size` and `version`**, which next.3 took out.
+
+## [2.0.0-rc.3] - 2026-10-20
+
+The third candidate for 2.0, on the `next` dist-tag: [rc.2](#200-rc2---2026-10-19) with 1.2.1's fix, so a large
+canvas costs on 2.0 what it does on 1.2.1. Nothing else changes.
+
+### Fixed
+
+- **Everything in [1.2.1](#121---2026-10-19)**, merged from `main`: 2.0.0-rc.2 carried 1.2.0's cost on a large
+  canvas — every node's own state and handlers for connecting from the keyboard, a 10,000-node unculled mount 17%
+  slower — and this takes 1.2.1's fix.
+
+## [2.0.0-rc.2] - 2026-10-19
+
+The second candidate for 2.0, on the `next` dist-tag: [rc.1](#200-rc1---2026-10-17) and everything 1.2.0 added
+since, so an app moving to 2.0 keeps what it has on 1.2. Nothing else changes; React Flow 13 is still at
+`13.0.0-next.0`, so 2.0 stays a candidate.
+
+### Added
+
+- **Everything in [1.2.0](#120---2026-10-19)**, merged from `main`: connecting from the keyboard, its
+  `ariaLabelConfig` keys, `NodeBits.handleProps`, and Escape letting go of a connection begun by a click. The whole
+  canvas's budget is 40 kB, as in 1.2 (39.01); the core's stays 21 (20.85).
+
+## [2.0.0-rc.1] - 2026-10-17
+
+**Flowinger 2.0, following React Flow 13** — a release candidate, published to the `next` dist-tag. React Flow 13 is
+itself at `13.0.0-next.0`, and `<ReactFlow>` follows a changed React Flow default only in a major version, so 2.0
+stays a candidate until React Flow 13.0.0 is out and nothing more has moved. What changes, and how 1.1 prepares an
+app for each: [Upgrading to 2.0](docs/upgrading.md#upgrading-to-20). In short: a bare number as a fit's margin is
+pixels, `<ReactFlow>` fits with `'5%'`, change handlers are typed as changesets, the edge paths other than bezier
+come with `edgePathsFeature`, and the package is ES modules only.
+
+### Changed
+
+- **Breaking: a bare number as a fit's margin is pixels**, as in React Flow 13: `padding: 20` leaves 20 px a side,
+  in `fitViewOptions`, `fitView()`, `fitBounds()`, `getViewportForBounds()` and `viewportForBounds()`. In 1.x it was
+  a ratio of the fitted size, as in React Flow 12, so `padding: 0.1` now leaves none. A margin with a unit (`'5%'`,
+  `'20px'`, per side) means what it did. 1.1 said so in development.
+- **Breaking: `<ReactFlow>` fits with React Flow 13's margin, `'5%'` a side** (it was 0.1 of the view, about 4.5%),
+  wherever a fit names none: `fitView`, the instance's `fitView()`, `Controls`' button. `reactFlowDefaults` is React
+  Flow 13's (`fitViewOptions: { padding: '5%' }`); `reactFlow12Defaults` keeps 1.x's margin.
+  `<FlowingerCanvas>` and `<FlowingerCore>` keep their 40 px.
+- **Breaking: `OnNodesChange` and `OnEdgesChange` take a `NodeChangeset` / `EdgeChangeset`**, as React Flow 13's do —
+  what the canvas has given them since 1.1. A handler written for an array still fits, since a changeset is one;
+  code that *calls* a handler with a plain array needs `new NodeChangeset(list)`. `useNodesState`' handler takes
+  either.
+- **Breaking: on a `<FlowingerCore>`, `straight`, `smoothstep` and `step` edges need `edgePathsFeature`**, and are
+  beziers without it. It takes 0.45 kB out of a core whose edges are beziers: the core is 20.81 kB gzipped (21.26 in
+  1.1), and its budget 21 kB. `<FlowingerCanvas>` and `<ReactFlow>` have the feature; 1.1 had it as a feature that
+  did nothing, and said so in development. The path functions and the edge components are unchanged.
+- **Breaking: ES modules only**, as React Flow 13 ships. No CommonJS build, no second set of declarations for
+  `require`, no `typesVersions` or stub folders; `exports` is the entry map, and `engines.node` is `>=20.19`. Node's
+  `require` loads the package on Node 20.19+ and 22.12+; bundlers, Vite, Next.js and Vitest are unaffected. Jest
+  needs `NODE_OPTIONS=--experimental-vm-modules` (Node 22.21+ or 24.9+) or a transform; a TypeScript `.cts` file
+  needs `module: nodenext`; `moduleResolution: node10` finds no subpath. 1.1 said so under Jest.
+  `pnpm check:toolchains` checks all of it, and runs in CI on Node 22 and 24.
+- **The examples and the site's live editor write their fit margins with a unit** (`'6.5%'` where they had `0.15`,
+  the same margin), and ask for `flowinger` `^1.1.0`, the first release that takes one.
+- **React Flow 13 is the oracle.** The tests that check geometry, names and defaults against React Flow's own code
+  run against `@xyflow/react` 13.0.0-next.0, and the coverage audit in CI runs with `--strict` against its
+  declarations.
+
+### Added
+
+- **1.x after 2.0**: fixes for security problems, crashes and regressions for six months after `2.0.0`, from a `v1`
+  branch. A release of an older major than npm's `latest` goes to that major's dist-tag (`v1`), and is not the latest
+  GitHub release (`release.yml`, and *Releasing* in CONTRIBUTING.md).
+
+### Removed
+
+- **Breaking: `CounterNode`**, a type React Flow never exported (the example in a doc comment of its `Node`),
+  deprecated in 1.1.
+- The development warnings 1.1 gave about margins, edge paths and Jest: what they warned of has happened.
+
+### Deprecated
+
+- **`colorMode`**: React Flow 13 calls it `forceColorMode`, which flowinger has had since 1.1. It stays and works.
+  So do the names React Flow 13 dropped — `useStore`, `useStoreApi`, `applyNodeChanges`, `applyEdgeChanges`,
+  `useHandleConnections`, `ColorModeClass`: nothing is removed for following React Flow.
 
 ## [1.2.1] - 2026-10-19
 
@@ -619,7 +843,14 @@ First release.
   features, about 23 kB with all of them.
 - Server rendering and hydration on React 18 and 19.
 
-[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.1...v2.0.0
+[2.0.0-rc.5]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.4...v2.0.0-rc.5
+[2.0.0-rc.4]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.3...v2.0.0-rc.4
+[2.0.0-rc.3]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.2...v2.0.0-rc.3
+[2.0.0-rc.2]: https://github.com/Naveen-Boddepalli/flowinger/compare/v2.0.0-rc.1...v2.0.0-rc.2
+[2.0.0-rc.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v2.0.0-rc.1
 [1.2.1]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Naveen-Boddepalli/flowinger/compare/v1.0.1...v1.1.0

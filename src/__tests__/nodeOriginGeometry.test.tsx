@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
+import * as RF from '@xyflow/react';
 import { useFlowingerStore } from '../context.ts';
 import {
   FlowingerCanvas,
@@ -135,6 +136,49 @@ describe('what asks where a node is', () => {
     );
     const hits = flow?.getIntersectingNodes({ id: 'a' }).map((n) => n.id);
     expect(hits).toEqual(['c']);
+  });
+
+  it("finds React Flow 13's intersections for a node and a list it is given, whose nodeOrigin next.3 began to count", () => {
+    // Centred: a is drawn at 50..150 x 80..120. Raw positions would draw it at 100..200 x 100..140.
+    const nodes: Node[] = [
+      at('a', 100, 100),
+      at('in', 140, 110, { width: 20, height: 20 }), // drawn inside a (130..150 x 100..120); raw, half out
+      at('raw', 170, 90, { width: 40, height: 20 }), // drawn 150..190: touches a's edge only; raw, overlaps
+      at('left', 20, 100), // drawn -30..70: overlaps
+      at('far', 600, 600),
+    ];
+    const ask = (flow: { getIntersectingNodes: (n: Node, partially: boolean, among: Node[]) => { id: string }[] }) =>
+      [true, false].map((partially) => flow.getIntersectingNodes(nodes[0]!, partially, nodes).map((n) => n.id).sort());
+
+    let mine: FlowingerInstance | undefined;
+    const GrabMine = () => {
+      mine = useReactFlow();
+      return null;
+    };
+    render(
+      <FlowingerProvider>
+        <FlowingerCanvas nodes={nodes} nodeOrigin={[0.5, 0.5]}>
+          <GrabMine />
+        </FlowingerCanvas>
+      </FlowingerProvider>,
+    );
+    let theirs: RF.ReactFlowInstance | undefined;
+    const GrabTheirs = () => {
+      theirs = RF.useReactFlow();
+      return null;
+    };
+    render(
+      <RF.ReactFlowProvider>
+        <div style={{ width: 800, height: 600 }}>
+          <RF.ReactFlow nodes={nodes as never} nodeOrigin={[0.5, 0.5]}>
+            <GrabTheirs />
+          </RF.ReactFlow>
+        </div>
+      </RF.ReactFlowProvider>,
+    );
+    if (!mine || !theirs) throw new Error('no instance');
+    expect(ask(theirs as never)).toEqual([['in', 'left'], ['in']]);
+    expect(ask(mine as never)).toEqual(ask(theirs as never));
   });
 
   it('frames the drawn boxes with fitView and getNodesBounds', () => {

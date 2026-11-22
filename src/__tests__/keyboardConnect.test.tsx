@@ -115,6 +115,15 @@ describe('connecting from the keyboard', () => {
     expect(r.onConnect).not.toHaveBeenCalled();
   });
 
+  it('a click on the pane lets go of a connection begun from the keyboard, and says so, without onClickConnectEnd', () => {
+    const r = mount();
+    press(r.handle('a', 'out'));
+    fireEvent.click(r.container.querySelector('.flowinger')!);
+    expect(r.said()).toBe('Connection cancelled.');
+    expect(r.handle('a', 'out').hasAttribute('aria-pressed')).toBe(false);
+    expect(r.onClickConnectEnd).not.toHaveBeenCalled();
+  });
+
   it('works with connectOnClick off — a keyboard cannot drag — while a click then does nothing', () => {
     const r = mount({ connectOnClick: false });
     fireEvent.click(r.handle('a', 'out'));

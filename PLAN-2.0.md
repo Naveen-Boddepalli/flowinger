@@ -5,7 +5,42 @@ covers waits for it. This page is the plan for that release: when it starts, wha
 what has to be seen working first, and in what order. Each section says whether it is decided, proposed, or waiting
 on a measurement. Decisions are the owner's; "proposed" means a recommendation not yet taken.
 
-## Where it stands (2026-10-17)
+## Status (2026-11-22): `2.0.0` released, following React Flow 13.0.2
+
+The owner chose to build 2.0 now rather than wait for React Flow 13.0.0 (*When 2.0 starts*, below). It is done on
+the branch, in two releases:
+
+- **1.1.0** (`release/1.1`): the bridge. Everything React Flow 13.0.0-next.0 adds, without breaking anything —
+  margins with units, the six store hooks, changesets, `forceColorMode`, `changeParent` — and a development warning,
+  once a page, for each thing 2.0 changes. The core's budget went to 21.5 kB (21.26: changesets 0.94, React Flow's
+  margin arithmetic 0.34), and the whole canvas's to 39.
+- **2.0.0** (`release/2.0`): D1 — `<ReactFlow>` fits with `'5%'`, a number margin is pixels, change handlers are typed
+  as changesets, React Flow 13 is the tests' oracle and CI's audit runs `--strict` against it; D2 — ES modules only
+  (option C), `check:toolchains` in CI on Node 22 and 24; D3 — the edge paths in `edgePathsFeature`, the core 20.81
+  kB (budget 21); `CounterNode` removed; `colorMode` deprecated for `forceColorMode`; D5 — a 1.x release after 2.0
+  publishes to npm's `v1` tag.
+- **One item of D1 was not needed.** React Flow 13 drops 12's `light` class on a canvas with no colour mode, but
+  flowinger's `<ReactFlow>` never added it (1.0's D1 left colours out), so nothing changed.
+
+- **rc.4 (2026-11-15) follows 13.0.0-next.3**, which came three weeks after next.0 (next.1 and next.2 on 2026-11-04,
+  next.3 on 2026-11-08) and moved more than the oracles had seen: it took out `nodeClickDistance`,
+  `getHandleConnections` and `HandleConnection`, added `useEqualSelector`, gave changesets `update` and `data`
+  changes and a new reading of an `add`, and made a pane click end a click-connect and a release off a node no
+  click. The unit tests and the audit caught three of these; a diff of next.0's source against next.3's found the
+  rest. The core is 20.97 kB here and 21.03 on CI's Linux runner, whose gzip comes out about 60 bytes bigger, so
+  its budget went back to 1.1's 21.5 kB (the owner's choice; the growth is the changesets, 0.12 kB). The whole
+  canvas is 39.5–39.6 (budget 40).
+
+- **React Flow 13.0.0 came out on 2026-11-16**, the day `release/2.0` merged into `main`, and 13.0.2 the day after.
+  From next.3 it renamed `paneClickDistance` to `paneDragThreshold`, which a pan now waits for, and made `NodeProps`
+  of a union a union; D1's table has the rest, and what needed nothing. Only the `reactFlowDefaults` test and the
+  audit failed on it, as they should, each on the rename. The core is 20.98 kB, the whole canvas 39.49.
+
+**What waiting would have bought:** React Flow 13.0.0 is out, so nothing more: a change in 13.x after 2.0.0 is
+2.x's to follow where it adds and 3.0's where it changes a default. What is left before `2.0.0` goes to `latest` is
+the proof (5), against 13.0.2.
+
+## Where it stood when this plan was written (2026-10-17)
 
 - `1.0.1` on npm, a day after `1.0.0`. About 1,260 downloads in the 30 days to 2026-10-12 (557 in its last week).
   One known consumer, QueryLens, which put its trial of 1.0 off until after its own 2.0.
@@ -55,7 +90,7 @@ the feature API (still `@experimental`, so it can change in a minor).
 
 ## Decisions
 
-### D1. Follow React Flow 13 on `<ReactFlow>` — **proposed; waiting on 13.0.0**
+### D1. Follow React Flow 13 on `<ReactFlow>` — **decided; filled from 13.0.2 (2026-11-21)**
 
 1.0's split stays: `<ReactFlow>` behaves like React Flow, while `<FlowingerCanvas>` and `<FlowingerCore>` keep
 flowinger's own defaults. 2.0 moves `<ReactFlow>` from React Flow 12 to 13. When 13.0.0 is out, the audit and the
@@ -85,6 +120,22 @@ the audit in CI runs against it.
 | **The fit margin:** a number is pixels, not a ratio, and the default is `'5%'` a side, not 0.1 | **2.0** | The same number would fit differently, on every canvas, and in `getViewportForBounds`. The bridge warns, once a page, where a number margin is given, and says how to write the same margin as a string (`'5%'` and `'20px'` mean the same in 12 and 13) |
 | **No colour class without `forceColorMode`** (12's `<ReactFlow>` puts `light` on the container) | **2.0** | On `<ReactFlow>` only. A stylesheet that selects `.react-flow.light` notices |
 | Packaging (ESM only, React Compiler…) | D2 | |
+
+**What 13.0.0 changes beyond next.0**, read from 13.0.2's source (2026-11-21), the release 2.0 follows; next.1–next.3
+were measured as they came (rc.4), and next.3 → 13.0.2 by a diff of the two packages' source:
+
+| React Flow 13.0.0 (next.1 to 13.0.2) | Lands in | How |
+|---|---|---|
+| `useEqualSelector`; `update` and `data` changes; a changeset's `clear`, `isEmpty`, `getNewNodes`, `getNewEdges` | 2.0 (rc.4) | Added names |
+| `nodeClickDistance` removed | 2.0 (rc.4) | Kept as flowinger's own prop, out of `reactFlowDefaults`; `reactFlow12Defaults` keeps 12's 0. Not deprecated: 13 has nothing that says the same |
+| `getHandleConnections`, `HandleConnection`, a changeset's `size` and `version` removed | 2.0 (rc.4) | Kept, `@deprecated` with 13's replacement |
+| A changeset's reading of an `add` and a `remove`; a pane click ends a click-connect; a press let go of off a node is no click | 2.0 (rc.4) | On all three canvases |
+| **`paneClickDistance` renamed `paneDragThreshold`**, and a pan waits for it as a click does | **2.0** | `paneDragThreshold` added on every canvas, and a selection box waits for it too; `reactFlowDefaults` has 13's 1 in place of `paneClickDistance: 1`, so `<ReactFlow>`'s clicks are the same and it pans from 2 px, not 3. `paneClickDistance` kept and not deprecated: a click distance below the pan's is something `paneDragThreshold` cannot say |
+| **`NodeProps` of a union is a union** | **2.0** | The same, a type change only. An `interface` extending `NodeProps<N>` for a generic `N` breaks, as in 13 |
+| `selectionOnDrag` does nothing while the left button pans (`panOnDrag` `true`, and now an array with `0`) | — | Not followed, as in 1.x, where 12 did the same for `true`: in flowinger the box is the plain drag's. The migration guide says so |
+| An `EdgeToolbar` is stacked with its edge, among the nodes | — | Not followed: flowinger draws edge labels and toolbars on a layer over every node |
+| A node moved with the arrows is announced where it is after the move | — | Flowinger already did |
+| Measured nodes clamped with `nodeOrigin`; children updated after any measure | — | React Flow's own store; flowinger's engine places nodes its own way, and its geometry oracles pass on 13.0.2 |
 
 So next.0 alone makes 2.0 smaller than it looks. Every name 13 adds can be in flowinger before 2.0, and what has
 to wait is two defaults and what a number means as a margin. A React Flow 13 app could then switch to a flowinger
@@ -127,7 +178,7 @@ applied:
 |---|---|---|
 | Node 24.16 and 22.19: `require` and `import`, a server render from each | ok | ok |
 | Jest 30.5, default config | ok | **fails**: "Must use import to load ES Module" |
-| Jest 30.5, `NODE_OPTIONS=--experimental-vm-modules` | ok | ok on Node 24.16; fails on 22.19 (Jest needs 22.21+ or 24.9+) |
+| Jest 30.5, `NODE_OPTIONS=--experimental-vm-modules` | ok | ok on Node 24.16; fails on 22.19, and on 22.23 in CI (2026-11-16: the "22.21+" written here first was a guess) |
 | Vitest 5 | ok | ok |
 | TypeScript 5.9, `node16`: a `.cts` and an `.mts` | ok | **fails** in the `.cts` (TS1479: an ES module cannot be `require`d) |
 | TypeScript 5.9, `bundler` | ok | ok |
@@ -197,7 +248,8 @@ This will be the first time two stable lines exist, with one maintainer.
 - **Publishing:** releases come from that branch through `release.yml` with a `v1` dist-tag, so a 1.x patch never
   moves `latest`. `release.yml` needs to learn both: a tag from a branch other than `main`, and the dist-tag.
 - **Docs:** the roadmap's condition for versioned docs ("a `1.x` has users on more than one version") is met at
-  2.0. The site keeps the 1.x pages under `/v1/`.
+  2.0. The site keeps the 1.x pages under `/v1/` — done: `site/scripts/sync-docs.mjs` builds them from the `v1`
+  branch.
 
 ### Considered and left as they are
 
@@ -295,13 +347,23 @@ measured again, and the changelog says why for either outcome.
 - The migration guide written against 13, with its defaults read from 13's source.
 - The README's *Status*, the comparison table and the size figures, updated.
 - `llms.txt` updated.
-- The `/v1/` docs (D5).
+- The `/v1/` docs (D5) — done after 2.0.0.
 
 ### 7. Release
 
 - `2.0.0-rc.1` goes to the `next` dist-tag through `release.yml`, tagged from `release/2.0`. A second candidate
   only if the proof finds something.
-- The `v1` branch is cut from the last 1.x tag before the release PR merges.
+- **`2.0.0-rc.2` (2026-10-19):** 1.2.0 (connecting from the keyboard) merged into `release/2.0`, so the candidate
+  carries everything 1.x has. A third only if the proof finds something, or 1.x adds more first.
+- **`2.0.0-rc.3` (2026-10-20):** 1.2.1 merged in — the fix for 1.2.0's cost on a large unculled canvas, which rc.2
+  carried.
+- **`2.0.0-rc.5` (2026-11-22):** follows React Flow 13.0.2, out since 2026-11-16 (*Status*, and D1's table). The
+  candidate `check:registry` and the phone are tried on, since 13.0.0 changed when a pan starts. Published
+  2026-11-22 with provenance; `check:registry` passes on it on React 18 and 19 (signatures and provenance, `require`
+  and `import` with a server render, strict TypeScript on `nodenext`), and CI's browser suite ran in Chromium,
+  Firefox and WebKit before the tag. A phone was tried on it the same day, and was fine.
+- **`2.0.0` (2026-11-22)** goes to `latest`, the same library as rc.5, tagged from `main`.
+- The `v1` branch is cut from the last 1.x tag — `v1.2.1` today — before the release PR merges.
 - Then `2.0.0` goes to `latest`, tagged from `main` after the PR merges (CONTRIBUTING's *Releasing*). Tagging is
   the owner's.
 

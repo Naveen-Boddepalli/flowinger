@@ -13,7 +13,7 @@
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm version" src="https://img.shields.io/npm/v/flowinger" /></a>
   <a href="https://www.npmjs.com/package/flowinger"><img alt="npm total downloads" src="https://badgen.net/npm/dt/flowinger?color=green" /></a>
   <a href="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Naveen-Boddepalli/flowinger/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="docs/features.md"><img alt="core size: about 21.3 kB gzipped" src="https://img.shields.io/badge/core-~21.3_kB_gzip-blue" /></a>
+  <a href="docs/features.md"><img alt="core size: about 21.5 kB gzipped" src="https://img.shields.io/badge/core-~21.5_kB_gzip-blue" /></a>
   <img alt="no dependencies" src="https://img.shields.io/badge/dependencies-0-brightgreen" />
   <a href="https://www.npmjs.com/package/flowinger"><img alt="TypeScript types included" src="https://img.shields.io/npm/types/flowinger" /></a>
   <a href="LICENSE.md"><img alt="MIT license" src="https://img.shields.io/npm/l/flowinger" /></a>
@@ -32,22 +32,22 @@
   <img src="docs/assets/demo.png" alt="Flowinger's demo: plan operators as HTML nodes joined by labelled SVG edges, a sub-flow group, a minimap and zoom controls" width="780" />
 </p>
 
-> **Status:** `1.1` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
-> for `2.0`. It is what [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) draws its diagrams with, and
-> its API follows React Flow's — 12's, and 13's names as well; [Upgrading](docs/upgrading.md) says what 2.0, which
-> follows React Flow 13, will change, and what 1.0 did. These docs describe `main`; what is newer than the latest npm
+> **Status:** `2.0` — [semantic versioning](docs/stability.md): a change that breaks what that page covers waits
+> for `3.0`. It is what [QueryLens](https://query-lens.1234naveenboddepalli.workers.dev) draws its diagrams with, and
+> its API follows React Flow 13's (13.0.2), keeping every name of 12's;
+> [Upgrading](docs/upgrading.md) says what 2.0 and 1.0 changed. These docs describe `main`; what is newer than the latest npm
 > release is listed under *Unreleased* there.
 
 ## Why Flowinger
 
-- **Small, and only what you use.** The core is about 21.3 kB gzipped; drag, connect, selection and the rest are
-  opt-in features that add only their own code, so the whole canvas is about 39 kB. In QueryLens, swapping
+- **Small, and only what you use.** The core is about 21.5 kB gzipped; drag, connect, selection and the rest are
+  opt-in features that add only their own code, so the whole canvas is about 40 kB. In QueryLens, swapping
   React Flow for it took the diagram chunk from **59.1 kB to 20.2 kB** gzipped.
 - **No dependencies.** `react` and `react-dom` (18 or 19) are the only peers. Plain DOM, SVG and CSS.
 - **Your components are the nodes.** Anything you can render in a `div` is a node; handles are measured where
   they are really drawn, so an edge follows a handle you moved with CSS.
 - **An API you already know.** React Flow's names for components, hooks, props, class names, `data-testid`s and
-  types — all [210 of its exports](docs/react-flow-coverage.md), and **every one of the 302 members** of the props,
+  types — all [220 of React Flow 13's exports](docs/react-flow-coverage.md) (and 12's), and **every one of the 303 members** of the props,
   instance and components you write against *does something* (the audit counts a name that compiles and does
   nothing apart, and there are none) — measured from its own type declarations, with a
   [migration guide](docs/migrating-from-react-flow.md). `<ReactFlow>` has React Flow's defaults, so moving from
@@ -63,22 +63,23 @@
 
 ## At a glance: Flowinger and React Flow
 
-| | Flowinger | React Flow (`@xyflow/react` 12) |
+| | Flowinger 2 | React Flow 13 (`@xyflow/react` 13.0.2) |
 |---|---|---|
-| Runtime dependencies | **0** | 3 direct (`@xyflow/system`, `zustand`, `classcat`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
+| Runtime dependencies | **0** | 4 direct (`@xyflow/system`, `zustand`, `classcat`, `react-compiler-runtime`), plus `d3-zoom`, `d3-drag`, `d3-selection`… through `@xyflow/system` |
 | Stylesheet to import | **None** (CSS variables) | `@xyflow/react/dist/style.css` |
-| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev)) | **20.2 kB** gzipped | 59.1 kB gzipped |
-| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.2 s |
-| Mount 10,000 nodes, culled | **53 ms** | 544 ms |
-| Pan / zoom 10,000 nodes, no culling | **7.9 / 8.9 ms** a frame | 32.3 / 32.2 ms a frame |
-| Pan / zoom 10,000 nodes, culled | **2.5 / 1.2 ms** a frame | 3.7 / 4.3 ms a frame |
-| Drag at 10,000 nodes, culled | **3.8 ms** a move | 4.5 ms a move |
+| Diagram chunk in a real app ([QueryLens](https://query-lens.1234naveenboddepalli.workers.dev), flowinger 1.1 against React Flow 12) | **20.2 kB** gzipped | 59.1 kB gzipped |
+| Mount 10,000 nodes ([benchmarks](docs/benchmarks.md)) | **0.6 s** | 1.1 s |
+| Mount 10,000 nodes, culled | **55 ms** | 571 ms |
+| Pan / zoom 10,000 nodes, no culling | **8.1 / 9.4 ms** a frame | 12.1 / 11.6 ms a frame |
+| Pan / zoom 10,000 nodes, culled | 2.6 / **1.5 ms** a frame | 2.1 / 3.3 ms a frame (a pan is level: it varies from run to run) |
+| Drag at 10,000 nodes, no culling | **44 ms** a move | 47 ms a move |
+| Drag at 10,000 nodes, culled | **3.7 ms** a move | 4.4 ms a move |
 | Undo/redo, copy-paste, snap lines, export, smart edges | **Free**, separate entry points | [React Flow Pro](https://reactflow.dev/pro) examples (paid subscription) |
-| API | React Flow's names: 210 of 210 exports, 119 of 119 props | — |
+| API | React Flow 13's names: 220 of 220 exports, 118 of 118 props — and every one of 12's | — |
 | Ecosystem, examples, answers online | Small and new | **Large and mature** |
 
-The culled pan is level within the noise (React Flow's read 2.6–4.2 ms across runs); the zoom is about half
-React Flow's cost, and a culled mount a tenth, because Flowinger's first render is culled too. Where React Flow is still ahead is the last row: its ecosystem.
+A culled mount is a tenth of React Flow's, because Flowinger's first render is culled too. Where React Flow is
+ahead: the last row, its ecosystem. (Before 2.1, React Flow 13 also dragged a node without culling 1.3–2× cheaper.)
 
 ## Install
 
@@ -86,7 +87,8 @@ React Flow's cost, and a culled mount a tenth, because Flowinger's first render 
 npm install flowinger      # or: pnpm add flowinger · yarn add flowinger
 ```
 
-React 18 or 19 is a peer dependency. The package ships ESM, CommonJS and TypeScript declarations for both.
+React 18 or 19 is a peer dependency. The package is ES modules with TypeScript declarations, as React Flow 13 is;
+Node's `require` loads it too (Node 20.19+ or 22.12+).
 
 ## Quick start
 
@@ -170,9 +172,9 @@ import { FlowingerCore, connectFeature, dragFeature } from 'flowinger';
 
 | Build | Gzipped |
 |---|---|
-| `FlowingerCore`, no features | about 21.3 kB |
+| `FlowingerCore`, no features | about 21.5 kB |
 | …plus each feature you name | only its own code |
-| `FlowingerCanvas`, every feature | about 39 kB |
+| `FlowingerCanvas`, every feature | about 40 kB |
 
 Both are held by budgets in CI, measured on a small consumer's real bundle. A prop for a feature the canvas
 lacks does nothing — and in development the console says so. See [Features](docs/features.md).
@@ -246,7 +248,7 @@ covers the part of the API that apps like the one above use, and says plainly wh
 | | |
 |---|---|
 | **React** | 18 and 19, both tested in CI |
-| **Modules** | ESM and CommonJS, with TypeScript declarations for each (checked with publint and Are the Types Wrong) |
+| **Modules** | ES modules with TypeScript declarations, as React Flow 13 ships; `require` loads them on Node 20.19+ (checked with publint, Are the Types Wrong and `pnpm check:toolchains`) |
 | **Rendering** | Client, server and hydration (`react-dom/server`) |
 | **Browsers** | Current evergreen browsers — pointer events, `ResizeObserver`. The browser suite runs in Chromium, Firefox and WebKit; two-finger touch pinch is unit-tested but not yet seen on a physical device ([roadmap](ROADMAP.md)) |
 
