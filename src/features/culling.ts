@@ -86,9 +86,11 @@ export const cullingFeature: Feature = {
   firstVisible,
   install(ctx) {
     let memo: Memo | null = null;
-    /** Made at a pass after one that asked every node with nothing changed between: not for a list that keeps changing. */
+    /**
+     * Made when the view leaves the region with nothing else changed since the last pass: not at a mount, and not
+     * for lists that keep changing, which a pass that asks everything serves as well.
+     */
     let grid: Grid | null = null;
-    let settled = false;
 
     const publish = (nodeIds: ReadonlySet<string>, edgeIndices: Set<number>, edges: readonly Edge[]) => {
       // The edge layer draws them in this order, and a later edge is above an earlier one.
@@ -105,7 +107,6 @@ export const cullingFeature: Feature = {
       if (!pane) {
         memo = null;
         grid = null;
-        settled = false;
         if (ctx.visible !== null) ctx.setVisible(null);
         return;
       }
@@ -113,11 +114,9 @@ export const cullingFeature: Feature = {
       const zoom = viewport.zoom;
       const nodes = ctx.nodes;
       const edges = ctx.edges;
-      // The grid follows what moved, or is made again at the next pass that needs it.
+      // The grid follows what moved; when it cannot say what (nodes came or went), it goes.
       const again = dirty && withChildren(dirty);
-      // Nodes that came or went say so: every node changed.
-      if (!again) settled = false;
-      if (grid && (!settled || !again?.every((id) => place(grid as Grid, id)))) grid = null;
+      if (grid && !again?.every((id) => place(grid as Grid, id))) grid = null;
       if (grid && grid.edges !== edges) spanAll(grid, edges);
       // A selection that changes names the nodes (a controlled flow replaces them) or says so outright (the
       // engine's own) — so what is selected is not part of what is remembered.
@@ -153,7 +152,9 @@ export const cullingFeature: Feature = {
         width: view.width * (1 + 2 * MARGIN),
         height: view.height * (1 + 2 * MARGIN),
       };
-      if (settled) grid ??= build(nodes, edges);
+      if (known?.edges === edges && known.nodeCount === nodes.length && known.dragging === dragging && dirty?.size === 0) {
+        grid ??= build(nodes, edges);
+      }
       const g = grid;
       // Each node's box once, for the nodes and again for the edges between nodes out of view.
       const rects = g ? g.boxes : new Map<string, Rect>();
@@ -178,7 +179,6 @@ export const cullingFeature: Feature = {
       } else {
         nodes.forEach(ask);
         edges.forEach((_, i) => draw(i));
-        settled = true;
       }
 
       memo = {

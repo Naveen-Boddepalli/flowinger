@@ -1,11 +1,12 @@
 // Flowinger and React Flow, the same graph, in a real browser — and the numbers, from this machine.
 //
-//   pnpm bench                     the whole matrix, 5 runs each (a quarter of an hour)
+//   pnpm bench                     the whole matrix, 5 runs each (about twenty minutes)
 //   pnpm bench --n 1000 --runs 1   a quick look
 //   pnpm bench --dry               print the table; write nothing
 //   E2E_CHANNEL=chrome pnpm bench  use an installed Chrome instead of Playwright's Chromium
 //
-// For each library, graph size and `onlyRenderVisibleElements` setting it opens a clean page and measures:
+// For each library, graph size (1,000 to 10,000 nodes, and 50,000 with culling only) and `onlyRenderVisibleElements`
+// setting it opens a clean page and measures:
 //   mount     from the render until the document last changed — the nodes, handles and edges all there
 //   pan, zoom main-thread milliseconds per frame, over 150 frames of one wheel event each
 //   drag      main-thread milliseconds per mouse move, over 60 moves of one node
@@ -30,7 +31,9 @@ const arg = (name, fallback) => {
   const at = process.argv.indexOf(`--${name}`);
   return at === -1 ? fallback : process.argv[at + 1];
 };
-const sizes = arg('n', '') ? [Number(arg('n'))] : [1000, 5000, 10000];
+const sizes = arg('n', '') ? [Number(arg('n'))] : [1000, 5000, 10000, 50000];
+// Past this, only with culling: without it a canvas this big is seconds a frame in both, and not what anyone draws.
+const CULLED_ONLY = 20000;
 const runs = Number(arg('runs', 5));
 const libs = ['flowinger', 'reactflow'];
 // `--dry`: print the table, and leave bench/results.json and the docs alone.
@@ -110,7 +113,7 @@ async function session(lib, n, cull) {
 
 const results = [];
 for (const n of sizes) {
-  for (const cull of [false, true]) {
+  for (const cull of n > CULLED_ONLY ? [true] : [false, true]) {
     for (const lib of libs) {
       const all = [];
       for (let r = 0; r < runs; r++) {
