@@ -10,6 +10,22 @@ The design notes behind each release — what was measured, what was tried and d
 
 ## [Unreleased]
 
+### Changed
+
+- **Culling asks a grid what is near the view.** With `onlyRenderVisibleElements` on, a pan that leaves the region
+  worked out last (the view and a quarter of it round each side) runs a pass, and that pass asked every node and
+  edge: 2 ms at 10,000 nodes, 10 at 50,000, 24 at 100,000, a dropped frame each time a pan left the region. It now
+  asks a grid of cells that holds each node's box and the box round each edge's two nodes: 0.09 ms at 10,000 nodes,
+  0.18 at 50,000, 0.19 at 100,000. The grid is made the first time the view leaves the region with nothing else
+  changed (10–90 ms once, at 10,000–100,000 nodes) and kept in step with the nodes that move; a mount, and lists
+  that keep changing, ask everything as before and pay nothing for it. The benchmarks now include 50,000 nodes with
+  culling on.
+- **A selection and the end of a drag say which nodes they changed**, rather than that every node did: culling looks
+  again at those nodes instead of making a whole pass, and keeps its grid.
+- **The size budget for the whole canvas is 41 kB gzipped** (was 40.5): the grid costs 0.71 kB of the culling feature,
+  and the whole canvas is now 40.65 kB, about 60 bytes more on CI's runner. The core does not change (21.45 kB, budget
+  22).
+
 ### Fixed
 
 - **A 1.x release would not have published.** From 2.0 the release workflow sent a release of an older major to

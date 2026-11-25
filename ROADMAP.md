@@ -88,14 +88,14 @@ compiles and does nothing apart; there are none), and it keeps every name of 12'
    It keeps them now, and the drag costs 44 ms against React Flow's 47 at 10,000 nodes, 16 against 18 at 5,000
    ([benchmarks](docs/benchmarks.md)). Both are still heavy at those sizes without culling: what is left of the 44
    is React's work for the nodes, which a canvas that draws everything does.
-2. **A spatial index for culling.** With `onlyRenderVisibleElements` on, flowinger is ahead or level — at 10,000 nodes a
-   mount is 55 ms against 571 and a zoom 1.5 ms a frame against 3.3, and a pan is level — and a pan or zoom that
-   stays inside the region last worked out costs nothing. The pass that does run, when the view leaves it, still
-   asks every node; a grid of node ids would have it ask only the cells it enters.
-3. **Size.** The core is 21.45 kB against a 22 budget and the whole canvas 39.95 against 40.5 — both raised by half
-   a kilobyte for the drag, in the open, as 2.0 did — so the next feature that touches either finds the bytes or
-   raises the budget again. What could still come out of the core is the rarely used part of the instance API,
-   behind a feature — a break, so 3.0's.
+2. **A spatial index for culling** — done on `main`, for 2.2. With `onlyRenderVisibleElements` on, flowinger leads
+   every row: at 10,000 nodes a mount is 53 ms against 511, a pan 2.6 ms a frame against 4.7, a zoom 1.6 against 4.8;
+   at 50,000, 104 ms against 2.6 s and a drag 5.1 ms a move against 27. A pass that runs when the view leaves the
+   region asked every node and edge (24 ms at 100,000 nodes); it now asks a grid of cells (0.19 ms).
+3. **Size.** The core is 21.45 kB against a 22 budget and the whole canvas 40.65 against 41 — the core's raised by
+   half a kilobyte for the drag, the canvas's by a kilobyte for the drag and the culling grid, each in the open — so
+   the next feature that touches either finds the bytes or raises the budget again. What could still come out of the
+   core is the rarely used part of the instance API, behind a feature — a break, so 3.0's.
 4. **Touch and screen readers.** Touch is automated in Chromium and was checked on a phone for 1.0.1 and 2.0;
    VoiceOver on macOS for 1.0.1 and keyboard connecting.
 5. **`Controls`' lock default.** React Flow shows it by default; here it is off. Revisit once it has been used.
