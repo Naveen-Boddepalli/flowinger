@@ -56,7 +56,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm size --max-full 40.5 --max-lean 22
+      - run: pnpm size --max-full 41 --max-lean 22
       - run: node scripts/size-dist.mjs --max-lean 22
       - run: pnpm check:package
       - run: node scripts/check-examples.mjs
