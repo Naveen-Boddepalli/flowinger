@@ -21,6 +21,32 @@ const ASSUMED_PANE = { width: 1920, height: 1080 };
  */
 const KEEP_LIMIT = 3;
 
+/** A cell of the grid, in graph units: a few nodes across. */
+const CELL = 400;
+
+/** A box over more cells of the grid than this is kept apart and asked every time: a big group, a long edge. */
+const WIDE = 64;
+
+/**
+ * What is where, by the cells of a grid: a pass asks about what is in the cells the region covers, not about
+ * everything. `at` is the cells each one is in, so that it can be taken out when it moves; a wide one is in a
+ * cell of its own (-1), asked every time.
+ */
+interface Cells<K> {
+  cells: Map<number, K[]>;
+  at: Map<K, number[]>;
+}
+
+/** The nodes' boxes, and the box round each edge's two nodes, in cells; with the edges they were made from. */
+interface Grid {
+  boxes: Map<string, Rect>;
+  nodes: Cells<string>;
+  spans: Cells<number>;
+  edges: readonly Edge[];
+  /** The edges that touch each node, by index. */
+  of: Map<string, number[]>;
+}
+
 /**
  * What was worked out last time, and what it was worked out from.
  */
@@ -48,17 +74,21 @@ interface Memo {
  * only when that set changes — a pan that reveals nothing new costs no render. Off, or before the pane
  * has a size, everything counts (a null set).
  *
- * The set is worked out for every node when the lists change, or when the view leaves the region (the view
- * and a margin round it) it was last worked out for. A pan or zoom that stays inside that region costs nothing:
- * every node in view is already drawn. When only some nodes changed — a drag, a measurement, a selection —
- * only those, what is inside them, and the edges that touch them are looked at again: ten thousand nodes are
- * not asked about for one that moved.
+ * The set is worked out again when the lists change, or when the view leaves the region (the view and a margin
+ * round it) it was last worked out for. A pan or zoom that stays inside that region costs nothing: every node in
+ * view is already drawn. When only some nodes changed — a drag, a measurement, a selection — only those, what is
+ * inside them, and the edges that touch them are looked at again: ten thousand nodes are not asked about for one
+ * that moved. And a pass that does run asks only about what is near the region, from a grid of where every node
+ * and edge is: made when the lists change, and kept in step with the nodes that move.
  */
 export const cullingFeature: Feature = {
   name: 'culling',
   firstVisible,
   install(ctx) {
     let memo: Memo | null = null;
+    /** Made at a pass after one that asked every node with nothing changed between: not for a list that keeps changing. */
+    let grid: Grid | null = null;
+    let settled = false;
 
     const publish = (nodeIds: ReadonlySet<string>, edgeIndices: Set<number>, edges: readonly Edge[]) => {
       // The edge layer draws them in this order, and a later edge is above an earlier one.
@@ -74,6 +104,8 @@ export const cullingFeature: Feature = {
       const pane = ctx.options.onlyRenderVisibleElements ? ctx.paneSize() : null;
       if (!pane) {
         memo = null;
+        grid = null;
+        settled = false;
         if (ctx.visible !== null) ctx.setVisible(null);
         return;
       }
@@ -81,6 +113,12 @@ export const cullingFeature: Feature = {
       const zoom = viewport.zoom;
       const nodes = ctx.nodes;
       const edges = ctx.edges;
+      // The grid follows what moved, or is made again at the next pass that needs it.
+      const again = dirty && withChildren(dirty);
+      // Nodes that came or went say so: every node changed.
+      if (!again) settled = false;
+      if (grid && (!settled || !again?.every((id) => place(grid as Grid, id)))) grid = null;
+      if (grid && grid.edges !== edges) spanAll(grid, edges);
       // A selection that changes names the nodes (a controlled flow replaces them) or says so outright (the
       // engine's own) — so what is selected is not part of what is remembered.
       const dragging = ctx.draggingIds.size === 0 ? '' : [...ctx.draggingIds].sort().join('|');
@@ -106,7 +144,7 @@ export const cullingFeature: Feature = {
           memo = moved;
           return;
         }
-        if (incremental(moved, dirty, nodes, edges)) return;
+        if (again && incremental(moved, again, nodes, edges)) return;
       }
 
       const region: Rect = {
@@ -115,14 +153,33 @@ export const cullingFeature: Feature = {
         width: view.width * (1 + 2 * MARGIN),
         height: view.height * (1 + 2 * MARGIN),
       };
+      if (settled) grid ??= build(nodes, edges);
+      const g = grid;
       // Each node's box once, for the nodes and again for the edges between nodes out of view.
-      const rects = new Map<string, Rect>();
+      const rects = g ? g.boxes : new Map<string, Rect>();
       const nodeIds = new Set<string>();
-      for (const n of nodes) if (drawsNode(n, region, rects)) nodeIds.add(n.id);
       const edgeIndices = new Set<number>();
-      edges.forEach((e, i) => {
-        if (drawsEdge(e, nodeIds, region, rects)) edgeIndices.add(i);
-      });
+      const ask = (n: Node | undefined) => {
+        if (n && !nodeIds.has(n.id) && drawsNode(n, region, rects)) nodeIds.add(n.id);
+      };
+      const draw = (i: number) => {
+        if (!edgeIndices.has(i) && drawsEdge(edges[i] as Edge, nodeIds, region, rects)) edgeIndices.add(i);
+      };
+      // Far out, the region covers more cells than there are nodes: then everything is asked.
+      const keys = g && cellsOf(region, nodes.length);
+      if (g && keys) {
+        // What is near the region — an edge of a node in it reaches it — and the nodes drawn wherever they are.
+        keys.push(-1);
+        for (const key of keys) g.nodes.cells.get(key)?.forEach((id) => ask(ctx.nodeById.get(id)));
+        const anywhere = [...ctx.selectedNodeIds(), ...ctx.draggingIds];
+        for (const id of anywhere) ask(ctx.nodeById.get(id));
+        for (const key of keys) g.spans.cells.get(key)?.forEach(draw);
+        for (const id of anywhere) g.of.get(id)?.forEach(draw);
+      } else {
+        nodes.forEach(ask);
+        edges.forEach((_, i) => draw(i));
+        settled = true;
+      }
 
       memo = {
         edges,
@@ -143,12 +200,8 @@ export const cullingFeature: Feature = {
       publish(nodeIds, edgeIndices, edges);
     };
 
-    /**
-     * Looks again at `dirty` and what is inside them, and at the edges that touch any of those. False when it
-     * cannot — a node is not there — and then everything is looked at.
-     */
-    const incremental = (known: Memo, dirty: ReadonlySet<string>, nodes: readonly Node[], edges: readonly Edge[]) => {
-      // Inside a node that moved, everything moved.
+    /** The nodes that moved and what is inside them, for inside a node that moved everything moved; null past the limit. */
+    const withChildren = (dirty: ReadonlySet<string>): string[] | null => {
       const again = new Set<string>();
       const add = (id: string) => {
         if (again.has(id)) return;
@@ -156,13 +209,20 @@ export const cullingFeature: Feature = {
         for (const child of ctx.childrenOf.get(id) ?? []) add(child);
       };
       for (const id of dirty) add(id);
-      if (again.size > INCREMENTAL_LIMIT) return false;
+      return again.size > INCREMENTAL_LIMIT ? null : [...again];
+    };
 
+    /**
+     * Looks again at the nodes that moved (`again`, with what is inside them), and at the edges that touch any of
+     * those. False when it cannot — a node is not there — and then a whole pass runs.
+     */
+    const incremental = (known: Memo, again: readonly string[], nodes: readonly Node[], edges: readonly Edge[]) => {
+      const boxes = grid?.boxes;
       let nodeIds: Set<string> | null = null;
       for (const id of again) {
         const n = ctx.nodeById.get(id);
         if (!n) return false;
-        const inView = drawsNode(n, known.region);
+        const inView = drawsNode(n, known.region, boxes);
         if ((nodeIds ?? known.nodeIds).has(id) === inView) continue;
         nodeIds ??= new Set(known.nodeIds);
         if (inView) nodeIds.add(id);
@@ -175,7 +235,7 @@ export const cullingFeature: Feature = {
       let edgeIndices: Set<number> | null = null;
       for (const id of again) {
         for (const i of known.edgesOf.get(id) ?? []) {
-          const draw = drawsEdge(edges[i] as Edge, current, known.region);
+          const draw = drawsEdge(edges[i] as Edge, current, known.region, boxes);
           if ((edgeIndices ?? known.edgeIndices).has(i) === draw) continue;
           edgeIndices ??= new Set(known.edgeIndices);
           if (draw) edgeIndices.add(i);
@@ -200,6 +260,40 @@ export const cullingFeature: Feature = {
         cache?.set(n.id, rect);
       }
       return rect;
+    };
+
+    /** The grid, made from every node and edge. */
+    const build = (nodes: readonly Node[], edges: readonly Edge[]): Grid => {
+      const g: Grid = { boxes: new Map(), nodes: cells(), spans: cells(), edges, of: new Map() };
+      for (const n of nodes) put(g.nodes, n.id, rectOf(n, g.boxes));
+      spanAll(g, edges);
+      return g;
+    };
+
+    /** A node that moved, and its edges, put where they now are. False if it is not there. */
+    const place = (g: Grid, id: string): boolean => {
+      const n = ctx.nodeById.get(id);
+      if (!n) return false;
+      g.boxes.delete(id);
+      put(g.nodes, id, rectOf(n, g.boxes));
+      g.of.get(id)?.forEach((i) => span(g, i));
+      return true;
+    };
+
+    /** The edges, all put again: the list changed. */
+    const spanAll = (g: Grid, edges: readonly Edge[]) => {
+      g.edges = edges;
+      g.of = edgesByNode(edges);
+      g.spans = cells();
+      edges.forEach((_, i) => span(g, i));
+    };
+
+    /** An edge in the cells the box round its two nodes covers; nowhere while either is missing. */
+    const span = (g: Grid, i: number) => {
+      const e = g.edges[i] as Edge;
+      const a = g.boxes.get(e.source);
+      const b = g.boxes.get(e.target);
+      put(g.spans, i, a && b ? around(a, b) : null);
     };
 
     /** A node is drawn if it is in the region — or selected or being dragged, wherever it is. */
@@ -296,15 +390,49 @@ function keeps(region: Rect, view: Rect): boolean {
 
 /** Whether the box that holds both of two nodes reaches the region: the line between them may cross it. */
 function crosses(a: Rect, b: Rect, region: Rect): boolean {
+  return isRectIntersecting(around(a, b), region, true);
+}
+
+/** The box that holds both of two. */
+function around(a: Rect, b: Rect): Rect {
   const x = Math.min(a.x, b.x);
   const y = Math.min(a.y, b.y);
-  const span = {
-    x,
-    y,
-    width: Math.max(a.x + a.width, b.x + b.width) - x,
-    height: Math.max(a.y + a.height, b.y + b.height) - y,
-  };
-  return isRectIntersecting(span, region, true);
+  return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
+}
+
+function cells<K>(): Cells<K> {
+  return { cells: new Map(), at: new Map() };
+}
+
+
+/**
+ * The keys of the cells a box covers; null past `most`. Two cells a long way apart can share a key: that only
+ * adds nodes to ask about, and each is asked exactly.
+ */
+function cellsOf(r: Rect, most: number): number[] | null {
+  const x0 = Math.floor(r.x / CELL);
+  const y0 = Math.floor(r.y / CELL);
+  const x1 = Math.floor((r.x + r.width) / CELL);
+  const y1 = Math.floor((r.y + r.height) / CELL);
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) > most) return null;
+  const keys: number[] = [];
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) keys.push(x * 4194304 + y);
+  return keys;
+}
+
+/** Puts `k` in the cells a box covers (none: null), out of wherever it was. */
+function put<K>(c: Cells<K>, k: K, r: Rect | null) {
+  for (const key of c.at.get(k) ?? []) {
+    const list = c.cells.get(key) as K[];
+    list.splice(list.indexOf(k), 1);
+  }
+  const keys = r ? (cellsOf(r, WIDE) ?? [-1]) : [];
+  for (const key of keys) {
+    const list = c.cells.get(key);
+    if (list) list.push(k);
+    else c.cells.set(key, [k]);
+  }
+  c.at.set(k, keys);
 }
 
 function edgesByNode(edges: readonly Edge[]): Map<string, number[]> {

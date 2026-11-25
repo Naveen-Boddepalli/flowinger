@@ -173,8 +173,8 @@ export interface EngineContext {
 
   /** Runs `fn` when the event happens. */
   on: (event: FeatureEvent, fn: () => void) => void;
-  /** Says the layout changed in a way `on('change')` would not otherwise hear of. */
-  changed: () => void;
+  /** Says the layout changed in a way `on('change')` would not otherwise hear of: for these nodes, or for any. */
+  changed: (ids?: Iterable<string>) => void;
   /**
    * The nodes whose place, size, visibility or selection changed since this was last asked — or null, for
    * "any, or no way of saying which". For something that works out a thing for every node on each `'change'`

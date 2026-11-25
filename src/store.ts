@@ -1332,8 +1332,8 @@ export function createFlowingerStore(
     on: (event, fn) => {
       hooks[event].push(fn);
     },
-    changed: () => {
-      markDirty();
+    changed: (ids?: Iterable<string>) => {
+      markDirty(ids);
       run('change');
     },
     takeDirtyNodes: () => {

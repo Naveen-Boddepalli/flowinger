@@ -240,7 +240,7 @@ export const dragFeature: Feature<DragApi> = {
         },
         end: (e) => {
           for (const n of items) ctx.draggingIds.delete(n.id);
-          ctx.changed();
+          ctx.changed(items.map((n) => n.id));
           if (ctx.nodesControlled()) {
             ctx.emitNodeChanges(items.map((n) => ({ type: 'position', id: n.id, dragging: false })));
           }
